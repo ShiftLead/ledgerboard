@@ -1,0 +1,5 @@
+# The same opt-in rules as dev-cadence, which syncs ledgerboard.py and lints its scripts with them.
+line-length = 120
+
+[lint]
+select = ["E4", "E7", "E9", "F", "DTZ", "PLW1510", "PLW1508", "I001"]
