@@ -37,13 +37,18 @@ as a skill of the same name): `docs/procedures/stranded-work.md` (the periodic s
 The ledger and board formats, defined once (README). Three things live here and nothing else:
 `SPEC.md` (the formats in prose), `ledgerboard.py` (one stdlib-only module: pure functions over
 text — parse, check, edit, the commit subject of an edit), and `fixtures/` (a Markdown input and
-its expected JSON per case). Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md):
+its expected JSON per case). **Status: pre-v1.0** — these files, the tests, CI and the commands
+below arrive with TD-001. Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md):
 
 - **Never in `ledgerboard.py`:** git, the network, the machine roster, forges, trackers, delivery,
-  sweeps, sessions, or a name of either consumer. What a caller needs from outside the text is
-  passed in (the cross-repo resolver of `pickable()`).
+  sweeps, sessions, or logic that knows either consumer. What a caller needs from outside the text is
+  passed in (the cross-repo resolver of `pickable()`). Two named exceptions: the release header's
+  SYNCED FILE line names dev-cadence as the vendoring repo, and the subject parser still reads the
+  three `shiftlead: …` insert subjects written before ledgerboard existed.
 - **Public repo:** fixtures are invented, never copied from a real repo's ledger or board; no
-  person's, machine's or private repo's name in code, comments or fixtures.
+  person's or machine's name, and no private repo's contents or internal paths, in code, comments
+  or fixtures. dev-cadence is private until its public scrub (its TD-090), so links to it work only
+  for its members until then.
 - **A format change** is a PR here (spec, code and fixtures together), then a release, then each
   consumer's vendor PR — dev-cadence first, then ShiftLead's sync PR. A consumer's copy is never
   edited in place.
@@ -51,6 +56,7 @@ its expected JSON per case). Its boundary is [ShiftLead's ADR 2026-10-12](https:
 ## Commands
 
 ```bash
+# arrive with TD-001 (not yet present):
 python3 -m unittest discover -s tests   # the suite (stdlib only)
 python3 tests/run_fixtures.py           # every fixture against ledgerboard.py
 ./release.sh <x.y>                      # write the header line, commit, tag (after the PR merges)
@@ -60,7 +66,7 @@ python3 tests/run_fixtures.py           # every fixture against ledgerboard.py
 
 | Need | Where |
 |---|---|
-| The formats | `SPEC.md` |
+| The formats | `SPEC.md` (with TD-001) |
 | Why three repos, and what is whose | the ADR above |
 | How work is done here | `docs/cadence.md` (synced from dev-cadence) |
 | Open work | `docs/technical_debt.md` |
