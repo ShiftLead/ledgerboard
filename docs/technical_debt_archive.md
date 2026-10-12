@@ -10,7 +10,7 @@ Resolved entries moved from [technical_debt.md](technical_debt.md), appended in 
 **Type:** feature
 **Added:** 2026-10-12
 **Status:** Resolved 2026-10-12.
-**Resolved:** 2026-10-12 — v1.0 released (PR #2, the release PR); dev-cadence's suite passes against it (its TD-106).
+**Resolved:** 2026-10-12 (PR #3) — v1.0 released; the module was built in PR #2; dev-cadence's suite passes against it (its TD-106).
 **Location:** `ledgerboard.py`, `SPEC.md`, `fixtures/`, `tests/`, `release.sh` (all new)
 
 **Why:** the ledger and board formats are parsed twice today, once in dev-cadence's scripts and once in ShiftLead, held together by parity tests on one side; that is where the two drift. ShiftLead's ADR 2026-10-12 (*Builds*, row 1) moves the formats here so there is one parser.
