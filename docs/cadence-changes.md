@@ -12,6 +12,18 @@ Read by `scripts/cadence_changes.py --hook` (SessionStart) and by orchestrators 
 sessions already running (ShiftLead design §4.8). Written by the dev-cadence PR that changes
 the convention (cadence.md §7).
 
+## 2026-10-12 — the ledger and board formats are `scripts/ledgerboard.py`'s, vendored from ShiftLead/ledgerboard
+Do: sync before running a newer `ledger.py`, `nudge_user_attention.py` or `board_edit.py` by hand — they import it. Never add a regex for a ledger or board line elsewhere; call the module (its `SPEC.md` is the format).
+See: cadence.md §2.12, §7; TD-106.
+
+## 2026-10-12 — the worktree root is a setting: `worktree-root` in `docs/cadence.toml`
+Do: to put worktrees somewhere other than `.claude/worktrees`, set `worktree-root = "<dir>"` (relative to the clone root) — never edit a synced script; `open_worktree.sh`, the anchor guard, the hydrate scan, the workspace generator and sync's `.gitignore` line follow it. Existing worktrees are not moved.
+See: cadence.md §1.1, §9.18; TD-101.
+
+## 2026-10-12 — memory is `docs/claude-memory/` for every tool; the memory guard's Claude checks follow `agents`
+Do: tell a non-Claude session where memory lives — add the seed `AGENTS.md`'s *Durable knowledge goes in `docs/claude-memory/`* line to your map. A repo whose `agents` setting leaves out `claude` no longer gets the guard's `autoMemoryDirectory` and fallback warnings.
+See: cadence.md §7.1, §7.2, §9.18; TD-095.
+
 ## 2026-10-12 — the sweep, the cadence check and the attention report are procedures in `docs/procedures/`
 Do: run them by following `docs/procedures/stranded-work.md`, `cadence.md` and `attention.md` from any tool; Claude Code's `/stranded-work`, `/cadence` and `/attention` now only point there. List them in `AGENTS.md`'s map.
 See: cadence.md §7.4, §3.11, §4.9; TD-093.

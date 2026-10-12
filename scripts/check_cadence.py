@@ -36,7 +36,7 @@ never a fake pass):
               comment, and a late BLOCK is a plain fail, never acknowledged. A caller that acts on a repeated
               fail skips an acknowledged one (cadence §4.9).
               A tool-made board PR (cadence §4.5, TD-083) passes with no comment:
-              its title is board_edit.py's fixed message (BOARD_EDIT_MSG_RE), it
+              its title is a board edit's fixed message (ledgerboard's subject_kind), it
               touches the board alone, and its one commit — merged, a single-parent
               squash whose subject ends `(#n)`; open, the only commit past the default
               branch — is the one-item edit the direct audit's board-edit class
@@ -97,7 +97,7 @@ suffix, not the root — classified as
     stamp         only Swept:/Swept-deep: lines on docs/user_attention.md
     board-append  whole `- [ ]` items with a Due:, under a `## Needs…` heading, nothing removed
     board-edit    one item's tick (+ Closed:), Due:, Decided: or reply tails changed, under board_edit.py's fixed
-                  message (BOARD_EDIT_MSG_RE — a parity pair with board_edit.py, cadence §7)
+                  message (ledgerboard's subject() writes it and subject_kind() reads it)
     fail          anything else: landed without review (the files it touched are named)
 
 A fail there fails the run (exit 1); a window with direct commits and no PRs is not
@@ -903,11 +903,19 @@ def row_deploy(pr, root):
 # touches, and anything outside the carve-outs is a fail ("landed without review").
 BOARD = "docs/user_attention.md"
 PR_SUBJECT_RE = re.compile(r"\(#\d+\)$|^Merge pull request #\d+ ")
-# board_edit.py's fixed message (cadence §4, tool-made board edits) — a parity pair (§7)
-BOARD_EDIT_MSG_RE = re.compile(r"^\S+: (?:snooze|done|decide|reply) .+ \(session [^)]+\)$")
-STAMP_LINE_RE = re.compile(r"^(?:Swept|Swept-deep):\s")
-OPEN_ITEM_RE = re.compile(r"^\s*-\s*\[ \]\s+\S")
-ANY_ITEM_RE = re.compile(r"^(\s*-\s*)\[[ xX]\]")
+SWEEP_STAMPS = ("Swept", "Swept-deep")  # the stamp lines a sweep writes (cadence §3); their shape is ledgerboard's
+
+
+def _lb():
+    """The board format, defined once: the sibling SYNC file ledgerboard.py (ShiftLead/ledgerboard),
+    imported when a board is read — as this script imports its other siblings — so the rows that
+    read no board run without it."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import ledgerboard  # sibling SYNC file
+
+    return ledgerboard
 HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 _PR_MERGE_SHAS = set()  # merge commits of the PRs the --since listing returned
 
@@ -950,13 +958,8 @@ def _board_diff(root, sha):
 
 
 def _edit_key(line):
-    """An item line with what a tool-made edit may change taken out: the tick, the
-    Closed:, Due: and Decided: fields and the reply tails — the board reader's own item_key (cadence §7),
-    imported, never re-typed."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import nudge_user_attention as N  # sibling SYNC script, as board_edit.py imports it
-
-    return N.item_key(line)
+    """An item line with what a tool-made edit may change taken out: ledgerboard's item_key."""
+    return _lb().item_key(line)
 
 
 def classify_direct(root, sha, subject, files):
@@ -969,10 +972,10 @@ def classify_direct(root, sha, subject, files):
     removed, added = diff
     new = [a for _, a in added]
     changed = [x for x in removed + new if x.strip()]  # a stamp's first write brings a blank line
-    if changed and all(STAMP_LINE_RE.match(x) for x in changed):
+    if changed and all(_lb().is_stamp(x, SWEEP_STAMPS) for x in changed):
         return "stamp", "only the Swept:/Swept-deep: stamp lines"
     items = [(n, a) for n, a in added if a.strip()]  # blank lines may come with an append
-    if not removed and items and all(OPEN_ITEM_RE.match(a) and "Due:" in a for _, a in items):
+    if not removed and items and all(_lb().is_open_item(a) and "Due:" in a for _, a in items):
         post = (git(["show", f"{sha}:{BOARD}"], cwd=root) or "").splitlines()
         heads = []
         for n, _ in items:
@@ -981,9 +984,9 @@ def classify_direct(root, sha, subject, files):
         if all(h.startswith("## Needs") for h in heads):
             return "board-append", f"{len(items)} whole item line(s) appended under {heads[0]}"
         return "fail", "appended items outside the ## Needs section"
-    if len(removed) == 1 and len(new) == 1 and OPEN_ITEM_RE.match(removed[0]) \
-            and ANY_ITEM_RE.match(new[0]) and _edit_key(removed[0]) == _edit_key(new[0]):
-        if BOARD_EDIT_MSG_RE.match(subject):
+    if len(removed) == 1 and len(new) == 1 and _lb().is_open_item(removed[0]) \
+            and _lb().is_item(new[0]) and _edit_key(removed[0]) == _edit_key(new[0]):
+        if _lb().subject_kind(subject) == "edit":
             return "board-edit", "one item's Due:/tick/Closed:/Decided:/reply, under board_edit.py's message"
         return "fail", "a one-item board edit without board_edit.py's fixed message"
     return "fail", f"board change outside the carve-outs (-{len(removed)} +{len(new)} lines)"
@@ -998,7 +1001,7 @@ def row_board_edit_pr(pr, root):
     ends `(#n)` (a rebase merge's last commit carries no such suffix, and its earlier ones
     would go unread); open, the one commit between the default branch and the head. None
     when it is not one, or its commit is not in this clone: the ordinary review row decides."""
-    if not root or not BOARD_EDIT_MSG_RE.match(pr.get("title") or ""):
+    if not root or _lb().subject_kind(pr.get("title") or "") != "edit":
         return None
     if [f["path"] for f in pr.get("files") or []] != [BOARD]:
         return None

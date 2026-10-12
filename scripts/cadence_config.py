@@ -59,8 +59,28 @@ MACHINE_NAME = "cadence.toml"
 KEYS = {
     "review-model": ("sonnet", "the independent reviewer's model (§4.8): a cheaper model than the author's, never the same"),
     "sweep-model": ("sonnet", "the model the deep sweep's agents run on (/stranded-work deep)"),
-    "agents": ("claude", "the agent tools whose sessions the safety nets must see, comma-separated (TD-100)"),
+    "agents": ("claude", "the agent tools whose sessions the safety nets must see, comma-separated (TD-100); without claude, the memory guard skips its Claude checks (TD-095)"),
+    "worktree-root": (".claude/worktrees", "where open_worktree.sh puts worktrees, a path relative to the clone root (TD-101)"),
 }
+
+
+def _rel_dir(v: str) -> str:
+    """worktree-root: a directory inside the clone, so every reader can join it to the root."""
+    n = os.path.normpath(v.strip())
+    if os.path.isabs(n) or n == "." or n == ".." or n.startswith("../") or n.startswith("~"):
+        raise ValueError(f"must be a path inside the clone, relative to its root, not {v!r}")
+    parts = n.split("/")
+    # .git is git's; .claude itself holds settings. Glob and gitignore metacharacters would
+    # make find -path, the editor's exclude and sync's .gitignore line match more than the
+    # root, so the value is kept to plain names.
+    if parts[0] == ".git" or n == ".claude" or any(c in n for c in "*?[]\\") or any(p[:1] in ("#", "!") for p in parts):
+        raise ValueError(f"must be a plain directory path (no .git, no bare .claude, no * ? [ ] \\, no leading # or !), not {v!r}")
+    return n
+
+
+# key -> a function returning the value to use, or raising ValueError naming what is wrong.
+# `get`, every importer through resolve(), and --check all go through it.
+VALIDATE = {"worktree-root": _rel_dir}
 
 
 # The opt-outs (TD-072, moved here by TD-096): tables in the repo's file, never the machine's —
@@ -138,15 +158,24 @@ def sources(repo: str | None) -> list[tuple[str, dict]]:
 def resolve(key: str, files: list[tuple[str, dict]]) -> tuple[object, str]:
     v = (os.environ.get(env_name(key)) or "").strip()
     if v:
-        return v, "env " + env_name(key)
+        return _valid(key, v, "env " + env_name(key)), "env " + env_name(key)
     for label, table in files:
         if key in table:
             v = table[key]
             if not isinstance(v, str) or not v:
                 raise ConfigError(f"{label}: {key} must be a non-empty string, not {v!r}")
-            return v, label
+            return _valid(key, v, label), label
     default = KEYS[key][0]
     return default, "default" if default is not None else "unset"
+
+
+def _valid(key: str, v: str, label: str) -> str:
+    if key not in VALIDATE:
+        return v
+    try:
+        return VALIDATE[key](v)
+    except ValueError as e:
+        raise ConfigError(f"{label}: {key} {e}") from None
 
 
 def check(files: list[tuple[str, dict]]) -> list[str]:
@@ -165,6 +194,11 @@ def check(files: list[tuple[str, dict]]) -> list[str]:
                 problems.append(f"{label}: unknown key '{k}' — nothing reads it (known: {', '.join(KEYS)})")
             elif not isinstance(v, str) or not v:
                 problems.append(f"{label}: {k} must be a non-empty string, not {v!r}")
+            elif k in VALIDATE:
+                try:
+                    VALIDATE[k](v)
+                except ValueError as e:
+                    problems.append(f"{label}: {k} {e}")
     return problems
 
 

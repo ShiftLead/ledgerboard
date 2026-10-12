@@ -46,6 +46,7 @@ Usage:
                                # from stdin; silent unless there's a conflict
 """
 
+import functools
 import json
 import os
 import subprocess
@@ -149,6 +150,18 @@ def _occupancy_repo_root(p: Path) -> "Path | None":
     return result
 
 
+@functools.lru_cache(maxsize=None)
+def _worktree_parts(root: Path) -> tuple[str, ...]:
+    """The `worktree-root` setting as path parts (cadence_config.py, TD-101). A setting that
+    cannot be read falls back to the default: the guard degrades, it never fails here."""
+    try:
+        import cadence_config as C
+        value, _ = C.resolve("worktree-root", C.sources(str(root)))
+    except Exception:  # noqa: BLE001 — no helper, an unreadable file, an invalid value
+        value = ".claude/worktrees"
+    return Path(str(value)).parts
+
+
 def occupies(session_cwd: str, root: Path) -> bool:
     """True if a session started at session_cwd is working in ROOT's main checkout."""
     try:
@@ -159,9 +172,12 @@ def occupies(session_cwd: str, root: Path) -> bool:
         return True
     if root not in p.parents:
         return False
-    # sessions inside <root>/.claude/worktrees/<name> are isolated, not occupants
+    # sessions inside <root>/<worktree-root>/<name> are isolated, not occupants — the
+    # worktree root is the setting open_worktree.sh creates them under (TD-101). Only a
+    # fast path: a worktree anywhere else is cleared by the nested-root test below.
     rel = p.relative_to(root).parts
-    if len(rel) >= 2 and rel[0] == ".claude" and rel[1] == "worktrees":
+    wt = _worktree_parts(root)
+    if len(rel) > len(wt) and rel[: len(wt)] == wt:
         return False
     # Being UNDER root's directory is not the same as being IN root's checkout.
     # An independent repo nested in the working dir — a sibling checkout kept
