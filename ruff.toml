@@ -1,5 +1,7 @@
 # The same opt-in rules as dev-cadence, which syncs ledgerboard.py and lints its scripts with them.
 line-length = 120
+# scripts/ is dev-cadence's synced code, linted in dev-cadence; here `ledgerboard` sorts as first-party, there as a sibling.
+extend-exclude = ["scripts"]
 
 [lint]
 select = ["E4", "E7", "E9", "F", "DTZ", "PLW1510", "PLW1508", "I001"]
