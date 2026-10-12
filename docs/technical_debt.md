@@ -14,7 +14,7 @@ An entry's fields are the `**Name:** value` lines right under its heading, up to
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| TD-001 | Release v1.0: `ledgerboard.py`, `SPEC.md` and fixtures, moved out of dev-cadence's scripts | High | Open |
+| TD-001 | Release v1.0: `ledgerboard.py`, `SPEC.md` and fixtures, moved out of dev-cadence's scripts | High | Built — release pending |
 
 ---
 
@@ -23,7 +23,7 @@ An entry's fields are the `**Name:** value` lines right under its heading, up to
 **Priority:** High
 **Type:** feature
 **Added:** 2026-10-12
-**Status:** Open — being built in session `ao-dc-decouple` together with dev-cadence's vendoring entry, whose branch is this release's test bar.
+**Status:** Built (PR #2: the module, SPEC.md, fixtures, tests, CI, release.sh); open until the v1.0 release PR, which archives this entry, merges and v1.0 is tagged. dev-cadence's whole suite passes against it in its TD-106 branch.
 **Location:** `ledgerboard.py`, `SPEC.md`, `fixtures/`, `tests/`, `release.sh` (all new)
 
 **Why:** the ledger and board formats are parsed twice today, once in dev-cadence's scripts and once in ShiftLead, held together by parity tests on one side; that is where the two drift. ShiftLead's ADR 2026-10-12 (*Builds*, row 1) moves the formats here so there is one parser.
