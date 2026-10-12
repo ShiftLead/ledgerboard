@@ -101,7 +101,7 @@ back exactly what was meant:
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, replacing an earlier one;
 - **reply** appends a reply tail.
 
-A new item is composed as `- [ ] <today> (session `<name>` on <host>, or n/a) — <text>. Context:
+A new item (`item_line(text, due, today, session, host, context)`) is composed as `- [ ] <today> (session `<name>` on <host>, or n/a) — <text>. Context:
 <about>. Due: <date>.`; an answer given elsewhere (on a ledger entry) as an already decided `decide`
 item with `(person)` as its head.
 
@@ -115,5 +115,5 @@ read as appends.
 ## Versions
 
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
-A reader that meets a newer major than it knows reads nothing and says so. A release of the module
+A reader that meets a newer major than it knows reads nothing and says so (`version_problem()`, which a consumer calls before it trusts what it parsed — no parser calls it for you). A release of the module
 is `v<major>.<minor>`: a minor release reads every file the major's earlier releases wrote.

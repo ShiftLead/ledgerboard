@@ -14,6 +14,9 @@
   },
   {
    "refused": "a decision needs its words: one of the entry's answers, or what you typed"
+  },
+  {
+   "refused": "an answer may not carry Context:, Answers:, Decided: or Closed: — say it in other words"
   }
  ],
  "edits": {
@@ -122,6 +125,14 @@
    "is_sweep_stamp": true,
    "row_id": null
   },
+  "Swept: n/a": {
+   "entry_id": null,
+   "is_item": false,
+   "is_open_item": false,
+   "is_stamp": false,
+   "is_sweep_stamp": true,
+   "row_id": null
+  },
   "| TD-012 | A row | Low | Open |": {
    "entry_id": null,
    "is_item": false,
@@ -156,6 +167,9 @@
   },
   {
    "ok": "board_edit: done No session named. (session n/a)"
+  },
+  {
+   "refused": "a snooze needs its date"
   }
  ],
  "versions": [
@@ -170,6 +184,14 @@
   {
    "major": 1,
    "problem": null
+  },
+  {
+   "major": 2,
+   "problem": "this file declares Ledgerboard: 2, newer than this ledgerboard.py reads (1) — vendor a newer release; nothing was read"
+  },
+  {
+   "major": 2,
+   "problem": "this file declares Ledgerboard: 2, newer than this ledgerboard.py reads (1) — vendor a newer release; nothing was read"
   }
  ]
 }

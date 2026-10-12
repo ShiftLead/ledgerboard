@@ -61,6 +61,14 @@ class Resolver(unittest.TestCase):
         self.assertFalse(r["entries"][0]["pickable"])
 
 
+class OddResolvers(unittest.TestCase):
+    def test_odd_output_is_unresolved_never_an_error(self):
+        for got in (None, ("open",), ("a", "b", "c"), {"state": "open"}, {"why": None}, {"state": "archived", "why": None}):
+            x = L.pickable(LEDGER, "", lambda item, got=got: got)["entries"][0]["cross_repo"][0]
+            self.assertIn(x["state"], ("open", "archived", "unresolved"), got)
+            self.assertIsInstance(x["why"], str, got)
+
+
 class Check(unittest.TestCase):
     def test_a_standing_flag_is_information(self):
         bad = LEDGER.replace("**Priority:** Low", "**Priority:** Low\n**Type:** chore")

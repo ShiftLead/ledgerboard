@@ -187,11 +187,13 @@ def _resolved(item: str, resolve: Resolve | None) -> dict:
     got = resolve(item)
     if isinstance(got, Mapping):
         out = {"item": item, **got}
+    elif isinstance(got, (tuple, list)) and len(got) == 2:
+        out = {"item": item, "state": got[0], "why": got[1]}
     else:
-        state, why = got
-        out = {"item": item, "state": state, "why": why or ""}
+        return {"item": item, "state": "unresolved", "why": f"the resolver returned {got!r}"}
+    out["why"] = out.get("why") or ""
     if out.get("state") not in ("open", "archived", "unresolved"):
-        out = {**out, "state": "unresolved", "why": out.get("why") or f"the resolver said {out.get('state')!r}"}
+        out.update(state="unresolved", why=out["why"] or f"the resolver said {out.get('state')!r}")
     return out
 
 
@@ -811,6 +813,8 @@ def subject(tool: str, action: str, text: str, *, to: date | str | None = None, 
     the line without its `- [ ]`) or an `append` of it. `session` defaults to the one the item names."""
     if action not in (*EDIT_ACTIONS, "append"):
         raise Refused(f"unknown action {action}")
+    if action == "snooze" and not to:
+        raise Refused("a snooze needs its date")
     what = (f" to {to.isoformat() if isinstance(to, date) else to}" if action == "snooze"
             else f": {' '.join((answer or '').split())}" if action == "decide" else "")
     sm = SESSION_RE.search(text)
@@ -833,9 +837,11 @@ def subject_kind(line: str) -> str | None:
 
 ANY_ITEM_RE = re.compile(r"^(\s*-\s*)\[[ xX]\]")
 OPEN_ITEM_RE = re.compile(r"^\s*-\s*\[ \]\s+\S")
-# A dated preamble stamp, `Name: YYYY-MM-DD (…)`: the shape is the format's; which names a
-# consumer writes (`Swept:`, `Swept-deep:`) and what they mean are the consumer's.
-STAMP_LINE_RE = re.compile(r"^(?P<name>[A-Z][\w-]*):\s+\d{4}-\d{2}-\d{2}\b")
+# A preamble stamp, `Name: <value>` — dated, `Name: YYYY-MM-DD (…)`, when no names are given. The
+# shape is the format's; which names a consumer writes (`Swept:`, `Swept-deep:`) and what they
+# mean are the consumer's.
+STAMP_LINE_RE = re.compile(r"^(?P<name>[A-Z][\w-]*):\s")
+DATED_STAMP_RE = re.compile(r"^[A-Z][\w-]*:\s+\d{4}-\d{2}-\d{2}\b")
 _ENTRY_LINE_RE = re.compile(r"^## (TD-\d+):")
 _ROW_LINE_RE = re.compile(r"^\|\s*(TD-\d+)\s*\|")
 
@@ -863,9 +869,11 @@ def is_open_item(line: str) -> bool:
 
 
 def is_stamp(line: str, names: tuple[str, ...] | None = None) -> bool:
-    """A dated preamble stamp line; with `names`, only one of those names."""
+    """A stamp line: with `names`, any `Name: ` line of one of those names; without, a dated one."""
+    if names is None:
+        return bool(DATED_STAMP_RE.match(line))
     m = STAMP_LINE_RE.match(line)
-    return bool(m) and (names is None or m.group("name") in names)
+    return bool(m) and m.group("name") in names
 
 
 # ---------------------------------------------------------------------------------------------
@@ -877,9 +885,11 @@ VERSION_RE = re.compile(r"^Ledgerboard:\s*(\d+)\s*$", re.MULTILINE)
 
 
 def format_major(text: str) -> int:
-    """The major version a ledger or board declares on its `Ledgerboard: N` preamble line; 1 when none."""
+    """The major version a ledger or board declares on its `Ledgerboard: N` preamble line (before its
+    first entry or item); 1 when none. Nothing here calls it: a reader calls ``version_problem``
+    before it trusts what it parsed."""
     pre = COMMENT_RE.sub("", text)
-    first = re.search(r"^(?:## |\s*-\s*\[)", pre, re.MULTILINE)
+    first = re.search(r"^(?:## TD-\d+:|\s*-\s*\[[ xX]\]\s)", pre, re.MULTILINE)  # the first entry or item
     m = VERSION_RE.search(pre[: first.start() if first else len(pre)])
     return int(m.group(1)) if m else 1
 
