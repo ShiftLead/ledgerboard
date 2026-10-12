@@ -37,8 +37,7 @@ as a skill of the same name): `docs/procedures/stranded-work.md` (the periodic s
 The ledger and board formats, defined once (README). Three things live here and nothing else:
 `SPEC.md` (the formats in prose), `ledgerboard.py` (one stdlib-only module: pure functions over
 text — parse, check, edit, the commit subject of an edit), and `fixtures/` (a Markdown input and
-its expected JSON per case). **Status: pre-v1.0** — these files, the tests, CI and the commands
-below arrive with TD-001. Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md):
+its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md):
 
 - **Never in `ledgerboard.py`:** git, the network, the machine roster, forges, trackers, delivery,
   sweeps, sessions, or logic that knows either consumer. What a caller needs from outside the text is
@@ -56,10 +55,9 @@ below arrive with TD-001. Its boundary is [ShiftLead's ADR 2026-10-12](https://g
 ## Commands
 
 ```bash
-# arrive with TD-001 (not yet present):
 python3 -m unittest discover -s tests   # the suite (stdlib only)
-python3 tests/run_fixtures.py           # every fixture against ledgerboard.py
-./release.sh <x.y>                      # write the header line, commit, tag (after the PR merges)
+python3 fixtures/run.py                 # every fixture against ledgerboard.py (--check-header: a release's header)
+./release.sh <x.y>; ./release.sh --tag <x.y>   # stamp on a branch and PR it; tag once it merges
 ```
 
 ## Documentation map
