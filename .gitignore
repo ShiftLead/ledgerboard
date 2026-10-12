@@ -1,0 +1,4 @@
+docs/session_index.md
+.claude/settings.local.json
+.claude/worktrees/
+*.code-workspace
