@@ -14,9 +14,31 @@ An entry's fields are the `**Name:** value` lines right under its heading, up to
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
+| TD-002 | Board items have no identifier: a person quotes an item's text to refer to it, and a reword loses the reference | Medium | Open |
 
 ---
 
+
+## TD-002: Board items have no identifier: a person quotes an item's text to refer to it, and a reword loses the reference
+
+**Priority:** Medium
+**Type:** feature
+**Added:** 2026-10-12 (ShiftLead's ao-paul, at Paul's ask)
+**Status:** Open
+**Location:** `SPEC.md` *The board* (an item, the item key, *Edits*: `item_line`); `ledgerboard.py` (the item parser, `item_line`, the edits' find); the fixtures
+
+**Why:** Paul, 2026-10-12: *should we add identifiers to the user attention items — that way I don't have to quote it to reference it?* A ledger entry has `TD-NNN` and ShiftLead's mail has an id, but a board item has only its date, its head and its words. To point a session at an item, or ask about one in chat, the person pastes its text; and a consumer finds the item for an edit by its text (ShiftLead's `board.py` `_find`: the line number, then the whole line), so an item reworded since it was read is refused as moved. The format is this repo's (ShiftLead's ADR 2026-10-12), so the id is defined here and both consumers read it with no parser of their own.
+
+**Fix:**
+- Define the id: a short written token, e.g. `UA-12`, numbered per board in order and never reused (the board's archive included), placed in a fixed spot on the item (after the checkbox and kind, before the date, is one candidate). Written at creation by `item_line`, which needs the next number from the board and its archive.
+- The item key: the SPEC says a key's shape for a given line is part of the format and changing it is a new major. An item written with an id keeps the id in its key (stable, since replies, `Decided:` and `Closed:` are already outside the key); an item written before it has no id and its key is unchanged, so **no backfill** of existing items, and v1 readers must still read a line that carries one (a minor release only if an older v1 reader tolerates the token; otherwise this is v2 — decide which and say it in *Versions*).
+- The edits: find an item by its id first, then as today; `snooze`, `done`, `decide` and `reply` take an id.
+- Fixtures: an item with an id, one without, an id on a closed item, a duplicated id (reported).
+- Done when a new item carries an id, every edit can address an item by it, old items read and edit as before, and the release is tagged for the consumers to vendor.
+
+**Related:** ShiftLead TD-603 (draws and accepts the id: the Inbox, the Due strip, `board_reply`), ShiftLead TD-584/TD-585 (vendoring ledgerboard), dev-cadence TD-106 (dev-cadence's vendoring; its `board_edit.py` and nudge hook print the id once vendored).
+
+---
 
 <!-- Entry template:
 
