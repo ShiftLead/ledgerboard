@@ -5,7 +5,8 @@
   "2026-01-05 (session s-1) — **First**, then **second**. Due: 2026-01-20.": "First",
   "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.": "Spread over space",
   "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head": null,
-  "decide 2026-01-05 (session s-1) — Pick one. Context: TD-004. Due: 2026-01-20. Answers: a | b.": null
+  "decide 2026-01-05 (session s-1) — Pick one. Context: TD-004. Due: 2026-01-20. Answers: a | b.": null,
+  "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b.": "a"
  },
  "compose": [
   {
@@ -86,6 +87,9 @@
   },
   "no-form-offered": {
    "ok": null
+  },
+  "placeholder-only": {
+   "refused": "Not right needs its words: say what is off"
   },
   "prefix-only": {
    "refused": "Not right needs its words: say what is off"

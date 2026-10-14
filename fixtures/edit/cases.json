@@ -205,7 +205,8 @@
     "2026-01-05 (session s-1) — **First**, then **second**. Due: 2026-01-20.",
     "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head",
     "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.",
-    "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20."
+    "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20.",
+    "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b."
   ],
   "not_right_forms": [
     "Not right: <what>",
@@ -268,6 +269,14 @@
     {
       "name": "empty",
       "said": "",
+      "offered": [
+        "Works",
+        "Not right: <what>"
+      ]
+    },
+    {
+      "name": "placeholder-only",
+      "said": "Not right: <b>",
       "offered": [
         "Works",
         "Not right: <what>"
