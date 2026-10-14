@@ -73,8 +73,16 @@ cannot read (`Due: 2026-1-9`) is reported, never silently undated.
 line's end, in this order:
 - `Answers: a | b (default).` — the proposed answers, `\|` for a literal bar; at most one marked
   ` (default)`, the asker's recommendation. A `look` carries exactly `Answers: Works | Not right: <what>.`
+  Its second answer is a **form**, whose slot is the person's words: an offered answer is the form when
+  it is `Not right:` alone or followed by one `<…>` placeholder (whitespace collapsed, case as written);
+  `Not right: wrong repo` is a complete answer like any other. An answer given to a form fills it when
+  it starts `Not right:` and says more than the form; one that says nothing more is refused.
 - `Decided: <text> (YYYY-MM-DD).` — the person's answer. A decided item stays open and due; it now
   waits on whoever acts on it, not on the person.
+
+**The bold head** — an item's first `**…**` run, whitespace collapsed, read outside its replies'
+words, is its title where it has one. A line with none has no bold head; what stands in for it is the
+consumer's.
 
 **Replies** — ` — <name>, YYYY-MM-DD: <words>` after the `Due:` and ahead of the trailing fields,
 any number in a row. A reply's words never carry `Context:`, `Answers:`, `Decided:` or `Closed:`,
