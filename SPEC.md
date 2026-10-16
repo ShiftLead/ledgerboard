@@ -67,8 +67,9 @@ Type's index in pick order (`0` debt, `1` feature), its id number zero-padded to
 a caller orders entries of several repos together, the repo's name — joined by `|`
 (`2|0|000642|shiftlead`; `implicit_key()`). Two undragged neighbours always have room between them.
 `midpoint(a, b)` returns a key strictly between two keys, either end open (None); it writes digits
-and lower-case letters after a shared prefix (a `|` only where nothing else fits) and never ends a
-key in `0`, so there is room again. It refuses keys out of order and a pair with no key between
+and lower-case letters after a shared prefix (a `|` only where nothing else fits), and a key it
+writes past the prefix never ends in `0`, so there is room again (one that only follows `b`'s own
+characters may). It refuses keys out of order and a pair with no key between
 them — `a` against `a` followed by `|`s alone, or nothing against `0` (a key starts with a letter or
 digit, so none sorts below `0`).
 

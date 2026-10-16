@@ -374,7 +374,7 @@ def implicit_key(priority: str | None, etype: str | None, tid: str, repo: str = 
 
 def midpoint(a: str | None, b: str | None) -> str:
     """A key strictly between ``a`` and ``b`` (None: that end is open), written from KEY_DIGITS
-    after a shared prefix, never ending in the lowest digit — so there is always room again."""
+    after a shared prefix, never ending in the lowest digit it writes — so there is room again."""
     for k in (a, b):
         if k is not None and not KEY_RE.match(k):
             raise Refused(f"not a key: {k!r}")
