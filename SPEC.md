@@ -54,22 +54,23 @@ The rank is a person's order of a ledger's entries; it is the pick order.
 
 **Cards.** A ledger's entries fall into **cards**: the connected components of its entries over
 their `Blocked by` ids (the ids before any `decision (…)`), joined in both directions
-(`components()`). An id an entry names that is not among the entries read — an archived or unknown
+(`components()`); ids match by number, as a blocker does (`TD-7` is `TD-007`). An id an entry names that is not among the entries read — an archived or unknown
 one — is listed with the card but is not a member and joins nothing; a `<repo>#TD-NNN` id is listed
 for a caller to join cards across repos. The same rule reads an archive.
 
 **Keys.** Every open entry has a key, a string compared character by character in code point order,
 except that `|`, the separator, sorts below every other character (`key_order()`); a shorter key that
 is a prefix of a longer one sorts first. A key starts with a letter or digit and holds letters,
-digits, `|`, `_`, `.`, `/` and `-`. An entry's key is its line in the rank file when it has one,
+digits, `|`, `_`, `.`, `/` and `-` (ASCII only). An entry's key is its line in the rank file when it has one,
 else its **implicit key**: its Priority's band (`1` High, `2` Medium, `3` Low, `4` anything else), its
 Type's index in pick order (`0` debt, `1` feature), its id number zero-padded to six digits, and, where
 a caller orders entries of several repos together, the repo's name — joined by `|`
 (`2|0|000642|shiftlead`; `implicit_key()`). Two undragged neighbours always have room between them.
 `midpoint(a, b)` returns a key strictly between two keys, either end open (None); it writes digits
 and lower-case letters after a shared prefix (a `|` only where nothing else fits) and never ends a
-key in `0`, so there is room again. It refuses keys out of order, and `a` against `a` followed by
-nothing but `|`s, which has nothing between.
+key in `0`, so there is room again. It refuses keys out of order and a pair with no key between
+them — `a` against `a` followed by `|`s alone, or nothing against `0` (a key starts with a letter or
+digit, so none sorts below `0`).
 
 **A card's key** is the best (lowest) key among its members that have a line, when any has one,
 else the best implicit key among them. So a card the person placed keeps its place: a Priority edit
@@ -84,7 +85,7 @@ YAML-shaped but read only through `rank()`, which takes every key as a string (`
 number). The reader flags a line it cannot read and a repeated id (⚠, the first line holds), and a
 blank line, a comment below the first entry, or a line out of key order (ℹ). The writer
 (`set_rank()`) sets or removes the given ids' lines, places a new line at its key's place, and keeps
-every other line byte for byte. A line for an archived entry is ignored — only open members carry a
+every other line byte for byte (a new line takes the file's own line ending). A line for an archived entry is ignored — only open members carry a
 card's key — and harmless until its card is wholly archived.
 
 **Rank writes** are made by a tool, each in a commit (and PR) that changes the rank file alone,

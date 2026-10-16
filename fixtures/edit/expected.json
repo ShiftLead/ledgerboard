@@ -260,6 +260,15 @@
   },
   {
    "refused": "not a key: '|a'"
+  },
+  {
+   "refused": "no key between None and '0'"
+  },
+  {
+   "ok": "a|0"
+  },
+  {
+   "ok": "0|0"
   }
  ],
  "not_right_fills": {
@@ -456,6 +465,12 @@
   },
   {
    "refused": "not a key: '|0'"
+  },
+  {
+   "ok": "# c\r\nTD-1: 0z\r\nTD-2: 1a\r\n"
+  },
+  {
+   "refused": "not a key: 'é'"
   }
  ],
  "subject_kinds": {

@@ -176,6 +176,18 @@ class Rank(unittest.TestCase):
         self.assertEqual([c["ids"] for c in comps], [["TD-001", "TD-005"], ["TD-002", "TD-003"], ["TD-004"]])
         self.assertEqual(comps[0]["cross_repo"], ["x#TD-9"])
 
+    def test_review_findings(self):  # ledgerboard#13's review: each a failing input before its fix
+        with self.assertRaises(L.Refused):
+            L.midpoint(None, "0")  # nothing sorts below 0; never the invalid "|i"
+        self.assertEqual(L.midpoint("a", "a|0|"), "a|0")
+        self.assertEqual(L.set_rank("# c\r\nTD-001: 1\r\n", {"TD-001": "2"}), "# c\r\nTD-001: 2\r\n")
+        self.assertEqual(L.set_rank("# c\r\nTD-001: 1\r\n", {"TD-002": "2"}), "# c\r\nTD-001: 1\r\nTD-002: 2\r\n")
+        with self.assertRaises(L.Refused):
+            L.set_rank("", {"TD-002": "\u00e9"})
+        led = "## TD-7: low\n\n**Priority:** Low\n\n## TD-008: high\n\n**Priority:** High\n**Blocked by:** TD-007\n"
+        self.assertEqual(_order(led), ["TD-7", "TD-008"])
+        self.assertEqual(L.pickable(led, "", rank_text="TD-0007: 0h\n")["entries"][0]["key"], "0h")
+
 
 class Header(unittest.TestCase):
     def test_check_header(self):

@@ -233,7 +233,10 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
     flags = _Flags()
     for text in decl_flags:
         flags.add(text, None, "fields", "fields-decl")
-    lined, rank_flags = rank(rank_text or "")
+    lines, rank_flags = rank(rank_text or "")
+    lined = {}
+    for t, k in lines.items():
+        lined.setdefault(_num(t), k)  # by number: a line for TD-7 is TD-007's
     for text in rank_flags:
         flags.add(text, None, "rank", "rank")
     keys: dict[str, str] = {}
@@ -259,7 +262,7 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                 if key not in CADENCE_FIELDS and key not in vocab:
                     flags.add(f"ℹ {e['id']}: field {key!r} has no vocabulary on the preamble's Fields: line — "
                               "not validated; declare it (cadence.md §2.12)", e["id"], key, "undeclared-field")
-        keys.setdefault(e["id"], lined.get(e["id"]) or implicit_key(prio, etype, e["id"], repo))
+        keys.setdefault(e["id"], lined.get(n) or implicit_key(prio, etype, e["id"], repo))
         rec = {"id": e["id"], "title": e["title"], "priority": prio, "type": etype,
                "blocked_by": [], "cross_repo": [], "pickable": True, "fields": e["fields"],
                "key": keys[e["id"]], "card_key": ""}
@@ -338,7 +341,7 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
 # ---------------------------------------------------------------------------------------------
 
 RANK_LINE_RE = re.compile(r"^(TD-\d+):[ \t]+(\S+)[ \t]*$")
-KEY_RE = re.compile(r"^[0-9A-Za-z][|\w./-]*$")  # never a leading `|`; the rest of a repo name may ride along
+KEY_RE = re.compile(r"^[0-9A-Za-z][|\w./-]*$", re.ASCII)  # never a leading `|`; the rest of a repo name may ride along
 KEY_SEP = "|"  # the lowest character of the key order, below every other
 KEY_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"  # what midpoint() writes, in key order
 BANDS = {"high": "1", "medium": "2", "low": "3"}  # an implicit key's first component; anything else is 4
@@ -378,12 +381,14 @@ def midpoint(a: str | None, b: str | None) -> str:
     lo, hi = a or "", b
     if hi is not None and key_order(lo) >= key_order(hi):
         raise Refused(f"no key between {a!r} and {b!r}: they are not in order")
-    out, i = [], 0
+    out, i, between = [], 0, None
     while True:
         ca = lo[i] if i < len(lo) else None
         cb = hi[i] if hi is not None and i < len(hi) else None
         if hi is not None and cb is None:
-            raise Refused(f"no key between {a!r} and {b!r}")  # only when b is a followed by `|`s alone
+            if between:  # b ran out while it was followed: the longest prefix of b above a is between
+                return between
+            raise Refused(f"no key between {a!r} and {b!r}")
         if ca is not None and ca == cb:
             out.append(ca)
             i += 1
@@ -399,8 +404,10 @@ def midpoint(a: str | None, b: str | None) -> str:
         elif ord(KEY_DIGITS[0]) < high:  # below b's character only the lowest digit fits: take it, b is passed
             out.append(KEY_DIGITS[0])
             hi = None
-        elif cb == KEY_DIGITS[0] and i + 1 < len(hi) or cb == KEY_SEP:  # follow b and go deeper
+        elif cb == KEY_DIGITS[0] and i + 1 < len(hi) or cb == KEY_SEP or not out:  # follow b and go deeper
             out.append(cb)
+            if len(out) > len(lo) and KEY_RE.match("".join(out)) and "".join(out) != hi:
+                between = "".join(out)  # a proper prefix of b, longer than a: a fallback when b runs out
         else:  # the separator, the lowest character, is below b's: take it, b is passed
             out.append(KEY_SEP)
             hi = None
@@ -444,23 +451,24 @@ def set_rank(text: str, lines: Mapping[str, str | None]) -> str:
             raise Refused(f"not an entry id: {tid!r}")
         if key is not None and not KEY_RE.match(key):
             raise Refused(f"not a key: {key!r}")
-    src = text.splitlines(keepends=True) if text else [ln + "\n" for ln in RANK_HEADER.splitlines()]
+    nl = "\r\n" if "\r\n" in text else "\n"  # a new line takes the file's own ending
+    src = text.splitlines(keepends=True) if text else [ln + nl for ln in RANK_HEADER.splitlines()]
     if src and not src[-1].endswith("\n"):
-        src[-1] += "\n"
+        src[-1] += nl
     kept = []
     for line in src:
-        m = RANK_LINE_RE.match(line.rstrip("\n"))
+        m = RANK_LINE_RE.match(line.rstrip("\r\n"))
         if not (m and m.group(1) in lines):
             kept.append(line)
     for tid, key in sorted(((t, k) for t, k in lines.items() if k is not None),
                            key=lambda tk: (key_order(tk[1]), _num(tk[0]))):
         at = len(kept)
         for j, line in enumerate(kept):
-            m = RANK_LINE_RE.match(line.rstrip("\n"))
+            m = RANK_LINE_RE.match(line.rstrip("\r\n"))
             if m and (key_order(m.group(2)), _num(m.group(1))) > (key_order(key), _num(tid)):
                 at = j
                 break
-        kept.insert(at, f"{tid}: {key}\n")
+        kept.insert(at, f"{tid}: {key}{nl}")
     out = "".join(kept)
     got, _ = rank(out)
     want = {t: k for t, k in lines.items() if k is not None}
@@ -476,7 +484,9 @@ def components(ents: list[dict]) -> list[dict]:
     joins nothing), and the ``<repo>#TD-NNN`` ids they name, for a caller to join across repos.
     Components are in the file order of their first member."""
     order = [e["id"] for e in ents]
-    present = set(order)
+    present: dict[int, str] = {}  # by number, as pickable() reads a blocker: TD-7 is TD-007
+    for t in order:
+        present.setdefault(_num(t), t)
     parent = {t: t for t in order}
 
     def find(t: str) -> str:
@@ -491,9 +501,9 @@ def components(ents: list[dict]) -> list[dict]:
         for b in ids:
             if "#" in b:
                 xrepo.append(b)
-            elif b in present:
-                if b != e["id"]:
-                    parent[find(b)] = find(e["id"])
+            elif _num(b) in present:
+                if _num(b) != _num(e["id"]):
+                    parent[find(present[_num(b)])] = find(e["id"])
             else:
                 others.append(b)
         named[e["id"]] = (others, xrepo)
@@ -508,7 +518,7 @@ def components(ents: list[dict]) -> list[dict]:
     return list(groups.values())
 
 
-def _card_order(live: list[dict], keys: dict[str, str], lined: dict[str, str]) -> dict[str, tuple[tuple, str]]:
+def _card_order(live: list[dict], keys: dict[str, str], lined: dict[int, str]) -> dict[str, tuple[tuple, str]]:
     """Each live entry's (sort value, card key). The card key is the best lined key among the card's
     members when any has a line, else the best implicit key; the sort value is that key, the card's
     lowest id, then the entry's place in the card — after every member it is blocked by, else by key."""
@@ -516,10 +526,12 @@ def _card_order(live: list[dict], keys: dict[str, str], lined: dict[str, str]) -
     raw = {e["id"]: e["blocked_raw"] for e in live}
     for comp in components(live):
         ids = comp["ids"]
-        card = min((keys[t] for t in ids if t in lined), key=key_order, default=None) \
+        card = min((keys[t] for t in ids if _num(t) in lined), key=key_order, default=None) \
             or min((keys[t] for t in ids), key=key_order)
         low = min(_num(t) for t in ids)
-        deps = {t: {b for b in parse_blocked(raw[t] or "")[0] if b in ids and b != t} for t in ids}
+        num = {_num(t): t for t in ids}
+        deps = {t: {num[_num(b)] for b in parse_blocked(raw[t] or "")[0]
+                    if "#" not in b and _num(b) in num and num[_num(b)] != t} for t in ids}
         left, pos = set(ids), 0
         while left:
             ready = [t for t in left if not deps[t] & left] or list(left)  # a cycle: key order breaks it
