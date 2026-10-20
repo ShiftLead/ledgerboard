@@ -121,7 +121,12 @@ cannot read (`Due: 2026-1-9`) is reported, never silently undated.
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
 line's end, in this order:
 - `Answers: a | b (default).` — the proposed answers, `\|` for a literal bar; at most one marked
-  ` (default)`, the asker's recommendation. A `look` carries exactly `Answers: Works | Not right: <what>.`
+  ` (default)`, the asker's recommendation. An answer may say what it leads to after its first
+  ` — ` (space, em dash, space): `<label> (default) — <consequence>`. The **label** is the answer —
+  what a press sends and `Decided:` records; the mark ends the label; the consequence is the rest
+  (a later ` — ` is part of it), read beside the labels (`parse_consequences()`, `""` for an answer
+  that says none). A dashless answer is all label, as before v1.3, and a mark at the very end of an
+  answer with a consequence (`a — b (default)`) still marks its label. A `look` carries exactly `Answers: Works | Not right: <what>.`
   Its second answer is a **form**, whose slot is the person's words: an offered answer is the form when
   it is `Not right:` alone or followed by one `<…>` placeholder (whitespace collapsed, case as written);
   `Not right: wrong repo` is a complete answer like any other. An answer given to a form fills it when

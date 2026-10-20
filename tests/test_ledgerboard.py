@@ -212,3 +212,28 @@ class Fixtures(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AnswerConsequences(unittest.TestCase):
+    LINE = ("- [ ] decide 2026-01-05 (session s-1) — Pick. Context: TD-040. Due: 2026-01-20. "
+            "Answers: On disk (default) — the next run reads it back | In memory — cold — every time | Not now.")
+
+    def test_labels_consequences_and_the_default_are_read_apart(self):
+        text = self.LINE[len("- [ ] "):]
+        self.assertEqual(L.parse_answers(text), ["On disk", "In memory", "Not now"])
+        self.assertEqual(L.parse_consequences(text), ["the next run reads it back", "cold — every time", ""])
+        self.assertEqual(L.parse_default(text), "On disk")
+
+    def test_decided_line_reads_back_as_written(self):
+        line = L.decided_line("Pick", "TD-40", ["On disk — the next run reads it back", "Not now"], 0, "On disk", "2026-01-15")
+        text = line[len("- [ ] "):].rstrip("\n")
+        self.assertEqual(L.parse_answers(text), ["On disk", "Not now"])
+        self.assertEqual(L.parse_consequences(text), ["the next run reads it back", ""])
+        self.assertEqual(L.parse_default(text), "On disk")
+
+    def test_a_decide_edit_records_the_label_and_keeps_the_consequences(self):
+        out = L.edit_line(self.LINE, "decide", answer="In memory", today=date(2026, 1, 15))
+        text = out[len("- [ ] "):].rstrip("\n")
+        self.assertEqual(L.parse_decided(text), ("In memory", date(2026, 1, 15)))
+        self.assertEqual(L.parse_consequences(text), ["the next run reads it back", "cold — every time", ""])
+        self.assertEqual(L.item_key(out), L.item_key(self.LINE))
