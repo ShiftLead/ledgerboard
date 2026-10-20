@@ -210,9 +210,6 @@ class Fixtures(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class AnswerConsequences(unittest.TestCase):
     LINE = ("- [ ] decide 2026-01-05 (session s-1) — Pick. Context: TD-040. Due: 2026-01-20. "
@@ -237,3 +234,36 @@ class AnswerConsequences(unittest.TestCase):
         self.assertEqual(L.parse_decided(text), ("In memory", date(2026, 1, 15)))
         self.assertEqual(L.parse_consequences(text), ["the next run reads it back", "cold — every time", ""])
         self.assertEqual(L.item_key(out), L.item_key(self.LINE))
+
+    def test_spacing_around_a_consequence_is_not_part_of_it(self):
+        self.assertEqual(L.split_answer("A —   leads on  "), ("A", "leads on", False))
+        self.assertEqual(L.split_answer("A (default) — x"), ("A", "x", True))
+        self.assertEqual(L.split_answer("A — x (default)"), ("A", "x", True))  # marked whole, as before v1.3
+        self.assertEqual(L.split_answer("B —"), ("B", "", False))
+
+    def test_deciding_the_default_keeps_its_mark_and_consequence(self):
+        out = L.edit_line(self.LINE, "decide", answer="On disk", today=date(2026, 1, 15))
+        text = out[len("- [ ] "):].rstrip("\n")
+        self.assertEqual(L.parse_decided(text), ("On disk", date(2026, 1, 15)))
+        self.assertEqual(L.parse_default(text), "On disk")
+        self.assertEqual(L.parse_consequences(text)[0], "the next run reads it back")
+
+    def test_a_consequence_shaped_like_a_reply_is_not_a_reply(self):
+        text = "2026-01-05 (session s-1) — Pick. Due: 2026-01-20. Answers: A (default) — Sam, 2026-01-01: yes | B."
+        self.assertEqual(L.parse_replies(text), [])
+        self.assertEqual(L.parse_consequences(text), ["Sam, 2026-01-01: yes", ""])
+        out = L.edit_line("- [ ] " + text, "reply", reply="later", by="Kim", today=date(2026, 1, 15))
+        self.assertEqual(L.parse_replies(out[len("- [ ] "):].rstrip("\n")), [("Kim", "2026-01-15", "later.")])
+
+    def test_a_look_reads_its_labels_with_consequences_beside(self):
+        text = "look 2026-01-05 (session s-1) — Renders? Due: 2026-01-20. Answers: Works — ship it | Not right: <what> — fix first."
+        self.assertEqual(L.parse_answers(text), ["Works", "Not right: <what>"])
+        self.assertTrue(L.is_not_right_form(L.parse_answers(text)[1]))
+
+    def test_decided_line_writes_one_mark_and_no_empty_consequence(self):
+        line = L.decided_line("Pick", "TD-40", ["A — x (default)", "B — ", "C"], 0, "A", "2026-01-15")
+        self.assertIn("Answers: A (default) — x | B | C.", line)
+
+
+if __name__ == "__main__":
+    unittest.main()

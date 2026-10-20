@@ -620,6 +620,8 @@ def split_answer(answer: str) -> tuple[str, str, bool]:
     marked before v1.3."""
     label, sep, cons = answer.partition(CONSEQUENCE_SEP)
     label, cons = label.strip(), cons.strip()
+    if not sep and label.endswith(CONSEQUENCE_SEP.rstrip()):
+        label = label[: -len(CONSEQUENCE_SEP.rstrip())].rstrip() or label  # `B —`: an empty consequence
     marked = bool(DEFAULT_MARK_RE.search(label))
     if marked:
         label = DEFAULT_MARK_RE.sub("", label) or label
@@ -663,7 +665,10 @@ def reply_span(text: str) -> tuple[int, int] | None:
     after its Due: to its trailing Answers:/Decided:/Closed: fields, or the line's end. Read
     only after the Due: — prose shaped like a reply before it is the item's own."""
     due = DUE_RE.search(text)  # the item's own Due: is its first, as _trailer reads it — a reply may name one
-    m = REPLY_TAIL_RE.search(text, due.end() if due else 0)
+    # a reply sits ahead of the trailing fields: a consequence shaped like one (`A — Sam,
+    # 2026-01-01: yes`) is part of its answer, never a reply
+    at = _trailing_field_start(text, after_due=True)
+    m = REPLY_TAIL_RE.search(text, due.end() if due else 0, len(text) if at is None else at)
     if m is None:
         return None
     ends = [f.start() for f in (r.search(text, m.end()) for r in (ANSWERS_RE, DECIDED_RE, CLOSED_RE)) if f]
@@ -977,6 +982,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
                 new = f"{body[:at].rstrip()} Due: {to.isoformat()}. {body[at:]}"
         got = parse_board(new, warn=False)
         if not got or got[0].due != to or got[0].answers != parse_answers(text) \
+                or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
                 or got[0].decided != parse_decided(text):
             raise Refused(f"after the edit the reader does not read Due: {to.isoformat()} "
                           "with the item's other fields unchanged")
@@ -995,6 +1001,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
             new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} {fld}"
         got = parse_board(new, warn=False)
         if not got or got[0].decided != (answer, today) or got[0].answers != parse_answers(text) \
+                or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
                 or got[0].due != parse_board(body, warn=False)[0].due:
             raise Refused(f"the reader would not read back 'Decided: {answer}' with the item's "
                           "other fields unchanged — rephrase the answer")
@@ -1020,7 +1027,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
             new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} {body[at:]}"
         was, got = parse_board(body, warn=False)[0], parse_board(new, warn=False)
         replies = parse_replies(new)
-        if not got or (got[0].due, got[0].answers, got[0].decided) != (was.due, was.answers, was.decided) \
+        if not got or (got[0].due, got[0].answers, got[0].consequences, got[0].decided) \
+                != (was.due, was.answers, was.consequences, was.decided) \
                 or parse_default(got[0].text) != parse_default(text) \
                 or item_refs(got[0].text) != item_refs(text) \
                 or replies[:-1] != parse_replies(body) or not replies \
@@ -1064,8 +1072,8 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
     if FIELD_NAME_RE.search(said):
         raise Refused("an answer may not carry Context:, Answers:, Decided: or Closed: — say it in other words")
     def opt(a: str, marked: bool) -> str:
-        label, sep, cons = ANY_FIELD_RE.sub(r"\1", " ".join(str(a).split())).replace("|", "\\|").partition(CONSEQUENCE_SEP)
-        return label + (" (default)" if marked else "") + sep + cons
+        label, cons, _ = split_answer(ANY_FIELD_RE.sub(r"\1", " ".join(str(a).split())).replace("|", "\\|"))
+        return label + (" (default)" if marked else "") + (CONSEQUENCE_SEP + cons if cons else "")
     opts = [opt(a, i == default) for i, a in enumerate(answers or ()) if str(a).strip()]
     tail = f" Answers: {' | '.join(opts)}." if opts else ""
     body = f"decide {today} (person) — {_sentence(head)} Context: {ref}. Due: {today}.{tail} Decided: {said} ({today})."

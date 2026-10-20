@@ -123,10 +123,12 @@ line's end, in this order:
 - `Answers: a | b (default).` — the proposed answers, `\|` for a literal bar; at most one marked
   ` (default)`, the asker's recommendation. An answer may say what it leads to after its first
   ` — ` (space, em dash, space): `<label> (default) — <consequence>`. The **label** is the answer —
-  what a press sends and `Decided:` records; the mark ends the label; the consequence is the rest
-  (a later ` — ` is part of it), read beside the labels (`parse_consequences()`, `""` for an answer
-  that says none). A dashless answer is all label, as before v1.3, and a mark at the very end of an
-  answer with a consequence (`a — b (default)`) still marks its label. A `look` carries exactly `Answers: Works | Not right: <what>.`
+  what a press sends and `Decided:` records — and the mark ends it; the **consequence** is the
+  rest, a later ` — ` included, read beside the labels (`parse_consequences()`, `""` for an answer
+  that says none; `B —` is the label `B`). A dashless answer is all label, and a mark at the very
+  end of an answer with a consequence (`a — b (default)`) still marks its label. A consequence
+  shaped like a reply is part of its answer, never a reply.
+  A `look` carries exactly `Answers: Works | Not right: <what>.`
   Its second answer is a **form**, whose slot is the person's words: an offered answer is the form when
   it is `Not right:` alone or followed by one `<…>` placeholder (whitespace collapsed, case as written);
   `Not right: wrong repo` is a complete answer like any other. An answer given to a form fills it when
@@ -181,3 +183,9 @@ read as appends.
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
 A reader that meets a newer major than it knows reads nothing and says so (`version_problem()`, which a consumer calls before it trusts what it parsed — no parser calls it for you). A release of the module
 is `v<major>.<minor>`: a minor release reads every file the major's earlier releases wrote.
+**v1.3 reads one thing differently:** an answer whose own text held ` — ` was one answer before
+v1.3 and is now a label and a consequence — `Keep — nothing changes` was the answer `Keep — nothing
+changes` and is now the label `Keep`, so a `Decided:` written from the old answer no longer
+equals a label, and a mark written mid-answer (`A (default) — x | B (default)`) now counts as a
+second mark. The item key is unchanged. A board that wrote such answers re-reads them; one with
+no ` — ` inside an answer reads exactly as before.
