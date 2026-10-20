@@ -665,10 +665,7 @@ def reply_span(text: str) -> tuple[int, int] | None:
     after its Due: to its trailing Answers:/Decided:/Closed: fields, or the line's end. Read
     only after the Due: — prose shaped like a reply before it is the item's own."""
     due = DUE_RE.search(text)  # the item's own Due: is its first, as _trailer reads it — a reply may name one
-    # a reply sits ahead of the trailing fields: a consequence shaped like one (`A — Sam,
-    # 2026-01-01: yes`) is part of its answer, never a reply
-    at = _trailing_field_start(text, after_due=True)
-    m = REPLY_TAIL_RE.search(text, due.end() if due else 0, len(text) if at is None else at)
+    m = REPLY_TAIL_RE.search(text, due.end() if due else 0)
     if m is None:
         return None
     ends = [f.start() for f in (r.search(text, m.end()) for r in (ANSWERS_RE, DECIDED_RE, CLOSED_RE)) if f]
@@ -1071,6 +1068,8 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
         raise Refused("a decision needs its words: one of the entry's answers, or what you typed")
     if FIELD_NAME_RE.search(said):
         raise Refused("an answer may not carry Context:, Answers:, Decided: or Closed: — say it in other words")
+    if any(REPLY_TAIL_RE.search(" ".join(str(a).split())) for a in answers or ()):
+        raise Refused("an answer's consequence may not read as a reply (` — <name>, <date>: `) — say it in other words")
     def opt(a: str, marked: bool) -> str:
         label, cons, _ = split_answer(ANY_FIELD_RE.sub(r"\1", " ".join(str(a).split())).replace("|", "\\|"))
         return label + (" (default)" if marked else "") + (CONSEQUENCE_SEP + cons if cons else "")

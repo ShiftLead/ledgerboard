@@ -248,12 +248,9 @@ class AnswerConsequences(unittest.TestCase):
         self.assertEqual(L.parse_default(text), "On disk")
         self.assertEqual(L.parse_consequences(text)[0], "the next run reads it back")
 
-    def test_a_consequence_shaped_like_a_reply_is_not_a_reply(self):
-        text = "2026-01-05 (session s-1) — Pick. Due: 2026-01-20. Answers: A (default) — Sam, 2026-01-01: yes | B."
-        self.assertEqual(L.parse_replies(text), [])
-        self.assertEqual(L.parse_consequences(text), ["Sam, 2026-01-01: yes", ""])
-        out = L.edit_line("- [ ] " + text, "reply", reply="later", by="Kim", today=date(2026, 1, 15))
-        self.assertEqual(L.parse_replies(out[len("- [ ] "):].rstrip("\n")), [("Kim", "2026-01-15", "later.")])
+    def test_decided_line_refuses_a_consequence_shaped_like_a_reply(self):
+        with self.assertRaises(L.Refused):
+            L.decided_line("Pick", "TD-40", ["A — Sam, 2026-01-01: yes", "B"], 0, "A", "2026-01-15")
 
     def test_a_look_reads_its_labels_with_consequences_beside(self):
         text = "look 2026-01-05 (session s-1) — Renders? Due: 2026-01-20. Answers: Works — ship it | Not right: <what> — fix first."
