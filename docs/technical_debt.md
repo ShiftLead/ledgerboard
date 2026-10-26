@@ -14,6 +14,7 @@ An entry's fields are the `**Name:** value` lines right under its heading, up to
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
+| TD-003 | PRs are checked by GitHub Actions, whose minutes the account's repos share and which have stopped: gate on a local `precheck` | Medium | Open — decided 2026-10-26 (Paul: every repo moves to precheck) |
 
 ---
 
@@ -35,3 +36,16 @@ An entry's fields are the `**Name:** value` lines right under its heading, up to
 
 **Related:** other TDs, PRs, decision docs.
 -->
+
+## TD-003: PRs are checked by GitHub Actions, whose minutes the account's repos share and which have stopped: gate on a local `precheck`
+
+**Priority:** Medium
+**Added:** 2026-10-26 (Paul; drafted by session `memory-vs-cadence`)
+**Status:** Open
+**Location:** `.github/workflows/ci.yml` (`on: pull_request`, push to `main`, tags `v*`); `docs/cadence.toml` (no `precheck` key); `AGENTS.md`; dev-cadence `cadence.md` §4.12 and TD-148
+
+**Why:** GitHub Actions stopped on the shared account (ShiftLead org from 2026-10-26: *recent account payments have failed or your spending limit needs to be increased*), and Paul decided every repo gates on a local `precheck` instead (dev-cadence TD-148): the minutes are one pool across all the repos, kept for what has to run on GitHub. This repo's `ci.yml` runs `ruff check .`, the unit tests and the fixtures on every pull request and push to `main`, so its PRs now read red for a reason that says nothing about the code. The tag job — a release's module carries its header — is the one that belongs on GitHub.
+
+**Fix:** `precheck = "ruff check . && python3 -m unittest discover -s tests && python3 fixtures/run.py"` in `docs/cadence.toml` (the merge gate runs it with `dev-cadence run precheck.py --pr <n>`, recording `cadence/precheck`); `ci.yml` keeps the tag trigger and `workflow_dispatch`, and drops `pull_request` and the push to `main`; `AGENTS.md` names the gate. Done when a PR's gate reads a green `cadence/precheck` and no workflow runs on `pull_request`.
+
+**Related:** dev-cadence TD-148 (the convention), samscrape TD-465, shiftlead TD-1033.
