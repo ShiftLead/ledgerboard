@@ -10,7 +10,7 @@
 Run this from the repo's root before anything else, and act on what it prints:
 
 ```bash
-scripts/cadence_hooks.sh --session-start
+dev-cadence hook session-start
 ```
 
 It names what is due on this machine's attention boards, this repo's pull requests that have
@@ -20,6 +20,10 @@ follow. Claude Code runs it for you through `.claude/settings.json`; a tool with
 session-start hook runs it itself. It always exits 0.
 
 ## How this repo works
+
+This repo pins dev-cadence (`docs/cadence.toml`'s `[dev-cadence]`, TD-129): `docs/cadence.md` and
+`docs/procedures/*.md` below are the pinned tree's files, which `dev-cadence path cadence.md` (or
+`procedures/<name>.md`) prints; its scripts run as `dev-cadence run <script>`.
 
 The working rules are `docs/cadence.md` — worktrees (§1), the ledger `docs/technical_debt.md`
 (§2), the attention board `docs/user_attention.md` (§3), and the review and merge loop (§4).
@@ -66,6 +70,6 @@ python3 fixtures/run.py                 # every fixture against ledgerboard.py (
 |---|---|
 | The formats | `SPEC.md` (with TD-001) |
 | Why three repos, and what is whose | the ADR above |
-| How work is done here | `docs/cadence.md` (synced from dev-cadence) |
+| How work is done here | `cadence.md` in the pinned dev-cadence (`dev-cadence path cadence.md`; the pin is `docs/cadence.toml`'s `[dev-cadence]`, TD-129) |
 | Open work | `docs/technical_debt.md` |
 | What waits on a person | `docs/user_attention.md` |
