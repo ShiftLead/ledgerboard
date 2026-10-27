@@ -419,6 +419,7 @@
  ],
  "rank_paths": {
   "a/b/ledger.md": "a/b/ledger_rank.yml",
+  "docs/ledger": "docs/ledger/rank.yml",
   "docs/technical_debt.md": "docs/technical_debt_rank.yml",
   "technical_debt.md": "technical_debt_rank.yml"
  },
@@ -523,7 +524,7 @@
   },
   {
    "major": 2,
-   "problem": "this file declares Ledgerboard: 2, newer than this ledgerboard.py reads (1) — vendor a newer release; nothing was read"
+   "problem": null
   },
   {
    "major": 1,
@@ -531,11 +532,15 @@
   },
   {
    "major": 2,
-   "problem": "this file declares Ledgerboard: 2, newer than this ledgerboard.py reads (1) — vendor a newer release; nothing was read"
+   "problem": null
   },
   {
    "major": 2,
-   "problem": "this file declares Ledgerboard: 2, newer than this ledgerboard.py reads (1) — vendor a newer release; nothing was read"
+   "problem": null
+  },
+  {
+   "major": 3,
+   "problem": "this file declares Ledgerboard: 3, newer than this ledgerboard.py reads (2) — vendor a newer release; nothing was read"
   }
  ]
 }

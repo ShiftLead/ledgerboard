@@ -19,4 +19,4 @@ reader and writer of a ledger or board calls `ledgerboard.py`.
 Releases are tagged; each consumer vendors the file, whose first line names its release and hash. Why it
 is shaped this way: [ShiftLead ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md).
 
-**Status:** released — v1.0, then v1.1 (a board item's bold head and the live look's `Not right: <what>` form), then v1.2 (the rank: cards, keys, the rank file, and the pick order it gives), then v1.3 (an answer says what it leads to: `<label> (default) — <consequence>`); the tags are the releases.
+**Status:** released — v1.0, then v1.1 (a board item's bold head and the live look's `Not right: <what>` form), then v1.2 (the rank: cards, keys, the rank file, and the pick order it gives), then v1.3 (an answer says what it leads to: `<label> (default) — <consequence>`); v2.0 (the ledger as a directory, one file per entry) is built and not yet released; the tags are the releases.

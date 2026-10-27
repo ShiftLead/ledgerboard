@@ -4,7 +4,8 @@
 """The ledger and board formats, defined once (SPEC.md).
 
 A **ledger** (``docs/technical_debt.md``) is a file of ``## TD-NNN: title`` entries, each with a
-header block of ``**Name:** value`` fields, a summary table, and an archive beside it. A **board**
+header block of ``**Name:** value`` fields, a summary table, and an archive beside it — or, from
+v2, a directory of one ``TD-NNN.md`` per entry (``docs/ledger/``) that ``load()`` reads as the same text. A **board**
 (``docs/user_attention.md``) is a file of ``- [ ] [kind] YYYY-MM-DD (session …) — text`` items with
 trailing ``Due:``/``Answers:``/``Decided:`` fields, reply tails and a detail block.
 
@@ -15,7 +16,7 @@ neither keeps a second parser of either format.
 
 Sections: the ledger (entries, ``Fields:``, ``Blocked by``, derived pickable, ``check``); the rank
 (cards, keys, the rank file, the pick order); the board
-(items, the item record, keys and refs); edits (``edit_line``, composing an item, the commit
+(items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
 subject of a write and its parser); line predicates for diff walkers; the format version.
 """
 
@@ -352,7 +353,10 @@ QUEUE_SUBJECT_RE = re.compile(r"^queue: (?:rank|join|prune) TD-\d+(?:, TD-\d+)* 
 
 
 def rank_path(ledger_path: str) -> str:
-    """The rank file of the ledger at ``ledger_path``: ``<ledger stem>_rank.yml`` beside it."""
+    """The rank file of the ledger at ``ledger_path``: ``<ledger stem>_rank.yml`` beside a v1 file,
+    ``rank.yml`` inside a v2 directory (a path not ending in ``.md``)."""
+    if not ledger_path.endswith(".md"):
+        return _sub(ledger_path, "rank.yml")
     head, sep, name = ledger_path.rpartition("/")
     stem = name[:-3] if name.endswith(".md") else name
     return f"{head}{sep}{stem}_rank.yml"
@@ -1182,10 +1186,187 @@ def is_stamp(line: str, names: tuple[str, ...] | None = None) -> bool:
 
 
 # ---------------------------------------------------------------------------------------------
+# The ledger as a directory (v2): one file per entry, read back as one text
+# ---------------------------------------------------------------------------------------------
+
+LEDGER_README = "README.md"  # a v2 ledger's opening prose and preamble lines
+LEDGER_ARCHIVE = "archive"  # a v2 ledger's archived entries, each file moved there
+ENTRY_FILE_RE = re.compile(r"^TD-(\d+)\.md$")  # an entry's file, named as its heading spells the id
+
+Ls = Callable[[str], "list[str] | None"]  # a directory's file names, or None when the path is not a directory
+Read = Callable[[str], "str | None"]  # a file's text, or None when there is none
+
+
+def _sub(path: str, name: str) -> str:
+    return f"{path.rstrip('/')}/{name}" if path else name
+
+
+def archive_path(ledger_path: str) -> str:
+    """A v1 ledger's archive: ``<ledger stem>_archive.md`` beside it (``docs/technical_debt_archive.md``)."""
+    return ledger_path[:-3] + "_archive.md" if ledger_path.endswith(".md") else ledger_path + "_archive.md"
+
+
+def _entry_names(names: list[str]) -> list[str]:
+    """The entry files among a directory's names, in id order (by number; then by name)."""
+    found = [(int(m.group(1)), n) for n in names for m in [ENTRY_FILE_RE.match(n)] if m]
+    return [n for _, n in sorted(found)]
+
+
+def _joined(head: str | None, parts: list[str]) -> str:
+    texts = [t.rstrip("\n") + "\n" for t in ([head] if head else []) + parts if t and t.strip()]
+    return "\n".join(texts)
+
+
+def _dir_text(path: str, names: list[str], read: Read, head: str | None = None) -> str:
+    return _joined(head, [t for t in (read(_sub(path, n)) for n in _entry_names(names)) if t is not None])
+
+
+def load(path: str, ls: Ls, read: Read) -> tuple[str, str]:
+    """(ledger text, archive text) of the ledger at ``path``, whichever major it is written in.
+
+    A v1 ledger is a file: its text, and its archive's beside it (``archive_path()``). A v2 ledger is
+    a directory: ``README.md`` and then every ``TD-NNN.md`` in id order, joined by blank lines, is
+    the text a v1 ledger would hold without its summary table; ``archive/`` gives the archive's the
+    same way. Every parser here reads that text unchanged. The module opens no file: ``ls`` and
+    ``read`` are the caller's (a file system, or one ``git ls-tree`` and ``git cat-file --batch`` at
+    a revision), so a read at a commit is the same call. A missing file reads as empty."""
+    names = ls(path)
+    if names is None:
+        return read(path) or "", read(archive_path(path)) or ""
+    arch = _sub(path, LEDGER_ARCHIVE)
+    return (_dir_text(path, names, read, head=read(_sub(path, LEDGER_README))),
+            _dir_text(arch, ls(arch) or [], read))
+
+
+def entry_path(path: str, tid: str, ls: Ls) -> str | None:
+    """The one file holding entry ``tid`` (``TD-7`` finds ``TD-007.md``) in the v2 ledger at
+    ``path``, open before archived; None when there is none, or when ``path`` is a v1 file, whose
+    entries all live in the text ``load()`` reads."""
+    names = ls(path)
+    if names is None:
+        return None
+    want = _num(tid)
+    for d, ns in ((path, names), (_sub(path, LEDGER_ARCHIVE), ls(_sub(path, LEDGER_ARCHIVE)) or [])):
+        for n in _entry_names(ns):
+            if int(ENTRY_FILE_RE.match(n).group(1)) == want:
+                return _sub(d, n)
+    return None
+
+
+def _sections(text: str) -> list[tuple[str | None, str]]:
+    """``text`` cut at each `## ` heading outside an HTML comment: (the TD id, or None for any other
+    heading and for the text before the first), and the section's text byte for byte."""
+    hidden = [m.span() for m in COMMENT_RE.finditer(text)]  # as entries() reads them
+    cuts = [m.start() for m in SECTION_RE.finditer(text)
+            if not any(a <= m.start() < b for a, b in hidden)]
+    out = []
+    for a, b in zip([0, *cuts], [*cuts, len(text)]):
+        part = text[a:b]
+        m = HEADING_RE.match(part) if a in cuts else None
+        if part:
+            out.append((m.group(1) if m else None, part))
+    return out
+
+
+def split(ledger: str, archive: str) -> dict[str, str]:
+    """The v2 directory of a v1 ledger and its archive: {relative path: text}. Each entry's text,
+    from its heading to the next `## ` heading, is its file (trailing blank lines trimmed to one
+    newline); the ledger's text before its first `## ` heading is ``README.md``, with
+    ``Ledgerboard: 2`` under its title, and the ``## Summary`` section's lines other than the table
+    and blanks follow it (a ``Fields:`` line there stays in the preamble); the archive's text before
+    its first entry is dropped. Refused for a ledger that is not v1, another `## ` section, an id
+    twice, a result that would not read back the same entries (by id), ``Fields:`` and version, or
+    one ``v2_problems()`` names (an HTML comment left open in an entry)."""
+    if format_major(ledger) != 1:
+        raise Refused(f"the ledger declares Ledgerboard: {format_major(ledger)} — only a v1 ledger splits")
+    files: dict[str, str] = {}
+    seen: set[int] = set()
+    readme, kept = "", []
+    for where, text in (("", ledger), (LEDGER_ARCHIVE, archive)):
+        for i, (tid, part) in enumerate(_sections(text)):
+            if tid is None:
+                if i == 0 and not part.startswith("## "):
+                    readme = readme if where else part
+                    continue
+                title, _, rest = part.partition("\n")
+                if not where and title.strip().lower() == "## summary":
+                    kept += [ln for ln in rest.splitlines() if ln.strip() and not ln.lstrip().startswith("|")]
+                    continue
+                raise Refused(f"{title!r} in the {'archive' if where else 'ledger'} is not an entry — "
+                              "move it into an entry or the README first; nothing was split")
+            if _num(tid) in seen:
+                raise Refused(f"{tid} appears twice — one file per entry cannot hold both; nothing was split")
+            seen.add(_num(tid))
+            files[_sub(where, f"{tid}.md")] = part.rstrip("\n") + "\n"
+    files[LEDGER_README] = _v2_readme(readme, kept)
+    new_ledger, new_archive = load("", _dict_ls(files), files.get)
+    for old, new, what in ((ledger, new_ledger, "ledger"), (archive, new_archive, "archive")):
+        if sorted(entries(old), key=lambda e: _num(e["id"])) != entries(new):
+            raise Refused(f"the split {what} would not read back the same entries — nothing was split")
+    if declared(ledger) != declared(new_ledger) or declarations(ledger) != declarations(new_ledger):
+        raise Refused("the split README would not declare the same Fields: — nothing was split")
+    if format_major(new_ledger) != 2:
+        raise Refused("the split README would not read as Ledgerboard: 2 — nothing was split")
+    problems = v2_problems("", _dict_ls(files), files.get)
+    if problems:
+        raise Refused(f"the split would not read as its files say ({'; '.join(problems)}) — nothing was split")
+    return files
+
+
+def _v2_readme(text: str, kept: list[str]) -> str:
+    """``README.md`` from a v1 ledger's opening prose: ``Ledgerboard: 2`` under its title (any
+    ``Ledgerboard: 1`` line dropped), then ``kept`` — the Summary section's lines that are not table."""
+    lines = [ln for ln in text.rstrip("\n").split("\n") if not VERSION_RE.match(ln)] if text.strip() else []
+    at = 1 if lines and lines[0].startswith("# ") else 0
+    lines[at:at] = (["", "Ledgerboard: 2"] if at else ["Ledgerboard: 2", ""])
+    out = "\n".join(lines).rstrip("\n") + "\n"
+    return out + ("\n" + "\n".join(kept) + "\n" if kept else "")
+
+
+def v2_problems(path: str, ls: Ls, read: Read) -> list[str]:
+    """Why the v2 ledger at ``path`` may not read as its files say, or []: each ``TD-NNN.md`` must
+    open with its one `## TD-NNN:` heading, the number its name's, with every HTML comment closed in
+    the file, and one file per number across the ledger and its archive. A hand edit can break each
+    of these, and ``load()`` would then join a file into its neighbour; a consumer calls this beside
+    ``version_problem()`` before it trusts a v2 read. [] for a v1 file."""
+    names = ls(path)
+    if names is None:
+        return []
+    out, seen = [], {}
+    arch = _sub(path, LEDGER_ARCHIVE)
+    for d, ns in ((path, names), (arch, ls(arch) or [])):
+        for n in _entry_names(ns):
+            rel, want = _sub(d, n), int(ENTRY_FILE_RE.match(n).group(1))
+            if want in seen:
+                out.append(f"{rel}: TD-{want} has a file already ({seen[want]}) — one file per entry")
+            seen.setdefault(want, rel)
+            text = read(rel) or ""
+            if text.count("<!--") != len(COMMENT_RE.findall(text)):
+                out.append(f"{rel}: an HTML comment is not closed in the file — it would hide the next entry")
+            heads = HEADING_RE.findall(COMMENT_RE.sub("", text))
+            first = HEADING_RE.match(text)
+            if not first or len(heads) != 1 or _num(first.group(1)) != want:
+                out.append(f"{rel}: must open with its one `## TD-{want}:` heading "
+                           f"(found {', '.join(h[0] for h in heads) or 'none'})")
+    return out
+
+
+def _dict_ls(files: Mapping[str, str]) -> Ls:
+    """``ls`` over a {relative path: text} mapping, as ``load()`` takes it ("" is the root)."""
+    def ls(path: str) -> list[str] | None:
+        pre = f"{path.rstrip('/')}/" if path else ""
+        names = [p[len(pre):] for p in files if p.startswith(pre) and "/" not in p[len(pre):]]
+        if not names and not any(p.startswith(pre) for p in files):
+            return None
+        return sorted(names)
+    return ls
+
+
+# ---------------------------------------------------------------------------------------------
 # The format version
 # ---------------------------------------------------------------------------------------------
 
-FORMAT_MAJOR = 1  # the newest major version of the formats this module reads
+FORMAT_MAJOR = 2  # the newest major version of the formats this module reads
 VERSION_RE = re.compile(r"^Ledgerboard:\s*(\d+)\s*$", re.MULTILINE)
 
 
