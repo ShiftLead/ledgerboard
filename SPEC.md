@@ -240,7 +240,7 @@ equals a label; an answer ending in a bare ` —` (`B —`) was the label `B —
 mark written mid-answer (`A (default) — x | B (default)`) now counts as a second mark. The item
 key is unchanged for every line. A board that wrote such answers re-reads them; one with
 no ` — ` inside an answer reads exactly as before.
-**v2.0 adds the ledger as a directory** (above): `load()`, `entry_path()`, `split()` and
+**v2.0 adds the ledger as a directory** (above): `load()`, `entry_path()`, `split()`, `v2_problems()` and
 `archive_path()`, and `rank_path()` of a directory. A v1 ledger reads exactly as before, through
 `load()` too; the board is unchanged, and `Ledgerboard: 2` on a board means nothing new. A v1.x
 module meets a v2 repo as a missing `docs/technical_debt.md`, never a wrong reading, so a repo
