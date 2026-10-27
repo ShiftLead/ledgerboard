@@ -264,3 +264,67 @@ class AnswerConsequences(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LedgerDirectory(unittest.TestCase):
+    """v2.0: a ledger as a directory, read back as one text by ``load()`` with the caller's I/O."""
+
+    FILES = {"README.md": "# Ledger\n\nLedgerboard: 2\n",
+             "TD-10.md": "## TD-10: Ten\n\n**Priority:** Low\n",
+             "TD-002.md": "## TD-002: Two\n\n**Priority:** High\n**Blocked by:** TD-001\n",
+             "notes.txt": "not an entry",
+             "archive/TD-001.md": "## TD-001: One\n\n**Priority:** High\n"}
+
+    def io(self, files):
+        return L._dict_ls(files), files.get
+
+    def test_load_joins_the_readme_then_entries_in_id_order(self):
+        led, arc = L.load("", *self.io(self.FILES))
+        self.assertEqual([e["id"] for e in L.entries(led)], ["TD-002", "TD-10"])
+        self.assertEqual([e["id"] for e in L.entries(arc)], ["TD-001"])
+        self.assertTrue(led.startswith("# Ledger\n\nLedgerboard: 2\n\n## TD-002"))
+        self.assertEqual(L.format_major(led), 2)
+        self.assertIsNone(L.version_problem(led))
+        self.assertEqual([e["id"] for e in L.pickable(led, arc)["pickable"]], ["TD-002", "TD-10"])
+
+    def test_load_reads_a_v1_file_and_its_archive_beside_it(self):
+        files = {"docs/technical_debt.md": LEDGER, "docs/technical_debt_archive.md": "## TD-009: x\n"}
+        ls = lambda p: None if p.endswith(".md") else sorted(files)  # noqa: E731
+        self.assertEqual(L.load("docs/technical_debt.md", ls, files.get), (LEDGER, "## TD-009: x\n"))
+
+    def test_a_missing_readme_or_archive_reads_as_empty(self):
+        files = {"TD-001.md": "## TD-001: One\n"}
+        self.assertEqual(L.load("", *self.io(files)), ("## TD-001: One\n", ""))
+
+    def test_entry_path_finds_the_one_file_open_or_archived_by_number(self):
+        ls, _ = self.io(self.FILES)
+        self.assertEqual(L.entry_path("", "TD-2", ls), "TD-002.md")
+        self.assertEqual(L.entry_path("", "TD-001", ls), "archive/TD-001.md")
+        self.assertIsNone(L.entry_path("", "TD-003", ls))
+        self.assertIsNone(L.entry_path("docs/technical_debt.md", "TD-001", lambda p: None))
+
+    def test_split_and_load_round_trip(self):
+        files = L.split(LEDGER, "# Archive\n\n## TD-009: Nine\n\nbody\n")
+        self.assertEqual(sorted(files), ["README.md", "TD-001.md", "TD-002.md", "archive/TD-009.md"])
+        self.assertIn("Ledgerboard: 2", files["README.md"])
+        led, arc = L.load("", *self.io(files))
+        self.assertEqual(L.entries(led), L.entries(LEDGER))
+        self.assertEqual(files["archive/TD-009.md"], "## TD-009: Nine\n\nbody\n")
+
+    def test_split_keeps_a_commented_heading_inside_its_entry(self):
+        led = "# L\n\n## TD-001: One\n\nx\n<!--\n## TD-002: Not an entry\n-->\n"
+        files = L.split(led, "")
+        self.assertEqual(sorted(files), ["README.md", "TD-001.md"])
+        self.assertIn("Not an entry", files["TD-001.md"])
+
+    def test_split_refuses_what_it_would_lose(self):
+        for led, why in (("# L\n\n## TD-001: One\n\n## Notes\n\nkept nowhere\n", "is not an entry"),
+                         ("# L\n\n## TD-001: One\n\n## TD-1: Again\n", "appears twice")):
+            with self.assertRaises(L.Refused) as cm:
+                L.split(led, "")
+            self.assertIn(why, str(cm.exception))
+
+    def test_split_drops_only_the_summary_section(self):
+        led = "# L\n\n## Summary\n\n| ID | T |\n|--|--|\n| TD-001 | One |\n\n## TD-001: One\n"
+        files = L.split(led, "")
+        self.assertNotIn("| TD-001 |", "".join(files.values()))

@@ -1,4 +1,4 @@
-# The ledger and board formats — version 1
+# The ledger and board formats — versions 1 and 2
 
 This is the formats' one definition in prose; `ledgerboard.py` is the one implementation and
 `fixtures/` the cases any implementation must reproduce. Where this text and the module disagree,
@@ -48,6 +48,47 @@ the ledger, in pick order by intent.
 **`Tracker:`** — an entry mapped from an outside tracker carries its id as `**Tracker:** ABC-123`.
 Every edit keeps it byte for byte; what it links to is the importer's.
 
+## The ledger as a directory (v2)
+
+A v1 ledger is one file that every filing edits in the same places — a summary row and a body, on
+neighbouring lines for neighbouring ids — so concurrent filings conflict. **A v2 ledger is a
+directory** (by convention `docs/ledger/`) with one file per entry, and no stored summary table:
+
+```
+docs/ledger/
+  README.md        # the opening prose, then the preamble lines: Ledgerboard: 2, Fields: …
+  TD-160.md        # one entry: its `## TD-160: title` heading to the end of its text
+  rank.yml         # the rank file (rank_path() of the directory)
+  archive/
+    TD-121.md      # an archived entry: the same file, moved
+```
+
+- **An entry file** is named `TD-NNN.md`, the id spelled as its heading spells it (`TD-24.md`); the
+  title lives only in the heading, so a retitle never renames a file. An entry is a `TD-*.md` file
+  directly in the directory or in `archive/`; any other file there is not an entry.
+- **`README.md`** holds what a v1 ledger holds before its first `## ` heading, and declares
+  `Ledgerboard: 2` on a preamble line.
+- **Archiving** moves the file into `archive/` (with its Status edit). Open and archived stay two
+  texts, so *every blocker is archived* is still a test of which text a heading is in.
+- **The summary table is not stored**; a consumer prints one from the entries in pick order.
+- **Reading** (`load(path, ls, read)`) gives the same two texts a v1 ledger and its archive give:
+  `README.md`, then each entry file in id order (by number), joined by one blank line — the
+  ledger's text without a table — and `archive/`'s entries the same way. Every parser reads those
+  texts unchanged. Given a v1 file instead, `load()` reads it and its archive beside it
+  (`<stem>_archive.md`, `archive_path()`), so one call reads either major.
+- **The caller does the I/O.** `ls(path)` returns the names of the files directly in the directory
+  `path` (no subdirectories), or None when `path` is not a directory; `read(path)` returns a file's
+  text, or None when there is none, which reads as empty. Paths are joined with `/`. A file-system
+  pair and a git pair (one `git ls-tree` and one `git cat-file --batch` at a revision) are the
+  caller's; the module opens nothing, as everywhere else in it.
+- **One entry** is `entry_path(path, tid, ls)`: the one file holding it, open before archived,
+  matched by number (`TD-7` finds `TD-007.md`); None when there is none or `path` is a v1 file.
+- **Migration** is `split(ledger, archive)`: the v2 files of a v1 pair, each entry's text from its
+  heading to the next `## ` heading (one inside an HTML comment does not cut) byte for byte, the
+  text before the ledger's first heading as `README.md` with `Ledgerboard: 2` added, the
+  `## Summary` section and the archive's text before its first entry dropped. It refuses any other
+  `## ` section, an id twice, and a result whose `entries()` differ from the input's.
+
 ## The rank
 
 The rank is a person's order of a ledger's entries; it is the pick order.
@@ -80,7 +121,8 @@ ties by their lowest id; within a card an entry comes after every member it is b
 its own key (a cycle is broken by key).
 
 **The rank file** is named from the ledger's path: `<ledger stem>_rank.yml` beside it
-(`docs/technical_debt_rank.yml`; `rank_path()`), with no setting of its own. Its grammar: `#`
+(`docs/technical_debt_rank.yml`; `rank_path()`), or `rank.yml` inside a v2 directory
+(`docs/ledger/rank.yml`), with no setting of its own. Its grammar: `#`
 comment lines first, then one line per entry, `TD-NNN: <key>`, sorted by key; nothing else. It is
 YAML-shaped but read only through `rank()`, which takes every key as a string (`09` is a key, not a
 number). The reader flags a line it cannot read and a repeated id (⚠, the first line holds), and a
@@ -181,6 +223,7 @@ read as appends.
 ## Versions
 
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
+A v2 ledger declares it in its `README.md`, which `load()` puts first.
 A reader that meets a newer major than it knows reads nothing and says so (`version_problem()`, which a consumer calls before it trusts what it parsed — no parser calls it for you). A release of the module
 is `v<major>.<minor>`: a minor release reads every file the major's earlier releases wrote.
 **v1.3 reads one thing differently:** an answer whose own text held ` — ` was one answer before
@@ -190,3 +233,8 @@ equals a label; an answer ending in a bare ` —` (`B —`) was the label `B —
 mark written mid-answer (`A (default) — x | B (default)`) now counts as a second mark. The item
 key is unchanged for every line. A board that wrote such answers re-reads them; one with
 no ` — ` inside an answer reads exactly as before.
+**v2.0 adds the ledger as a directory** (above): `load()`, `entry_path()`, `split()` and
+`archive_path()`, and `rank_path()` of a directory. A v1 ledger reads exactly as before, through
+`load()` too; the board is unchanged, and `Ledgerboard: 2` on a board means nothing new. A v1.x
+module meets a v2 repo as a missing `docs/technical_debt.md`, never a wrong reading, so a repo
+moves to a v2 ledger only once every reader of it runs v2.0.
