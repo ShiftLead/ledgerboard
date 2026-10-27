@@ -83,11 +83,18 @@ docs/ledger/
   caller's; the module opens nothing, as everywhere else in it.
 - **One entry** is `entry_path(path, tid, ls)`: the one file holding it, open before archived,
   matched by number (`TD-7` finds `TD-007.md`); None when there is none or `path` is a v1 file.
-- **Migration** is `split(ledger, archive)`: the v2 files of a v1 pair, each entry's text from its
-  heading to the next `## ` heading (one inside an HTML comment does not cut) byte for byte, the
-  text before the ledger's first heading as `README.md` with `Ledgerboard: 2` added, the
-  `## Summary` section and the archive's text before its first entry dropped. It refuses any other
-  `## ` section, an id twice, and a result whose `entries()` differ from the input's.
+- **Damage a hand edit can do** is named by `v2_problems(path, ls, read)`, which a consumer calls
+  beside `version_problem()`: an entry file that does not open with its one `## TD-NNN:` heading
+  numbered as its name, one whose HTML comment is not closed in the file (it would hide the next
+  entry once joined), and two files for one number across the ledger and its archive.
+- **Migration** is `split(ledger, archive)`, for a v1 ledger only: the v2 files of a v1 pair. Each
+  entry's text runs from its heading to the next `## ` heading outside an HTML comment, read as
+  `entries()` reads comments, and is its file with trailing blank lines trimmed to one newline.
+  `README.md` is the text before the ledger's first heading, with `Ledgerboard: 2` under its title,
+  then the `## Summary` section's lines other than the table and blank lines. The archive's text
+  before its first entry is dropped. It refuses another `## ` section, an id twice, and a result
+  that does not read back the same entries (compared by id), the same `Fields:` and version 2, or
+  that `v2_problems()` flags.
 
 ## The rank
 

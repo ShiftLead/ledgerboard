@@ -328,3 +328,39 @@ class LedgerDirectory(unittest.TestCase):
         led = "# L\n\n## Summary\n\n| ID | T |\n|--|--|\n| TD-001 | One |\n\n## TD-001: One\n"
         files = L.split(led, "")
         self.assertNotIn("| TD-001 |", "".join(files.values()))
+
+    def test_split_refuses_a_ledger_that_is_not_v1(self):
+        with self.assertRaises(L.Refused):
+            L.split("# L\n\nLedgerboard: 3\n\n## TD-001: One\n", "")
+
+    def test_split_keeps_a_fields_line_from_the_summary_section(self):
+        led = "# T\n\n## Summary\n\nFields: Area = a | b\n\n| ID |\n|--|\n\n## TD-001: One\n\n**Area:** a\n"
+        files = L.split(led, "")
+        new, _ = L.load("", *self.io(files))
+        self.assertEqual(L.declared(new), L.declared(led))
+        self.assertEqual(files["README.md"], "# T\n\nLedgerboard: 2\n\nFields: Area = a | b\n")
+
+    def test_split_refuses_an_entry_with_a_comment_left_open(self):
+        led = "# L\n\n## TD-001: One\n\n<!-- unclosed\n\n## TD-002: Two\n"
+        with self.assertRaises(L.Refused) as cm:
+            L.split(led, "")
+        self.assertIn("not closed", str(cm.exception))
+
+    def test_split_takes_entries_in_any_order(self):
+        files = L.split("# L\n\n## TD-002: Two\n\n## TD-001: One\n", "")
+        self.assertEqual(sorted(files), ["README.md", "TD-001.md", "TD-002.md"])
+
+    def test_v2_problems_names_a_file_that_would_not_read_as_itself(self):
+        bad = {"README.md": "# L\n\nLedgerboard: 2\n",
+               "TD-001.md": "## TD-001: One\n\n<!-- never closed\n",
+               "TD-002.md": "## TD-002: Two\n",
+               "TD-007.md": "## TD-008: Wrong number\n",
+               "TD-009.md": "no heading\n",
+               "archive/TD-2.md": "## TD-2: Again\n"}
+        got = L.v2_problems("", *self.io(bad))
+        self.assertEqual(len(got), 4, got)
+        for name, why in (("TD-001.md", "not closed"), ("TD-007.md", "TD-008"), ("TD-009.md", "none"),
+                          ("archive/TD-2.md", "has a file already")):
+            self.assertTrue(any(g.startswith(name) and why in g for g in got), (name, got))
+        self.assertEqual(L.v2_problems("", *self.io(self.FILES)), [])
+        self.assertEqual(L.v2_problems("x.md", lambda p: None, lambda p: None), [])

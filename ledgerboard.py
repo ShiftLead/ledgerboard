@@ -1192,7 +1192,6 @@ def is_stamp(line: str, names: tuple[str, ...] | None = None) -> bool:
 LEDGER_README = "README.md"  # a v2 ledger's opening prose and preamble lines
 LEDGER_ARCHIVE = "archive"  # a v2 ledger's archived entries, each file moved there
 ENTRY_FILE_RE = re.compile(r"^TD-(\d+)\.md$")  # an entry's file, named as its heading spells the id
-COMMENT_SPAN_RE = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)  # an unclosed comment runs to the end, as in Markdown
 
 Ls = Callable[[str], "list[str] | None"]  # a directory's file names, or None when the path is not a directory
 Read = Callable[[str], "str | None"]  # a file's text, or None when there is none
@@ -1257,7 +1256,7 @@ def entry_path(path: str, tid: str, ls: Ls) -> str | None:
 def _sections(text: str) -> list[tuple[str | None, str]]:
     """``text`` cut at each `## ` heading outside an HTML comment: (the TD id, or None for any other
     heading and for the text before the first), and the section's text byte for byte."""
-    hidden = [m.span() for m in COMMENT_SPAN_RE.finditer(text)]
+    hidden = [m.span() for m in COMMENT_RE.finditer(text)]  # as entries() reads them
     cuts = [m.start() for m in SECTION_RE.finditer(text)
             if not any(a <= m.start() < b for a, b in hidden)]
     out = []
@@ -1271,22 +1270,27 @@ def _sections(text: str) -> list[tuple[str | None, str]]:
 
 def split(ledger: str, archive: str) -> dict[str, str]:
     """The v2 directory of a v1 ledger and its archive: {relative path: text}. Each entry's text,
-    from its heading to the next `## ` heading, is its file byte for byte; the ledger's text before
-    its first `## ` heading is ``README.md``, with ``Ledgerboard: 2`` on a preamble line; the
-    ``## Summary`` section (the table) is dropped, and so is the archive's text before its first
-    entry. Refused when anything else would be lost — another `## ` section, or an id twice — or
-    when ``load()`` of the result would not read the same entries (``entries()``) as the input."""
+    from its heading to the next `## ` heading, is its file (trailing blank lines trimmed to one
+    newline); the ledger's text before its first `## ` heading is ``README.md``, with
+    ``Ledgerboard: 2`` under its title, and the ``## Summary`` section's lines other than the table
+    and blanks follow it (a ``Fields:`` line there stays in the preamble); the archive's text before
+    its first entry is dropped. Refused for a ledger that is not v1, another `## ` section, an id
+    twice, a result that would not read back the same entries (by id), ``Fields:`` and version, or
+    one ``v2_problems()`` names (an HTML comment left open in an entry)."""
+    if format_major(ledger) != 1:
+        raise Refused(f"the ledger declares Ledgerboard: {format_major(ledger)} — only a v1 ledger splits")
     files: dict[str, str] = {}
     seen: set[int] = set()
+    readme, kept = "", []
     for where, text in (("", ledger), (LEDGER_ARCHIVE, archive)):
         for i, (tid, part) in enumerate(_sections(text)):
             if tid is None:
                 if i == 0 and not part.startswith("## "):
-                    if not where:
-                        files[LEDGER_README] = _v2_readme(part)
+                    readme = readme if where else part
                     continue
-                title = part.split("\n", 1)[0]
+                title, _, rest = part.partition("\n")
                 if not where and title.strip().lower() == "## summary":
+                    kept += [ln for ln in rest.splitlines() if ln.strip() and not ln.lstrip().startswith("|")]
                     continue
                 raise Refused(f"{title!r} in the {'archive' if where else 'ledger'} is not an entry — "
                               "move it into an entry or the README first; nothing was split")
@@ -1294,19 +1298,57 @@ def split(ledger: str, archive: str) -> dict[str, str]:
                 raise Refused(f"{tid} appears twice — one file per entry cannot hold both; nothing was split")
             seen.add(_num(tid))
             files[_sub(where, f"{tid}.md")] = part.rstrip("\n") + "\n"
-    files.setdefault(LEDGER_README, _v2_readme(""))
-    ls = _dict_ls(files)
-    new_ledger, new_archive = load("", ls, files.get)
+    files[LEDGER_README] = _v2_readme(readme, kept)
+    new_ledger, new_archive = load("", _dict_ls(files), files.get)
     for old, new, what in ((ledger, new_ledger, "ledger"), (archive, new_archive, "archive")):
-        if entries(old) != entries(new):
+        if sorted(entries(old), key=lambda e: _num(e["id"])) != entries(new):
             raise Refused(f"the split {what} would not read back the same entries — nothing was split")
+    if declared(ledger) != declared(new_ledger) or declarations(ledger) != declarations(new_ledger):
+        raise Refused("the split README would not declare the same Fields: — nothing was split")
+    if format_major(new_ledger) != 2:
+        raise Refused("the split README would not read as Ledgerboard: 2 — nothing was split")
+    problems = v2_problems("", _dict_ls(files), files.get)
+    if problems:
+        raise Refused(f"the split would not read as its files say ({'; '.join(problems)}) — nothing was split")
     return files
 
 
-def _v2_readme(text: str) -> str:
-    text = VERSION_RE.sub("Ledgerboard: 2", text) if VERSION_RE.search(text) else \
-        text.rstrip("\n") + ("\n\n" if text.strip() else "") + "Ledgerboard: 2"
-    return text.rstrip("\n") + "\n"
+def _v2_readme(text: str, kept: list[str]) -> str:
+    """``README.md`` from a v1 ledger's opening prose: ``Ledgerboard: 2`` under its title (any
+    ``Ledgerboard: 1`` line dropped), then ``kept`` — the Summary section's lines that are not table."""
+    lines = [ln for ln in text.rstrip("\n").split("\n") if not VERSION_RE.match(ln)] if text.strip() else []
+    at = 1 if lines and lines[0].startswith("# ") else 0
+    lines[at:at] = (["", "Ledgerboard: 2"] if at else ["Ledgerboard: 2", ""])
+    out = "\n".join(lines).rstrip("\n") + "\n"
+    return out + ("\n" + "\n".join(kept) + "\n" if kept else "")
+
+
+def v2_problems(path: str, ls: Ls, read: Read) -> list[str]:
+    """Why the v2 ledger at ``path`` may not read as its files say, or []: each ``TD-NNN.md`` must
+    open with its one `## TD-NNN:` heading, the number its name's, with every HTML comment closed in
+    the file, and one file per number across the ledger and its archive. A hand edit can break each
+    of these, and ``load()`` would then join a file into its neighbour; a consumer calls this beside
+    ``version_problem()`` before it trusts a v2 read. [] for a v1 file."""
+    names = ls(path)
+    if names is None:
+        return []
+    out, seen = [], {}
+    arch = _sub(path, LEDGER_ARCHIVE)
+    for d, ns in ((path, names), (arch, ls(arch) or [])):
+        for n in _entry_names(ns):
+            rel, want = _sub(d, n), int(ENTRY_FILE_RE.match(n).group(1))
+            if want in seen:
+                out.append(f"{rel}: TD-{want} has a file already ({seen[want]}) — one file per entry")
+            seen.setdefault(want, rel)
+            text = read(rel) or ""
+            if text.count("<!--") != len(COMMENT_RE.findall(text)):
+                out.append(f"{rel}: an HTML comment is not closed in the file — it would hide the next entry")
+            heads = HEADING_RE.findall(COMMENT_RE.sub("", text))
+            first = HEADING_RE.match(text)
+            if not first or len(heads) != 1 or _num(first.group(1)) != want:
+                out.append(f"{rel}: must open with its one `## TD-{want}:` heading "
+                           f"(found {', '.join(h[0] for h in heads) or 'none'})")
+    return out
 
 
 def _dict_ls(files: Mapping[str, str]) -> Ls:

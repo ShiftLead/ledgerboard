@@ -173,14 +173,14 @@ def v2_case(L, md: Path) -> dict:
     got = ledger_case(L, md, (*L.load(str(d), fs_ls, fs_read), fs_read(L.rank_path(str(d)))))
     rows, got["rows"] = got["rows"], "(the v1 twin's)"
     got["v2"] = {"split_matches_dir": _refused(lambda: L.split(led, arc)) == {"ok": v2_files(d)},
-                 "rows": rows}
+                 "rows": rows, "problems": L.v2_problems(str(d), fs_ls, fs_read)}
     return got
 
 
 def v2_expected(want: dict | None) -> dict | None:
     if want is None:
         return None
-    return dict(want, rows="(the v1 twin's)", v2={"split_matches_dir": True, "rows": []})
+    return dict(want, rows="(the v1 twin's)", v2={"split_matches_dir": True, "rows": [], "problems": []})
 
 
 def cases(L, root: Path):
