@@ -25,6 +25,8 @@ Fixtures, each an invented input and its expected JSON:
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
   ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2); an answer's
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3).
+- ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
+  and each check; ``components()`` of it joins through the field.
 """
 
 from __future__ import annotations

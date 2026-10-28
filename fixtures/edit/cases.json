@@ -563,6 +563,7 @@
   "components": [
     "ledger/ranked.md",
     "ledger/ranked.archive.md",
-    "ledger/basic.md"
+    "ledger/basic.md",
+    "ledger/parts.md"
   ]
 }
