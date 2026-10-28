@@ -37,7 +37,8 @@ archive, or another repo's entry the reader cannot resolve keeps the block. A wr
 `**Pickable:**` line is only a field.
 
 **`Part of`** (v2.1) — `**Part of:** TD-n`, on a part, names its **one** parent in the **same
-ledger**; free comment may follow the id (a second id after a comma is a second parent, an error).
+ledger**; free comment may follow the id (a second id after a comma is a second parent, an error;
+anything after the first id with no comma is comment).
 A parent is any entry: a design and its builds or live checks, a fix or feature and its subtasks.
 It keeps `Blocked by` apart from the parts: a parent's `Blocked by` names only what must really
 land first, and its parts keep it unpicked while any is open — what listing them in `Blocked by`

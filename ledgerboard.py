@@ -422,7 +422,8 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                               e["id"], "blocked by", "blocked-unknown")
                     open_ids.append(b)  # unknown: keep the block — the safe direction
             if not open_ids and not who and not bad:
-                flags.add(f"ℹ {e['id']}: every blocker is archived ({', '.join(ids)}) — pickable; "
+                now = "pickable; " if rec["pickable"] else "it still waits on its open parts; "
+                flags.add(f"ℹ {e['id']}: every blocker is archived ({', '.join(ids)}) — {now}"
                           "the Blocked by field can go", e["id"], "blocked by", "blockers-archived")
             else:
                 rec["blocked_by"] = open_ids + [f"decision ({w})" for w in who] + [repr(b) for b in bad]

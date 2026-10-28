@@ -389,6 +389,9 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
         self.assertEqual([e["id"] for e in r["pickable"]], ["TD-002"])
 
     def test_a_parent_whose_parts_are_all_archived_is_pickable(self):
+        led = _entry(1, "Medium", "**Blocked by:** TD-009") + _entry(2, "Low", "**Part of:** TD-001")
+        text = [f for f in L.pickable(led, _entry(9))["flags"] if "every blocker is archived" in f]
+        self.assertIn("still waits on its open parts", text[0])  # review of #22: not "pickable"
         r = L.pickable(_entry(1), self.ARCHIVE)
         self.assertEqual([e["id"] for e in r["pickable"]], ["TD-001"])
         self.assertEqual(r["entries"][0]["parts_open"], [])
