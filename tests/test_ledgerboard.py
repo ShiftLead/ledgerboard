@@ -364,3 +364,105 @@ class LedgerDirectory(unittest.TestCase):
             self.assertTrue(any(g.startswith(name) and why in g for g in got), (name, got))
         self.assertEqual(L.v2_problems("", *self.io(self.FILES)), [])
         self.assertEqual(L.v2_problems("x.md", lambda p: None, lambda p: None), [])
+
+
+def _entry(n: int, prio: str = "Medium", *lines: str) -> str:
+    return "\n".join([f"## TD-{n:03d}: entry {n}", "", f"**Priority:** {prio}", *lines, ""]) + "\n"
+
+
+class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR 2026-10-27, Part of)
+    DESIGN = (_entry(1, "Medium") + _entry(2, "Low", "**Part of:** TD-001 (its build)")
+              + _entry(3, "High", "**Part of:** TD-1", "**Blocked by:** TD-002"))
+    ARCHIVE = _entry(4, "Medium", "**Part of:** TD-001")
+
+    def kinds(self, led, arc="", old=None):
+        return [(r["id"], r["kind"], r["level"]) for r in L.check(led, arc, old=old)]
+
+    def test_a_parent_with_open_parts_is_not_pickable_and_keeps_its_blockers_apart(self):
+        r = L.pickable(self.DESIGN, self.ARCHIVE)
+        rec = {e["id"]: e for e in r["entries"]}
+        self.assertFalse(rec["TD-001"]["pickable"])
+        self.assertEqual(rec["TD-001"]["parts_open"], ["TD-002", "TD-003"])
+        self.assertEqual(rec["TD-001"]["blocked_by"], [])  # parts are not blockers
+        self.assertEqual(rec["TD-002"]["part_of"], "TD-001")
+        self.assertEqual(rec["TD-003"]["part_of"], "TD-1")  # as written; matched by number
+        self.assertEqual([e["id"] for e in r["pickable"]], ["TD-002"])
+
+    def test_a_parent_whose_parts_are_all_archived_is_pickable(self):
+        r = L.pickable(_entry(1), self.ARCHIVE)
+        self.assertEqual([e["id"] for e in r["pickable"]], ["TD-001"])
+        self.assertEqual(r["entries"][0]["parts_open"], [])
+
+    def test_a_parent_is_ordered_after_its_parts_whatever_its_key(self):
+        led = _entry(1, "High") + _entry(2, "Low", "**Part of:** TD-001") + _entry(3, "Medium", "**Part of:** TD-001")
+        self.assertEqual(_order(led), ["TD-003", "TD-002", "TD-001"])
+        self.assertEqual(_order(led, "TD-001: 0a\nTD-002: 0z\n"), ["TD-002", "TD-003", "TD-001"])  # the parent's line moves the card, not it
+        self.assertEqual(_order(self.DESIGN), ["TD-002", "TD-003", "TD-001"])  # TD-003 waits on TD-002
+
+    def test_parts_do_not_inherit_their_parents_blockers(self):
+        led = _entry(1, "Medium", "**Blocked by:** TD-009") + _entry(2, "Low", "**Part of:** TD-001") + _entry(9)
+        self.assertCountEqual([e["id"] for e in L.pickable(led, "")["pickable"]], ["TD-002", "TD-009"])
+
+    def test_cards_join_by_part_of(self):
+        led = _entry(1) + _entry(2, "Low", "**Part of:** TD-001") + _entry(5, "Low", "**Part of:** TD-007")
+        self.assertEqual([(c["ids"], c["others"]) for c in L.components(L.entries(led))],
+                         [(["TD-001", "TD-002"], []), (["TD-005"], ["TD-007"])])
+        self.assertEqual([c["ids"] for c in L.components(L.entries(self.ARCHIVE + _entry(1)))],
+                         [["TD-004", "TD-001"]])
+
+    def test_every_entry_on_a_cycle_carries_its_own_flag(self):
+        led = (_entry(1) + _entry(2, "Medium", "**Part of:** TD-001")
+               + _entry(3, "Medium", "**Part of:** TD-002", "**Blocked by:** TD-001"))
+        self.assertEqual([t for t, k, _ in self.kinds(led) if k == "cycle"], ["TD-001", "TD-002", "TD-003"])
+        self.assertTrue(all(lv == "info" for _, k, lv in self.kinds(led, old=led) if k == "cycle"))  # standing
+        # an edit to either end fails: the flag on the changed entry is an error, the others standing
+        before = led.replace("\n**Blocked by:** TD-001", "")
+        self.assertEqual([(t, lv) for t, k, lv in self.kinds(led, old=before) if k == "cycle"],
+                         [("TD-001", "info"), ("TD-002", "info"), ("TD-003", "error")])
+        before = led.replace("**Part of:** TD-001", "**Status:** Open")
+        self.assertIn(("TD-002", "cycle", "error"), self.kinds(led, old=before))
+        # an edit that removes the bad id passes
+        self.assertNotIn("cycle", [k for _, k, _ in self.kinds(before, old=led)])
+
+    def test_a_part_blocked_by_its_parent_is_a_cycle(self):
+        led = _entry(1) + _entry(2, "Medium", "**Part of:** TD-001", "**Blocked by:** TD-001")
+        self.assertEqual([t for t, k, _ in self.kinds(led) if k == "cycle"], ["TD-001", "TD-002"])
+        self.assertEqual(L.pickable(led, "")["pickable"], [])
+
+    def test_a_blocked_by_cycle_alone_is_flagged_too(self):
+        led = _entry(1, "Medium", "**Blocked by:** TD-002") + _entry(2, "Medium", "**Blocked by:** TD-001")
+        self.assertEqual([t for t, k, _ in self.kinds(led) if k == "cycle"], ["TD-001", "TD-002"])
+
+    def test_the_legacy_edge_is_carried_by_the_parent(self):
+        led = (_entry(1, "Medium", "**Blocked by:** TD-002, TD-003, TD-009") + _entry(2, "Medium", "**Part of:** TD-001")
+               + _entry(3, "Medium", "**Part of:** TD-002") + _entry(9))
+        legacy = [r for r in L.check(led, "") if r["kind"] == "legacy-part"]
+        self.assertEqual([(r["id"], r["level"]) for r in legacy], [("TD-001", "info")])
+        self.assertIn("TD-002, TD-003", legacy[0]["text"])  # a part and a part's part; TD-009 is a real blocker
+        self.assertNotIn("cycle", [k for _, k, _ in self.kinds(led)])  # a parallel edge, no cycle
+        # standing: information; the parent changed: an error; only the part changed: the parent's flag stands
+        self.assertIn(("TD-001", "legacy-part", "info"), self.kinds(led, old=led))
+        self.assertIn(("TD-001", "legacy-part", "error"),
+                      self.kinds(led, old=led.replace(", TD-003, TD-009", ", TD-009")))
+        self.assertIn(("TD-001", "legacy-part", "info"),
+                      self.kinds(led, old=led.replace("**Part of:** TD-002", "**Status:** Open")))
+
+    def test_what_a_part_of_line_cannot_name(self):
+        led = (_entry(1, "Low", "**Part of:** far#TD-005") + _entry(2, "Low", "**Part of:** TD-099")
+               + _entry(3, "Low", "**Part of:** TD-008") + _entry(4, "Low", "**Part of:** TD-005, TD-006")
+               + _entry(5) + _entry(6) + _entry(7, "Low", "**Part of:** soon"))
+        self.assertEqual([(t, k, lv) for t, k, lv in self.kinds(led, _entry(8)) if t != "TD-005"],
+                         [("TD-001", "part-of-item", "error"), ("TD-002", "part-of-unknown", "error"),
+                          ("TD-003", "part-of-archived", "info"), ("TD-004", "part-of-item", "error"),
+                          ("TD-007", "part-of-item", "error")])
+        # an unreadable or cross-repo line makes no parent: TD-005 stays pickable
+        self.assertIn("TD-005", [e["id"] for e in L.pickable(led, _entry(8))["pickable"]])
+
+    def test_part_of_is_a_cadence_field(self):
+        led = "Fields: Owner = a | b\n\n" + _entry(1) + _entry(2, "Low", "**Part of:** TD-001")
+        self.assertNotIn("undeclared-field", [k for _, k, _ in self.kinds(led, old="")])
+        self.assertIn("part of", L.CADENCE_FIELDS)
+
+    def test_a_ledger_with_no_part_of_reads_as_before(self):
+        r = L.pickable(RANKED, "")
+        self.assertTrue(all(e["part_of"] is None and e["parts_open"] == [] for e in r["entries"]))

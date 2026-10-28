@@ -20,8 +20,8 @@ next blank line. Each `**Name:** value` line there is one field, on one line; a 
 first wins. Names compare case- and separator-insensitively (`Blocked by`, `blocked-by`,
 `BLOCKED_BY`). **A field's value is its first word**, lower-cased; the rest of the line is a free
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
-feature), `Added`, `Status`, `Blocked by`, `Location`. A `Priority`, `Type` or `Blocked by` written
-below the header block is still read, and flagged.
+feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1). A `Priority`, `Type`,
+`Blocked by` or `Part of` written below the header block is still read, and flagged.
 
 **`Fields:`** — a ledger may declare its own fields' vocabularies once, on one preamble line before
 the first entry: `Fields: Owner = builder | designer; Kind = build | design-first`. A declared
@@ -31,11 +31,38 @@ The format's own fields are never redeclared.
 **`Blocked by`** — comma-separated items, each `TD-NNN` or `<repo>#TD-NNN` (another repo's
 entry; `<repo>` a name or `owner/name`), then optionally `decision (<who>)` last, whose pointer
 runs to the end of the line. **Pickable is derived, never written:** an entry is pickable when it
-has no `Blocked by`, or every entry it names is archived and it names no decision. An item that
-cannot be read, an entry in neither the ledger nor the archive, or another repo's entry the reader
-cannot resolve keeps the block. A written `**Pickable:**` line is only a field.
+has no `Blocked by`, or every entry it names is archived and it names no decision — and no open
+entry is `Part of` it (below). An item that cannot be read, an entry in neither the ledger nor the
+archive, or another repo's entry the reader cannot resolve keeps the block. A written
+`**Pickable:**` line is only a field.
 
-**Pick order** is the rank (below): by card, then within a card by dependency, then by key. With
+**`Part of`** (v2.1) — `**Part of:** TD-n`, on a part, names its **one** parent in the **same
+ledger**; free comment may follow the id (a second id after a comma is a second parent, an error).
+A parent is any entry: a design and its builds or live checks, a fix or feature and its subtasks.
+It keeps `Blocked by` apart from the parts: a parent's `Blocked by` names only what must really
+land first, and its parts keep it unpicked while any is open — what listing them in `Blocked by`
+did before. A parent's record carries `parts_open` (its open parts, never in `blocked_by`) and a
+part's carries `part_of` (the id as written; ids match by number, `TD-7` is `TD-007`).
+- A part's own pickable comes from its own `Blocked by` alone: parts do not inherit their parent's
+  blockers. A part that also waits on its parent's blocker names it in its own `Blocked by`.
+- **A part is never blocked by its parent or any ancestor**: the parent waits on the part's archive
+  and the part on the parent's, so neither moves.
+- What `ledger --check` says, ids normalised as a blocker's are, on the entry as the edit leaves it
+  (so an edit that removes the bad id passes):
+  - a `Part of` naming another repo's entry (`<repo>#TD-n`), a value that is not an id, or a second
+    parent is an unreadable item (⚠, `part-of-item`), and makes no parent; one naming no entry in the
+    ledger or the archive is ⚠ (`part-of-unknown`); one naming an archived parent is ℹ
+    (`part-of-archived`): an open part of a finished parent;
+  - over the **waits-on graph** — X → Y when X is `Blocked by` Y, P → C when C is `Part of` P (a parent
+    waits on its part) — **(a) no cycle**: every entry on a cycle (a part blocked by an ancestor, a
+    `Blocked by` loop, an entry part of itself) carries its own flag (`cycle`); **(b) no legacy
+    edge**: a parent's `Blocked by` naming its own part or a part's part, the old way of keeping it
+    unpicked, is flagged on the parent (`legacy-part`). Both are information on a standing ledger
+    and errors on a changed or new entry (`check()`'s `EDIT_ERRORS`), so an edit to any entry on a
+    cycle fails whichever end it touched.
+
+**Pick order** is the rank (below): by card, then within a card by dependency (an entry after what
+it is blocked by and after its parts), then by key. With
 no rank file it is Priority (High, Medium, Low, then anything else), then Type (debt before feature),
 then id order — except that a card moves as one, at its best member's key, so a prerequisite is
 picked before the entries that wait on it.
@@ -101,7 +128,7 @@ docs/ledger/
 The rank is a person's order of a ledger's entries; it is the pick order.
 
 **Cards.** A ledger's entries fall into **cards**: the connected components of its entries over
-their `Blocked by` ids (the ids before any `decision (…)`), joined in both directions
+their `Blocked by` ids (the ids before any `decision (…)`) and their `Part of` parent (v2.1), joined in both directions
 (`components()`); ids match by number, as a blocker does (`TD-7` is `TD-007`). An id an entry names that is not among the entries read — an archived or unknown
 one — is listed with the card but is not a member and joins nothing; a `<repo>#TD-NNN` id is listed
 for a caller to join cards across repos. The same rule reads an archive.
@@ -124,8 +151,8 @@ digit, so none sorts below `0`).
 **A card's key** is the best (lowest) key among its members that have a line, when any has one,
 else the best implicit key among them. So a card the person placed keeps its place: a Priority edit
 on a lined card moves nothing, and a member added later takes the card's key. Cards sort by key,
-ties by their lowest id; within a card an entry comes after every member it is blocked by, then by
-its own key (a cycle is broken by key).
+ties by their lowest id; within a card an entry comes after every member it is blocked by and every
+member that is `Part of` it, then by its own key (a cycle is broken by key).
 
 **The rank file** is named from the ledger's path: `<ledger stem>_rank.yml` beside it
 (`docs/technical_debt_rank.yml`; `rank_path()`), or `rank.yml` inside a v2 directory
@@ -245,3 +272,9 @@ no ` — ` inside an answer reads exactly as before.
 `load()` too; the board is unchanged, and `Ledgerboard: 2` on a board means nothing new. A v1.x
 module meets a v2 repo as a missing `docs/technical_debt.md`, never a wrong reading, so a repo
 moves to a v2 ledger only once every reader of it runs v2.0.
+**v2.1 adds `Part of`** (*The ledger*, above): the field, a parent unpicked while a part is open and
+ordered after its parts, cards joined through it, and the checks on it. An older reader ignores the
+field, so it reads a parent whose parts are no longer in its `Blocked by` as pickable: a ledger
+writes `Part of` only once every reader of it runs v2.1. A ledger with no `Part of` reads as
+before, except that a `Blocked by` cycle, which no earlier release named, is now flagged (ℹ when
+standing).

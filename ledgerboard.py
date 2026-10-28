@@ -14,7 +14,7 @@ What a caller needs from outside the text is passed in — the cross-repo resolv
 ``pickable()``, today's date. Two consumers vendor this file (dev-cadence's scripts, ShiftLead);
 neither keeps a second parser of either format.
 
-Sections: the ledger (entries, ``Fields:``, ``Blocked by``, derived pickable, ``check``); the rank
+Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived pickable, ``check``); the rank
 (cards, keys, the rank file, the pick order); the board
 (items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
 subject of a write and its parser); line predicates for diff walkers; the format version.
@@ -40,9 +40,10 @@ SECTION_RE = re.compile(r"^## ", re.MULTILINE)
 ROW_RE = re.compile(r"^\|\s*(TD-(\d+))\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|", re.MULTILINE)
 FIELD_RE = re.compile(r"^\*\*([A-Za-z][^*:\n]*?):\*\*[ \t]*(.*?)[ \t]*$")  # one line, one field
 FIELDS_DECL_RE = re.compile(r"^Fields:[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # the preamble's declaration
-CADENCE_FIELDS = ("priority", "type", "added", "status", "blocked by", "location")  # the spec's own fields
+CADENCE_FIELDS = ("priority", "type", "added", "status", "blocked by", "location", "part of")  # the spec's own fields
 PRIORITY_RE = re.compile(r"^\*\*Priority:\*\*\s*(\w+)", re.MULTILINE)
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one line only
+PART_OF_RE = re.compile(r"^\*\*Part of:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one parent, same ledger (v2.1)
 TYPE_RE = re.compile(r"^\*\*Type:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)
 TYPES = ("debt", "feature")  # pick order within a Priority; the first is the default
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)  # the seed template's example entry lives in one
@@ -51,7 +52,7 @@ XREPO_ITEM_RE = re.compile(r"^([\w.-]+(?:/[\w.-]+)?)#(TD-\d+)$")
 DECISION_RE = re.compile(r"\bdecision\s*\(([^)]+)\)", re.IGNORECASE)
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
-EDIT_ERRORS = ("pickable-disagrees", "undeclared-field")  # information on a standing ledger, an error in a new edit
+EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
@@ -131,8 +132,8 @@ def entries(text: str) -> list[dict]:
     """The ledger's entry bodies, in file order: id, title, priority, blocked (raw or None), fields.
 
     HTML comments are dropped first: the seed ledger's entry template is a commented-out
-    `## TD-001: …` that is not an entry. Priority, Type and Blocked by come from the header
-    block; one written further down the body is still read (the safe direction) and flagged."""
+    `## TD-001: …` that is not an entry. Priority, Type, Blocked by and Part of come from the
+    header block; one written further down the body is still read (the safe direction) and flagged."""
     text = COMMENT_RE.sub("", text)
     out = []
     for m in HEADING_RE.finditer(text):
@@ -140,7 +141,8 @@ def entries(text: str) -> list[dict]:
         body = text[m.end(): nxt.start() if nxt else len(text)]
         fields = header_block(body)
         below = []
-        for key, rx in (("priority", PRIORITY_RE), ("type", TYPE_RE), ("blocked by", BLOCKED_RE)):
+        for key, rx in (("priority", PRIORITY_RE), ("type", TYPE_RE), ("blocked by", BLOCKED_RE),
+                        ("part of", PART_OF_RE)):
             if key not in fields:
                 bm = rx.search(body)
                 if bm:
@@ -152,7 +154,8 @@ def entries(text: str) -> list[dict]:
         out.append({"id": m.group(1), "title": m.group(3).strip(),
                     "priority": prio.capitalize() if prio else None,
                     "type_raw": (type_raw.split() or [None])[0] if type_raw else None,  # a value of only \r or NBSP is no Type
-                    "blocked_raw": blocked, "fields": fields, "below": below})
+                    "blocked_raw": blocked, "part_of_raw": fields.get("part of") or None,
+                    "fields": fields, "below": below})
     return out
 
 
@@ -180,6 +183,113 @@ def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
         else:
             bad.append(item)
     return ids, who, bad
+
+
+def parse_part_of(raw: str | None) -> tuple[str | None, str | None]:
+    """(the parent's id, what cannot be read) of one Part of value (v2.1). The parent is the
+    value's first item, a ``TD-NNN`` in the same ledger; the rest of the line is a free comment,
+    except a second id after a comma, which names a second parent. Another repo's entry
+    (``<repo>#TD-NNN``) is never a parent: a parent's pickable needs every entry naming it."""
+    first, _, rest = (raw or "").strip().partition(",")
+    item = first.split()[0].rstrip(".;:") if first.split() else ""
+    if not item:
+        return None, None
+    if XREPO_ITEM_RE.match(item):
+        return None, f"names {item}, another repo's entry — a parent is in the same ledger"
+    if not ID_ITEM_RE.match(item):
+        return None, f"cannot read {item!r} — write TD-NNN"
+    second = rest.strip().split()[0].rstrip(".;:") if rest.strip() else ""
+    if ID_ITEM_RE.match(second) or XREPO_ITEM_RE.match(second):
+        return None, f"names a second parent ({second}) — an entry is part of one"
+    return item, None
+
+
+def _parents(live: list[dict]) -> tuple[dict[str, str], dict[str, tuple[str | None, str | None]]]:
+    """({part: its open parent's id as the ledger spells it}, {id: parse_part_of() of its line}) of the
+    live entries; a parent matches by number, as a blocker does (``TD-7`` is ``TD-007``)."""
+    num: dict[int, str] = {}
+    for e in live:
+        num.setdefault(_num(e["id"]), e["id"])
+    parent_of, part_of = {}, {}
+    for e in live:
+        if e.get("part_of_raw"):
+            part_of[e["id"]] = parse_part_of(e["part_of_raw"])
+            par = part_of[e["id"]][0]
+            if par and _num(par) in num:
+                parent_of.setdefault(e["id"], num[_num(par)])
+    return parent_of, part_of
+
+
+def _descendants(tid: str, parts: Mapping[str, list[str]]) -> list[str]:
+    """Every open part of ``tid``, and their parts, breadth first; a cycle ends the walk."""
+    out, seen, todo = [], {tid}, list(parts.get(tid, ()))
+    while todo:
+        t = todo.pop(0)
+        if t not in seen:
+            seen.add(t)
+            out.append(t)
+            todo.extend(parts.get(t, ()))
+    return out
+
+
+def _waits_on(live: list[dict], parent_of: dict[str, str]) -> dict[str, set[str]]:
+    """The live entries' waits-on edges (v2.1): X → Y when X is Blocked by Y, P → C when C is
+    Part of P (a parent waits on its parts); local ids only, matched by number."""
+    num = {}
+    for e in live:
+        num.setdefault(_num(e["id"]), e["id"])
+    out: dict[str, set[str]] = {e["id"]: set() for e in live}
+    for e in live:
+        for b in parse_blocked(e["blocked_raw"] or "")[0]:
+            if "#" not in b and _num(b) in num:
+                out[e["id"]].add(num[_num(b)])
+    for c, p in parent_of.items():
+        out.setdefault(p, set()).add(c)
+    return out
+
+
+def _on_cycles(edges: dict[str, set[str]]) -> list[list[str]]:
+    """The strongly connected groups of ``edges`` that hold a cycle (two or more members, or one
+    that waits on itself), each in its members' order of ``edges``; Tarjan's, iterative."""
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    stack: list[str] = []
+    on: set[str] = set()
+    found = []
+    for root in edges:
+        if root in index:
+            continue
+        work = [(root, iter(sorted(edges[root], key=_num)))]
+        index[root] = low[root] = len(index)
+        stack.append(root)
+        on.add(root)
+        while work:
+            v, it = work[-1]
+            w = next(it, None)
+            if w is not None:
+                if w not in index:
+                    index[w] = low[w] = len(index)
+                    stack.append(w)
+                    on.add(w)
+                    work.append((w, iter(sorted(edges.get(w, ()), key=_num))))
+                elif w in on:
+                    low[v] = min(low[v], index[w])
+                continue
+            work.pop()
+            if work:
+                low[work[-1][0]] = min(low[work[-1][0]], low[v])
+            if low[v] == index[v]:
+                group = []
+                while True:
+                    w = stack.pop()
+                    on.discard(w)
+                    group.append(w)
+                    if w == v:
+                        break
+                if len(group) > 1 or v in edges.get(v, ()):
+                    pos = {t: i for i, t in enumerate(edges)}
+                    found.append(sorted(group, key=pos.__getitem__))
+    return found
 
 
 def _resolved(item: str, resolve: Resolve | None) -> dict:
@@ -218,17 +328,22 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
     """Every live entry in pick order, with its derived pickable, open blockers and raw fields; plus flags.
 
     **Pickable is derived, never written:** an entry is pickable when it has no Blocked by field,
-    or every entry it names is archived and it names no decision. ``resolve`` answers a
+    or every entry it names is archived and it names no decision — and no open entry is Part of
+    it (v2.1; its ``parts_open``, kept apart from ``blocked_by``). ``resolve`` answers a
     ``<repo>#TD-NNN`` item (see ``Resolve``); without one, such an item keeps its block.
     ``undeclared`` also flags a header field with no vocabulary, when the ledger declares any.
 
     **Pick order is the rank** (SPEC *The rank*): ``rank_text`` is the rank file's text (None or
     "": no lines), ``repo`` the last component of an implicit key. Each record carries its ``key``
     (its line's, else its implicit key) and its ``card_key``; entries sort by card, then within a
-    card by dependency, then key."""
+    card by dependency (after its blockers and its parts), then key."""
     live = entries(ledger)
     live_nums = {_num(e["id"]) for e in live}
     archived = heading_nums(archive)
+    parent_of, part_of = _parents(live)
+    parts_open: dict[str, list[str]] = {}
+    for c, par in parent_of.items():
+        parts_open.setdefault(par, []).append(c)
     table = {int(m.group(2)): m.group(4) for m in ROW_RE.finditer(COMMENT_RE.sub("", ledger))}
     vocab, decl_flags = declared(ledger)
     flags = _Flags()
@@ -266,7 +381,22 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
         keys.setdefault(e["id"], lined.get(n) or implicit_key(prio, etype, e["id"], repo))
         rec = {"id": e["id"], "title": e["title"], "priority": prio, "type": etype,
                "blocked_by": [], "cross_repo": [], "pickable": True, "fields": e["fields"],
-               "key": keys[e["id"]], "card_key": ""}
+               "key": keys[e["id"]], "card_key": "", "part_of": None, "parts_open": []}
+        par, why = part_of.get(e["id"], (None, None))
+        if why:
+            flags.add(f"⚠ {e['id']}: its Part of {why}", e["id"], "part of", "part-of-item")
+        elif par:
+            rec["part_of"] = par
+            if _num(par) not in live_nums:
+                if _num(par) in archived:
+                    flags.add(f"ℹ {e['id']}: Part of {par}, which is archived — read as an open part of a "
+                              "finished parent", e["id"], "part of", "part-of-archived")
+                else:
+                    flags.add(f"⚠ {e['id']}: Part of {par}, which names no entry in the ledger or the archive",
+                              e["id"], "part of", "part-of-unknown")
+        if parts_open.get(e["id"]):
+            rec["parts_open"] = list(parts_open[e["id"]])
+            rec["pickable"] = False
         if e["blocked_raw"] is not None:
             ids, who, bad = parse_blocked(e["blocked_raw"])
             for item in bad:
@@ -297,13 +427,25 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
             else:
                 rec["blocked_by"] = open_ids + [f"decision ({w})" for w in who] + [repr(b) for b in bad]
                 rec["pickable"] = False
+            below_me = _descendants(e["id"], parts_open)
+            legacy = [b for b in ids if "#" not in b and any(_num(b) == _num(d) for d in below_me)]
+            if legacy:
+                flags.add(f"ℹ {e['id']}: its Blocked by names {', '.join(legacy)}, Part of it — a parent's "
+                          "parts keep it unpicked by their Part of line; drop them from Blocked by",
+                          e["id"], "blocked by", "legacy-part")
         written = first_word(e["fields"].get("pickable"))
         if written in ("yes", "no") and (written == "yes") != rec["pickable"]:
             flags.add(f"ℹ {e['id']}: its Pickable line says {written}, the derived pickable is "
                       f"{'yes' if rec['pickable'] else 'no'} — the line is only a field (cadence.md §2.12)",
                       e["id"], "pickable", "pickable-disagrees")
         (pick if rec["pickable"] else blocked).append(rec)
-    order = _card_order(live, keys, lined)
+    for group in _on_cycles(_waits_on(live, parent_of)):
+        for t in group:
+            on = f"on a waits-on cycle with {', '.join(x for x in group if x != t)}" if len(group) > 1 \
+                else "waits on itself"
+            flags.add(f"ℹ {t}: {on} — none of it can be picked; break it (a part is never blocked "
+                      "by its parent or an ancestor)", t, "blocked by", "cycle")
+    order = _card_order(live, keys, lined, parent_of)
     for r in pick + blocked:
         r["card_key"] = order[r["id"]][1]
     for lst in (pick, blocked):
@@ -483,7 +625,7 @@ def set_rank(text: str, lines: Mapping[str, str | None]) -> str:
 
 def components(ents: list[dict]) -> list[dict]:
     """The connected components of ``ents`` (``entries()`` of a ledger or an archive) over their
-    Blocked by ids, both directions: ``{ids, others, cross_repo}`` — the members in file order, the
+    Blocked by ids and their Part of parent (v2.1), both directions: ``{ids, others, cross_repo}`` — the members in file order, the
     local ids they name that are not among ``ents`` (an archived or unknown entry: not a member,
     joins nothing), and the ``<repo>#TD-NNN`` ids they name, for a caller to join across repos.
     Components are in the file order of their first member."""
@@ -501,6 +643,9 @@ def components(ents: list[dict]) -> list[dict]:
     named: dict[str, tuple[list[str], list[str]]] = {}
     for e in ents:
         ids = parse_blocked(e["blocked_raw"])[0] if e.get("blocked_raw") else []
+        par = parse_part_of(e.get("part_of_raw"))[0]
+        if par and all(_num(par) != _num(b) for b in ids if "#" not in b):
+            ids = [*ids, par]  # another repo's entry is never a parent: parse_part_of() reads none
         others, xrepo = [], []
         for b in ids:
             if "#" in b:
@@ -522,10 +667,12 @@ def components(ents: list[dict]) -> list[dict]:
     return list(groups.values())
 
 
-def _card_order(live: list[dict], keys: dict[str, str], lined: dict[int, str]) -> dict[str, tuple[tuple, str]]:
+def _card_order(live: list[dict], keys: dict[str, str], lined: dict[int, str],
+                parent_of: Mapping[str, str] | None = None) -> dict[str, tuple[tuple, str]]:
     """Each live entry's (sort value, card key). The card key is the best lined key among the card's
     members when any has a line, else the best implicit key; the sort value is that key, the card's
-    lowest id, then the entry's place in the card — after every member it is blocked by, else by key."""
+    lowest id, then the entry's place in the card — after every member it is blocked by and every
+    part of it (``parent_of``: {part: parent}), else by key."""
     out: dict[str, tuple[tuple, str]] = {}
     raw = {e["id"]: e["blocked_raw"] for e in live}
     for comp in components(live):
@@ -536,6 +683,9 @@ def _card_order(live: list[dict], keys: dict[str, str], lined: dict[int, str]) -
         num = {_num(t): t for t in ids}
         deps = {t: {num[_num(b)] for b in parse_blocked(raw[t] or "")[0]
                     if "#" not in b and _num(b) in num and num[_num(b)] != t} for t in ids}
+        for c, par in (parent_of or {}).items():
+            if par in deps and c in deps and c != par:
+                deps[par].add(c)
         left, pos = set(ids), 0
         while left:
             ready = [t for t in left if not deps[t] & left] or list(left)  # a cycle: key order breaks it
