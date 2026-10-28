@@ -39,4 +39,4 @@
 # full commit, moved by `dev-cadence bump` in a reviewed PR. Written by `sync.sh --pin`.
 [dev-cadence]
 source = "https://github.com/ShiftLead/dev-cadence"
-ref = "a2af41d7336805bcde0939028b0234946c2fa994"
+ref = "4c49a39e108f85229f902376dda0a12b81b33bb9"

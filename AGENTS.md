@@ -25,7 +25,7 @@ This repo pins dev-cadence (`docs/cadence.toml`'s `[dev-cadence]`, TD-129): `doc
 `docs/procedures/*.md` below are the pinned tree's files, which `dev-cadence path cadence.md` (or
 `procedures/<name>.md`) prints; its scripts run as `dev-cadence run <script>`.
 
-The working rules are `docs/cadence.md` — worktrees (§1), the ledger `docs/technical_debt.md`
+The working rules are `docs/cadence.md` — worktrees (§1), the ledger `docs/ledger/`
 (§2), the attention board `docs/user_attention.md` (§3), and the review and merge loop (§4).
 Three procedures run on top of them, each a doc any agent follows (Claude Code also has each
 as a skill of the same name): `docs/procedures/stranded-work.md` (the periodic sweep, §3.11),
@@ -71,5 +71,5 @@ python3 fixtures/run.py                 # every fixture against ledgerboard.py (
 | The formats | `SPEC.md` (with TD-001) |
 | Why three repos, and what is whose | the ADR above |
 | How work is done here | `cadence.md` in the pinned dev-cadence (`dev-cadence path cadence.md`; the pin is `docs/cadence.toml`'s `[dev-cadence]`, TD-129) |
-| Open work | `docs/technical_debt.md` |
+| Open work | `docs/ledger/` (one `TD-NNN.md` per entry; `dev-cadence run ledger.py --summary`) |
 | What waits on a person | `docs/user_attention.md` |
