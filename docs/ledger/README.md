@@ -13,8 +13,6 @@ IDs are `TD-` plus a zero-padded three-digit number, assigned in order and never
 An entry's fields are the `**Name:** value` lines right under its heading, up to the first blank line (cadence.md §2). To add this repo's own fields, declare their values on one line here, e.g. `Fields: Owner = grinder | designer; Kind = build | design-first` — `scripts/ledger.py --list --owner grinder` and `--fields` then read them.
 
 ---
-
----
 <!-- Entry template:
 ## TD-001: Short title of the problem
 **Priority:** High | Medium | Low
