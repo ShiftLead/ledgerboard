@@ -1,4 +1,4 @@
-# The same opt-in rules as dev-cadence, which syncs ledgerboard.py and lints its scripts with them.
+# The same opt-in rules as agent-cadence, which syncs ledgerboard.py and lints its scripts with them.
 line-length = 120
 
 [lint]

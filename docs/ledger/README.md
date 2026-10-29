@@ -2,9 +2,9 @@
 
 Ledgerboard: 2
 
-Known issues, compromises, and deferred work. Add an entry any time a problem is identified but not immediately fixed — no exceptions, however small (see `cadence.md` §2, `dev-cadence path cadence.md`).
+Known issues, compromises, and deferred work. Add an entry any time a problem is identified but not immediately fixed — no exceptions, however small (see `cadence.md` §2, `agent-cadence path cadence.md`).
 
-**One file per entry (ledgerboard v2):** an open entry is `TD-NNN.md` here; a fully resolved one moves, by `git mv`, to [`archive/`](archive/), with **Fix** replaced by the resolution date plus a pointer to whichever doc/code now carries the lasting content (its relative links get one more `../`). An entry that is only *partly* resolved stays here, with what shipped and what remains spelled out in its **Status**. There is no stored summary table: `dev-cadence run ledger.py --summary` prints it.
+**One file per entry (ledgerboard v2):** an open entry is `TD-NNN.md` here; a fully resolved one moves, by `git mv`, to [`archive/`](archive/), with **Fix** replaced by the resolution date plus a pointer to whichever doc/code now carries the lasting content (its relative links get one more `../`). An entry that is only *partly* resolved stays here, with what shipped and what remains spelled out in its **Status**. There is no stored summary table: `agent-cadence run ledger.py --summary` prints it.
 
 This directory was split from `docs/technical_debt.md` and `docs/technical_debt_archive.md` on 2026-10-28 (`ledger.py --split`, dev-cadence TD-160); each entry's history before then is in those two files' logs.
 

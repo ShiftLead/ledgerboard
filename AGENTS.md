@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Seeded by dev-cadence's sync.sh (TD-092): created once if missing, never overwritten — this
+<!-- Seeded by agent-cadence's sync.sh (TD-092): created once if missing, never overwritten — this
      file is the repo's own. Codex and most agent tools read AGENTS.md; Claude Code reads CLAUDE.md,
      so a repo keeps its map here and makes CLAUDE.md the one line `@AGENTS.md` (cadence.md §7.6).
      Keep the first section first: it is how a session in any tool gets the cadence's wake-up. -->
@@ -10,7 +10,7 @@
 Run this from the repo's root before anything else, and act on what it prints:
 
 ```bash
-dev-cadence hook session-start
+agent-cadence hook session-start
 ```
 
 It names what is due on this machine's attention boards, this repo's pull requests that have
@@ -21,9 +21,9 @@ session-start hook runs it itself. It always exits 0.
 
 ## How this repo works
 
-This repo pins dev-cadence (`docs/cadence.toml`'s `[dev-cadence]`, TD-129): `docs/cadence.md` and
-`docs/procedures/*.md` below are the pinned tree's files, which `dev-cadence path cadence.md` (or
-`procedures/<name>.md`) prints; its scripts run as `dev-cadence run <script>`.
+This repo pins agent-cadence (`docs/cadence.toml`'s `[agent-cadence]`, TD-129): `docs/cadence.md` and
+`docs/procedures/*.md` below are the pinned tree's files, which `agent-cadence path cadence.md` (or
+`procedures/<name>.md`) prints; its scripts run as `agent-cadence run <script>`.
 
 The working rules are `docs/cadence.md` — worktrees (§1), the ledger `docs/ledger/`
 (§2), the attention board `docs/user_attention.md` (§3), and the review and merge loop (§4).
@@ -70,6 +70,6 @@ python3 fixtures/run.py                 # every fixture against ledgerboard.py (
 |---|---|
 | The formats | `SPEC.md` (with TD-001) |
 | Why three repos, and what is whose | the ADR above |
-| How work is done here | `cadence.md` in the pinned dev-cadence (`dev-cadence path cadence.md`; the pin is `docs/cadence.toml`'s `[dev-cadence]`, TD-129) |
-| Open work | `docs/ledger/` (one `TD-NNN.md` per entry; `dev-cadence run ledger.py --summary`) |
+| How work is done here | `cadence.md` in the pinned agent-cadence (`agent-cadence path cadence.md`; the pin is `docs/cadence.toml`'s `[agent-cadence]`, TD-129) |
+| Open work | `docs/ledger/` (one `TD-NNN.md` per entry; `agent-cadence run ledger.py --summary`) |
 | What waits on a person | `docs/user_attention.md` |
