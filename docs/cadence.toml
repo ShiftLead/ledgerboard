@@ -2,9 +2,9 @@
 # once and never overwrites it. People write it; tools only read it and never rewrite it, so a
 # comment saying why a value was chosen is safe here (cadence.md §9.18).
 #
-# Every tool reads a value through `dev-cadence run cadence_config.py get <key>` (Python >= 3.11).
+# Every tool reads a value through `agent-cadence run cadence_config.py get <key>` (Python >= 3.11).
 # The first that has it wins: env CADENCE_<KEY> (CADENCE_REVIEW_MODEL), this file, the machine's
-# ${XDG_CONFIG_HOME:-~/.config}/dev-cadence/cadence.toml, the default. `cadence_config.py`
+# ${XDG_CONFIG_HOME:-~/.config}/agent-cadence/cadence.toml, the default. `cadence_config.py`
 # prints every key with its value and source; `--check` names a key nothing reads.
 # To change a value, uncomment its line and edit the value (each is shown at its default).
 
@@ -26,7 +26,7 @@
 #
 # [not-adopted]
 # "§4" = "docs/decisions/0001-….md"
-#     §4 (branch → PR → squash) is not how this repo works: dev-cadence hook pre-push is
+#     §4 (branch → PR → squash) is not how this repo works: agent-cadence hook pre-push is
 #     neither shipped nor locked (an unedited copy is removed; an edited one is kept, with a
 #     WARN), no pre-push shim is installed (an existing one is removed either way), and
 #     sync-all.sh pushes its sync branch for the owner to merge instead of opening a PR.
@@ -35,8 +35,8 @@
 # "docs/claude-memory/MEMORY.md" = "docs/decisions/0001-….md"
 #     that SEED file is never created (one that exists is left alone — it is yours).
 
-# The dev-cadence this repo runs (TD-129): `source` is never moved by a bump, and `ref` is a
-# full commit, moved by `dev-cadence bump` in a reviewed PR. Written by `sync.sh --pin`.
-[dev-cadence]
-source = "https://github.com/ShiftLead/dev-cadence"
-ref = "0ad7b2fc21653b09cb3db1fbfd762e842d0b5e9b"
+# The agent-cadence this repo runs (TD-129): `source` is never moved by a bump, and `ref` is a
+# full commit, moved by `agent-cadence bump` in a reviewed PR. Written by `sync.sh --pin`.
+[agent-cadence]
+source = "https://github.com/ShiftLead/agent-cadence"
+ref = "29210e6c17c473cdeee50ba65e7bb1696819dfc3"
