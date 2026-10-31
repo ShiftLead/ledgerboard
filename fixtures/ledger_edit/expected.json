@@ -1,0 +1,67 @@
+{
+ "canonical": {
+  "already": {
+   "idempotent": true,
+   "ok": "## TD-041: An entry already in canonical form\n\n**Priority:** Low\n**Type:** debt\n**Added:** 2026-01-11\n**Owner:** designer\n**Kind:** design-first\n**Status:** Open\n**Taken by:** a-session\n**Id take:** 0123456789abcdef0123456789abcdef\n**Blocked by:** TD-012, decision (the owner)\n**Waits:** the next run\n**Part of:** TD-030\n**Location:** `docs/x.md`\n**Escaped from:** other-repo#TD-007\n**Resolved:** kept where the file has it\n\n**Why:** a reason.\n"
+  },
+  "crlf": {
+   "idempotent": true,
+   "ok": "## TD-049: Written with CRLF line endings\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** a reason.\n\n- a bullet\n"
+  },
+  "heading_only": {
+   "idempotent": true,
+   "ok": "## TD-042: Nothing but a heading\n"
+  },
+  "refused_lifted": {
+   "refused": "its Blocked by line is below the header block, where the reader still lifts it — move it into the header block, by hand"
+  },
+  "refused_no_header": {
+   "refused": "the paragraph after its heading is its header block, and 'some words' is not a field — an entry with a body needs its fields first; add them by hand"
+  },
+  "refused_open_comment": {
+   "refused": "an HTML comment is not closed in the entry — close it first"
+  },
+  "refused_repeated": {
+   "refused": "its header block names 'status' twice — keep one, by hand"
+  },
+  "refused_two_entries": {
+   "refused": "not one entry: an entry's text opens with its one `## TD-n:` heading (found TD-046, TD-047) — a v1 ledger: split first"
+  },
+  "refused_wrapped": {
+   "refused": "its header block holds a line that is not a field: '`src/c.py`' — join it to its field's line, or move it below the header block, by hand"
+  },
+  "reordered": {
+   "idempotent": true,
+   "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+  }
+ },
+ "entry_text": {
+  "mapping": {
+   "ok": "## TD-051: Sections as a mapping\n\n**Priority:** Low\n\n**Why:** a reason.\n\n**Related:** TD-050.\n"
+  },
+  "new": {
+   "ok": "## TD-050: A new entry\n\n**Priority:** Medium\n**Added:** 2026-01-15\n**Status:** Open\n**Id take:** 0123456789abcdef0123456789abcdef\n\nWords before the first lead.\n\n**Why:** the reason.\n\n**Fix:** the steps:\n- one\n- two\n\n**Done when:** both are done.\n"
+  },
+  "refused_bold_paragraph": {
+   "refused": "the entry would not read back with these fields and sections — a paragraph opening in bold starts a section of its own; rephrase it"
+  },
+  "refused_field_lines": {
+   "refused": "the Location field is one line (cadence.md §2.12)"
+  },
+  "refused_field_twice": {
+   "refused": "the field 'owner' is named twice"
+  },
+  "refused_id": {
+   "refused": "an entry's id is TD-n, not '51'"
+  },
+  "refused_no_fields": {
+   "refused": "an entry with sections needs at least one field: the paragraph after the heading is the header block"
+  },
+  "refused_title": {
+   "refused": "an entry needs its title, on one line"
+  },
+  "refused_unnamed_later": {
+   "refused": "only the first section may have no name — the text before the first lead"
+  }
+ }
+}

@@ -1,0 +1,165 @@
+{
+ "canonical": [
+  {
+   "name": "reordered",
+   "file": "reordered.md"
+  },
+  {
+   "name": "already",
+   "file": "already.md"
+  },
+  {
+   "name": "heading_only",
+   "file": "heading_only.md"
+  },
+  {
+   "name": "crlf",
+   "text": "## TD-049: Written with CRLF line endings\r\n\r\n**Status:** Open\r\n**Priority:** Low\r\n\r\n**Why:** a reason.\r\n\r\n- a bullet\r\n"
+  },
+  {
+   "name": "refused_wrapped",
+   "file": "wrapped.md"
+  },
+  {
+   "name": "refused_repeated",
+   "file": "repeated.md"
+  },
+  {
+   "name": "refused_lifted",
+   "file": "lifted.md"
+  },
+  {
+   "name": "refused_two_entries",
+   "file": "two_entries.md"
+  },
+  {
+   "name": "refused_open_comment",
+   "file": "open_comment.md"
+  },
+  {
+   "name": "refused_no_header",
+   "text": "## TD-057: A body with no fields before it\n\nsome words\n"
+  }
+ ],
+ "entry_text": [
+  {
+   "name": "new",
+   "id": "TD-050",
+   "title": "A new entry",
+   "fields": {
+    "Status": "Open",
+    "Priority": "Medium",
+    "Added": "2026-01-15",
+    "Taken by": "",
+    "Id take": "0123456789abcdef0123456789abcdef"
+   },
+   "sections": [
+    [
+     null,
+     "Words before the first lead."
+    ],
+    [
+     "Why",
+     "the reason."
+    ],
+    [
+     "Fix",
+     "the steps:\n- one\n- two"
+    ],
+    [
+     "Done when",
+     "both are done."
+    ]
+   ]
+  },
+  {
+   "name": "mapping",
+   "id": "TD-051",
+   "title": "Sections as a mapping",
+   "fields": {
+    "Priority": "Low"
+   },
+   "sections": {
+    "Why": "a reason.",
+    "Related": "TD-050."
+   }
+  },
+  {
+   "name": "refused_id",
+   "id": "51",
+   "title": "x",
+   "fields": {},
+   "sections": []
+  },
+  {
+   "name": "refused_title",
+   "id": "TD-052",
+   "title": "two\nlines",
+   "fields": {},
+   "sections": []
+  },
+  {
+   "name": "refused_field_lines",
+   "id": "TD-053",
+   "title": "x",
+   "fields": {
+    "Location": "a\nb"
+   },
+   "sections": []
+  },
+  {
+   "name": "refused_field_twice",
+   "id": "TD-054",
+   "title": "x",
+   "fields": {
+    "Owner": "builder",
+    "owner": "designer"
+   },
+   "sections": []
+  },
+  {
+   "name": "refused_bold_paragraph",
+   "id": "TD-055",
+   "title": "x",
+   "fields": {
+    "Priority": "Low"
+   },
+   "sections": [
+    [
+     "Why",
+     "a reason.\n\n**Bold** opens a paragraph"
+    ]
+   ]
+  },
+  {
+   "name": "refused_unnamed_later",
+   "id": "TD-056",
+   "title": "x",
+   "fields": {
+    "Priority": "Low"
+   },
+   "sections": [
+    [
+     "Why",
+     "a reason."
+    ],
+    [
+     null,
+     "loose words"
+    ]
+   ]
+  },
+  {
+   "name": "refused_no_fields",
+   "id": "TD-058",
+   "title": "x",
+   "fields": {},
+   "sections": [
+    [
+     "Why",
+     "a reason."
+    ]
+   ]
+  }
+ ]
+}

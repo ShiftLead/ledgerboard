@@ -17,7 +17,8 @@ neither keeps a second parser of either format.
 Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived pickable, ``check``); the rank
 (cards, keys, the rank file, the pick order); the board
 (items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
-subject of a write and its parser); line predicates for diff walkers; the format version.
+subject of a write and its parser); line predicates for diff walkers; ledger entries and their writers
+(``canonical``, ``entry_text``, v2.2); the format version.
 """
 
 from __future__ import annotations
@@ -41,7 +42,7 @@ ROW_RE = re.compile(r"^\|\s*(TD-(\d+))\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|", re.MULTI
 FIELD_RE = re.compile(r"^\*\*([A-Za-z][^*:\n]*?):\*\*[ \t]*(.*?)[ \t]*$")  # one line, one field
 FIELDS_DECL_RE = re.compile(r"^Fields:[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # the preamble's declaration
 CADENCE_FIELDS = ("priority", "type", "added", "status", "blocked by", "location", "part of",
-                  "escaped from")  # the spec's own fields
+                  "escaped from", "id take")  # the spec's own fields
 PRIORITY_RE = re.compile(r"^\*\*Priority:\*\*\s*(\w+)", re.MULTILINE)
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one line only
 PART_OF_RE = re.compile(r"^\*\*Part of:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one parent, same ledger (v2.1)
@@ -1512,6 +1513,198 @@ def _dict_ls(files: Mapping[str, str]) -> Ls:
             return None
         return sorted(names)
     return ls
+
+
+# ---------------------------------------------------------------------------------------------
+# Ledger entries and their writers (v2.2): one entry's text, in canonical form
+# ---------------------------------------------------------------------------------------------
+
+# The canonical header order (SPEC *Ledger entries and their edits*), spelled as written there; any
+# other field follows in the file's order. A place here is a rendering rule, not a declaration:
+# Owner, Kind, Taken by and Waits are not CADENCE_FIELDS.
+ENTRY_ORDER = ("Priority", "Type", "Added", "Owner", "Kind", "Status", "Taken by", "Id take",
+               "Blocked by", "Waits", "Part of", "Location")
+LEAD_RE = re.compile(r"^\*\*(?P<lead>[^*\n]+?)\*\*")  # a section's lead: its first paragraph's bold opening
+FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}(?=[^`]*$)|~{3,})(?P<info>.*)$")  # a code fence's line: no lead inside one
+
+
+def _entry_problem(text: str) -> str | None:
+    """Why ``text`` is not one entry a writer may render, or None: it opens with its one
+    `## TD-n:` heading, the only one outside its HTML comments, and every comment is closed."""
+    heads = HEADING_RE.findall(COMMENT_RE.sub("", text))
+    if not HEADING_RE.match(text) or len(heads) != 1:
+        return (f"not one entry: an entry's text opens with its one `## TD-n:` heading (found "
+                f"{', '.join(h[0] for h in heads) or 'none'}) — a v1 ledger: split first")
+    if text.count("<!--") != len(COMMENT_RE.findall(text)):
+        return "an HTML comment is not closed in the entry — close it first"
+    return None
+
+
+def _entry_parts(text: str) -> tuple[re.Match, list[tuple[str, str]], str]:
+    """(the heading's match, the header block as [(name as written, value)], the body with no
+    leading or trailing blank lines) of one entry, line endings normalised; raises Refused for an
+    entry ``canonical()`` refuses: not one entry, a header line that is not a field, a repeated
+    field, or a field below the header block that ``entries()`` would lift."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    why = _entry_problem(text)
+    if why:
+        raise Refused(why)
+    lines = text.split("\n")
+    i = 1
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    header, seen = [], set()
+    while i < len(lines) and lines[i].strip():
+        m = FIELD_RE.match(lines[i])
+        if not m and not header:
+            raise Refused(f"the paragraph after its heading is its header block, and {lines[i]!r} is not a "
+                          "field — an entry with a body needs its fields first; add them by hand")
+        if not m:
+            raise Refused(f"its header block holds a line that is not a field: {lines[i]!r} — "
+                          "join it to its field's line, or move it below the header block, by hand")
+        if field_key(m.group(1)) in seen:
+            raise Refused(f"its header block names {m.group(1).strip()!r} twice — keep one, by hand")
+        seen.add(field_key(m.group(1)))
+        header.append((m.group(1), m.group(2)))
+        i += 1
+    below = entries(text)[0]["below"]
+    if below:
+        raise Refused(f"its {', '.join(k.capitalize() for k in below)} line is below the header block, "
+                      "where the reader still lifts it — move it into the header block, by hand")
+    j = len(lines)
+    while j > i and not lines[j - 1].strip():
+        j -= 1
+    while i < j and not lines[i].strip():
+        i += 1
+    return HEADING_RE.match(text), header, "\n".join(lines[i:j])
+
+
+def _render(tid: str, title: str, header: list[tuple[str, str]], body: str) -> str:
+    """One entry in canonical form: heading, blank, the header in ENTRY_ORDER (the ordered fields
+    spelled as it spells them, any other as given, in the given order), blank, the body."""
+    place = {field_key(n): k for k, n in enumerate(ENTRY_ORDER)}
+    ordered = sorted(enumerate(header), key=lambda x: (place.get(field_key(x[1][0]), len(ENTRY_ORDER)), x[0]))
+    out = [f"## {tid}: {title.strip()}".rstrip()]
+    fields = [f"**{ENTRY_ORDER[place[field_key(n)]] if field_key(n) in place else n}:** {v}".rstrip()
+              for _, (n, v) in ordered]
+    if fields:
+        out += ["", *fields]
+    if body:
+        out += ["", body]
+    return "\n".join(out) + "\n"
+
+
+def _readback(text: str) -> tuple[str, str, dict[str, str], str]:
+    """What the reader reads of an entry: (id, title, fields as ``entries()`` reads them, body)."""
+    e = entries(text)[0]
+    return e["id"], e["title"], e["fields"], _entry_parts(text)[2]
+
+
+def canonical(text: str) -> str:
+    """One entry's text (a v2 ledger's ``TD-NNN.md``) in canonical form (SPEC *Ledger entries and
+    their edits*): line endings normalised to ``\\n``, the heading, a blank line, the header block in
+    ENTRY_ORDER and then any other field in the file's order, a blank line, the body byte for byte,
+    one trailing newline. Idempotent. Raises Refused for text that is not one entry, and for a header
+    block whose rendering would lose or duplicate a line — a line that is not a field, a repeated
+    field, a field below the header block that ``entries()`` would lift — which a person fixes; and
+    whenever the result would not read back the same id, title, fields and body."""
+    m, header, body = _entry_parts(text)
+    out = _render(m.group(1), m.group(3), header, body)
+    norm = text.replace("\r\n", "\n").replace("\r", "\n")
+    if _readback(out) != _readback(norm):
+        raise Refused("the canonical form would not read back the entry's fields and body unchanged — "
+                      "nothing was written")
+    return out
+
+
+def _entry_sections(body: str) -> list[tuple[str | None, str]]:
+    """The body's sections, in order: (the lead as written — the bold run's text, ``Why:`` or
+    ``Done when`` — or None for the text before the first lead; the section's text). A section is
+    a paragraph opening with a bold run and every paragraph after it up to the next that does; a
+    paragraph inside a code fence never opens one. Each text runs to the next lead, its trailing
+    blank lines trimmed."""
+    out: list[tuple[str | None, list[str]]] = []
+    fence, prev_blank = "", True  # the open fence's run (``` or ~~~, its length), or ""
+    for line in body.split("\n"):
+        m = LEAD_RE.match(line) if prev_blank and not fence else None
+        if m or not out:
+            out.append((m.group("lead") if m else None, []))
+        out[-1][1].append(line)
+        f = FENCE_RE.match(line)
+        if f and not fence:
+            fence = f.group("fence")
+        elif f and f.group("fence")[0] == fence[0] and len(f.group("fence")) >= len(fence) \
+                and not f.group("info").strip():
+            fence = ""  # closed by a bare run of its own character, at least as long
+        prev_blank = not line.strip()
+    found = []
+    for lead, ls in out:
+        while ls and not ls[-1].strip():
+            ls = ls[:-1]
+        if lead is not None or ls:
+            found.append((lead, "\n".join(ls)))
+    return found
+
+
+def _section_key(lead: str) -> str:
+    """A section's name for matching: its lead's ``field_key`` with a trailing colon dropped, so
+    ``Done when`` and ``Done when:`` are one name; a qualified lead (``Fix (to design):``) keeps its
+    whole text and so matches only itself."""
+    return field_key(lead.strip().rstrip(":"))
+
+
+def entry_text(tid: str, title: str, fields, sections) -> str:
+    """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value} or (name,
+    value) pairs, one line each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
+    mapping, each written ``**<name>:** <text>``, a whitespace-only line emptied (in a code block
+    too); a first pair with no name is the unnamed lead, written as given. Raises Refused for an id that is not ``TD-n``, an empty or multi-line title, a
+    field that is not one ``**Name:** value`` line, a field named twice, and sections that would not
+    read back as given (a paragraph of a section's text that opens in bold would start another)."""
+    if not ID_ITEM_RE.match(str(tid)):
+        raise Refused(f"an entry's id is TD-n, not {tid!r}")
+    title = str(title or "")
+    if not title.strip() or "\n" in title.strip():
+        raise Refused("an entry needs its title, on one line")
+    header, seen = [], set()
+    for name, value in (fields.items() if isinstance(fields, Mapping) else fields or ()):
+        name, value = str(name).strip(), str(value or "").strip()
+        if not value:
+            continue
+        if "\n" in value or "\r" in value:
+            raise Refused(f"the {name} field is one line (cadence.md §2.12)")
+        m = FIELD_RE.match(f"**{name}:** {value}")
+        if not m or m.group(1) != name or m.group(2) != value:
+            raise Refused(f"{name!r}: {value!r} would not read back as one field")
+        if field_key(name) in seen:
+            raise Refused(f"the field {name!r} is named twice")
+        seen.add(field_key(name))
+        header.append((name, value))
+    pairs = list(sections.items()) if isinstance(sections, Mapping) else list(sections or ())
+    if pairs and not header:
+        raise Refused("an entry with sections needs at least one field: the paragraph after the heading "
+                      "is the header block")
+    parts, want = [], []
+    for k, (name, words) in enumerate(pairs):
+        words = "\n".join(ln.rstrip() if not ln.strip() else ln
+                          for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
+        if not words.strip():
+            raise Refused(f"the section {name or '(unnamed)'!r} is empty")
+        if not name:
+            if k:
+                raise Refused("only the first section may have no name — the text before the first lead")
+            parts.append(words)
+            want.append((None, words))
+            continue
+        lead = f"{str(name).strip()}:"
+        parts.append(f"**{lead}** {words}")
+        want.append((_section_key(lead), parts[-1]))
+    out = canonical(_render(str(tid), title, header, "\n\n".join(parts)))
+    got = [(_section_key(lead) if lead is not None else None, t)
+           for lead, t in _entry_sections(_entry_parts(out)[2])]
+    if got != want or _readback(out)[2] != {field_key(n): v for n, v in header}:
+        raise Refused("the entry would not read back with these fields and sections — a paragraph "
+                      "opening in bold starts a section of its own; rephrase it")
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
