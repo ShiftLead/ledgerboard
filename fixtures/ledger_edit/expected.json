@@ -78,7 +78,7 @@
     "kind": "archive-open-parts",
     "level": "error",
     "standing": false,
-    "text": "⚠ TD-020: left the ledger while TD-021, TD-022 are still Part of it — archive its parts first, or give them another parent"
+    "text": "⚠ TD-020: left the ledger while TD-021, TD-022 are still Part of it — archive its parts first, or point their Part of at its new id or another parent"
    }
   ]
  },

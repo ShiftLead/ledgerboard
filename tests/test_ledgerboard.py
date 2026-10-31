@@ -587,3 +587,8 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
         moved = _entry(2, "Low", "**Part of:** TD-004") + _entry(3) + _entry(4)
         self.assertFalse([r for r in L.check(moved, _entry(1), old=led + _entry(4)) if r["kind"] == "archive-open-parts"])
         self.assertFalse([r for r in L.check(after, _entry(1)) if r["kind"] == "archive-open-parts"])
+        # deleted outright, or renumbered with its parts left pointing at the old id: the same error
+        for arc, extra in (("", ""), ("", _entry(9))):
+            with self.subTest(renumbered=bool(extra)):
+                got = [r["id"] for r in L.check(after + extra, arc, old=led) if r["kind"] == "archive-open-parts"]
+                self.assertEqual(got, ["TD-001"])

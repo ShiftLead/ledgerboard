@@ -487,19 +487,20 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
 def _left_with_open_parts(old: str, ledger: str) -> list[dict]:
     """``archive-open-parts`` (v2.2): each id in ``old`` and not in ``ledger`` (by number) that an open
     entry of ``ledger`` is still Part of — the parent archived, or renumbered, ahead of its parts."""
-    now = {_num(e["id"]) for e in entries(ledger)}
+    live = entries(ledger)
+    now = {_num(e["id"]) for e in live}
     left = {}
     for e in entries(old):
         if _num(e["id"]) not in now:
             left.setdefault(_num(e["id"]), e["id"])
     parts: dict[int, list[str]] = {}
-    for e in entries(ledger):
+    for e in live:
         par = parse_part_of(e["part_of_raw"])[0]
         if par and _num(par) in left:
             parts.setdefault(_num(par), []).append(e["id"])
     return [{"level": "error", "id": left[n], "field": "part of", "kind": "archive-open-parts", "standing": False,
              "text": f"⚠ {left[n]}: left the ledger while {', '.join(ps)} {'is' if len(ps) == 1 else 'are'} still "
-                     "Part of it — archive its parts first, or give them another parent"}
+                     "Part of it — archive its parts first, or point their Part of at its new id or another parent"}
             for n, ps in sorted(parts.items())]
 
 
