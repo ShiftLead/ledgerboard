@@ -37,13 +37,19 @@ Each choice below is settled by `SPEC.md` or by the agreed shape, unless it is m
 - **C3. Kind rules are the writer's, never the reader's (steer).** `item_line()` writes `Answers:` only on a `decide` (at least two distinct labels, at most one marked default) and on a `look` (the fixed pair, which it writes itself, with `Works (default)` only when asked). It writes no `Due:` on an `fyi`, and requires one on every other kind. These are cadence.md §3.5's *Which items carry `Answers:`* table: a decide's default only "when the session has a recommendation; none when only the person can know", a look's `Works (default)` only with evidence, no answers on `act`, `watch` or `fyi`. An item with no kind is not in that table. This plan gives it `act`'s rule, since both are the person's to-do and a question with answers is a `decide`. The reader still reads whatever a line carries, so no old line reads differently. *The alternative:* leave kinds unchecked and let a writer put `Answers:` on any item. Then `item_problem()` could not say that a hand-typed `act` with answers is wrong.
 - **C4. A `decide` needs its detail block.** Cadence.md §3.3 says a decide always has one. `item_line()` refuses a `decide` without `context`, `question` and `recommended`. `item_problem()` cannot check this, since it sees the line only (the agreed shape: the gate checks the item line).
 - **C5. The archive moves an open twin with its closed copy.** When an open item and a closed one share a key, the reader already treats the open one as closed (SPEC *The board*). If only the closed copy moved, the open copy would reappear as open. So both move.
-- **C6. When to archive is the consumer's.** `archive_closed()` moves every closed item whenever it is called, and refuses only a board with none. `ARCHIVE_AT` stays the format's threshold for a consumer to read.
+- **C6. When to archive is the consumer's.** `archive_closed()` moves every closed item whenever it is called. It refuses a board with no closed item, a shape it would have to split (§3), and a result that does not read back. `ARCHIVE_AT` stays the format's threshold for a consumer to read.
 - **C7. The archive write gets its own commit subject (steer).** `<tool>: archive <n> closed items (session <name>)`, which `subject_kind()` reads as `archive`. Without it, a consumer's audit of tool-made board writes has no subject to recognise. *The alternative:* no subject, and each consumer names the PR itself.
-- **C8. `item_line()` refuses where it used to write a wrong line.** A field name in the text or the context is refused, as is a host given with no session and a `today` that is not a date. A missing host is left out rather than written as `None`, and text ending in `?` or `!` keeps its own mark. Each of these changes what `item_line()` writes for those inputs, and so the key of the line it writes; a line already on a board is untouched, and its key with it. The *Versions* text names the changes. For every other call the output is unchanged (today's `compose` cases still pass).
+- **C8. `item_line()` refuses where it used to write a wrong line, and writes four inputs differently.** It now refuses: a field name (`Context:`, `Due:` in any case, `Answers:`, `Decided:`, `Closed:`) in the text or the context; a host given with no session; a session or host name holding whitespace or any of `` ` , ; ) ``; and a `today` that is not a date. It now writes differently:
+  - a missing host is left out rather than written `on None`;
+  - text ending in `?` or `!` keeps its mark with no `.` after it (`Ship it?`, not `Ship it?.`);
+  - text ending in several periods keeps them (`wait...`, where v2.2 writes `wait.`);
+  - a context ending in `.` loses that period (`Context: TD-1.`, where v2.2 writes `Context: TD-1..`).
+
+  Each changes what `item_line()` writes for those inputs, and so the key of the line it writes; a line already on a board is untouched, and its key with it. The *Versions* text names them. Today's `compose` cases give the same output.
 
 ## §1. `item_line()` writes every kind
 
-**Signature:** `item_line(text, due, today, session, host, context, *, kind=None, answers=None, default=None, detail=None) -> str`. It returns the item line and its detail block, one `\n` after each line.
+**Signature:** `item_line(text, due, today, session, host, context, *, kind=None, answers=None, default=None, detail=None) -> str`. It returns the item line and its detail block, one `\n` after each line. `answers` is a sequence of strings, each `<label>` or `<label> — <consequence>`, split at its first ` — ` as `split_answer()` reads it (the form `decided_line()` takes). `default` is a 0-based index into `answers`, or None. `detail` is described under *The detail block*.
 
 **The line:** `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Due: <due>.][ Answers: <answers>.]`
 
@@ -71,7 +77,7 @@ Each choice below is settled by `SPEC.md` or by the agreed shape, unless it is m
   - **Recommended:** <default label> — <recommended> **Otherwise:** <otherwise>
 ```
 
-On a `decide` with a default, `**Recommended:**` opens with the default's label, then ` — `. Otherwise it holds the given words alone (a decide with no default says there why only the person can know). `otherwise` is written on the Recommended bullet, so it is refused without `recommended`. Each part's own line, and `otherwise`, has its whitespace collapsed and ends a sentence, as the text does. A nested bullet has its whitespace collapsed and is written as given, with no period added.
+On a `decide` with a default, `**Recommended:**` opens with the default's label, then ` — `. Otherwise it holds the given words alone (a decide with no default says there why only the person can know). `otherwise` is written on the Recommended bullet, so it is refused without `recommended`. Each part's own line, and `otherwise`, has its whitespace collapsed and ends a sentence, as the text does. A nested bullet has its whitespace collapsed and is written as given after a `- ` the writer adds (four spaces in), with no period added.
 
 **Refused**, with a reason a person can act on:
 
@@ -81,7 +87,7 @@ On a `decide` with a default, `**Recommended:**` opens with the default's label,
 - a host given with no session, and a session or host name holding whitespace or any of `` ` , ; ) ``;
 - a kind not in `KINDS`;
 - a breach of the kinds table;
-- an answer label that ends in ` (default)` (the mark is the writer's), or a consequence shaped like a reply (` — <name>, <date>: `);
+- an answer label that ends in ` (default)` (the mark is the writer's), a consequence shaped like a reply (` — <name>, <date>: `), or any answer the read-back would not read back as given (one ending in a period, which `ANSWERS_RE` would drop);
 - a `detail` key other than the four parts and `otherwise`, or an empty or multi-line detail string;
 - **the read-back:** `parse_board()` of the result must give exactly one open item whose kind, due, answers, consequences, default, session, host, refs (`item_refs()` of `Context: <context>`) and detail block are the ones meant, with no `Decided:`, no replies, `fyi_due` false and `bad_due` None. The result must hold no other item line, open or closed, so a detail string that opens `[ ]` or `[x]` is refused. Otherwise the call is refused.
 
@@ -115,17 +121,17 @@ These go in `fixtures/edit/cases.json` `compose`. `fixtures/run.py` passes the n
 
 ### `item_problem(line) -> str | None`
 
-`item_problem` takes an item line, with or without its line ending. It returns why the line is not an open line the writers write, as the line now stands after any snooze, decide or reply, or None. When a line has several problems, the string names each one, separated by `; `. Each problem opens with its rule's tag, a fixed word the fixtures rely on: `open:` (rule 1), `kind:` (2), `head:` (3), `text:` and `context:` (4), `due:` (5), `answers:` (7) and `extra:` (8). The words after a tag are the build's, and the fixtures record them once written. A line the writers write:
+`item_problem` takes an item line, with or without its line ending. It returns why the line is not an open line the writers write, as the line now stands after any snooze, decide or reply, or None. When a line has several problems, the string names each one, separated by `; `. Each problem opens with its rule's tag, a fixed word the fixtures rely on: `open:` (rule 1), `kind:` (2), `head:` (3), `text:` and `context:` (4), `due:` (5), `answers:` (7) and `extra:` (8). Any word between `- [ ] ` and the date that is not a lower-case member of `KINDS` (`Decide`, `todo`) is a `kind:` problem. `head:` judges only what follows a kind, or nothing, and a valid date: a bad date or a head outside rule 3's forms. The words after a tag are the build's, and the fixtures record them once written. A line the writers write:
 
 1. opens `- [ ] ` at column 0, with single spaces;
 2. may carry a kind, which is lower-case and in `KINDS`;
-3. carries a valid date, then a head that is exactly one of ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)` or `(person)`;
+3. carries a valid date, then a head that is exactly one of ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)` or `(person)`. `(person)` stands only on a decided line, as `decided_line()` writes it;
 4. continues with ` — `, then text that ends a sentence and carries no field name, then ` Context: <words>.` once;
 5. carries ` Due: <date>.` once, right after Context, on every kind but `fyi`, and none on an `fyi`;
 6. may carry replies after its `Due:`, or after its `Context:` on an `fyi`;
 7. carries answers by the kinds table of §1 while it is undecided. A decided line (`Decided:` read) may carry answers or none, with at most one mark, whatever its kind, since `edit_line()` decides any item;
 
-8. holds nothing outside the parts rules 1–7 name, one space between each part and the next, with no trailing whitespace.
+8. holds nothing outside the parts rules 1–7 name, one space between each part and the next, with no trailing whitespace. The spacing inside a part (the words of a text or a Context) is not judged; `decided_line()` writes a ref as given.
 
 Rules 4, 5 and 7 are checked on the line with its reply tails (`reply_span()`) and its `Decided:` field taken out, and marks are counted among the `Answers:` alone. A reply's words and a `Decided:` text are the person's: `edit_line()` lets them hold `Due:` (a reply, on a dated item), a field name (a decide's answer) or ` (default)`, and none of that is a second field. Rules 1–8 are the definition; `canonical_item()` is defined from them, never the reverse.
 
@@ -139,26 +145,33 @@ The rule is checked as a property: `item_problem()` is None for every line `item
 - it adds the period after the `Due:` date when one is missing;
 - it moves a `Due: <date>` that stands between the text and `Context:` to right after Context, ending Context with its period. The move keeps the key, since `item_key()` strips `Due:` and a trailing period wherever they stand. What it cannot do is add the text's own period: `— text Due: D Context: x.` has the key `— text Context: x`, and `— text. Context: x` would be another. So a text that does not end a sentence is refused by rule 4, whatever the move.
 
-After the rewrites, the result must have no problem by `item_problem()`; otherwise the call is refused and names the problems that remain. So it refuses, among others: a text that does not end a sentence; a missing `Context:`; a head not in rule 3's forms; an `fyi` with a `Due:` (dropping it would lose words); a non-fyi with no `Due:` (there is no date to invent); and a `Due:` after `Answers:` or after replies, where moving it would change what the reader reads. The read-back must give the same key, and the same kind, due, answers, consequences, default, decided, replies, refs, session and host. It is idempotent: a line already in the form comes back unchanged. It is for a consumer's one-time format pass, which reports the lines it refused.
+After the rewrites, the result must have no problem by `item_problem()`; otherwise the call is refused and names the problems that remain. So it refuses, among others: a text that does not end a sentence; a missing `Context:`; a head not in rule 3's forms; an `fyi` with a `Due:` (dropping it would lose words); a non-fyi with no `Due:` (there is no date to invent); and a `Due:` after `Answers:` or after replies, where moving it would change what the reader reads. The read-back must give the same key, and the same kind, due, answers, consequences, default, decided, replies, refs, session and host. It is idempotent: a line already in the form comes back unchanged. It keeps the input's line ending, and it respells and moves only the field `DUE_RE` first finds, never a `due:` in a reply's words. It is for a consumer's one-time format pass, which reports the lines it refused.
 
 ### `board_problems(board, old=None) -> list[tuple[int, str]]`
 
-`board_problems` returns `(line number, problem)` for each open item line that `item_problem()` faults and that is new (C2): its `item_key()` is not the key of any item line, open or closed, in `old`. With `old=None`, every open line is judged. Closed lines are never judged. It is the board's `check()`: a consumer's gate calls it on the board as the edit leaves it, with the board as the edit found it.
+`board_problems` returns `(line number, problem)` for each open item line that `item_problem()` faults and that is new (C2): its `item_key()` is not the key of any item line, open or closed, in `old`. An open item line is every line `ITEM_RE` matches, at any indent, except an open twin of a closed line on the same board (which the reader already reads as closed). So a nested open line is judged, and faulted by rule 1. With `old=None`, every open line is judged. Closed lines are never judged. It is the board's `check()`: a consumer's gate calls it on the board as the edit leaves it, with the board as the edit found it.
 
 ### SPEC text (§2)
 
 New paragraphs in *Edits*, after *A new item*:
 
-> **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
+> **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
+> - opens `- [ ] ` at column 0;
+> - carries an optional lower-case kind, a date, and a head that is ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)`, or `(person)` on a decided line;
+> - continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, and ` Due: <date>.` on every kind but `fyi`;
+> - may then carry replies, then `Answers:` as *A new item* says a kind takes them (a decided line may carry any or none), then `Decided:`;
+> - holds nothing else, one space between parts.
 >
-> **The gate** is `board_problems(board, old)`: the faults of each open line whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
+> Fields inside a reply's words or a `Decided:` text are the person's and are not counted. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
+>
+> **The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
 
 ### Fixture cases (§2)
 
 These go in `fixtures/edit/cases.json`, as `item_problems` (a line → its problem or None), `canonical_items` (a line → its rewrite, or the refusal) and `board_problems` (an `old` text and a `new` text → the list).
 
 - **`item_problems` None:** each §1 written case's line; a `decided_line()` line; a snoozed line; a decided line; a replied-to line; a line replied to with `see Due: 2026-05-01`; a line decided with `Context: x` and with `b (default)`.
-- **`item_problems` faulted:** a head with no backticks; a head with `, branch x`; no `Context:`; `Due:` before `Context:`; an fyi with a `Due:`; an undecided decide with no answers; an act with answers; an indented line; a closed line ("not an open item"); a capitalised `Decide`; a decide with two marks.
+- **`item_problems` faulted:** an undecided line with a `(person)` head; an unknown word before the date; a head with no backticks; a head with `, branch x`; no `Context:`; `Due:` before `Context:`; an fyi with a `Due:`; an undecided decide with no answers; an act with answers; an indented line; a closed line ("not an open item"); a capitalised `Decide`; a decide with two marks.
 - **`canonical_items`:** `due: 2026-01-20` respelled; a missing date period added; `Due:` moved from before Context to after it (the key unchanged); the same with an unpunctuated text, refused; missing Context refused; a head with no backticks refused; an fyi with a `Due:` refused; a `Due:` after `Answers:` refused; an already canonical line returned unchanged.
 - **`board_problems`:** a faulted line in `old`, untouched, is not judged; the same line snoozed is not judged; a new hand-typed faulted line is judged; a new `item_line()` line passes; `old=None` judges everything open.
 
@@ -170,19 +183,21 @@ These go in `fixtures/edit/cases.json`, as `item_problems` (a line → its probl
 
 - **What moves:** each closed item line, with its detail block, and each open item line whose key equals a closed line's key, with its detail block (C5). They move in board order and byte for byte, each line keeping its own line ending. The board is split with `splitlines(keepends=True)`. An item's detail block is the reader's (`detail_block()`'s rule) applied to those raw lines: the lines right after the item that are indented deeper than its `-`, ended by a blank line, a line no deeper, or another item line. A whitespace-only line counts as blank.
 - **Refused shapes**, which a person straightens first, so that nothing is split: a moving item that is indented (nested under another item); a moving item followed by a deeper item line (a child that would be orphaned); and a moving item whose block is ended by a blank line followed by a line deeper than the item (a block broken by a blank line, which would move only its first half).
-- **The board:** those lines are taken out, and every other line is kept byte for byte, preamble included. Where a removal would leave two blank lines in a row, the removed run takes the blank line before it; at the start of the file, it takes the blank line after it. A section left with no items is left as it is. What a consumer writes there (the seed's `- (none)`) is the consumer's.
-- **The archive:** its text is kept byte for byte, and the moved lines are appended. A missing final newline is added first, in the archive's own line ending (`\r\n` when its first line ends so, else `\n`). When its last non-blank line is not an item or a detail line, the moved lines are separated from it by one blank line, and a blank line already at its end counts as that one. An empty archive becomes the moved lines alone. The archive's title and prose are the consumer's, written when the file is first made.
-- **Refused:** a board with no closed item; and a result whose read-back differs. The read-back requires `parse_board()` of the new board to give the old one's open items minus the moved twins, compared on every field but `line` (which shifts when lines above an item move); `closed_items()` of the new board to be empty; and the archive's new tail to equal the moved lines.
+- **The board:** those lines are taken out, and every other line is kept byte for byte, preamble included. Where a removal would leave two blank lines in a row, the removed run takes the blank line before it; at the start of the file, it takes the blank line after it; and at the end of the file, it takes the blank line before it, so the board ends as it did. A section left with no items is left as it is. What a consumer writes there (the seed's `- (none)`) is the consumer's.
+- **The archive:** its text is kept byte for byte, and the moved lines are appended. A missing final newline is added first, in the archive's own line ending (`\r\n` when its first line ends so, else `\n`). When its last non-blank line is not an item or a detail line, the moved lines are separated from it by one blank line, and a blank line already at its end counts as that one. An empty or whitespace-only archive becomes the moved lines alone. The archive's title and prose are the consumer's, written when the file is first made.
+- **Refused:** a board with no closed item; and a result whose read-back differs. The read-back requires `parse_board()` of the new board to equal `parse_board()` of the old one (which already leaves twins out), compared on every field but `line` (which shifts when lines above an item move); `closed_items()` of the new board to be empty; and the archive's new tail to equal the moved lines.
 
 ### `archive_subject(tool, count, session=None) -> str`
 
-`archive_subject` returns `<tool>: archive <count> closed items (session <name>)`, with `n/a` when there is no session; `count` is the closed items moved, twins not counted. `subject_kind()` reads this subject as `archive` (C7).
+`archive_subject` returns `<tool>: archive <count> closed items (session <name>)`, or `closed item` when `count` is 1, with `n/a` when there is no session; `count` is the closed items moved, twins not counted. It refuses a `tool` that `queue_subject()` would refuse, a `count` that is not an int of 1 or more, and a session name holding whitespace or a parenthesis. `subject_kind()` reads this subject as `archive` (C7).
 
 ### SPEC text (§3)
 
 In *The board*, the first paragraph's sentence "Items are never deleted; closed ones are archived in bulk once ten or more sit on the board." (wrapped across two lines in `SPEC.md`) is followed by:
 
-> The archive moves them (`archive_closed(board, archive)`, v2.3): each closed line with its detail block, and any open line whose key a closed line shares, in board order and byte for byte, appended to the archive's text. Every other board line stays byte for byte. When to archive is the consumer's; `ARCHIVE_AT` is the threshold it reads.
+> The archive moves them (`archive_closed(board, archive)`, v2.3): each closed line with its detail block, and any open line whose key a closed line shares, in board order and byte for byte, appended to the archive's text. Every other board line stays byte for byte. It refuses a moving item that is nested, that has a nested item under it, or whose detail block a blank line breaks, since it would split them. When to archive is the consumer's; `ARCHIVE_AT` is the threshold it reads. The archive is not one of the four edits under *Edits*, which each rewrite one line.
+
+and the kept sentence's "closed ones are archived in bulk once ten or more sit on the board" becomes "closed ones are archived in bulk, ten (`ARCHIVE_AT`) being the threshold a consumer reads".
 
 In *Edits*, in the commit-subject paragraph, after the sentence about `append`:
 
@@ -214,7 +229,7 @@ These go in a new `fixtures/archive/` directory: `<case>.board.md` and `<case>.a
 
 The last build adds to *Versions*:
 
-> **v2.3 gives the board writers** (*Edits*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session), writes no `None` host, and adds no period after text that ends in `?` or `!`. A line written by an earlier release keeps its text and its key.
+> **v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key.
 
 ## The builds
 
@@ -228,7 +243,7 @@ Each build is its own entry, `Part of: TD-008`, with no Kind:
 
 Each build's Done when includes its `SPEC.md` text landing with the code and fixtures. All three change *Edits* in `SPEC.md` and `fixtures/run.py`, so they land in series, and B3, the last, adds the *Versions* paragraph. B3 needs nothing from B2's code; the order keeps the shared files from conflicting. The release (v2.3) is the person's. The consumers follow, each on its own ledger, never filed from here:
 
-- **agent-cadence:** its `board.py` entry (TD-008's *Related*): the CLI over these writers, `fmt` through `canonical_item()`, and the gate through `board_problems()`.
+- **agent-cadence:** its `board.py` entry (TD-008's *Related*): the CLI over these writers, `fmt` through `canonical_item()`, the gate through `board_problems()`, and the seed board header's `Format:` line given backticked session names, the form the gate accepts.
 - **ShiftLead:** the vendor PR that takes v2.3. Its board write-back may take the new keywords, which is its own choice.
 
 ## Not in this design
