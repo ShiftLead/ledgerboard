@@ -284,4 +284,5 @@ writes `Part of` only once every reader of it runs v2.1. A ledger with no `Part 
 before, except that a `Blocked by` cycle, which no earlier release named, is now flagged (ℹ when
 standing).
 **v2.2 adds `Escaped from`** to the format's own fields: in a ledger with a `Fields:` line it is no
-longer an `undeclared-field`. An older reader reads it as an undeclared field.
+longer an `undeclared-field` (an older reader flags it as one there), and a `Fields:` line that
+declares it is ignored and flagged, as for the other own fields.
