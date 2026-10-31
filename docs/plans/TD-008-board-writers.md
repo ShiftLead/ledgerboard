@@ -115,20 +115,20 @@ These go in `fixtures/edit/cases.json` `compose`. `fixtures/run.py` passes the n
 
 ### `item_problem(line) -> str | None`
 
-`item_problem` takes an item line, with or without its line ending. It returns why the line is not an open line the writers write, as the line now stands after any of `edit_line()`'s edits, or None. When a line has several problems, the string names each one, separated by `; `. A line the writers write:
+`item_problem` takes an item line, with or without its line ending. It returns why the line is not an open line the writers write, as the line now stands after any snooze, decide or reply, or None. When a line has several problems, the string names each one, separated by `; `. A line the writers write:
 
 1. opens `- [ ] ` at column 0, with single spaces;
 2. may carry a kind, which is lower-case and in `KINDS`;
 3. carries a valid date, then a head that is exactly one of ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)` or `(person)`;
 4. continues with ` — `, then text that ends a sentence and carries no field name, then ` Context: <words>.` once;
 5. carries ` Due: <date>.` once, right after Context, on every kind but `fyi`, and none on an `fyi`;
-6. may carry replies after its `Due:`;
+6. may carry replies after its `Due:`, or after its `Context:` on an `fyi`;
 7. carries answers by the kinds table of §1 while it is undecided. A decided line (`Decided:` read) may carry answers or none, with at most one mark, whatever its kind, since `edit_line()` decides any item;
 
 Rules 4, 5 and 7 are checked on the line with its reply tails (`reply_span()`) and its `Decided:` field taken out, and marks are counted among the `Answers:` alone. A reply's words and a `Decided:` text are the person's: `edit_line()` lets them hold `Due:` (a reply, on a dated item), a field name (a decide's answer) or ` (default)`, and none of that is a second field.
 8. holds nothing else, so `canonical_item(line) == line`.
 
-The rule is checked as a property: `item_problem()` is None for every line `item_line()` writes, for every line `decided_line()` writes, and for each of those after any `edit_line()` edit that is not refused. (A snooze of an `fyi` is refused, since the reader reads no `Due:` on one.)
+The rule is checked as a property: `item_problem()` is None for every line `item_line()` writes, for every line `decided_line()` writes, and for each of those after any snooze, decide or reply that `edit_line()` does not refuse. (A snooze of an `fyi` is refused, since the reader reads no `Due:` on one. A `done` ticks the line, which leaves the open form: closed lines are never judged.)
 
 ### `canonical_item(line) -> str`
 
@@ -142,7 +142,7 @@ The rule is checked as a property: `item_problem()` is None for every line `item
 
 New paragraphs in *Edits*, after *A new item*:
 
-> **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any of the four edits. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
+> **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
 >
 > **The gate** is `board_problems(board, old)`: the faults of each open line whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
 
