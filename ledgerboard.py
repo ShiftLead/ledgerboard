@@ -1656,8 +1656,8 @@ def _section_key(lead: str) -> str:
 def entry_text(tid: str, title: str, fields, sections) -> str:
     """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value} or (name,
     value) pairs, one line each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
-    mapping, each written ``**<name>:** <text>``; a first pair with no name is the unnamed lead,
-    written as given. Raises Refused for an id that is not ``TD-n``, an empty or multi-line title, a
+    mapping, each written ``**<name>:** <text>``, a whitespace-only line emptied (in a code block
+    too); a first pair with no name is the unnamed lead, written as given. Raises Refused for an id that is not ``TD-n``, an empty or multi-line title, a
     field that is not one ``**Name:** value`` line, a field named twice, and sections that would not
     read back as given (a paragraph of a section's text that opens in bold would start another)."""
     if not ID_ITEM_RE.match(str(tid)):

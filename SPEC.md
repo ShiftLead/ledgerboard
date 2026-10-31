@@ -144,9 +144,9 @@ tell an entry it would have written from one it would not. A reader reads either
   above. A writer needs every line there to be one `**Name:** value` field and each name to appear
   once, so an entry with a body has at least one field: its first paragraph is its header block.
 - **The body** is everything after the header block. It is cut into **sections**. A section's
-  **lead** is the bold run that opens its first paragraph (`**Why:**`, `**Done when**`). The section
-  runs through every following paragraph up to the next paragraph that opens with a bold run, so a
-  Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a line of
+  **lead** is the bold run that opens its first paragraph (`**Why:**`, `**Done when**`); a paragraph
+  opens the body or follows a blank line. The section runs through every following paragraph up to
+  the next paragraph that opens with a bold run, so a Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a line of
   three or more backticks or tildes (indented at most three spaces), and closes on a bare line of the
   same character at least as long.
   - Leads match by `field_key` with the colon optional: `Done when` and `Done when:` are one name.
