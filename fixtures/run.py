@@ -27,6 +27,8 @@ Fixtures, each an invented input and its expected JSON:
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3).
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
   and each check; ``components()`` of it joins through the field.
+- ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
+  ``Fields:`` line flags an undeclared field beside it, never it.
 """
 
 from __future__ import annotations

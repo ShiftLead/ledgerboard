@@ -466,6 +466,11 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
         self.assertNotIn("undeclared-field", [k for _, k, _ in self.kinds(led, old="")])
         self.assertIn("part of", L.CADENCE_FIELDS)
 
+    def test_escaped_from_is_a_cadence_field(self):
+        led = "Fields: Owner = a | b\n\n" + _entry(1) + _entry(2, "Low", "**Escaped from:** other#TD-009 — its review missed it")
+        self.assertNotIn("undeclared-field", [k for _, k, _ in self.kinds(led, old="")])
+        self.assertIn("escaped from", L.CADENCE_FIELDS)
+
     def test_a_ledger_with_no_part_of_reads_as_before(self):
         r = L.pickable(RANKED, "")
         self.assertTrue(all(e["part_of"] is None and e["parts_open"] == [] for e in r["entries"]))

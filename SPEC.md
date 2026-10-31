@@ -20,8 +20,12 @@ next blank line. Each `**Name:** value` line there is one field, on one line; a 
 first wins. Names compare case- and separator-insensitively (`Blocked by`, `blocked-by`,
 `BLOCKED_BY`). **A field's value is its first word**, lower-cased; the rest of the line is a free
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
-feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1). A `Priority`, `Type`,
-`Blocked by` or `Part of` written below the header block is still read, and flagged.
+feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` (v2.2). A
+`Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged.
+
+**`Escaped from`** (v2.2) — `**Escaped from:** TD-n` or `<repo>#TD-n`, on a defect: the design entry
+whose review should first have caught it. Its value is free, so no `Fields:` line declares it; the
+format only parses it, and what it resolves to is the consumer's.
 
 **`Fields:`** — a ledger may declare its own fields' vocabularies once, on one preamble line before
 the first entry: `Fields: Owner = builder | designer; Kind = build | design-first`. A declared
@@ -279,3 +283,5 @@ field, so it reads a parent whose parts are no longer in its `Blocked by` as pic
 writes `Part of` only once every reader of it runs v2.1. A ledger with no `Part of` reads as
 before, except that a `Blocked by` cycle, which no earlier release named, is now flagged (ℹ when
 standing).
+**v2.2 adds `Escaped from`** to the format's own fields: in a ledger with a `Fields:` line it is no
+longer an `undeclared-field`. An older reader reads it as an undeclared field.
