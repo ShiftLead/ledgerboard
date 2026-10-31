@@ -501,6 +501,15 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
         self.assertEqual([L._section_key(x) for x in ("Done when", "Done when:", "Fix (to design):")],
                          ["done when", "done when", "fix (to design)"])
 
+    def test_a_fence_closes_only_on_its_own_kind(self):
+        def leads(body):
+            return [lead for lead, _ in L._entry_sections(body)]
+        self.assertEqual(leads("**Why:** a\n\n~~~\n```\n\n**Z:** in\n~~~\n\n**Fix:** b"), ["Why:", "Fix:"])
+        self.assertEqual(leads("**Why:** a\n\n````\n```\n\n**Z:** in\n````\n\n**Fix:** b"), ["Why:", "Fix:"])
+        self.assertEqual(leads("**Why:** a\n\n```x``` inline\n\n**Fix:** b"), ["Why:", "Fix:"])
+        self.assertEqual(leads("**Why:** a\n\n    ```\n\n**Fix:** b"), ["Why:", "Fix:"])
+        self.assertEqual(L._entry_sections("**Why:** a\n   \n\n**Fix:** b")[0], ("Why:", "**Why:** a"))
+
     def test_a_bold_run_mid_paragraph_opens_no_section(self):
         self.assertEqual([lead for lead, _ in L._entry_sections("**Why:** a\n**Fix:** b")], ["Why:"])
 

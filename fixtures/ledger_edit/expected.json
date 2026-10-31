@@ -15,6 +15,9 @@
   "refused_lifted": {
    "refused": "its Blocked by line is below the header block, where the reader still lifts it — move it into the header block, by hand"
   },
+  "refused_no_header": {
+   "refused": "the paragraph after its heading is its header block, and 'some words' is not a field — an entry with a body needs its fields first; add them by hand"
+  },
   "refused_open_comment": {
    "refused": "an HTML comment is not closed in the entry — close it first"
   },
@@ -50,6 +53,9 @@
   },
   "refused_id": {
    "refused": "an entry's id is TD-n, not '51'"
+  },
+  "refused_no_fields": {
+   "refused": "an entry with sections needs at least one field: the paragraph after the heading is the header block"
   },
   "refused_title": {
    "refused": "an entry needs its title, on one line"

@@ -1525,7 +1525,7 @@ def _dict_ls(files: Mapping[str, str]) -> Ls:
 ENTRY_ORDER = ("Priority", "Type", "Added", "Owner", "Kind", "Status", "Taken by", "Id take",
                "Blocked by", "Waits", "Part of", "Location")
 LEAD_RE = re.compile(r"^\*\*(?P<lead>[^*\n]+?)\*\*")  # a section's lead: its first paragraph's bold opening
-FENCE_RE = re.compile(r"^\s*(?:```|~~~)")  # a code fence: no lead inside one
+FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}(?=[^`]*$)|~{3,})(?P<info>.*)$")  # a code fence's line: no lead inside one
 
 
 def _entry_problem(text: str) -> str | None:
@@ -1556,6 +1556,9 @@ def _entry_parts(text: str) -> tuple[re.Match, list[tuple[str, str]], str]:
     header, seen = [], set()
     while i < len(lines) and lines[i].strip():
         m = FIELD_RE.match(lines[i])
+        if not m and not header:
+            raise Refused(f"the paragraph after its heading is its header block, and {lines[i]!r} is not a "
+                          "field — an entry with a body needs its fields first; add them by hand")
         if not m:
             raise Refused(f"its header block holds a line that is not a field: {lines[i]!r} — "
                           "join it to its field's line, or move it below the header block, by hand")
@@ -1621,16 +1624,26 @@ def _entry_sections(body: str) -> list[tuple[str | None, str]]:
     paragraph inside a code fence never opens one. Each text runs to the next lead, its trailing
     blank lines trimmed."""
     out: list[tuple[str | None, list[str]]] = []
-    fenced, prev_blank = False, True
+    fence, prev_blank = "", True  # the open fence's run (``` or ~~~, its length), or ""
     for line in body.split("\n"):
-        m = LEAD_RE.match(line) if prev_blank and not fenced else None
+        m = LEAD_RE.match(line) if prev_blank and not fence else None
         if m or not out:
             out.append((m.group("lead") if m else None, []))
         out[-1][1].append(line)
-        if FENCE_RE.match(line):
-            fenced = not fenced
+        f = FENCE_RE.match(line)
+        if f and not fence:
+            fence = f.group("fence")
+        elif f and f.group("fence")[0] == fence[0] and len(f.group("fence")) >= len(fence) \
+                and not f.group("info").strip():
+            fence = ""  # closed by a bare run of its own character, at least as long
         prev_blank = not line.strip()
-    return [(lead, "\n".join(ls).strip("\n")) for lead, ls in out if lead is not None or "\n".join(ls).strip()]
+    found = []
+    for lead, ls in out:
+        while ls and not ls[-1].strip():
+            ls = ls[:-1]
+        if lead is not None or ls:
+            found.append((lead, "\n".join(ls)))
+    return found
 
 
 def _section_key(lead: str) -> str:
@@ -1640,9 +1653,9 @@ def _section_key(lead: str) -> str:
     return field_key(lead.strip().rstrip(":"))
 
 
-def entry_text(tid: str, title: str, fields: Mapping[str, str], sections) -> str:
-    """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value}, one line
-    each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
+def entry_text(tid: str, title: str, fields, sections) -> str:
+    """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value} or (name,
+    value) pairs, one line each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
     mapping, each written ``**<name>:** <text>``; a first pair with no name is the unnamed lead,
     written as given. Raises Refused for an id that is not ``TD-n``, an empty or multi-line title, a
     field that is not one ``**Name:** value`` line, a field named twice, and sections that would not
@@ -1653,7 +1666,7 @@ def entry_text(tid: str, title: str, fields: Mapping[str, str], sections) -> str
     if not title.strip() or "\n" in title.strip():
         raise Refused("an entry needs its title, on one line")
     header, seen = [], set()
-    for name, value in fields.items():
+    for name, value in (fields.items() if isinstance(fields, Mapping) else fields or ()):
         name, value = str(name).strip(), str(value or "").strip()
         if not value:
             continue
@@ -1667,9 +1680,13 @@ def entry_text(tid: str, title: str, fields: Mapping[str, str], sections) -> str
         seen.add(field_key(name))
         header.append((name, value))
     pairs = list(sections.items()) if isinstance(sections, Mapping) else list(sections or ())
+    if pairs and not header:
+        raise Refused("an entry with sections needs at least one field: the paragraph after the heading "
+                      "is the header block")
     parts, want = [], []
     for k, (name, words) in enumerate(pairs):
-        words = str(words or "").replace("\r\n", "\n").strip("\n")
+        words = "\n".join(ln.rstrip() if not ln.strip() else ln
+                          for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
         if not words.strip():
             raise Refused(f"the section {name or '(unnamed)'!r} is empty")
         if not name:

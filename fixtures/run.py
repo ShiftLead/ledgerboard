@@ -176,6 +176,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     """The entry writers' cases (v2.2): an input is an entry file beside ``cases.json`` or inline
     ``text`` (a CRLF case must be inline: a text read here has its line endings translated)."""
     d = root / "ledger_edit"
+    if not hasattr(L, "canonical"):  # a module older than v2.2: this case fails, the others still run
+        return {"missing": "the module has no canonical() — older than v2.2"}
 
     def text(c):
         return c["text"] if "text" in c else (d / c["file"]).read_text(encoding="utf-8")

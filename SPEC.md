@@ -142,11 +142,13 @@ tell an entry it would have written from one it would not. A reader reads either
 - **The heading** is `## TD-n: title`.
 - **The header block** is the lines after the heading's blank lines, up to the next blank line, as
   above. A writer needs every line there to be one `**Name:** value` field and each name to appear
-  once.
+  once, so an entry with a body has at least one field: its first paragraph is its header block.
 - **The body** is everything after the header block. It is cut into **sections**. A section's
   **lead** is the bold run that opens its first paragraph (`**Why:**`, `**Done when**`). The section
   runs through every following paragraph up to the next paragraph that opens with a bold run, so a
-  Fix keeps its bullets. A paragraph inside a code fence opens no section.
+  Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a line of
+  three or more backticks or tildes (indented at most three spaces), and closes on a bare line of the
+  same character at least as long.
   - Leads match by `field_key` with the colon optional: `Done when` and `Done when:` are one name.
   - A qualified lead (`**Fix (to design):**`, a dated `**Note (…):**`) is its own section, matched
     only by its whole text.
