@@ -14,10 +14,9 @@ goes stale and then overrides the newer one.
 | `manager-lb-1.md` | manager | watches the grinder and the cadence check's readings; creates no work |
 | `techlead-context.md` | techlead | **not a brief**: the primer the techlead reads first on every fill |
 | `grinder-lb-1.md` | grinder | `free-pick` from `agent-cadence run ledger.py --pickable` |
+| `designer-lb-1.md` | designer | the `design-first` entries: a design is a plan in `docs/plans/` and the entry's Fix |
 
-**Why the team exists.** Designs for this repo are held in conversation with Paul and reach the
-ledger already shaped, blocked on `decision (Paul)` until their review rounds converge; the team
-builds what that releases. So it runs the `build` flow, and an entry still blocked is never its.
+**Why the team exists.** It runs the `td` flow: the designer takes the entries Paul marks `**Kind:** design-first`, runs their review rounds and, on his go, files their builds; the grinder builds everything else that is pickable; the techlead reads and merges PRs on the held paths. An entry designed in conversation with Paul carries no Kind and goes straight to the grinder. An entry blocked on `decision (Paul)` is no seat's.
 
 Treat every brief as stale by default: check a rule against `AGENTS.md`, `SPEC.md` and the pinned
 `cadence.md` (`agent-cadence path cadence.md`) before leaning on it.

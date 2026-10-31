@@ -1,15 +1,13 @@
 # ShiftLead's definition of this repo's team (ShiftLead design §4.9). Set up 2026-10-31 on Paul's
 # go, to build entries as they become pickable: the builds his design conversations release.
 #
-# The flow is `build`: designs are held in conversation with Paul and reach the ledger already
-# shaped, blocked on `decision (Paul)` until their review rounds converge (his layer, §2.4), so a
-# design stage here would duplicate that, and `td`'s designer would write designs nobody asked
-# for. `build-review` is the switch if a techlead's read of every PR is wanted before Paul's
-# (`ao team flow lb-grind build-review`); its review stage waits on `held:` below.
-# Every path whose merge is Paul's (the grinder brief's *Paul's merge*): the vendored module and what
-# defines or releases it, and the team's own rules.
-held: ["ledgerboard.py", "SPEC.md", "fixtures/**", "release.sh", "AGENTS.md", ".github/**",
-       "docs/cadence.toml", ".shiftlead.yml", "docs/briefs/**"]
+# The flow is `td` (Paul, 2026-10-31): design → build → review. The designer takes only entries
+# marked `**Kind:** design-first` (or blocked on `decision (designer)`); every other pickable entry
+# is the grinder's, so an entry already designed in conversation skips the designer by carrying no
+# Kind. The techlead's review stage reads every PR on a `held:` path and merges it for an
+# unattended author. A release (stamp and tag) stays Paul's: the consumers vendor tags only.
+# The team's own rules are not held: a PR touching them is left for Paul (the grinder brief).
+held: ["ledgerboard.py", "SPEC.md", "fixtures/**", "release.sh", "tests/**"]
 
 # The repo's whole check (AGENTS.md *Commands*); stdlib only, so a fresh worktree needs nothing.
 commands:
@@ -22,7 +20,7 @@ worktree_setup: 'dev=$(command -v agent-cadence || echo "$HOME/.local/bin/agent-
 
 teams:
   lb-grind:
-    flows: [build, build-review]
+    flows: [td, build-review, build]
     manager:
       role: manager
       name: lb-manager
@@ -34,3 +32,6 @@ teams:
         name: lb-grinder
         lane: free-pick
         brief: docs/briefs/grinder-lb-1.md
+      - role: designer
+        name: lb-designer
+        brief: docs/briefs/designer-lb-1.md
