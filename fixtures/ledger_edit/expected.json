@@ -35,6 +35,53 @@
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
   }
  },
+ "check": {
+  "no_old_no_rule": [
+   {
+    "field": "part of",
+    "id": "TD-021",
+    "kind": "part-of-archived",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-021: Part of TD-020, which is archived — read as an open part of a finished parent"
+   },
+   {
+    "field": "part of",
+    "id": "TD-022",
+    "kind": "part-of-archived",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-022: Part of TD-20, which is archived — read as an open part of a finished parent"
+   }
+  ],
+  "nothing_left": [],
+  "parent_archived_ahead_of_its_parts": [
+   {
+    "field": "part of",
+    "id": "TD-021",
+    "kind": "part-of-archived",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-021: Part of TD-020, which is archived — read as an open part of a finished parent"
+   },
+   {
+    "field": "part of",
+    "id": "TD-022",
+    "kind": "part-of-archived",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-022: Part of TD-20, which is archived — read as an open part of a finished parent"
+   },
+   {
+    "field": "part of",
+    "id": "TD-020",
+    "kind": "archive-open-parts",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-020: left the ledger while TD-021, TD-022 are still Part of it — archive its parts first, or point their Part of at its new id or another parent"
+   }
+  ]
+ },
  "edit_entry": {
   "archive": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Resolved 2026-01-20: built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Resolved:** 2026-01-20 (PR #12) — `src/thing.py` and its test\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
