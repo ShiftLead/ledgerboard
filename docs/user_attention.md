@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] decide 2026-10-30 (person) — A new decide item and an archive of closed ones have no writer: the board's writers cover every write, as the ledger's now do. Context: TD-008. Due: 2026-10-30. Decided: go ahead (2026-10-30).
+- [x] decide 2026-10-30 (person) — A new decide item and an archive of closed ones have no writer: the board's writers cover every write, as the ledger's now do. Context: TD-008. Due: 2026-10-30. Decided: go ahead (2026-10-30). Closed: 2026-10-31 — TD-008's block lifted on Paul's go; the ledgerboard team builds it.
 - (none)
 
 ## In-flight (parked by a session)
