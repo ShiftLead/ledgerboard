@@ -46,14 +46,14 @@ its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary 
 - **Never in `ledgerboard.py`:** git, the network, the machine roster, forges, trackers, delivery,
   sweeps, sessions, or logic that knows either consumer. What a caller needs from outside the text is
   passed in (the cross-repo resolver of `pickable()`). Two named exceptions: the release header's
-  SYNCED FILE line names dev-cadence as the vendoring repo, and the subject parser still reads the
+  SYNCED FILE line names agent-cadence as the vendoring repo, and the subject parser still reads the
   three `shiftlead: …` insert subjects written before ledgerboard existed.
 - **Public repo:** fixtures are invented, never copied from a real repo's ledger or board; no
   person's or machine's name, and no private repo's contents or internal paths, in code, comments
-  or fixtures. dev-cadence is private until its public scrub (its TD-090), so links to it work only
+  or fixtures. agent-cadence is private until its public scrub (its TD-090), so links to it work only
   for its members until then.
 - **A format change** is a PR here (spec, code and fixtures together), then a release, then each
-  consumer's vendor PR — dev-cadence first, then ShiftLead's sync PR. A consumer's copy is never
+  consumer's vendor PR — agent-cadence first, then ShiftLead's sync PR. A consumer's copy is never
   edited in place.
 
 ## Commands

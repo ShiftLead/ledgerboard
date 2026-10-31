@@ -11,9 +11,9 @@ A **ledger** (`docs/technical_debt.md`) holds a repo's deferred work as `TD-NNN`
 - `fixtures/` — language-neutral conformance cases (a Markdown input and its expected JSON), so a reader in
   any language can prove it reads the formats the same way.
 
-It is consumed by [dev-cadence](https://github.com/ShiftLead/dev-cadence) (how a repo works, for any agent
+It is consumed by [agent-cadence](https://github.com/ShiftLead/agent-cadence) (how a repo works, for any agent
 or a person) and [ShiftLead](https://github.com/ShiftLead/shiftlead) (how many sessions are run). Neither
-depends on the other; both depend on this. (dev-cadence is private until its public scrub.) The rule that keeps them in step: **no second parser** — every
+depends on the other; both depend on this. (agent-cadence is private until its public scrub.) The rule that keeps them in step: **no second parser** — every
 reader and writer of a ledger or board calls `ledgerboard.py`.
 
 Releases are tagged; each consumer vendors the file, whose first line names its release and hash. Why it
