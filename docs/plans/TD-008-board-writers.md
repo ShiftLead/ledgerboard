@@ -87,7 +87,7 @@ On a `decide` with a default, `**Recommended:**` opens with the default's label,
 - a host given with no session, and a session or host name holding whitespace or any of `` ` , ; ) ``;
 - a kind not in `KINDS`;
 - a breach of the kinds table;
-- an answer label that ends in ` (default)` (the mark is the writer's), a consequence shaped like a reply (` — <name>, <date>: `), or any answer the read-back would not read back as given (a last answer ending in a period, which `ANSWERS_RE` drops with the field's own);
+- an answer label that ends in ` (default)` (the mark is the writer's), a consequence shaped like a reply (` — <name>, <date>: `), or any answer the read-back would not read back as given;
 - a `detail` key other than the four parts and `otherwise`, or an empty or multi-line detail string;
 - **the read-back:** `parse_board()` of the result must give exactly one open item whose kind, due, answers, consequences, default, session, host, refs (`item_refs()` of `Context: <context>`) and detail block are the ones meant, with no `Decided:`, no replies, `fyi_due` false and `bad_due` None. The result must hold no other item line, open or closed, so a detail string that opens `[ ]` or `[x]` is refused. Otherwise the call is refused.
 
