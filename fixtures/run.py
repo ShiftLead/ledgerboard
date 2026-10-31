@@ -29,7 +29,8 @@ Fixtures, each an invented input and its expected JSON:
   and each check; ``components()`` of it joins through the field.
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one
   entry's writers — ``canonical()`` of each input (and whether a second pass changes it) and
-  ``entry_text()`` of each new entry, or why each is refused.
+  ``entry_text()`` of each new entry, and ``edit_entry()`` of each case's steps run in order, or why
+  each is refused.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -176,8 +177,9 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     """The entry writers' cases (v2.2): an input is an entry file beside ``cases.json`` or inline
     ``text`` (a CRLF case must be inline: a text read here has its line endings translated)."""
     d = root / "ledger_edit"
-    if not hasattr(L, "canonical"):  # a module older than v2.2: this case fails, the others still run
-        return {"missing": "the module has no canonical() — older than v2.2"}
+    missing = [n for n in ("canonical", "entry_text", "edit_entry") if not hasattr(L, n)]
+    if missing:  # a module older than v2.2: this case fails, the others still run
+        return {"missing": f"the module has no {', '.join(missing)} — older than v2.2"}
 
     def text(c):
         return c["text"] if "text" in c else (d / c["file"]).read_text(encoding="utf-8")
@@ -187,7 +189,17 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         if "ok" in got:
             got["idempotent"] = L.canonical(got["ok"]) == got["ok"]
         return got
+    def edits(c):
+        def run():
+            out = text(c)
+            for st in c["steps"]:
+                dated = st["action"] in ("note", "archive", "reopen")  # the others take no date
+                args = {"today": c.get("today", spec["today"])} if dated else {}
+                out = L.edit_entry(out, st["action"], **{**args, **st["args"]})
+            return out
+        return _refused(run)
     return {"canonical": {c["name"]: canon(c) for c in spec["canonical"]},
+            "edit_entry": {c["name"]: edits(c) for c in spec["edit_entry"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],
                 c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]]))
