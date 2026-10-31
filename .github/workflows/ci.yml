@@ -1,12 +1,20 @@
 name: ci
+# The merge gate is the local precheck (docs/cadence.toml's `precheck`, run by
+# `agent-cadence run precheck.py --pr <n>`, TD-003): the account's repos share one pool of Actions
+# minutes. This workflow runs on a PR from a fork, whose code then runs in GitHub's sandbox rather
+# than on a machine; on a release tag, whose module must carry its header; and by hand. A PR from
+# this repo skips the job: the precheck already runs the same checks.
 on:
   pull_request:
   push:
-    branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 jobs:
   test:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         python: ["3.10", "3.13"]
