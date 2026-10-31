@@ -123,6 +123,9 @@
   "refused_today_not_iso": {
    "refused": "note needs today's date as YYYY-MM-DD, not '20260120'"
   },
+  "refused_today_on_an_undated_action": {
+   "refused": "set takes no today"
+  },
   "refused_unknown_action": {
    "refused": "unknown action close"
   },

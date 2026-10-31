@@ -748,6 +748,21 @@
      }
     }
    ]
+  },
+  {
+   "name": "refused_today_on_an_undated_action",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High"
+      },
+      "today": "2026-01-20"
+     }
+    }
+   ]
   }
  ]
 }

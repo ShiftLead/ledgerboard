@@ -193,7 +193,9 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         def run():
             out = text(c)
             for st in c["steps"]:
-                out = L.edit_entry(out, st["action"], today=c.get("today", spec["today"]), **st["args"])
+                dated = st["action"] in ("note", "archive", "reopen")  # the others take no date
+                args = {"today": c.get("today", spec["today"])} if dated else {}
+                out = L.edit_entry(out, st["action"], **{**args, **st["args"]})
             return out
         return _refused(run)
     return {"canonical": {c["name"]: canon(c) for c in spec["canonical"]},

@@ -1785,7 +1785,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     - ``renumber`` (``new``): the heading's id; ``rename_ref`` (``old``, ``new``): that id rewritten in
       Blocked by and Part of.
 
-    ``today`` is the caller's date (none is read here). Every edit is refused for an entry
+    ``today`` is the caller's date, taken by note, archive and reopen only (none is read here). Every edit is refused for an entry
     ``canonical()`` refuses, and unless the result reads back exactly the change meant — the id,
     title, fields (as ``entries()`` reads them) and sections — and nothing else. Validity (a
     vocabulary, a Blocked by item, a cycle) is ``check()``'s, which the caller runs on the result."""
@@ -1794,7 +1794,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     given = {k for k, v in (("fields", fields), ("words", words), ("section", section), ("why", why),
                             ("pr", pr), ("pointer", pointer), ("as_is", as_is or None),
                             ("superseded_by", superseded_by), ("new", new), ("old", old)) if v is not None}
-    stray = sorted(given - _ENTRY_ARGS[action])
+    stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _DATED_ACTIONS else [])
     if stray:
         raise Refused(f"{action} takes no {', '.join(stray)}")
     day = ""
