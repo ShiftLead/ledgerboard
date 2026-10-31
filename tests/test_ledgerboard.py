@@ -474,3 +474,47 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
     def test_a_ledger_with_no_part_of_reads_as_before(self):
         r = L.pickable(RANKED, "")
         self.assertTrue(all(e["part_of"] is None and e["parts_open"] == [] for e in r["entries"]))
+
+
+class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledgerboard TD-005)
+    EDIT = ROOT / "fixtures" / "ledger_edit"
+
+    def test_every_canonical_input_reads_back_as_it_was(self):
+        for md in sorted(self.EDIT.glob("*.md")):
+            text = md.read_text(encoding="utf-8")
+            try:
+                out = L.canonical(text)
+            except L.Refused:
+                continue
+            with self.subTest(md.name):
+                self.assertEqual(L.canonical(out), out)
+                self.assertEqual(L.entries(out), L.entries(text))
+                files = {"README.md": "Ledgerboard: 2\n", md.name.replace(md.stem, L.entries(out)[0]["id"]): out}
+                self.assertEqual(L.v2_problems("", L._dict_ls(files), files.get), [])
+
+    def test_a_section_runs_to_the_next_lead(self):
+        body = ("words first\n\n**Why:** a\n\nb\n\n**Fix (to design):** c\n\n**Fix:** d\n- e\n\n- f\n\n"
+                "```\n\n**Not:** a lead\n```\n\n**Done when** g")
+        got = [(lead, t.split("\n")[-1]) for lead, t in L._entry_sections(body)]
+        self.assertEqual(got, [(None, "words first"), ("Why:", "b"), ("Fix (to design):", "**Fix (to design):** c"),
+                               ("Fix:", "```"), ("Done when", "**Done when** g")])
+        self.assertEqual([L._section_key(x) for x in ("Done when", "Done when:", "Fix (to design):")],
+                         ["done when", "done when", "fix (to design)"])
+
+    def test_a_bold_run_mid_paragraph_opens_no_section(self):
+        self.assertEqual([lead for lead, _ in L._entry_sections("**Why:** a\n**Fix:** b")], ["Why:"])
+
+    def test_the_order_is_spelled_as_spec_lists_it_and_others_as_written(self):
+        out = L.canonical("## TD-1: x\n\n**ID_TAKE:** ab\n**part-of:** TD-2\n**Zed note:** z\n**priority:** Low\n")
+        self.assertEqual(out, "## TD-1: x\n\n**Priority:** Low\n**Id take:** ab\n**Part of:** TD-2\n**Zed note:** z\n")
+
+    def test_id_take_is_a_cadence_field(self):
+        led = "Fields: Owner = a | b\n\n" + _entry(1, "Low", "**Id take:** 0123456789abcdef0123456789abcdef")
+        self.assertNotIn("undeclared-field", [r["kind"] for r in L.check(led, "", old="")])
+        self.assertIn("id take", L.CADENCE_FIELDS)
+
+    def test_a_new_entry_reads_back_its_fields(self):
+        out = L.entry_text("TD-7", "t", {"Kind": "build", "Priority": "High", "Waits": ""}, {"Why": "w"})
+        e = L.entries(out)[0]
+        self.assertEqual((e["id"], e["fields"]), ("TD-7", {"priority": "High", "kind": "build"}))
+        self.assertEqual(L.canonical(out), out)

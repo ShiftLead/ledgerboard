@@ -20,12 +20,17 @@ next blank line. Each `**Name:** value` line there is one field, on one line; a 
 first wins. Names compare case- and separator-insensitively (`Blocked by`, `blocked-by`,
 `BLOCKED_BY`). **A field's value is its first word**, lower-cased; the rest of the line is a free
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
-feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` (v2.2). A
+feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` and `Id take` (v2.2). A
 `Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged.
 
 **`Escaped from`** (v2.2) — `**Escaped from:** TD-n` or `<repo>#TD-n`, on a defect: the design entry
 whose review should first have caught it. Its value is free, so no `Fields:` line declares it; the
 format only parses it, and what it resolves to is the consumer's.
+
+**`Id take`** (v2.2) — `**Id take:** <nonce>`: the 32-hex `take:` nonce of the counter take that
+handed the entry its id. It is provenance, never an assignment, and nothing routes on it. It is
+judged only where its id is new; after the merge it is inert, and no tool strips it. Which counter
+and what judges it are the consumer's.
 
 **`Fields:`** — a ledger may declare its own fields' vocabularies once, on one preamble line before
 the first entry: `Fields: Owner = builder | designer; Kind = build | design-first`. A declared
@@ -127,6 +132,59 @@ docs/ledger/
   before its first entry is dropped. It refuses another `## ` section, an id twice, and a result
   that does not read back the same entries (compared by id), the same `Fields:` and version 2, or
   that `v2_problems()` flags.
+
+## Ledger entries and their edits (v2.2)
+
+A v2 entry file is one entry, and the writers render it in one **canonical form**, so a tool can
+tell an entry it would have written from one it would not. A reader reads either.
+
+**The entry.**
+- **The heading** is `## TD-n: title`.
+- **The header block** is the lines after the heading's blank lines, up to the next blank line, as
+  above. A writer needs every line there to be one `**Name:** value` field and each name to appear
+  once.
+- **The body** is everything after the header block. It is cut into **sections**. A section's
+  **lead** is the bold run that opens its first paragraph (`**Why:**`, `**Done when**`). The section
+  runs through every following paragraph up to the next paragraph that opens with a bold run, so a
+  Fix keeps its bullets. A paragraph inside a code fence opens no section.
+  - Leads match by `field_key` with the colon optional: `Done when` and `Done when:` are one name.
+  - A qualified lead (`**Fix (to design):**`, a dated `**Note (…):**`) is its own section, matched
+    only by its whole text.
+  - A body lead named like a field (`**Location:**` in the body) is a body section, never a field.
+  - Text before the first lead is an unnamed section, kept as written.
+
+**Canonical form** (`canonical(text)`): line endings normalised to `\n` first, then
+- the heading (its title stripped);
+- one blank line;
+- the header block in this order: `Priority, Type, Added, Owner, Kind, Status, Taken by, Id take,
+  Blocked by, Waits, Part of, Location`, each spelled so. Then any other field, spelled as the file
+  spells it, in the file's order. A place in the order is a rendering rule, not a declaration:
+  `Owner`, `Kind`, `Taken by` and `Waits` are not the format's own fields. A header `Resolved` is not
+  in the order and is kept where the other fields put it;
+- one blank line;
+- the body byte for byte, with its leading and trailing blank lines dropped and one trailing
+  newline.
+
+`canonical()` is idempotent. It refuses text that is not one entry: it must open with its one
+`## TD-n:` heading outside HTML comments and close every comment, which is what `v2_problems()` asks
+of a file. A v1 ledger is refused with *split first*. It also refuses a header block it would have
+to lose or duplicate a line of, leaving that for a person to fix:
+- a line that is not a field (a wrapped `Location`);
+- a repeated field;
+- a field written below the header block that the reader still lifts (a `Priority`, `Type`,
+  `Blocked by` or `Part of`).
+
+Its rule: the result reads back the same id, title, fields and body, or nothing is written.
+
+**A new entry** (`entry_text(id, title, fields, sections)`) is that form. Its fields are one line
+each, and an empty value is left out. Each section is written `**<name>:** <text>`; a first section
+with no name is the unnamed one, written as given. It is refused for an id that is not `TD-n`, a
+title that is empty or more than one line, a field that would not read back as one line or is named
+twice, and sections that would not read back as given (a section's paragraph that opens in bold
+would start a section of its own).
+
+**A change to the canonical form is a minor release**: each consumer reformats its entries once,
+when it takes that release.
 
 ## The rank
 
@@ -285,4 +343,7 @@ before, except that a `Blocked by` cycle, which no earlier release named, is now
 standing).
 **v2.2 adds `Escaped from`** to the format's own fields: in a ledger with a `Fields:` line it is no
 longer an `undeclared-field` (an older reader flags it as one there), and a `Fields:` line that
-declares it is ignored and flagged, as for the other own fields.
+declares it is ignored and flagged, as for the other own fields. `Id take` joins them the same way.
+v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the canonical form,
+`canonical()` and `entry_text()`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
+entry it writes.
