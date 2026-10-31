@@ -2,6 +2,7 @@
 
 import ast
 import hashlib
+import json
 import subprocess
 import sys
 import unittest
@@ -527,3 +528,39 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
         e = L.entries(out)[0]
         self.assertEqual((e["id"], e["fields"]), ("TD-7", {"priority": "High", "kind": "build"}))
         self.assertEqual(L.canonical(out), out)
+
+    def test_every_edit_returns_canonical_form_and_one_entry_file(self):
+        spec = json.loads((self.EDIT / "cases.json").read_text(encoding="utf-8"))
+        want = json.loads((self.EDIT / "expected.json").read_text(encoding="utf-8"))["edit_entry"]
+        for name, got in want.items():
+            if "ok" not in got:
+                continue
+            with self.subTest(name):
+                out = got["ok"]
+                self.assertEqual(L.canonical(out), out)
+                files = {"README.md": "Ledgerboard: 2\n", f"{L.entries(out)[0]['id']}.md": out}
+                self.assertEqual(L.v2_problems("", L._dict_ls(files), files.get), [])
+        self.assertEqual(sorted(c["name"] for c in spec["edit_entry"]), sorted(want))
+
+    def test_each_action_names_its_arguments(self):
+        self.assertEqual(set(L.ENTRY_ACTIONS), set(L._ENTRY_ARGS))
+
+    def test_set_leaves_every_other_field_as_it_was(self):
+        text = (self.EDIT / "reordered.md").read_text(encoding="utf-8")
+        before = L.entries(text)[0]["fields"]
+        after = L.entries(L.edit_entry(text, "set", fields={"Owner": "designer"}))[0]["fields"]
+        self.assertEqual({k: v for k, v in after.items() if k != "owner"}, {k: v for k, v in before.items() if k != "owner"})
+        self.assertEqual(after["owner"], "designer")
+
+    def test_an_archived_entry_keeps_one_resolved_line_however_often_it_is_reopened(self):
+        text = (self.EDIT / "archived.md").read_text(encoding="utf-8")
+        for n in range(3):
+            text = L.edit_entry(L.edit_entry(text, "reopen", today="2026-02-01", why=f"round {n}"),
+                                "archive", today="2026-02-02", why="done", pr=20 + n)
+        self.assertEqual(text.count("**Resolved:**"), 1)
+        self.assertIn("**Resolved:** 2026-02-02 (PR #22)", text)
+        self.assertTrue(L.entries(text)[0]["fields"]["status"].startswith("Resolved 2026-02-02"))
+
+    def test_dates_are_the_callers(self):
+        with self.assertRaises(L.Refused):
+            L.edit_entry((self.EDIT / "archived.md").read_text(encoding="utf-8"), "reopen", why="x")

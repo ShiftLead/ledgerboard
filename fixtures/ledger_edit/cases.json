@@ -161,5 +161,528 @@
     ]
    ]
   }
+ ],
+ "today": "2026-01-20",
+ "edit_entry": [
+  {
+   "name": "set_fields",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High",
+       "Pickable": "",
+       "Waits": "the next run"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_two_lines",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Location": "a\nb"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "note",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "the second half built"
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_no_status",
+   "file": "no_status.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "first words"
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_refused_two_lines",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "one\ntwo"
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_why",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Why",
+      "words": "a new reason."
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_done_when_without_colon",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Done when:",
+      "words": "all three are done."
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_adds_after_why",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Ask",
+      "words": "which way?"
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_adds_after_why_beside_a_qualified_fix",
+   "file": "no_status.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Fix",
+      "words": "choose, then build."
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_adds_before_done_when_no_why",
+   "text": "## TD-066: No Why\n\n**Priority:** Low\n\n**Done when** done.\n\n**Related:** TD-012.\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Fix",
+      "words": "steps."
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_refused_two_named",
+   "file": "two_notes.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Note",
+      "words": "x"
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_refused_bold_paragraph",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Why",
+      "words": "a.\n\n**Bold** opens a section"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "built",
+      "pr": 12,
+      "pointer": "`src/thing.py` and its test"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_as_is",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "built as it says",
+      "pr": 12,
+      "as_is": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_no_pr",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "done by hand",
+      "pointer": "`docs/thing.md`"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_refused_pointer_hash",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "done",
+      "pointer": "see #12"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_refused_pr_text",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "done",
+      "pr": "#12"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_no_fix",
+   "file": "no_fix.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "decided",
+      "pr": 14
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_qualified_fix_only_no_status",
+   "file": "no_status.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "designed",
+      "pr": 15
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_header_resolved",
+   "file": "header_resolved.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "built again",
+      "pr": 16
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_superseded",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "TD-070 does it all",
+      "superseded_by": "TD-070"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_refused_superseded_with_pr",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "x",
+      "superseded_by": "TD-070",
+      "pr": 3
+     }
+    }
+   ]
+  },
+  {
+   "name": "reopen",
+   "file": "archived.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "it broke"
+     }
+    }
+   ]
+  },
+  {
+   "name": "reopen_no_status",
+   "file": "no_status.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "not done"
+     }
+    }
+   ]
+  },
+  {
+   "name": "reopen_header_resolved",
+   "file": "header_resolved.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "it broke"
+     }
+    }
+   ]
+  },
+  {
+   "name": "reopen_refused_both_resolved",
+   "file": "both_resolved.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "it broke"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_after_reopen",
+   "file": "archived.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "it broke"
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Fix",
+      "words": "fix it again."
+     }
+    },
+    {
+     "action": "archive",
+     "args": {
+      "why": "fixed",
+      "pr": 17
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_fix_after_reopen",
+   "file": "archived.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "it broke"
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Fix",
+      "words": "fix it again."
+     }
+    }
+   ]
+  },
+  {
+   "name": "renumber",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "renumber",
+     "args": {
+      "new": "TD-140"
+     }
+    }
+   ]
+  },
+  {
+   "name": "renumber_refused",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "renumber",
+     "args": {
+      "new": "140"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rename_ref_by_number",
+   "file": "two_notes.md",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "TD-007",
+      "new": "TD-107"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rename_ref_other_repo",
+   "file": "two_notes.md",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "other-repo#TD-7",
+      "new": "other-repo#TD-8"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rename_ref_parent",
+   "file": "two_notes.md",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "TD-30",
+      "new": "TD-031"
+     }
+    }
+   ]
+  },
+  {
+   "name": "crlf_note",
+   "text": "## TD-067: CRLF\r\n\r\n**Priority:** Low\r\n**Status:** Open\r\n\r\n**Why:** w\r\n",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "read through CRLF"
+     }
+    }
+   ]
+  },
+  {
+   "name": "refused_v1",
+   "file": "two_entries.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "x"
+     }
+    }
+   ]
+  },
+  {
+   "name": "refused_not_canonical",
+   "file": "wrapped.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "refused_unknown_action",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "close",
+     "args": {}
+    }
+   ]
+  },
+  {
+   "name": "refused_stray_argument",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "x",
+      "pr": 3
+     }
+    }
+   ]
+  },
+  {
+   "name": "refused_bad_today",
+   "file": "reordered.md",
+   "today": "soon",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "x"
+     }
+    }
+   ]
+  }
  ]
 }

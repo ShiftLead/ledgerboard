@@ -185,6 +185,48 @@ title that is empty or more than one line, a field that would not read back as o
 twice, and sections that would not read back as given (a section's paragraph that opens in bold
 would start a section of its own).
 
+**The archived entry.** An entry archived as done has the Status `Resolved YYYY-MM-DD: why`, and
+its Fix replaced by one line, `**Resolved:** YYYY-MM-DD (PR #n) — <pointer>`, which is its body's
+only `**Resolved:**` section. The pointer names the doc, test or code that now carries what lasts,
+and is optional, as is the PR (with no PR, the parenthesis is left out). An entry archived with
+nothing lasting to move keeps its Fix and has the line after it. An entry overtaken by another has
+the Status `Superseded YYYY-MM-DD by TD-n: why`, and its Why and Fix stay as written. A `Resolved`
+header field is the older form of the line: readers still read it, and the writers move it into
+the body.
+
+**Edits** (`edit_entry(text, action, *, today, …)`, one of `ENTRY_ACTIONS`) take one entry's text
+and return it in canonical form. Each is refused for an entry `canonical()` refuses (a v1 ledger:
+*split first*). It is also refused unless the result reads back exactly the change meant, and
+nothing else: the same id, title, fields and sections but for the change. The date is the caller's
+(`today`), and an argument the action does not take is refused. What a field's value means (a
+vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
+- **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
+  it. A value is one line.
+- **note** (`words`): appends ` YYYY-MM-DD: words` to Status. It is refused if Status's first word
+  would change, or if the words are more than one line. With no Status, it writes
+  `**Status:** YYYY-MM-DD: words`.
+- **edit** (`section`, `words`): replaces the named section's paragraphs, keeping its lead as
+  written. A section the body lacks is added after the first Why, else before the first Done when
+  or Related, else at the end. It is refused when two sections have the name.
+- **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`) writes the archived
+  entry, above. `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is
+  refused, since a reader would take that for the PR.
+  - An earlier `**Resolved:**` section is replaced, never doubled, and a `Resolved` header field is
+    removed.
+  - With no section named exactly Fix, the line goes at the end of the body, and a qualified Fix
+    lead is left alone.
+  - A missing Status is added.
+  - It is refused if two sections are named Fix.
+- **reopen** (`why`): Status becomes `Open YYYY-MM-DD: why — was: <old Status>`, or `Open
+  YYYY-MM-DD: why` when there was none. The `**Resolved:**` section stays as history, and the caller
+  writes a new Fix with `edit`. A `Resolved` header field moves into a `**Resolved:**` section at
+  the end of the body, never deleted. An entry with both is refused: a person merges them.
+- **renumber** (`new`) rewrites the heading's id. **rename_ref** (`old`, `new`) rewrites that id
+  in `Blocked by` and `Part of`. A local id matches by number; another repo's id matches as
+  `<repo>#TD-n`.
+
+Moving a file into `archive/` or back, and the relative links that move with it, are the caller's.
+
 **A change to the canonical form is a minor release**: each consumer reformats its entries once,
 when it takes that release.
 
@@ -347,5 +389,5 @@ standing).
 longer an `undeclared-field` (an older reader flags it as one there), and a `Fields:` line that
 declares it is ignored and flagged, as for the other own fields. `Id take` joins them the same way.
 v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the canonical form,
-`canonical()` and `entry_text()`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
+`canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
