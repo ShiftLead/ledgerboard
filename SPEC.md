@@ -70,6 +70,10 @@ part's carries `part_of` (the id as written; ids match by number, `TD-7` is `TD-
     unpicked, is flagged on the parent (`legacy-part`). Both are information on a standing ledger
     and errors on a changed or new entry (`check()`'s `EDIT_ERRORS`), so an edit to any entry on a
     cycle fails whichever end it touched.
+  - (v2.2) Given the ledger before the edit, an entry that has **left the ledger while an open entry
+    is still `Part of` it** is an error on the parent, naming its parts (`archive-open-parts`). This
+    covers a parent archived, or renumbered, ahead of its parts. The parts' own `part-of-archived`
+    stays ℹ. The error is never standing, since only the edit made it.
 
 **Pick order** is the rank (below): by card, then within a card by dependency (an entry after what
 it is blocked by and after its parts), then by key. With
@@ -391,5 +395,6 @@ standing).
 longer an `undeclared-field` (an older reader flags it as one there), and a `Fields:` line that
 declares it is ignored and flagged, as for the other own fields. `Id take` joins them the same way.
 v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the canonical form,
-`canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
+`canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
+gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.

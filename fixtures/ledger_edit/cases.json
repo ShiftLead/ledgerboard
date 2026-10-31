@@ -764,5 +764,24 @@
     }
    ]
   }
+ ],
+ "check": [
+  {
+   "name": "parent_archived_ahead_of_its_parts",
+   "ledger": "check/after.md",
+   "archive": "check/after.archive.md",
+   "old": "check/before.md"
+  },
+  {
+   "name": "no_old_no_rule",
+   "ledger": "check/after.md",
+   "archive": "check/after.archive.md"
+  },
+  {
+   "name": "nothing_left",
+   "ledger": "check/before.md",
+   "archive": "",
+   "old": "check/before.md"
+  }
  ]
 }

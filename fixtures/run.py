@@ -30,7 +30,8 @@ Fixtures, each an invented input and its expected JSON:
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one
   entry's writers — ``canonical()`` of each input (and whether a second pass changes it) and
   ``entry_text()`` of each new entry, and ``edit_entry()`` of each case's steps run in order, or why
-  each is refused.
+  each is refused; and ``check()``'s Part of flags of a ledger before and after an archive
+  (``check/``), ``archive-open-parts`` among them.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -200,6 +201,10 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         return _refused(run)
     return {"canonical": {c["name"]: canon(c) for c in spec["canonical"]},
             "edit_entry": {c["name"]: edits(c) for c in spec["edit_entry"]},
+            "check": {c["name"]: [r for r in L.check(text({"file": c["ledger"]}), text({"file": c["archive"]}) if c["archive"] else "",
+                                                     old=text({"file": c["old"]}) if c.get("old") else None)
+                                  if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown")]
+                      for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],
                 c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]]))

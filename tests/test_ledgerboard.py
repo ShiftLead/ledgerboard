@@ -575,3 +575,15 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
                              ("archive", {"why": "x", "superseded_by": "TD-9\n", "today": "2026-02-01"})):
             with self.subTest(action), self.assertRaises(L.Refused):
                 L.edit_entry(text, action, **args)
+
+    def test_a_parent_archived_ahead_of_its_parts_is_an_error_no_edit_demotes(self):
+        led = _entry(1) + _entry(2, "Low", "**Part of:** TD-001") + _entry(3, "Low", "**Part of:** TD-001")
+        after = _entry(2, "Low", "**Part of:** TD-001") + _entry(3, "Low", "**Part of:** TD-001")
+        got = [r for r in L.check(after, _entry(1), old=led) if r["kind"] == "archive-open-parts"]
+        self.assertEqual([(r["id"], r["level"], r["standing"]) for r in got], [("TD-001", "error", False)])
+        self.assertIn("TD-002, TD-003 are still Part of it", got[0]["text"])
+        # parts archived with it, or re-parented in the same edit: nothing
+        self.assertFalse([r for r in L.check("", _entry(1) + after, old=led) if r["kind"] == "archive-open-parts"])
+        moved = _entry(2, "Low", "**Part of:** TD-004") + _entry(3) + _entry(4)
+        self.assertFalse([r for r in L.check(moved, _entry(1), old=led + _entry(4)) if r["kind"] == "archive-open-parts"])
+        self.assertFalse([r for r in L.check(after, _entry(1)) if r["kind"] == "archive-open-parts"])

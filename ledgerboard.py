@@ -464,7 +464,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     an edit (None: every ⚠ is an error and nothing is standing). With it, a flag on an entry whose
     header block is unchanged — or a Fields: flag under an unchanged declaration — is standing:
     information, whatever it was. On a changed or new entry, EDIT_ERRORS are errors too. ``rank_text``
-    adds the rank file's flags (never standing: the file is a tool's)."""
+    adds the rank file's flags (never standing: the file is a tool's). Also with ``old`` (v2.2): an
+    entry that left the ledger while an open entry is still Part of it is an error,
+    ``archive-open-parts``, naming the parts — never standing, since only this edit made it."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text)["flag_recs"]]
     if old is None:
@@ -479,7 +481,26 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
-    return recs
+    return recs + _left_with_open_parts(old, ledger)
+
+
+def _left_with_open_parts(old: str, ledger: str) -> list[dict]:
+    """``archive-open-parts`` (v2.2): each id in ``old`` and not in ``ledger`` (by number) that an open
+    entry of ``ledger`` is still Part of — the parent archived, or renumbered, ahead of its parts."""
+    now = {_num(e["id"]) for e in entries(ledger)}
+    left = {}
+    for e in entries(old):
+        if _num(e["id"]) not in now:
+            left.setdefault(_num(e["id"]), e["id"])
+    parts: dict[int, list[str]] = {}
+    for e in entries(ledger):
+        par = parse_part_of(e["part_of_raw"])[0]
+        if par and _num(par) in left:
+            parts.setdefault(_num(par), []).append(e["id"])
+    return [{"level": "error", "id": left[n], "field": "part of", "kind": "archive-open-parts", "standing": False,
+             "text": f"⚠ {left[n]}: left the ledger while {', '.join(ps)} {'is' if len(ps) == 1 else 'are'} still "
+                     "Part of it — archive its parts first, or give them another parent"}
+            for n, ps in sorted(parts.items())]
 
 
 # ---------------------------------------------------------------------------------------------
