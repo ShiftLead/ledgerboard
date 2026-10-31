@@ -1,6 +1,6 @@
 # TD-008: the board's writers (v2.3)
 
-**Status:** Draft 2026-10-31 (the designer). Class: **wide**, since it changes a vendored format that both consumers run (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The review record is `docs/reviews/TD-008.md`.
+**Status:** Designed 2026-10-31 (the designer); it waits on the person's go. Class: **wide**, since it changes a vendored format that both consumers run (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The rounds ended after round 3 by the stop rule: its design review raised nothing build-changing. The build-changing findings per round from the design reviews were 7, 3, 0. The fact-checks raised 3, 0 and 1 in rounds 1 to 3, and 1 in the closing fact-check. The findings no review has read are the closing fact-check's F37–F39, all on `canonical_item()`'s rule for adding Context's period. They go into B2's Fix. The review record is `docs/reviews/TD-008.md`.
 
 **Entry:** [TD-008](../ledger/TD-008.md). The shape was agreed 2026-10-30 (the entry's Fix). This plan gives that shape its exact rules, `SPEC.md` text and fixture cases, and splits it into three builds that ship as one minor release.
 
