@@ -1713,6 +1713,12 @@ _ENTRY_ARGS = {"set": {"fields"}, "note": {"words"}, "edit": {"section", "words"
                "renumber": {"new"}, "rename_ref": {"old", "new"}}  # each action's keyword arguments
 _DATED_ACTIONS = ("note", "archive", "reopen")  # the actions that write today's date
 PR_IN_TEXT_RE = re.compile(r"#\d+")  # a consumer reads the first `#<digits>` of a Resolved line as its PR
+ISO_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")  # the one form a date is written in
+
+
+def _is_id(x: object, other_repo: bool = False) -> bool:
+    """``x`` is ``TD-n`` (or, ``other_repo``, also ``<repo>#TD-n``) and nothing more, not even a newline."""
+    return isinstance(x, str) and bool(ID_ITEM_RE.fullmatch(x) or (other_repo and XREPO_ITEM_RE.fullmatch(x)))
 
 
 def _one_line(what: str, words: str | None) -> str:
@@ -1793,18 +1799,26 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         raise Refused(f"{action} takes no {', '.join(stray)}")
     day = ""
     if action in _DATED_ACTIONS:
+        if isinstance(today, datetime):
+            today = today.date()  # a civil date: a time never reaches the file
         try:
-            day = (today if isinstance(today, date) else date.fromisoformat(str(today))).isoformat()
+            if not isinstance(today, date) and not (isinstance(today, str) and ISO_DAY_RE.fullmatch(today)):
+                raise ValueError
+            day = (today if isinstance(today, date) else date.fromisoformat(today)).isoformat()
         except ValueError:
             raise Refused(f"{action} needs today's date as YYYY-MM-DD, not {today!r}") from None
     m, header, body = _entry_parts(canonical(text))
     tid, title = m.group(1), m.group(3).strip()
+    title_read = entries(canonical(text))[0]["title"]  # as the reader reads it: an HTML comment dropped
     sections = _entry_sections(body)
     body_changed = False
 
     if action == "set":
         if not fields:
             raise Refused("set needs the fields to set")
+        keys = [field_key(str(n)) for n in fields]
+        if len(set(keys)) != len(keys):
+            raise Refused("set names one field twice")
         for name, value in fields.items():
             name = str(name).strip()
             if not value or not str(value).strip():
@@ -1824,6 +1838,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         header = _with(header, "Status", now)
     elif action == "edit":
         name = _one_line("the section's name", section).rstrip(":").strip()
+        if not name:
+            raise Refused("edit needs the section's name")
         said = "\n".join(ln.rstrip() if not ln.strip() else ln
                          for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
         if not said.strip():
@@ -1844,7 +1860,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         if superseded_by is not None:
             if pr is not None or pointer is not None or as_is:
                 raise Refused("a superseded entry keeps its Why and Fix: no pr, pointer or as_is")
-            if not ID_ITEM_RE.match(str(superseded_by)) or _num(str(superseded_by)) == _num(tid):
+            if not _is_id(superseded_by) or _num(superseded_by) == _num(tid):
                 raise Refused(f"superseded by another entry's TD-n, not {superseded_by!r}")
             header = _with(header, "Status", f"Superseded {day} by {superseded_by}: {said}")
         else:
@@ -1878,21 +1894,26 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             sections.append(("Resolved:", f"**Resolved:** {held}".rstrip()))
             body_changed = True
     elif action == "renumber":
-        if not ID_ITEM_RE.match(str(new or "")):
+        if not _is_id(new):
             raise Refused(f"renumber needs the new TD-n, not {new!r}")
-        tid = str(new)
+        if _num(new) == _num(tid):
+            raise Refused(f"{tid} is numbered {_num(tid)} already — a renumber gives it another number")
+        tid = new
     else:  # rename_ref
         for x in (old, new):
-            if not (ID_ITEM_RE.match(str(x or "")) or XREPO_ITEM_RE.match(str(x or ""))):
+            if not _is_id(x, other_repo=True):
                 raise Refused(f"rename_ref names entry ids (TD-n or <repo>#TD-n), not {x!r}")
         for key in ("blocked by", "part of"):
             v = _value(header, key)
             if v is not None:
                 header = [(n, _rename(x, old, new) if field_key(n) == key else x) for n, x in header]
 
+    if body_changed and any(re.search(r"\n[ \t]*\n", c.group(0)) for c in COMMENT_RE.finditer(body)):
+        raise Refused("an HTML comment in the body spans paragraphs, so a section's edit could land inside "
+                      "it — edit by hand")
     new_body = "\n\n".join(t for _, t in sections) if body_changed else body
     out = canonical(_render(tid, title, header, new_body))
-    want = (tid, title, {field_key(n): v for n, v in header},
+    want = (tid, title_read, {field_key(n): v for n, v in header},
             [(_section_key(lead) if lead is not None else None, t) for lead, t in sections])
     e = entries(out)[0]
     got = (e["id"], e["title"], e["fields"],

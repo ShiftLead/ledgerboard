@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -564,3 +564,14 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
     def test_dates_are_the_callers(self):
         with self.assertRaises(L.Refused):
             L.edit_entry((self.EDIT / "archived.md").read_text(encoding="utf-8"), "reopen", why="x")
+        out = L.edit_entry((self.EDIT / "archived.md").read_text(encoding="utf-8"), "reopen", why="x",
+                           today=datetime(2026, 2, 1, 13, 5, tzinfo=timezone.utc))
+        self.assertIn("**Status:** Open 2026-02-01: x — was:", out)
+        self.assertNotIn("13:05", out)
+
+    def test_an_id_argument_holds_nothing_after_its_number(self):
+        text = (self.EDIT / "reordered.md").read_text(encoding="utf-8")
+        for action, args in (("renumber", {"new": "TD-10\n"}), ("rename_ref", {"old": "TD-12", "new": "TD-8\n"}),
+                             ("archive", {"why": "x", "superseded_by": "TD-9\n", "today": "2026-02-01"})):
+            with self.subTest(action), self.assertRaises(L.Refused):
+                L.edit_entry(text, action, **args)

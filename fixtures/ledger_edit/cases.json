@@ -683,6 +683,71 @@
      }
     }
    ]
+  },
+  {
+   "name": "refused_today_not_iso",
+   "file": "reordered.md",
+   "today": "20260120",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "x"
+     }
+    }
+   ]
+  },
+  {
+   "name": "refused_comment_spans_sections",
+   "text": "## TD-068: A comment across sections\n\n**Priority:** Low\n\n**Why:** w <!-- a note\n\n**Fix:** x\n\n**Done when:** it ends -->\n",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "done",
+      "pr": 1
+     }
+    }
+   ]
+  },
+  {
+   "name": "renumber_refused_same_number",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "renumber",
+     "args": {
+      "new": "TD-40"
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_field_twice",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Owner": "a",
+       "owner": "b"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_title_with_comment",
+   "text": "## TD-069: A title <!-- with a comment -->\n\n**Priority:** Low\n**Status:** Open\n",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "read past the comment"
+     }
+    }
+   ]
   }
  ]
 }

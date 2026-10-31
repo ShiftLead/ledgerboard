@@ -197,8 +197,10 @@ the body.
 **Edits** (`edit_entry(text, action, *, today, …)`, one of `ENTRY_ACTIONS`) take one entry's text
 and return it in canonical form. Each is refused for an entry `canonical()` refuses (a v1 ledger:
 *split first*). It is also refused unless the result reads back exactly the change meant, and
-nothing else: the same id, title, fields and sections but for the change. The date is the caller's
-(`today`), and an argument the action does not take is refused. What a field's value means (a
+nothing else: the same id, title, fields and sections but for the change. An edit that rewrites
+the body joins its sections with one blank line, and is refused when an HTML comment there spans
+paragraphs. The date is the caller's (`today`, a date or `YYYY-MM-DD`; a time is never written), and
+an argument the action does not take is refused. What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
   it. A value is one line.
@@ -221,7 +223,7 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   YYYY-MM-DD: why` when there was none. The `**Resolved:**` section stays as history, and the caller
   writes a new Fix with `edit`. A `Resolved` header field moves into a `**Resolved:**` section at
   the end of the body, never deleted. An entry with both is refused: a person merges them.
-- **renumber** (`new`) rewrites the heading's id. **rename_ref** (`old`, `new`) rewrites that id
+- **renumber** (`new`) rewrites the heading's id to another number. **rename_ref** (`old`, `new`) rewrites that id
   in `Blocked by` and `Part of`. A local id matches by number; another repo's id matches as
   `<repo>#TD-n`.
 

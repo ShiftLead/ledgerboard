@@ -105,14 +105,23 @@
   "note_refused_two_lines": {
    "refused": "a note is one line (cadence.md §2.12)"
   },
+  "note_title_with_comment": {
+   "ok": "## TD-069: A title <!-- with a comment -->\n\n**Priority:** Low\n**Status:** Open 2026-01-20: read past the comment\n"
+  },
   "refused_bad_today": {
    "refused": "note needs today's date as YYYY-MM-DD, not 'soon'"
+  },
+  "refused_comment_spans_sections": {
+   "refused": "an HTML comment in the body spans paragraphs, so a section's edit could land inside it — edit by hand"
   },
   "refused_not_canonical": {
    "refused": "its header block holds a line that is not a field: '`src/c.py`' — join it to its field's line, or move it below the header block, by hand"
   },
   "refused_stray_argument": {
    "refused": "note takes no pr"
+  },
+  "refused_today_not_iso": {
+   "refused": "note needs today's date as YYYY-MM-DD, not '20260120'"
   },
   "refused_unknown_action": {
    "refused": "unknown action close"
@@ -135,6 +144,9 @@
   "renumber_refused": {
    "refused": "renumber needs the new TD-n, not '140'"
   },
+  "renumber_refused_same_number": {
+   "refused": "TD-040 is numbered 40 already — a renumber gives it another number"
+  },
   "reopen": {
    "ok": "## TD-062: An archived entry\n\n**Priority:** Low\n**Status:** Open 2026-01-20: it broke — was: Resolved 2026-01-05: built\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-05 (PR #7) — `docs/thing.md`\n"
   },
@@ -149,6 +161,9 @@
   },
   "set_fields": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** High\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Waits:** the next run\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+  },
+  "set_refused_field_twice": {
+   "refused": "set names one field twice"
   },
   "set_refused_two_lines": {
    "refused": "the Location field is one line (cadence.md §2.12)"
