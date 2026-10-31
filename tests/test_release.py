@@ -43,7 +43,7 @@ class ReleaseTag(unittest.TestCase):
         self.anchor = self.tmp / "anchor"
 
     def tag(self, cwd):
-        return subprocess.run(["bash", "release.sh", "--tag", self.version], cwd=cwd, env=ENV,
+        return subprocess.run(["bash", "release.sh", "--tag", self.version], cwd=cwd, env=ENV, check=False,
                               capture_output=True, text=True)
 
     def test_a_worktree_at_a_detached_origin_main_tags(self):
