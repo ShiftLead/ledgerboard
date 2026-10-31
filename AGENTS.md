@@ -50,8 +50,7 @@ its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary 
   three `shiftlead: …` insert subjects written before ledgerboard existed.
 - **Public repo:** fixtures are invented, never copied from a real repo's ledger or board; no
   person's or machine's name, and no private repo's contents or internal paths, in code, comments
-  or fixtures. agent-cadence is private until its public scrub (its TD-090), so links to it work only
-  for its members until then.
+  or fixtures.
 - **A format change** is a PR here (spec, code and fixtures together), then a release, then each
   consumer's vendor PR — agent-cadence first, then ShiftLead's sync PR. A consumer's copy is never
   edited in place.
