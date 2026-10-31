@@ -60,7 +60,8 @@ its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary 
 ```bash
 python3 -m unittest discover -s tests   # the suite (stdlib only)
 python3 fixtures/run.py                 # every fixture against ledgerboard.py (--check-header: a release's header)
-./release.sh <x.y>; ./release.sh --tag <x.y>   # stamp on a branch and PR it; tag once it merges
+./release.sh <x.y>   # stamp on a branch and PR it
+git checkout --detach origin/main && ./release.sh --tag <x.y>   # once it merges: tag (HEAD at origin/main; any worktree)
 ```
 
 ## Documentation map
