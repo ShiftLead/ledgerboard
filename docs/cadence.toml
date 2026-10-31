@@ -42,4 +42,4 @@ ledger-ids-host = "off"
 # full commit, moved by `agent-cadence bump` in a reviewed PR. Written by `sync.sh --pin`.
 [agent-cadence]
 source = "https://github.com/ShiftLead/agent-cadence"
-ref = "6bb23be3027130e7ca153da37191820cab685e7c"   # v0.1.0
+ref = "67023cc5b55d12cece178b5a0c6b89fc22582993"
