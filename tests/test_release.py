@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ("release.sh", "ledgerboard.py", "fixtures/run.py")
 ENV = {
-    **os.environ,
+    **{k: v for k, v in os.environ.items() if not k.startswith("GIT_")},  # no stray GIT_DIR from a hook
     "GIT_AUTHOR_NAME": "test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
     "GIT_COMMITTER_NAME": "test", "GIT_COMMITTER_EMAIL": "test@example.invalid",
     "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
