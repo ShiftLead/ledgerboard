@@ -55,7 +55,7 @@ Each choice below is settled by `SPEC.md` or by the agreed shape, unless it is m
 
 - `<text>` has its whitespace collapsed and ends a sentence: a `.` is added unless it already ends in `.`, `?` or `!`.
 - `<head>` is ``session `<name>` on <host>``, or ``session `<name>` `` when there is no host, or `n/a` when there is no session.
-- `<context>` has its whitespace collapsed and its trailing `.` stripped. An empty context is written `none`.
+- `<context>` has its whitespace collapsed and one trailing `.` stripped. An empty context is written `none`.
 - Answers are joined with ` | `, and a literal `|` is written `\|`. Each answer is written `<label>` or `<label> — <consequence>`, and the mark goes on the label: `<label> (default)`.
 
 **Kinds:**
@@ -125,11 +125,11 @@ These go in `fixtures/edit/cases.json` `compose`. `fixtures/run.py` passes the n
 
 1. opens `- [ ] ` at column 0, with single spaces;
 2. may carry a kind, which is lower-case and in `KINDS`;
-3. carries a valid date, then a head that is exactly one of ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)` or `(person)`. `(person)` stands only on a decided line, as `decided_line()` writes it;
+3. carries a valid date, then a head that is exactly one of ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)` or `(person)`. `(person)` stands only on a decided line, as `decided_line()` writes it. A name and a host hold no whitespace and none of `` ` , ; ) ``, as §1 requires of the writer's;
 4. continues with ` — `, then text that ends a sentence and carries no field name, then ` Context: <words>.` once;
 5. carries ` Due: <date>.` once, right after Context, on every kind but `fyi`, and none on an `fyi`;
 6. may carry replies after its `Due:`, or after its `Context:` on an `fyi`;
-7. carries answers by the kinds table of §1 while it is undecided. A decided line (`Decided:` read) may carry answers or none, with at most one mark, whatever its kind, since `edit_line()` decides any item;
+7. carries answers by the kinds table of §1 while it is undecided: on a `look`, exactly `Works | Not right: <what>` or `Works (default) | Not right: <what>`, so a hand-typed `Not right:` alone is faulted. A decided line (`Decided:` read) may carry answers or none, with at most one mark, whatever its kind, since `edit_line()` decides any item;
 
 8. holds nothing outside the parts rules 1–7 name, one space between each part and the next, with no trailing whitespace. The spacing inside a part (the words of a text or a Context) is not judged; `decided_line()` writes a ref as given.
 
@@ -143,7 +143,8 @@ The rule is checked as a property: `item_problem()` is None for every line `item
 
 - it respells the `Due:` field's name in any case as `Due:`;
 - it adds the period after the `Due:` date when one is missing;
-- it moves a `Due: <date>` that stands between the text and `Context:` to right after Context, ending Context with its period. The move keeps the key, since `item_key()` strips `Due:` and a trailing period wherever they stand. What it cannot do is add the text's own period: `— text Due: D Context: x.` has the key `— text Context: x`, and `— text. Context: x` would be another. So a text that does not end a sentence is refused by rule 4, whatever the move.
+- it adds Context's period when Context is followed by nothing but the `Due:` field, or by nothing at all on an `fyi`. The key is kept, since `item_key()` strips `Due:` and the line's trailing period. Followed by anything else (`Answers:`, replies), Context without its period is refused, since the period would then stand inside the key;
+- it moves a `Due: <date>` that directly follows the text's closing `.`, `?` or `!` to right after Context, ending Context with its period. It does this only when nothing follows Context, and the move keeps the key, since `item_key()` strips `Due:` and the line's trailing period. A `Due:` inside the text's prose (`— check Due: 2026-02-01 first.`) is never moved: rule 4 refuses it. What it cannot do is add the text's own period: `— text Due: D Context: x.` has the key `— text Context: x`, and `— text. Context: x` would be another. So a text that does not end a sentence is refused by rule 4, whatever the move.
 
 After the rewrites, the result must have no problem by `item_problem()`; otherwise the call is refused and names the problems that remain. So it refuses, among others: a text that does not end a sentence; a missing `Context:`; a head not in rule 3's forms; an `fyi` with a `Due:` (dropping it would lose words); a non-fyi with no `Due:` (there is no date to invent); and a `Due:` after `Answers:` or after replies, where moving it would change what the reader reads. The read-back must give the same key, and the same kind, due, answers, consequences, default, decided, replies, refs, session and host. It is idempotent: a line already in the form comes back unchanged. It keeps the input's line ending, and it respells and moves only the field `DUE_RE` first finds, never a `due:` in a reply's words. It is for a consumer's one-time format pass, which reports the lines it refused.
 
@@ -172,7 +173,7 @@ These go in `fixtures/edit/cases.json`, as `item_problems` (a line → its probl
 
 - **`item_problems` None:** each §1 written case's line; a `decided_line()` line; a snoozed line; a decided line; a replied-to line; a line replied to with `see Due: 2026-05-01`; a line decided with `Context: x` and with `b (default)`.
 - **`item_problems` faulted:** an undecided line with a `(person)` head; an unknown word before the date; a head with no backticks; a head with `, branch x`; no `Context:`; `Due:` before `Context:`; an fyi with a `Due:`; an undecided decide with no answers; an act with answers; an indented line; a closed line ("not an open item"); a capitalised `Decide`; a decide with two marks.
-- **`canonical_items`:** `due: 2026-01-20` respelled; a missing date period added; `Due:` moved from before Context to after it (the key unchanged); the same with an unpunctuated text, refused; missing Context refused; a head with no backticks refused; an fyi with a `Due:` refused; a `Due:` after `Answers:` refused; an already canonical line returned unchanged.
+- **`canonical_items`:** `due: 2026-01-20` respelled; a missing date period added; `Due:` moved from before Context to after it (the key unchanged); the same with an unpunctuated text, refused; a `Due:` inside the text's prose, refused; `Due:` before Context with `Answers:` after Context, refused; `Context: x Due: D.` given Context's period; missing Context refused; a head with no backticks refused; an fyi with a `Due:` refused; a `Due:` after `Answers:` refused; an already canonical line returned unchanged.
 - **`board_problems`:** a faulted line in `old`, untouched, is not judged; the same line snoozed is not judged; a new hand-typed faulted line is judged; a new `item_line()` line passes; `old=None` judges everything open.
 
 ## §3. The archive
@@ -189,7 +190,7 @@ These go in `fixtures/edit/cases.json`, as `item_problems` (a line → its probl
 
 ### `archive_subject(tool, count, session=None) -> str`
 
-`archive_subject` returns `<tool>: archive <count> closed items (session <name>)`, or `closed item` when `count` is 1, with `n/a` when there is no session; `count` is the closed items moved, twins not counted. It refuses a `tool` that `queue_subject()` would refuse, a `count` that is not an int of 1 or more, and a session name holding whitespace or a parenthesis. `subject_kind()` reads this subject as `archive` (C7).
+`archive_subject` returns `<tool>: archive <count> closed items (session <name>)`, or `closed item` when `count` is 1, with `n/a` when there is no session; `count` is the closed items moved, twins not counted. It refuses a `tool` holding whitespace or a parenthesis (`subject_kind()` reads a subject's tool as one word), a `count` that is not an int of 1 or more, and a session name holding whitespace or a parenthesis. `subject_kind()` reads this subject as `archive` (C7).
 
 ### SPEC text (§3)
 
@@ -223,7 +224,7 @@ These go in a new `fixtures/archive/` directory: `<case>.board.md` and `<case>.a
 - `broken`: a closed item's block broken by a blank line, refused;
 - `none`: no closed item, refused.
 
-`subject_kinds` gains an archive subject, and a new `archive_subjects` list covers the subject.
+`subject_kinds` gains an archive subject, and a new `archive_subjects` list covers the subject: one item, several, no session, and a tool holding a space, refused.
 
 ## Versions (all three builds)
 
