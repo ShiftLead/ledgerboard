@@ -17,7 +17,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 ## Needs the user
 
 - [x] decide 2026-10-30 (person) — A new decide item and an archive of closed ones have no writer: the board's writers cover every write, as the ledger's now do. Context: TD-008. Due: 2026-10-30. Decided: go ahead (2026-10-30). Closed: 2026-10-31 — TD-008's block lifted on Paul's go; the ledgerboard team builds it.
-- [ ] act 2026-10-31 (session ao-ledgerboard-lb-grinder on kmaster-Standard-PC-i440FX-PIIX-1996) — Merge PR #53 (PRs gated on the local precheck); merge PR #54 (release tag from a worktree) once the techlead has read it. Context: TD-003 / PR #53, TD-009 / PR #54. Due: 2026-10-31.
+- [ ] act 2026-10-31 (n/a) — Merge PR #53 (PRs gated on the local precheck); merge PR #54 (release tag from a worktree) once the techlead has read it. Context: TD-003 / PR #53, TD-009 / PR #54. Due: 2026-10-31.
   - **Context:** Both are built, reviewed and gated, and both touch files only you merge (`AGENTS.md`, and for #53 `.github/` and `docs/cadence.toml`).
     - PR #53 (TD-003): the merge gate becomes the local `precheck` in `docs/cadence.toml`, and `ci.yml` runs only on a fork's PR, a release tag and by hand, so this repo's own PRs no longer spend the shared Actions minutes. Its `cadence/precheck` is green, and its own Actions job already skips.
     - PR #54 (TD-009): `./release.sh --tag` checks that HEAD is `origin/main` instead of that `main` is checked out, so a worktree session can tag (`git checkout --detach origin/main && ./release.sh --tag <x.y>`). It also touches `release.sh` and `tests/`, so the techlead reads it first.
