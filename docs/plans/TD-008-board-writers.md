@@ -137,7 +137,7 @@ The rule is checked as a property: `item_problem()` is None for every line `item
 
 - it respells the `Due:` field's name in any case as `Due:`;
 - it adds the period after the `Due:` date when one is missing;
-- it moves a `Due: <date>` that stands between the text and `Context:` to right after Context's period. It does this only when the text ends a sentence and the Context ends with a period, since otherwise the key would change. (`— text Due: D Context: x.` has the key `— text Context: x`; adding the period would make it `— text. Context: x`.)
+- it moves a `Due: <date>` that stands between the text and `Context:` to right after Context, ending Context with its period. The move keeps the key, since `item_key()` strips `Due:` and a trailing period wherever they stand. What it cannot do is add the text's own period: `— text Due: D Context: x.` has the key `— text Context: x`, and `— text. Context: x` would be another. So a text that does not end a sentence is refused by rule 4, whatever the move.
 
 After the rewrites, the result must have no problem by `item_problem()`; otherwise the call is refused and names the problems that remain. So it refuses, among others: a text that does not end a sentence; a missing `Context:`; a head not in rule 3's forms; an `fyi` with a `Due:` (dropping it would lose words); a non-fyi with no `Due:` (there is no date to invent); and a `Due:` after `Answers:` or after replies, where moving it would change what the reader reads. The read-back must give the same key, and the same kind, due, answers, consequences, default, decided, replies, refs, session and host. It is idempotent: a line already in the form comes back unchanged. It is for a consumer's one-time format pass, which reports the lines it refused.
 
