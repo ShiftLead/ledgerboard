@@ -20,6 +20,9 @@
 # "cannot see", never as nobody here (TD-100).
 # agents = "claude"
 
+# A public repo's ledger-id takes never name the machine (TD-124, cadence.md §2.10).
+ledger-ids-host = "off"
+
 # --- opt-outs (cadence.md Adoption checklist step 9): what this repo does not adopt, each
 # naming the ADR that decided it. Read by sync.sh and sync.sh --verify; --verify reports each
 # as OPTED-OUT. Nothing uncommented here means the whole cadence is adopted.
@@ -39,4 +42,4 @@
 # full commit, moved by `agent-cadence bump` in a reviewed PR. Written by `sync.sh --pin`.
 [agent-cadence]
 source = "https://github.com/ShiftLead/agent-cadence"
-ref = "29210e6c17c473cdeee50ba65e7bb1696819dfc3"
+ref = "6bb23be3027130e7ca153da37191820cab685e7c"   # v0.1.0
