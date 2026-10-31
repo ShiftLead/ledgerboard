@@ -1,0 +1,36 @@
+# ShiftLead's definition of this repo's team (ShiftLead design §4.9). Set up 2026-10-31 on Paul's
+# go, to build entries as they become pickable: the builds his design conversations release.
+#
+# The flow is `build`: designs are held in conversation with Paul and reach the ledger already
+# shaped, blocked on `decision (Paul)` until their review rounds converge (his layer, §2.4), so a
+# design stage here would duplicate that, and `td`'s designer would write designs nobody asked
+# for. `build-review` is the switch if a techlead's read of every PR is wanted before Paul's
+# (`ao team flow lb-grind build-review`); its review stage waits on `held:` below.
+# Every path whose merge is Paul's (the grinder brief's *Paul's merge*): the vendored module and what
+# defines or releases it, and the team's own rules.
+held: ["ledgerboard.py", "SPEC.md", "fixtures/**", "release.sh", "AGENTS.md", ".github/**",
+       "docs/cadence.toml", ".shiftlead.yml", "docs/briefs/**"]
+
+# The repo's whole check (AGENTS.md *Commands*); stdlib only, so a fresh worktree needs nothing.
+commands:
+  test: python3 -m unittest discover -s tests && python3 fixtures/run.py
+  lint: ruff check .
+
+# A new worktree is set up by the pinned agent-cadence's hydrate (its memory path), as
+# samscrape's is: the launcher from PATH, else where its install puts it.
+worktree_setup: 'dev=$(command -v agent-cadence || echo "$HOME/.local/bin/agent-cadence"); "$dev" run hydrate_worktree.sh "$1"'
+
+teams:
+  lb-grind:
+    flows: [build, build-review]
+    manager:
+      role: manager
+      name: lb-manager
+      brief: docs/briefs/manager-lb-1.md
+    # Filled on demand for one batch of questions, reading the primer first (design §4.9b).
+    techlead: {name: lb-techlead, context: docs/briefs/techlead-context.md}
+    members:
+      - role: grinder
+        name: lb-grinder
+        lane: free-pick
+        brief: docs/briefs/grinder-lb-1.md
