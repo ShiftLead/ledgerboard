@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# release.sh <x.y>        — on a new branch release-v<x.y> from an up-to-date main, stamp
+# release.sh <x.y>        — on a new branch release-v<x.y> from a fresh origin/main, stamp
 #                           ledgerboard.py's first line with the release and its hash, run the
 #                           checks, and commit "Release v<x.y>". Push it and PR it like any change.
-# release.sh --tag <x.y>  — after that PR has squash-merged, on an up-to-date main: check that the
-#                           module's header names v<x.y> and is intact, and tag v<x.y>.
+# release.sh --tag <x.y>  — after that PR has squash-merged, with HEAD at origin/main (main in the
+#                           anchor's checkout, or `git checkout --detach origin/main` in a worktree,
+#                           which cannot hold main): check that the module's header names v<x.y> and
+#                           is intact, and tag v<x.y>. What the tag needs is checked, not the branch's
+#                           name: a clean tree, HEAD at origin/main, the header, no such tag.
 #
 # The header is  # ledgerboard v<x.y> sha256:<sha256 of every byte after the first line>
 # — the release travels inside the file, so a consumer's copy proves which release it is
@@ -20,8 +23,7 @@ git fetch -q origin
 git rev-parse -q --verify "refs/tags/v$v" >/dev/null && { echo "v$v exists" >&2; exit 2; }
 
 if [ "$tag" = 1 ]; then
-    [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "tag from main only" >&2; exit 2; }
-    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is not origin/main — pull first" >&2; exit 2; }
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "HEAD is not origin/main — pull, or: git checkout --detach origin/main" >&2; exit 2; }
     head -1 ledgerboard.py | grep -q "^# ledgerboard v$v sha256:" || { echo "the header does not name v$v" >&2; exit 2; }
     python3 fixtures/run.py --check-header
     git tag -a "v$v" -m "ledgerboard v$v"
