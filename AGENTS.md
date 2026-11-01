@@ -63,6 +63,12 @@ python3 fixtures/run.py                 # every fixture against ledgerboard.py (
 ./release.sh <x.y>; ./release.sh --tag <x.y>   # stamp on a branch and PR it; tag once it merges
 ```
 
+**The merge gate is the local precheck, not GitHub Actions (TD-003):** `docs/cadence.toml`'s `precheck`
+(`ruff check .`, the suite and the fixtures) runs on a PR's head through
+`agent-cadence run precheck.py --pr <n>`, recorded as its `cadence/precheck` status. The account's
+repos share one pool of Actions minutes, so `.github/workflows/ci.yml` runs only on a fork's PR (its
+code then runs in GitHub's sandbox, not on a machine), on a release tag and by hand.
+
 ## Documentation map
 
 | Need | Where |
