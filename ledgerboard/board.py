@@ -5,7 +5,7 @@
 
     python3 -m ledgerboard.board list    --board PATH [--today D]
     python3 -m ledgerboard.board add     --board PATH --text T [--due D] [--context C] [--kind K]
-                                         [--answer A]... [--default N] [--detail JSON]
+                                         [--answer A]... [--default N] [--lift A]... [--detail JSON]
                                          [--session S [--host H]] [--said WORDS --by NAME]
                                          [--decided WORDS [--by NAME]] [--under HEADING]
     python3 -m ledgerboard.board snooze  --board PATH --line N --expect HEAD --to D   (hide until D)
@@ -225,7 +225,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
              detail: Mapping | None = None, session: str | None = None, host: str | None = None,
              decided: str | None = None, said: str | None = None, by: str | None = None,
              under: str | None = NEEDS, today: str | date | None = None, tool: str = TOOL,
-             hide_until: str | None = None) -> Plan:
+             hide_until: str | None = None, lifts: Sequence[str] | None = None) -> Plan:
     """A new item at the top of the section `under` names (``item_line()``); with `said`, a question that
     was already answered, `by` and its words following the text as ` — <by>, <today>: <said>` (the
     subject keeps them out); with `decided`, an item already decided by the person (``decided_line()``:
@@ -233,7 +233,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
     day = _today(today).isoformat()
     bare = None
     if decided is not None:
-        if any(v is not None for v in (due, kind, detail, session, host, said, hide_until)):
+        if any(v is not None for v in (due, kind, detail, session, host, said, hide_until, lifts)):
             raise Refused("a decided item takes its title, context, answers, default, words and who gave them alone")
         new = decided_line(text, context or "", list(answers or []), default, decided, day,
                            by=who_answered(read(board), by))
@@ -247,7 +247,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
         def compose(t: str) -> str:
             return item_line(t, due, day, session, host, context, kind=kind,
                              answers=list(answers) if answers is not None else None, default=default, detail=detail,
-                             hide_until=hide_until)
+                             hide_until=hide_until, lifts=list(lifts) if lifts is not None else None)
 
         new = compose(words)
         if said is not None:
@@ -401,7 +401,7 @@ def build(a: argparse.Namespace) -> Plan:
             if not isinstance(detail, dict):
                 raise Refused("--detail is a JSON object")
         return plan_add(a.board, a.text, due=a.due, context=a.context, kind=a.kind, hide_until=a.hide_until,
-                        answers=a.answer or None, default=a.default, detail=detail, session=a.session,
+                        answers=a.answer or None, default=a.default, lifts=a.lift or None, detail=detail, session=a.session,
                         host=a.host, decided=a.decided, said=a.said, by=a.by, under=a.under,
                         today=a.today, tool=a.tool)
     if a.action in EDITS:
@@ -421,7 +421,7 @@ def build(a: argparse.Namespace) -> Plan:
 TAKES = {
     "list": {"board", "today"},
     "add": {"board", "text", "due", "context", "kind", "answer", "default", "detail", "session", "host",
-            "decided", "said", "by", "under", "today", "tool", "hide_until"},
+            "decided", "said", "by", "under", "today", "tool", "hide_until", "lift"},
     "snooze": {"board", "line", "expect", "to", "today", "tool", "session"},
     "due": {"board", "line", "expect", "to", "today", "tool", "session"},
     "done": {"board", "line", "expect", "why", "today", "tool", "session"},
@@ -438,7 +438,7 @@ NEEDS_OPT = {
     "reply": ("board", "line", "expect", "text", "by"), "archive": ("board", "archive"),
     "fmt": ("board",), "rank": ("rank", "queue"),
 }
-DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "set": [], "drop": []}
+DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "lift": [], "set": [], "drop": []}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -456,6 +456,8 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--why", help="done: why, for the Closed: field")
     ap.add_argument("--answer", action="append", default=[],
                     help="decide: the person's answer; add: one of the item's answers (repeat)")
+    ap.add_argument("--lift", action="append", default=[],
+                    help="add: a decide's answer that lifts its gate (repeat; none means Go)")
     ap.add_argument("--text", help="add: the item's text; reply: the reply's words")
     ap.add_argument("--by", help="reply, add --said: who says it; decide, add --decided: who answered (the one name "
                     "on the board's People: when it lists one)")

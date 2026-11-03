@@ -17,8 +17,10 @@
     "hide_until": null,
     "host": "box",
     "kind": "act",
+    "lifts": null,
     "line": 7,
     "overdue_days": null,
+    "parts": [],
     "refs": [
      "PR #12"
     ],
@@ -51,8 +53,10 @@
     "hide_until": null,
     "host": null,
     "kind": "decide",
+    "lifts": null,
     "line": 8,
     "overdue_days": null,
+    "parts": [],
     "refs": [
      "TD-7"
     ],

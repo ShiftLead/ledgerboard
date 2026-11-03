@@ -376,7 +376,7 @@
    "refused": "a decision needs its words: one of the entry's answers, or what you typed"
   },
   {
-   "refused": "an answer may not carry Context:, Hide until:, Answers:, Decided: or Closed: — say it in other words"
+   "refused": "an answer may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — say it in other words"
   },
   {
    "ok": "- [ ] decide 2026-01-15 (person) — Where the cache lives. Context: TD-40. Due: 2026-01-15. Answers: On disk (default) — the next run reads it back | In memory — every run starts cold | Not now. Decided: On disk (2026-01-15).\n"
@@ -415,13 +415,13 @@
    "ok": "- [ ] 2026-01-15 (session `w-1` on box-1) — Wait for the mirror... Context: TD-7. Due: 2026-01-20.\n"
   },
   {
-   "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a board line's text may not carry Context:, Parts:, Due:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
-   "refused": "the context may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "the context may not carry Context:, Parts:, Due:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
-   "refused": "the detail block's caveats may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "the detail block's caveats may not carry Context:, Parts:, Due:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
    "refused": "a decide offers two or more answers"
@@ -487,7 +487,7 @@
    "refused": "hide_until as YYYY-MM-DD, not '2026-1-18'"
   },
   {
-   "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a board line's text may not carry Context:, Parts:, Due:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
    "ok": "- [ ] decide 2026-01-15 (person) — Where the cache lives. Context: TD-40. Due: 2026-01-15. Answers: On disk (default) | Not now. Decided: On disk (by pat.lee) (2026-01-15).\n"
@@ -497,6 +497,36 @@
   },
   {
    "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Option A (default) | Option B \\| c | Not yet. Lifts: Option A | Option B \\| c.\n  - **Context:** The design is done.\n  - **Question:** Go?\n  - **Recommended:** Option A — it is ready.\n"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go (default) | Not yet.\n  - **Context:** The design is done.\n  - **Question:** Go?\n  - **Recommended:** Go — it is ready.\n"
+  },
+  {
+   "refused": "a lifting answer is one of the item's answers, not 'Later'"
+  },
+  {
+   "refused": "'go' is named twice among the lifting answers"
+  },
+  {
+   "refused": "lifts names one or more of the answers, or is None (`Go`)"
+  },
+  {
+   "refused": "only a decide names the answers that lift (lifts)"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1`) — Go on it? Context: TD-12, TD-13 see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.\n  - **Context:** The design is done.\n  - **Question:** Go?\n  - **Recommended:** it is ready.\n"
   }
  ],
  "edit_actions": {
@@ -524,6 +554,9 @@
   "decide-fresh": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default). Decided: b (2026-01-15)."
   },
+  "decide-keeps-parts-lifts": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B. Decided: Option B (by pat) (2026-01-15)."
+  },
   "decide-refused-answer-ends-by": {
    "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
   },
@@ -539,11 +572,17 @@
   "done-with-why": {
    "ok": "- [x] 2026-01-05 (session s-1 on h) — Ship it. Due: 2026-01-10. Closed: 2026-01-15 — merged."
   },
+  "due-added-after-parts": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15. Due: 2026-01-25."
+  },
   "due-existing": {
    "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-20. Answers: now | later."
   },
   "due-fyi-refused": {
    "refused": "after the edit the reader does not read Due: 2026-01-20 with the item's other fields unchanged"
+  },
+  "due-keeps-parts-lifts": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-25. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B."
   },
   "due-keeps-the-hide": {
    "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-30. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later."
@@ -566,14 +605,23 @@
   "reply-keeps-decided-by": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. — w-2, 2026-01-15: on it. Answers: a | b. Decided: a (by pat) (2026-01-11)."
   },
+  "reply-keeps-parts-lifts": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. — w-2, 2026-01-15: looking. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B."
+  },
   "reply-naming-hide-refused": {
-   "refused": "a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a reply may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   "reply-refused-due-on-undated": {
    "refused": "this item has no Due: date, so a reply may not carry one — the reader would take it for the item's; snooze sets its date"
   },
   "reply-refused-field": {
-   "refused": "a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a reply may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  "reply-refused-lifts": {
+   "refused": "a reply may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  "reply-refused-parts": {
+   "refused": "a reply may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   "reply-second": {
    "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. — Sam, 2026-01-12: halfway — Sam, 2026-01-15: all done"
@@ -592,6 +640,9 @@
   },
   "snooze-keeps-decided-by": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Hide until: 2026-01-20. Answers: a | b. Decided: a (by pat) (2026-01-11)."
+  },
+  "snooze-keeps-parts-lifts": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Hide until: 2026-01-18. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B."
   },
   "snooze-moves-the-hide": {
    "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-25. — Pat, 2026-01-06: later. Answers: now | later."
@@ -616,6 +667,8 @@
  "item_keys": {
   "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Answers: now | later",
   "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Answers: now | later",
+  "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B",
+  "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-25. Hide until: 2026-01-22. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B. Decided: Option A (by pat) (2026-01-21).": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B",
   "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1"
  },
  "item_problems": {
@@ -638,9 +691,24 @@
   "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12. Due: 2026-01-10.": "due: `Due:` stands after `Hide until:`; it follows Context; hide: `Hide until:` follows Due",
   "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.": "answers: an act carries no answers: a question with answers is a decide",
   "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later. Hide until: 2026-01-12.": "hide: `Hide until:` follows Due; answers: `Hide until:` stands after `Answers:`; answers: an act carries no answers: a question with answers is a decide",
+  "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Due: 2026-01-20. Lifts: Go.": "lifts: an act carries no `Lifts:`: only a decide's answer lifts; lifts: `Lifts: Go.` is what no `Lifts:` means: leave it out; lifts: `Lifts:` follows Answers",
+  "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Parts: TD-15. Due: 2026-01-20.": "parts: an act carries no `Parts:`: only a decide asks about a parent's parts",
   "- [ ] act 2026-01-15 (session `w-1` on box-1) — Do it. Context: TD-7. Due: 2026-01-20. Answers: yes | no.": "answers: an act carries no answers: a question with answers is a decide",
   "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South.": "head: `(person)` stands only on a decided line",
   "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South. Decided: North (2026-01-15).": null,
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: A | B. Lifts: A | a.": "lifts: an answer stands twice",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Not yet. Lifts: Go.": "lifts: `Lifts: Go.` is what no `Lifts:` means: leave it out",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Not yet. Lifts: Later.": "lifts: not one of the item's answers: Later",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Lifts: Go. Answers: Go | Not yet.": "lifts: `Lifts: Go.` is what no `Lifts:` means: leave it out; lifts: `Lifts:` follows Answers",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Parts: TD-15. Answers: Go | Not yet.": "parts: `Parts:` follows Context",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15 and TD-16. Due: 2026-01-20. Answers: Go | Not yet.": "parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-15. Due: 2026-01-20. Answers: Go | Not yet.": "parts: an id stands twice",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Not yet. Lifts: Option A.": null,
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Hide until: 2026-01-18. Answers: Option A | Not yet. Lifts: Option A.": null,
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: PR #5 decision (pat). Due: 2026-01-20. Answers: Go | Not yet.": "context: a decide that lifts a gate names exactly one entry in its Context",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12 decision (pat), TD-13. Due: 2026-01-20. Answers: Go | Not yet.": "context: a decide that lifts a gate names exactly one entry in its Context",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13, see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.": null,
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13. Due: 2026-01-20. Answers: Go | Not yet.": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20.": "answers: a decide carries two or more answers",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a (default) | b (default).": "answers: more than one marked ` (default)`",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b.": null,

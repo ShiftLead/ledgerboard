@@ -24,8 +24,10 @@
    "hide_until": null,
    "host": "box-1",
    "kind": "decide",
+   "lifts": null,
    "line": 8,
    "overdue_days": 3,
+   "parts": [],
    "refs": [
     "TD-7"
    ],
@@ -57,8 +59,10 @@
    "hide_until": null,
    "host": null,
    "kind": "decide",
+   "lifts": null,
    "line": 9,
    "overdue_days": 3,
+   "parts": [],
    "refs": [
     "TD-8"
    ],
@@ -90,8 +94,10 @@
    "hide_until": null,
    "host": null,
    "kind": "decide",
+   "lifts": null,
    "line": 10,
    "overdue_days": 3,
+   "parts": [],
    "refs": [
     "TD-9"
    ],
@@ -123,8 +129,10 @@
    "hide_until": null,
    "host": null,
    "kind": "decide",
+   "lifts": null,
    "line": 11,
    "overdue_days": 3,
+   "parts": [],
    "refs": [
     "TD-10"
    ],
@@ -147,8 +155,10 @@
    "hide_until": null,
    "host": null,
    "kind": "act",
+   "lifts": null,
    "line": 12,
    "overdue_days": null,
+   "parts": [],
    "refs": [
     "TD-11"
    ],
