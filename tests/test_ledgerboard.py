@@ -747,7 +747,8 @@ class TheLog(unittest.TestCase):
         self.assertFalse([r for r in L.check(good, "") if r["field"] == "log"])
 
     def test_a_status_lifts_only_from_a_word_its_end_a_colon_or_its_date_follow(self):
-        for status in ("In progress: x", "Open, held", "Open; held", "**Open** x", "Openly x"):
+        for status in ("In progress: x", "Open, held", "Open; held", "**Open** x", "Openly x", "Open x",
+                       "Resolved 2026-01-05.", "Open 2026-01-01T10:00", "Open 2026-01-01 by TD-9. x"):
             with self.subTest(status):
                 text = self.ENTRY.replace("**Status:** Open", f"**Status:** {status}")
                 self.assertEqual(L.status_notes_to_log(text), text)

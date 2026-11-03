@@ -234,8 +234,9 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
   - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
     where `<Word>` is a known one: `Open`, `Resolved`, `Superseded`, `Dropped`, or one v2.5's
     `migrate` maps (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), in any case,
-    not in bold, and followed by its end, a `.`, a `:` or its date. So `In progress`, `Open, held`
-    and `**Open** x` are prose, and nothing is lifted from them.
+    not in bold, and followed by its end, a `.`, a `:`, its date or `by`. A date or `by <id>` in the
+    head is followed by the end, whitespace or a `:`. So `In progress`, `Open, held`, `**Open** x`,
+    `Resolved 2026-10-03.` and `Open 2026-01-01T10:00` are prose, and nothing is lifted from them.
   - The tail becomes **one** Log line, verbatim (a date inside it stays prose), dated by the Status's
     date, else the `**Resolved:**` line's (or an older `Resolved` header field's), else `Added`'s. Each `— was:` segment becomes its own `was:
     <Status>` line, dated by its own date or the same fallbacks.

@@ -1090,6 +1090,16 @@
    "name": "in_progress",
    "file": "in_progress.md",
    "gates": []
+  },
+  {
+   "name": "date_then_punctuation_is_prose",
+   "text": "## TD-088: x\n\n**Added:** 2026-01-02\n**Status:** Resolved 2026-01-05, PR #4\n\n**Why:** w\n",
+   "gates": []
+  },
+  {
+   "name": "superseded_by_with_no_date",
+   "text": "## TD-089: x\n\n**Added:** 2026-01-02\n**Status:** Superseded by TD-90: TD-90 does it all\n\n**Why:** w\n",
+   "gates": []
   }
  ]
 }

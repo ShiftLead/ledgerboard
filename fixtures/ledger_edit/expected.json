@@ -336,6 +336,14 @@
   }
  },
  "log": {
+  "date_then_punctuation_is_prose": {
+   "gate_age": {},
+   "log_lines": [],
+   "log_problems": [],
+   "status_notes_to_log": {
+    "ok": "## TD-088: x\n\n**Added:** 2026-01-02\n**Status:** Resolved 2026-01-05, PR #4\n\n**Why:** w\n"
+   }
+  },
   "every_shape": {
    "gate_age": {
     "decision (Lee)": "2026-01-06",
@@ -544,6 +552,14 @@
    ],
    "status_notes_to_log": {
     "ok": "## TD-084: A section written below the Log\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-02: a note\n- 2026-01-03 a line with no colon\n\n**Done when:** it is done.\n"
+   }
+  },
+  "superseded_by_with_no_date": {
+   "gate_age": {},
+   "log_lines": [],
+   "log_problems": [],
+   "status_notes_to_log": {
+    "ok": "## TD-089: x\n\n**Added:** 2026-01-02\n**Status:** Superseded by TD-90\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: TD-90 does it all\n"
    }
   },
   "undated_status": {

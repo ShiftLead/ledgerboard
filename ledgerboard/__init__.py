@@ -2812,10 +2812,14 @@ LOG_SHAPES = (
 # the reserved ones v2.5's migrate maps away.
 STATUS_WORDS = ("open", "resolved", "superseded", "dropped", "designed", "built", "partly", "live", "in",
                 "done", "moved", "obe")
-# The word is followed by its end, a `.`, a `:` or its date: `In progress`, `Open, held` lift nothing.
-STATUS_HEAD_RE = re.compile(rf"^(?P<word>[A-Za-z]+)\.?(?=$|:|[ \t]+\d{{4}}-\d{{2}}-\d{{2}}(?![\d-]))"
-                            rf"(?:[ \t]+(?P<date>\d{{4}}-\d{{2}}-\d{{2}}))?"
-                            rf"(?:[ \t]+by[ \t]+(?P<by>{LOG_ID}))?(?=$|[\s:])")
+# The head, read whole or not at all: the word is followed by its end, a `:`, its date or `by`; a date
+# or a `by <id>` there is part of the head, and is followed by the end, whitespace or a `:`. So
+# `In progress`, `Open, held`, `Resolved 2026-10-03.` and `Open 2026-01-01T10:00` are prose.
+STATUS_HEAD_RE = re.compile(
+    r"^(?P<word>[A-Za-z]+)\.?(?=$|:|[ \t]+\d{4}-\d{2}-\d{2}|[ \t]+by[ \t])"
+    r"(?:[ \t]+(?P<date>\d{4}-\d{2}-\d{2})(?![\d-])|(?![ \t]+\d{4}-\d{2}-\d{2}))"
+    rf"(?:[ \t]+by[ \t]+(?P<by>{LOG_ID})|(?![ \t]+by[ \t]))"
+    r"(?=$|:|[ \t])")
 WAS_CUT = " — was: "
 LOG_AGE_KINDS = ("gate-added", "kept-waiting", "gate-reassigned")
 
@@ -3020,8 +3024,8 @@ def status_notes_to_log(text: str) -> str:
     ``**Resolved:**`` line's, else Added's; each ``— was:`` segment one ``was: <Status>`` line, dated
     by its own date or the same. Lines go in among the Log's by date, after any of an equal date; a
     line that would begin with a writer's prefix is written ``note: <text>``. The Status is left as
-    ``<Word> [D] [by <id>]``. The word is followed by its end, ``.``, ``:`` or its date, and is not in
-    bold. An unknown word, a Status with nothing after its head, or text with no date to give it: the
+    ``<Word> [D] [by <id>]``. The word is not in bold and is followed by its end, ``.``, ``:``, its
+    date or ``by``; a date or ``by <id>`` there is followed by the end, whitespace or ``:``. An unknown word, a Status with nothing after its head, or text with no date to give it: the
     text is returned as given, not reformatted. Refused for an entry ``canonical()`` refuses, and when
     there are notes to lift into a Log that is not the body's last section."""
     m, header, body = _entry_parts(canonical(text))
