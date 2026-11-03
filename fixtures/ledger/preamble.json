@@ -17,6 +17,7 @@
    "id": "TD-001",
    "key": "3|0|000001",
    "part_of": null,
+   "parts_gates": {},
    "parts_open": [],
    "pickable": true,
    "priority": "Low",
