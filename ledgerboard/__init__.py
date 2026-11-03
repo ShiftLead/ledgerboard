@@ -833,15 +833,67 @@ def parse_default(text: str) -> str | None:
     return marked[0] if len(marked) == 1 and marked[0] else None
 
 
-def parse_decided(text: str) -> tuple[str, date] | None:
-    """The item's `Decided: <text> (YYYY-MM-DD)` field, or None (absent or a bad date)."""
+# A person's name (v2.3, target design §3.1): dot-separated runs of letters, digits, `_` and `-`, compared
+# case-insensitively. `People:` lists them; `Decided: <label> (by <person>) (D).` records who answered.
+PERSON = r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*"
+PERSON_RE = re.compile(PERSON)
+DECIDED_BY_RE = re.compile(r"^(?P<label>.*\S)\s+\(by (?P<by>" + PERSON + r")\)$")
+PEOPLE_RE = re.compile(r"^People:(?P<names>.*)$")
+CONTEXT_GATE_RE = re.compile(r"\bdecision \((?P<person>" + PERSON + r")\)")
+
+
+def _decided_parts(text: str) -> tuple[str, str | None, date] | None:
+    """(label, by, date) of the item's `Decided:` field, or None (absent or a bad date). Only a final
+    `(by <person>)` before the date, `<person>` in the person grammar, is split off as `by` (v2.3)."""
     m = DECIDED_RE.search(_trailer(text))
     if not m:
         return None
     try:
-        return m.group("text"), datetime.strptime(m.group("date"), "%Y-%m-%d").date()  # noqa: DTZ007  # a civil date, as Due:
+        day = datetime.strptime(m.group("date"), "%Y-%m-%d").date()  # noqa: DTZ007  # a civil date, as Due:
     except ValueError:
         return None
+    b = DECIDED_BY_RE.match(m.group("text"))
+    return (b.group("label"), b.group("by"), day) if b else (m.group("text"), None, day)
+
+
+def parse_decided(text: str) -> tuple[str, date] | None:
+    """The item's `Decided: <label> [(by <person>)] (YYYY-MM-DD)` field as (label, date), or None (absent or
+    a bad date). The label is the answer alone: a final `(by <person>)` is parse_decided_by()'s (v2.3)."""
+    got = _decided_parts(text)
+    return (got[0], got[2]) if got else None
+
+
+def parse_decided_by(text: str) -> str | None:
+    """Who gave the item's `Decided:` answer — its final `(by <person>)` (v2.3) — or None."""
+    got = _decided_parts(text)
+    return got[1] if got else None
+
+
+def is_person(name: object) -> bool:
+    """Whether `name` is a person's name in the person grammar (v2.3)."""
+    return isinstance(name, str) and PERSON_RE.fullmatch(name) is not None
+
+
+def _people_line(content: str) -> tuple[int, str] | None:
+    """(1-based line, names text) of the board's first `People:` line above its first item, or None."""
+    for n, ln in enumerate(content.splitlines(), start=1):
+        if ANY_ITEM_RE.match(ln):
+            return None
+        m = PEOPLE_RE.match(ln.rstrip())
+        if m:
+            return n, m.group("names")
+    return None
+
+
+def board_people(content: str) -> list[str] | None:
+    """The names the board's `People:` preamble line lists (v2.3), as written, in order — or None when
+    it has none. The line is read only above the board's first item; its names are comma-separated.
+    A name outside the person grammar, a duplicate or an empty list is returned as it stands, for
+    board_problems() to flag; compare names case-insensitively."""
+    got = _people_line(content)
+    if got is None:
+        return None
+    return [n.strip() for n in got[1].split(",")] if got[1].strip() else []
 
 
 def reply_span(text: str) -> tuple[int, int] | None:
@@ -906,6 +958,7 @@ class BoardItem:
     # A decided item is NOT done: it stays on the board, and stays due, until whoever acts on
     # it closes it — but it is no longer the person's to-do.
     decided: tuple[str, date] | None = None
+    decided_by: str | None = None  # who gave the Decided: answer, its `(by <person>)` (v2.3)
     bad_due: str | None = None  # the text after "Due:" when it is not a date
     kind: str | None = None  # decide | act | look | watch | fyi, or None when unmarked
     fyi_due: bool = False  # an fyi item that carries a Due: anyway — ignored, and flagged
@@ -1006,7 +1059,7 @@ def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
             due, bad = None, None  # an fyi is never due
         items.append(BoardItem(text=text, due=due, line=lineno, answers=parse_answers(text),
                                default=parse_default(text), consequences=parse_consequences(text),
-                               decided=parse_decided(text), bad_due=bad,
+                               decided=parse_decided(text), decided_by=parse_decided_by(text), bad_due=bad,
                                kind=kind, fyi_due=fyi_due,
                                detail=detail_block(lines, lineno), hide_until=parse_hide_until(text)))
     return items
@@ -1077,6 +1130,7 @@ def item_record(item: BoardItem, today: date) -> dict:
         "consequences": item.consequences,
         "decided": ({"text": item.decided[0], "date": item.decided[1].isoformat()}
                     if item.decided else None),
+        "decided_by": item.decided_by,  # v2.3
         "waiting_on": item.waiting_on,
         "due_error": item.bad_due,
         "kind": item.kind,
@@ -1234,8 +1288,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
                 new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} Hide until: {to.isoformat()}.{rest}"
         was, got = parse_board(body, warn=False), parse_board(new, warn=False)
         if not got or not was or got[0].hide_until != to or got[0].due != was[0].due \
-                or (got[0].answers, got[0].consequences, got[0].default, got[0].decided, got[0].kind) \
-                != (was[0].answers, was[0].consequences, was[0].default, was[0].decided, was[0].kind) \
+                or (got[0].answers, got[0].consequences, got[0].default, got[0].decided, got[0].decided_by, got[0].kind) \
+                != (was[0].answers, was[0].consequences, was[0].default, was[0].decided, was[0].decided_by, was[0].kind) \
                 or parse_replies(new) != parse_replies(body) or item_refs(new) != item_refs(body) \
                 or item_key(new) != item_key(body):
             raise Refused(f"after the edit the reader does not read Hide until: {to.isoformat()} "
@@ -1262,7 +1316,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         got = parse_board(new, warn=False)
         if not got or got[0].due != to or got[0].answers != parse_answers(text) \
                 or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
-                or got[0].decided != parse_decided(text) or got[0].hide_until != parse_hide_until(text):
+                or got[0].decided != parse_decided(text) or got[0].decided_by != parse_decided_by(text) \
+                or got[0].hide_until != parse_hide_until(text):
             raise Refused(f"after the edit the reader does not read Due: {to.isoformat()} "
                           "with the item's other fields unchanged")
         return new
@@ -1270,7 +1325,13 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         answer = " ".join((answer or "").split())
         if not answer:
             raise Refused("the answer is empty")
-        fld = f"Decided: {answer} ({today.isoformat()})."
+        if DECIDED_BY_RE.match(answer):
+            raise Refused("an answer may not end in `(by <name>)` — the reader would read it as who answered; "
+                          "say it in other words")
+        by = " ".join((by or "").split()) or None
+        if by is not None and not is_person(by):
+            raise Refused(f"who answered, {by!r}, is not a person's name (letters, digits, `_`, `-`, dot-separated)")
+        fld = f"Decided: {answer}{f' (by {by})' if by else ''} ({today.isoformat()})."
         if parse_decided(text) is not None:
             m = DECIDED_RE.search(body)
             new = f"{body[: m.start()].rstrip()} {fld}"
@@ -1279,7 +1340,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
             head = body.rstrip()
             new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} {fld}"
         got = parse_board(new, warn=False)
-        if not got or got[0].decided != (answer, today) or got[0].answers != parse_answers(text) \
+        if not got or got[0].decided != (answer, today) or got[0].decided_by != by \
+                or got[0].answers != parse_answers(text) \
                 or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
                 or got[0].due != parse_board(body, warn=False)[0].due:
             raise Refused(f"the reader would not read back 'Decided: {answer}' with the item's "
@@ -1306,8 +1368,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
             new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} {body[at:]}"
         was, got = parse_board(body, warn=False)[0], parse_board(new, warn=False)
         replies = parse_replies(new)
-        if not got or (got[0].due, got[0].answers, got[0].consequences, got[0].decided) \
-                != (was.due, was.answers, was.consequences, was.decided) \
+        if not got or (got[0].due, got[0].answers, got[0].consequences, got[0].decided, got[0].decided_by) \
+                != (was.due, was.answers, was.consequences, was.decided, was.decided_by) \
                 or parse_default(got[0].text) != parse_default(text) \
                 or item_refs(got[0].text) != item_refs(text) \
                 or replies[:-1] != parse_replies(body) or not replies \
@@ -1496,18 +1558,27 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     return new
 
 
-def decided_line(title: str, ref: str, answers: list[str], default: int | None, words: str, today: str) -> str:
+def decided_line(title: str, ref: str, answers: list[str], default: int | None, words: str, today: str,
+                 by: str | None = None) -> str:
     """A new item already decided, for a person's answer given elsewhere (on a ledger entry):
     `- [ ] decide <today> (person) — <title>. Context: <ref>. Due: <today>. Answers: a | b (default).
-    Decided: <words> (<today>).` with its line ending. An answer may carry its consequence,
+    Decided: <words> [(by <by>)] (<today>).` with its line ending; `by`, who answered (v2.3), is a person's
+    name. An answer may carry its consequence,
     `<label> — <consequence>`; the mark goes on the label. Refused for empty words, words
-    carrying a field's name, or a line the reader would not read back."""
+    carrying a field's name or ending in `(by …)`, a `by` outside the person grammar, or a line the reader
+    would not read back."""
     head = ANY_FIELD_RE.sub(r"\1", " ".join(str(title or "").split())).rstrip(".") or ref
     said = " ".join(str(words or "").split())
     if not said:
         raise Refused("a decision needs its words: one of the entry's answers, or what you typed")
     if FIELD_NAME_RE.search(said):
         raise Refused("an answer may not carry Context:, Hide until:, Answers:, Decided: or Closed: — say it in other words")
+    if DECIDED_BY_RE.match(said):
+        raise Refused("an answer may not end in `(by <name>)` — the reader would read it as who answered; "
+                      "say it in other words")
+    by = " ".join(str(by or "").split()) or None
+    if by is not None and not is_person(by):
+        raise Refused(f"who answered, {by!r}, is not a person's name (letters, digits, `_`, `-`, dot-separated)")
     if any(REPLY_TAIL_RE.search(" ".join(str(a).split())) for a in answers or ()):
         raise Refused("an answer's consequence may not read as a reply (` — <name>, <date>: `) — say it in other words")
     def opt(a: str, marked: bool) -> str:
@@ -1515,9 +1586,10 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
         return label + (" (default)" if marked else "") + (CONSEQUENCE_SEP + cons if cons else "")
     opts = [opt(a, i == default) for i, a in enumerate(answers or ()) if str(a).strip()]
     tail = f" Answers: {' | '.join(opts)}." if opts else ""
-    body = f"decide {today} (person) — {_sentence(head)} Context: {ref}. Due: {today}.{tail} Decided: {said} ({today})."
+    body = f"decide {today} (person) — {_sentence(head)} Context: {ref}. Due: {today}.{tail} Decided: {said}{f' (by {by})' if by else ''} ({today})."
     d, c = DECIDED_RE.search(body), CONTEXT_RE.search(body)
-    if d is None or d.group("text") != said:
+    got = _decided_parts(body)
+    if d is None or got is None or got[:2] != (said, by):
         raise Refused(f"the board's reader would not read back 'Decided: {said}': say it in other words")
     if c is None or c.group("ctx").rstrip(".") != ref:
         raise Refused(f"the board's reader would not read back 'Context: {ref}' on this entry's line")
@@ -1767,7 +1839,7 @@ def canonical_item(line: str) -> str:
     was, got = parse_board(line, warn=False), parse_board(new, warn=False)
 
     def fields(it: BoardItem) -> tuple:
-        return (it.kind, it.due, it.hide_until, it.answers, it.consequences, it.default, it.decided,
+        return (it.kind, it.due, it.hide_until, it.answers, it.consequences, it.default, it.decided, it.decided_by,
                 parse_replies(it.text), item_refs(it.text), item_head(it.text))
     if item_key(new) != item_key(line[: len(line) - len(ending)]) or len(was) != 1 or len(got) != 1 \
             or fields(was[0]) != fields(got[0]):
@@ -1779,21 +1851,63 @@ def canonical_item(line: str) -> str:
     return new + ending
 
 
+def people_problems(board: str) -> list[tuple[int, str]]:
+    """(1-based line, problem) for the board's `People:` preamble line (v2.3): a note, opening `ℹ`, when
+    it has none (line 0) — a lift on such a board takes ordinary review — and a fault for a line that
+    lists no name, a name outside the person grammar, a name twice (case-insensitively), or a second
+    `People:` line above the first item."""
+    got = _people_line(board)
+    if got is None:
+        return [(0, "ℹ people: no `People:` line — nobody is named who may answer this board's items")]
+    n, _ = got
+    names = board_people(board) or []
+    out = []
+    if not names:
+        out.append((n, "people: `People:` lists no name"))
+    bad = [x for x in names if not is_person(x)]
+    if bad:
+        out.append((n, f"people: not a person's name: {', '.join(repr(x) for x in bad)}"))
+    seen: set[str] = set()
+    twice = [x for x in names if is_person(x) and (x.lower() in seen or seen.add(x.lower()))]
+    if twice:
+        out.append((n, f"people: named twice: {', '.join(twice)}"))
+    lines = board.splitlines()
+    for m in range(n, len(lines)):
+        if ANY_ITEM_RE.match(lines[m]):
+            break
+        if PEOPLE_RE.match(lines[m].rstrip()):
+            out.append((m + 1, "people: a second `People:` line — the first is read"))
+    return out
+
+
 def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
     """(1-based line, problem) for each open item line of `board` that item_problem() faults and
     that is new: no item line of `old`, open or closed, has its item key. Every `- [ ]` line at any
     indent is judged but an open twin of a closed one; closed lines never are; `old=None`
-    judges every open line. The board's gate: a consumer calls it on the board as the edit leaves
+    judges every open line. A new `decide` line whose Context names a gate, `decision (<person>)`, is
+    also faulted when the board's `People:` does not list that person. First come the board's
+    `People:` problems (people_problems(), v2.3), whose note on a board with none opens `ℹ` and is no
+    fault. The board's gate: a consumer calls it on the board as the edit leaves
     it, with the board as the edit found it."""
     closed = {item_key(ln) for ln in closed_items(board)}
     known = None if old is None else {item_key(ln) for ln in old.splitlines() if ANY_ITEM_RE.match(ln)}
-    out = []
+    people = board_people(board)
+    on = {x.lower() for x in people or []}
+    out = people_problems(board)
     for n, ln in enumerate(board.splitlines(), start=1):
         if not ITEM_RE.match(ln) or item_key(ln) in closed or (known is not None and item_key(ln) in known):
             continue
-        problem = item_problem(ln)
-        if problem:
-            out.append((n, problem))
+        problems = [p] if (p := item_problem(ln)) else []
+        text = ITEM_RE.match(ln).group("text").strip()
+        k = KIND_RE.match(text)
+        c = CONTEXT_RE.search(_gate_body(text))
+        if people is not None and k and k.group("kind").lower() == "decide" and c:
+            off = [g.group("person") for g in CONTEXT_GATE_RE.finditer(c.group("ctx"))
+                   if g.group("person").lower() not in on]
+            if off:
+                problems.append(f"context: the gate's person {', '.join(off)} is not on the board's `People:`")
+        if problems:
+            out.append((n, "; ".join(problems)))
     return out
 
 

@@ -14,16 +14,39 @@
   }
  ],
  "board_problems": [
-  [],
-  [],
   [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ],
    [
     2,
     "head: `(session w-2)` is not `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`"
    ]
   ],
-  [],
   [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ],
    [
     3,
     "text: does not end a sentence (`.`, `?` or `!`)"
@@ -31,6 +54,40 @@
    [
     4,
     "open: an item line opens `- [ ] ` at column 0, single-spaced; kind: 'nested' is not a kind: one of decide, act, look, watch, fyi, in lower case; head: a date then `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`, then ` — `"
+   ]
+  ],
+  [],
+  [
+   [
+    5,
+    "context: the gate's person lee is not on the board's `People:`"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [],
+  [
+   [
+    3,
+    "people: not a person's name: 'pat smith', ''"
+   ],
+   [
+    3,
+    "people: named twice: PAT"
+   ],
+   [
+    4,
+    "people: a second `People:` line — the first is read"
+   ]
+  ],
+  [
+   [
+    3,
+    "people: `People:` lists no name"
    ]
   ]
  ],
@@ -431,6 +488,15 @@
   },
   {
    "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (person) — Where the cache lives. Context: TD-40. Due: 2026-01-15. Answers: On disk (default) | Not now. Decided: On disk (by pat.lee) (2026-01-15).\n"
+  },
+  {
+   "refused": "who answered, 'pat lee', is not a person's name (letters, digits, `_`, `-`, dot-separated)"
+  },
+  {
+   "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
   }
  ],
  "edit_actions": {
@@ -446,11 +512,26 @@
   "decide-again-rewrites": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: b (2026-01-15)."
   },
+  "decide-by": {
+   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default). Decided: b (by pat) (2026-01-15)."
+  },
+  "decide-by-again-rewrites": {
+   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: b (by pat) (2026-01-15)."
+  },
+  "decide-by-refused-name": {
+   "refused": "who answered, 'pat smith', is not a person's name (letters, digits, `_`, `-`, dot-separated)"
+  },
   "decide-fresh": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default). Decided: b (2026-01-15)."
   },
+  "decide-refused-answer-ends-by": {
+   "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
+  },
   "decide-refused-empty": {
    "refused": "the answer is empty"
+  },
+  "decide-refused-not-right-ends-by": {
+   "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
   },
   "done-unpunctuated": {
    "ok": "- [x] 2026-01-05 (session s-1) — Ship it. Closed: 2026-01-15."
@@ -482,6 +563,9 @@
   "reply-ahead-of-answers": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. — Sam, 2026-01-15: leaning b, ask the team. Answers: a | b."
   },
+  "reply-keeps-decided-by": {
+   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. — w-2, 2026-01-15: on it. Answers: a | b. Decided: a (by pat) (2026-01-11)."
+  },
   "reply-naming-hide-refused": {
    "refused": "a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
@@ -505,6 +589,9 @@
   },
   "snooze-hides": {
    "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-20."
+  },
+  "snooze-keeps-decided-by": {
+   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Hide until: 2026-01-20. Answers: a | b. Decided: a (by pat) (2026-01-11)."
   },
   "snooze-moves-the-hide": {
    "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-25. — Pat, 2026-01-06: later. Answers: now | later."

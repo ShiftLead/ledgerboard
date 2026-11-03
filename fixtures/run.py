@@ -21,7 +21,7 @@ Fixtures, each an invented input and its expected JSON:
   ``<case>.v2/`` (``README.md``, ``TD-NNN.md``, ``archive/``, ``rank.yml``), is what ``split()``
   writes from the v1 texts, and ``load()`` of it gives the same ``<case>.json`` (v2.0).
 - ``board/<case>.md`` → ``<case>.json``: every open item's ``item_record()`` at ``TODAY``, plus
-  ``item_key()`` of every item line and ``closed_items()``, and ``needs_you()`` at ``TODAY`` (v2.3).
+  ``item_key()`` of every item line and ``closed_items()``, and ``needs_you()`` at ``TODAY`` and ``board_people()`` (v2.3).
 - ``edit/cases.json`` → ``edit/expected.json``: ``edit_line()``, ``subject()``, ``subject_kind()``,
   ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
   ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
@@ -31,7 +31,8 @@ Fixtures, each an invented input and its expected JSON:
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
   (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``edit_action()``, ``item_key()`` of lines
-  that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``.
+  that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
+  and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
@@ -173,6 +174,7 @@ def board_case(L, md: Path) -> dict:
     text = md.read_text(encoding="utf-8")
     items = L.parse_board(text, warn=False)
     return {"items": [L.item_record(i, TODAY) for i in items],
+            "people": L.board_people(text),  # v2.3
             "needs_you": [[i.line, cls, days] for i, cls, days in L.needs_you(text, TODAY)],  # v2.3
             "keys": [L.item_key(ln) for ln in text.splitlines() if L.is_item(ln)],
             "closed": L.closed_items(text)}
@@ -207,8 +209,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
                 c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:
-            out["compose"].append(_refused(lambda c=c: L.decided_line(
-                c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"])))
+            by = {"by": c["by"]} if "by" in c else {}  # v2.3: who answered
+            out["compose"].append(_refused(lambda c=c, by=by: L.decided_line(
+                c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"], **by)))
     out["item_problems"] = {ln: L.item_problem(ln) for ln in spec["item_problems"]}  # v2.3: the item gate
     out["canonical_items"] = [_refused(lambda ln=ln: L.canonical_item(ln)) for ln in spec["canonical_items"]]
     out["board_problems"] = [L.board_problems(c["new"], c["old"]) for c in spec["board_problems"]]

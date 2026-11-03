@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 import ledgerboard as L  # noqa: E402
 
 EDITS = (("snooze", {"to": date(2026, 3, 1)}), ("due", {"to": date(2026, 3, 2)}), ("decide", {"answer": "Context: x"}),
-         ("decide", {"answer": "b (default)"}), ("reply", {"reply": "see Due: 2026-05-01", "by": "w-2"}),
+         ("decide", {"answer": "b (default)"}), ("decide", {"answer": "b", "by": "pat.lee"}), ("reply", {"reply": "see Due: 2026-05-01", "by": "w-2"}),
          ("reply", {"reply": "ok", "by": "w-2"}))
 
 
@@ -64,7 +64,8 @@ class WritersPassTheGate(unittest.TestCase):
 
     def test_a_new_board_of_written_lines_has_no_problems(self):
         board = "".join(f"{ln}\n" for ln in written())
-        self.assertEqual(L.board_problems(board), [])
+        self.assertEqual([p for p in L.board_problems(board) if not p[1].startswith("ℹ")], [])  # a note is no fault
+        self.assertEqual(L.board_problems("People: w-1\n\n" + board), [])  # v2.3: with its People: line, none
 
 
 if __name__ == "__main__":

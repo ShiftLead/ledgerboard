@@ -338,8 +338,12 @@ line's end, in this order:
   it is `Not right:` alone or followed by one `<…>` placeholder (whitespace collapsed, case as written);
   `Not right: wrong repo` is a complete answer like any other. An answer given to a form fills it when
   it starts `Not right:` and is not itself the form — one that adds nothing, or only a placeholder, is refused.
-- `Decided: <text> (YYYY-MM-DD).` — the person's answer. A decided item stays open and due; it now
-  waits on whoever acts on it, not on the person.
+- `Decided: <label> (by <person>) (YYYY-MM-DD).` — the person's answer, and (v2.3) who gave it. A decided item
+  stays open and due; it now waits on whoever acts on it, not on the person. Only a final `(by <person>)` before
+  the date, `<person>` a person's name (below), is split off (`parse_decided_by()`, `BoardItem.decided_by`,
+  `item_record()`'s `decided_by`); the rest, never empty, is the label (`parse_decided()` keeps its shape,
+  `(label, date)`). A `Decided:` with no `(by …)` stays valid, as every one written before v2.3 is: it names
+  nobody. The item key strips the whole field, so a `(by …)` moves no key.
 
 **The bold head** — an item's first `**…**` run, whitespace collapsed, read outside its replies'
 words (its fields' are read: a bold answer with no bold before it is the head), is its title where it
@@ -360,6 +364,13 @@ the format: changing it is a new major version.** The one exception is v2.3's: t
 `Hide until: D` wherever it stands, as it strips `Due:`, so hiding an item never re-keys it. Only a line that
 already held that prose before v2.3 is keyed differently.
 
+**`People:`** (v2.3) — `People: a, b, c`, a preamble line naming the board's people: whose board it is, one
+person's or a team's, and so who may answer it. It lists one or more people's names, comma-separated, each
+**a person's name**: runs of letters, digits, `_` and `-`, joined by single dots (`pat`, `sam.lee`), compared
+case-insensitively. It is read only above the board's first item, and only the first such line
+(`board_people(content)`: the names as written, in order, or None for a board with none). A v2.2 reader reads
+no preamble line, so it ignores it.
+
 **Preamble lines** — `Name: value` lines before the items (`Kinds:`, `Format:`, a dated stamp
 `Name: YYYY-MM-DD (…)`) are kept byte for byte by every edit. Which stamps a consumer writes and
 what they mean are the consumer's.
@@ -373,7 +384,9 @@ back exactly what was meant:
 - **due** sets the item's `Due:`, the real deadline (adding one ahead of its `Hide until:` and trailing fields when it
   has none; v2.3);
 - **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
-- **decide** writes `Decided: <answer> (YYYY-MM-DD).`, replacing an earlier one;
+- **decide** writes `Decided: <answer> (YYYY-MM-DD).`, or with `by` (v2.3) `Decided: <answer> (by <by>) (YYYY-MM-DD).`,
+  replacing an earlier one. It refuses a `by` that is not a person's name, and an answer that itself ends in
+  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered;
 - **reply** appends a reply tail.
 
 **A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>. Due: <due>.` then `Answers: …` where its kind takes them. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
@@ -388,7 +401,7 @@ The **detail block** is composed from named parts, in the order `Context`, `Ques
 
 The writer refuses text, a context, an answer or a detail value that carries a field name, or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
 
-An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line()`, unchanged).
+An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line(…, by=)`), whose `Decided:` names who gave it as **decide** does, with the same refusals (v2.3).
 
 **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
 - opens `- [ ] ` at column 0;
@@ -399,7 +412,7 @@ An answer given elsewhere (on a ledger entry) is written as an already decided `
 
 Fields inside a reply's words or a `Decided:` text are the person's and are not counted. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
 
-**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
+**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day. Two rules join it in v2.3, for who may answer. First come the board's `People:` problems (`people_problems(board)`, line 0 for a missing line): a board with no `People:` line is noted, its text opening `ℹ`, which is no fault (nobody is named who may answer it, so a consumer sends a lift on it to ordinary review); a `People:` line that lists no name, a name that is not a person's name or the same name twice, and a second `People:` line above the first item, are faults. Then a new `decide` line whose Context names a gate, `decision (<person>)`, is faulted when the board has a `People:` line that does not list that person.
 
 **The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
 <answer>] (session <name>)` for the five edits (`edit_action()` reads the action back, v2.3; a `snooze … to D`
@@ -428,6 +441,12 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
 - **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_line()`) of the open item on `--line`, refused
   when that line is not an open item or no longer starts with `--expect` (the board moved since it was read);
   `reply` takes its `--by` from the caller;
+- **who answered** (v2.3) — `decide`, and `add --decided`, write who gave the answer (`who_answered(board, by)`):
+  on a board whose `People:` lists one name, `--by` defaults to it; on one that lists several, `--by` is
+  required. A `--by` the list does not hold is refused, and one it holds is written as the list spells it. On a
+  board with no `People:` line, `--by` is required and checked as a person's name only. A `People:` line the gate
+  faults refuses every answer. The caller supplies the name of the person who answered; a commit's author is
+  never one, since an agent commits under the person's name;
 - **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
 - **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
   lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
@@ -440,7 +459,7 @@ subject of its own, and a write that changes nothing (a rank line already so) pr
 `--plan` prints the changes as JSON (each path and its new text) and writes nothing. A write of several files is
 both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
 and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
-date (`--today`, else the local clock), who replies (`--by`), and the tool and session the subject names
+date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
 (`--tool`, `--session`). A file that declares a newer major is refused unread. Exit: 0 written (or nothing to
 change), 1 a write failed (every file restored), 2 usage, 3 refused.
 
@@ -475,4 +494,4 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
-**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. This is v2.3's one change to what is read: `Hide until:` is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; every other line reads and keys as in v2.2. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:` and `(by …)` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is one of v2.3's two changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The other is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.

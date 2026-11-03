@@ -153,6 +153,53 @@
       "line": "- [ ] decide 2026-01-05 (n/a) — Pick. Context: TD-1. Due: 2026-01-20. Answers: A (ok. Hide until: 2030-01-01) | B.",
       "action": "snooze",
       "to": "2026-01-25"
+    },
+    {
+      "name": "decide-by",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default).",
+      "action": "decide",
+      "answer": "b",
+      "by": "pat"
+    },
+    {
+      "name": "decide-by-again-rewrites",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: a (by sam) (2026-01-11).",
+      "action": "decide",
+      "answer": "b",
+      "by": "pat"
+    },
+    {
+      "name": "decide-by-refused-name",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default).",
+      "action": "decide",
+      "answer": "b",
+      "by": "pat smith"
+    },
+    {
+      "name": "decide-refused-answer-ends-by",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default).",
+      "action": "decide",
+      "answer": "b (by pat)"
+    },
+    {
+      "name": "decide-refused-not-right-ends-by",
+      "line": "- [ ] look 2026-01-05 (session s-1) — Does it work? Due: 2026-01-10. Answers: Works | Not right: <what>.",
+      "action": "decide",
+      "answer": "Not right: slow (by pat)",
+      "by": "pat"
+    },
+    {
+      "name": "snooze-keeps-decided-by",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: a (by pat) (2026-01-11).",
+      "action": "snooze",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "reply-keeps-decided-by",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: a (by pat) (2026-01-11).",
+      "action": "reply",
+      "reply": "on it",
+      "by": "w-2"
     }
   ],
   "subjects": [
@@ -743,6 +790,41 @@
       "host": null,
       "context": "TD-1",
       "kind": "act"
+    },
+    {
+      "fn": "decided_line",
+      "title": "Where the cache lives",
+      "ref": "TD-40",
+      "answers": [
+        "On disk",
+        "Not now"
+      ],
+      "default": 0,
+      "words": "On disk",
+      "by": "pat.lee"
+    },
+    {
+      "fn": "decided_line",
+      "title": "Where the cache lives",
+      "ref": "TD-40",
+      "answers": [
+        "On disk",
+        "Not now"
+      ],
+      "default": 0,
+      "words": "On disk",
+      "by": "pat lee"
+    },
+    {
+      "fn": "decided_line",
+      "title": "Where the cache lives",
+      "ref": "TD-40",
+      "answers": [
+        "On disk",
+        "Not now"
+      ],
+      "default": 0,
+      "words": "On disk (by pat)"
     }
   ],
   "predicates": [
@@ -1178,6 +1260,30 @@
     {
       "old": null,
       "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\nPeople: pat, Sam\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (Pat). Due: 2026-01-20. Answers: a | b (default).\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
+    },
+    {
+      "old": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n",
+      "new": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\nPeople: pat, sam, PAT, pat smith, \nPeople: lee\n\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\nPeople: below\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\nPeople:\n"
     }
   ],
   "archive_subjects": [
