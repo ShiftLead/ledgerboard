@@ -287,7 +287,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             "edit_entry": {c["name"]: edits(c) for c in spec["edit_entry"]},
             "check": {c["name"]: [r for r in L.check(text({"file": c["ledger"]}), text({"file": c["archive"]}) if c["archive"] else "",
                                                      old=text({"file": c["old"]}) if c.get("old") else None)
-                                  if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown")]
+                                  if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
+                                                   "log-not-last", "log-line")]
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],

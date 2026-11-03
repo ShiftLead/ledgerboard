@@ -198,10 +198,11 @@ the lead, one per line, each `- YYYY-MM-DD: words`, oldest first. It is always t
 section. `check()` flags a section after it, or a second Log (`log-not-last`), and a line that is not
 `- YYYY-MM-DD: words` or that opens with a writer's prefix but not in its shape (`log-line`). Both
 are errors on an entry this edit changed (its whole text, not only its header) and information on a
-standing one. A writer that appends to the Log refuses one that is not last, and `edit` and
+standing one. `check()` reads the Logs of the open entries, not the archive's. A writer that appends to the Log refuses one that is not last, and `edit` and
 `archive` put a section they add before it.
 - **Every ledger date is the UTC date.** The entry writers take a date, `YYYY-MM-DD`, or an aware
   datetime, which they turn into its UTC date; a naive datetime is refused, since its zone is unknown.
+  A fixture carries no datetime, so this rule is held by the unit tests.
 - **The writers' lines have fixed shapes**, which `log_line(line)` reads (`log_lines(text)` reads an
   entry's Log). Each line's words after the date are one of these. `who`, a session and a host are
   tokens of `[A-Za-z0-9_.@/-]+`. A gate is `decision (<person>)`, `until YYYY-MM-DD` or `event
@@ -232,9 +233,11 @@ standing one. A writer that appends to the Log refuses one that is not last, and
   `reopen` run before they write:
   - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
     where `<Word>` is a known one: `Open`, `Resolved`, `Superseded`, `Dropped`, or one v2.5's
-    `migrate` maps (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), in any case.
+    `migrate` maps (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), in any case,
+    not in bold, and followed by its end, a `.`, a `:` or its date. So `In progress`, `Open, held`
+    and `**Open** x` are prose, and nothing is lifted from them.
   - The tail becomes **one** Log line, verbatim (a date inside it stays prose), dated by the Status's
-    date, else the `**Resolved:**` line's, else `Added`'s. Each `— was:` segment becomes its own `was:
+    date, else the `**Resolved:**` line's (or an older `Resolved` header field's), else `Added`'s. Each `— was:` segment becomes its own `was:
     <Status>` line, dated by its own date or the same fallbacks.
   - The lines go in among the Log's by date, after any line of an equal date, and the Status is left
     as `<Word>[.] [YYYY-MM-DD] [by <id>]`.

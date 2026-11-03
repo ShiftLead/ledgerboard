@@ -36,6 +36,42 @@
   }
  },
  "check": {
+  "log_flags_no_old": [
+   {
+    "field": "log",
+    "id": "TD-090",
+    "kind": "log-not-last",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-090: a section follows its Log — the Log is the body's last section; move the section above it"
+   },
+   {
+    "field": "log",
+    "id": "TD-091",
+    "kind": "log-line",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-091: its Log line '- 2026-01-02 a line with no colon' is not `- YYYY-MM-DD: words`"
+   }
+  ],
+  "log_flags_standing_where_the_entry_is_unchanged": [
+   {
+    "field": "log",
+    "id": "TD-090",
+    "kind": "log-not-last",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-090: a section follows its Log — the Log is the body's last section; move the section above it"
+   },
+   {
+    "field": "log",
+    "id": "TD-091",
+    "kind": "log-line",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-091: its Log line '- 2026-01-02 a line with no colon' is not `- YYYY-MM-DD: words`"
+   }
+  ],
   "no_old_no_rule": [
    {
     "field": "part of",
@@ -94,6 +130,9 @@
   },
   "archive_copies_an_unknown_status_whole": {
    "ok": "## TD-082: A Status no lift reads\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #9)\n\n**Log:**\n- 2026-01-02: was: **Live check held** until the next run\n- 2026-01-20: archived: Resolved — held long enough\n"
+  },
+  "archive_copies_in_progress_whole": {
+   "ok": "## TD-087: Statuses that only look like a word and a note\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** Superseded 2026-01-20 by TD-90\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-02: was: In progress: the first half\n- 2026-01-20: archived: Superseded — replaced\n"
   },
   "archive_header_resolved": {
    "ok": "## TD-063: Archived the old way, its Resolved a header field\n\n**Priority:** Low\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #16)\n\n**Log:**\n- 2026-01-06: built\n- 2026-01-20: archived: Resolved — built again\n"
@@ -160,6 +199,9 @@
   },
   "note_leaves_an_unknown_status": {
    "ok": "## TD-082: A Status no lift reads\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** **Live check held** until the next run\n\n**Why:** a reason.\n\n**Fix:** the steps.\n\n**Log:**\n- 2026-01-20: looked\n"
+  },
+  "note_leaves_in_progress": {
+   "ok": "## TD-087: Statuses that only look like a word and a note\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** In progress: the first half\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-20: looked\n"
   },
   "note_lifts_the_status_notes": {
    "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-04: was: Open\n- 2026-01-05: a later line\n- 2026-01-20: a new note\n"
@@ -443,6 +485,14 @@
    ],
    "status_notes_to_log": {
     "ok": "## TD-080: An entry whose Log holds every writer shape\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** decision (Kim), until 2026-03-01, event (tool-v3)\n\n**Why:** a reason.\n\n**Ask:** go or not?\n\n**Log:**\n- 2026-01-02: filed by Kim, session plan-7, while other-repo#TD-4: \"file the \"tool\" entry\"\n- 2026-01-02: gate added: decision (Kim)\n- 2026-01-03: gate added: until 2026-03-01\n- 2026-01-04: gate added: event (tool-v3)\n- 2026-01-05: kept waiting: decision (Kim) — by Kim; answer \"Not yet\"\n- 2026-01-06: gate reassigned: decision (Kim) → decision (Lee) — by Kim; away a month\n- 2026-01-07: gate lifted: decision (Lee) — by Lee; answer \"Go\"; board other-repo\n- 2026-01-07: gate lifted: decision (Lee) — by Kim; override: Lee is away\n- 2026-01-08: gate lifted: event (tool-v3) — by box-1; pr-merged passed; tool#31\n- 2026-01-08: gate lifted: event (tool-v3) — by Kim; answer \"Drop it\"\n- 2026-01-09: gate lifted: until 2026-03-01 — by box-1; date reached\n- 2026-01-09: gate lift skipped: TD-81 no longer carries decision (Kim)\n- 2026-01-10: archived: Dropped — nothing needs it\n- 2026-01-11: reopened — it is needed after all\n- 2026-01-11: was: Built 2026-01-10: half of it\n- 2026-01-12: note: was: a lifted note that would read as a writer line\n- 2026-01-12: a tool of the future wrote this: unknown, kept byte for byte\n- 2026-01-13: gate lifted: by hand, in no shape\n"
+   }
+  },
+  "in_progress": {
+   "gate_age": {},
+   "log_lines": [],
+   "log_problems": [],
+   "status_notes_to_log": {
+    "ok": "## TD-087: Statuses that only look like a word and a note\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** In progress: the first half\n\n**Why:** a reason.\n"
    }
   },
   "legacy_status": {

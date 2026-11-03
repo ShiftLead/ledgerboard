@@ -746,6 +746,14 @@ class TheLog(unittest.TestCase):
         self.assertTrue(all(r["level"] == "error" for r in L.check(bad, "", old=good) if r["field"] == "log"))
         self.assertFalse([r for r in L.check(good, "") if r["field"] == "log"])
 
+    def test_a_status_lifts_only_from_a_word_its_end_a_colon_or_its_date_follow(self):
+        for status in ("In progress: x", "Open, held", "Open; held", "**Open** x", "Openly x"):
+            with self.subTest(status):
+                text = self.ENTRY.replace("**Status:** Open", f"**Status:** {status}")
+                self.assertEqual(L.status_notes_to_log(text), text)
+        text = "## TD-6: x\n\n**Status:** Resolved: built\n**Resolved:** 2026-01-07 (PR #3)\n\n**Why:** w\n"
+        self.assertIn("- 2026-01-07: built\n", L.edit_entry(text, "reopen", today="2026-02-01", why="again"))
+
     def test_a_gates_age(self):
         text = self.ENTRY.replace("**Status:** Open", "**Status:** Open\n**Blocked by:** decision (Paul)")
         self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 1))  # no Log: Added

@@ -991,6 +991,31 @@
      }
     }
    ]
+  },
+  {
+   "name": "note_leaves_in_progress",
+   "file": "in_progress.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "looked"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_copies_in_progress_whole",
+   "file": "in_progress.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "replaced",
+      "superseded_by": "TD-90"
+     }
+    }
+   ]
   }
  ],
  "check": [
@@ -1010,6 +1035,17 @@
    "ledger": "check/before.md",
    "archive": "",
    "old": "check/before.md"
+  },
+  {
+   "name": "log_flags_standing_where_the_entry_is_unchanged",
+   "ledger": "check/log_after.md",
+   "archive": "",
+   "old": "check/log_before.md"
+  },
+  {
+   "name": "log_flags_no_old",
+   "ledger": "check/log_after.md",
+   "archive": ""
   }
  ],
  "log": [
@@ -1049,6 +1085,11 @@
    "gates": [
     "decision (Kim)"
    ]
+  },
+  {
+   "name": "in_progress",
+   "file": "in_progress.md",
+   "gates": []
   }
  ]
 }

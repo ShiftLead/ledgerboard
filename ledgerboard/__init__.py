@@ -468,8 +468,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     adds the rank file's flags (never standing: the file is a tool's). Also with ``old`` (v2.2): an
     entry that left the ledger while an open entry is still Part of it is an error,
     ``archive-open-parts``, naming the parts — never standing, since only this edit made it. Each
-    entry's Log (v2.4) adds ``log-not-last`` and ``log-line`` (``log_problems()``), standing when the
-    entry's whole text is unchanged."""
+    open entry's Log (v2.4) adds ``log-not-last`` and ``log-line`` (``log_problems()``), standing when the
+    entry's whole text is unchanged; an archived entry's Log is not read."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text)["flag_recs"]]
     texts = _entry_texts(ledger)
@@ -481,7 +481,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         return recs
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
-    rewritten = {t for t, x in texts.items() if _entry_texts(old).get(t) != x}  # a Log flag's scope: the whole entry
+    old_texts = _entry_texts(old)
+    rewritten = {t for t, x in texts.items() if old_texts.get(t) != x}  # a Log flag's scope: the whole entry
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
         counts = True if r["kind"] == "rank" else decl_changed if r["id"] is None else \
@@ -2811,8 +2812,10 @@ LOG_SHAPES = (
 # the reserved ones v2.5's migrate maps away.
 STATUS_WORDS = ("open", "resolved", "superseded", "dropped", "designed", "built", "partly", "live", "in",
                 "done", "moved", "obe")
-STATUS_HEAD_RE = re.compile(rf"^(?P<word>[A-Za-z]+)\.?(?:[ \t]+(?P<date>\d{{4}}-\d{{2}}-\d{{2}}))?"
-                            rf"(?:[ \t]+by[ \t]+(?P<by>{LOG_ID}))?(?=$|[\s:,;.—])")
+# The word is followed by its end, a `.`, a `:` or its date: `In progress`, `Open, held` lift nothing.
+STATUS_HEAD_RE = re.compile(rf"^(?P<word>[A-Za-z]+)\.?(?=$|:|[ \t]+\d{{4}}-\d{{2}}-\d{{2}}(?![\d-]))"
+                            rf"(?:[ \t]+(?P<date>\d{{4}}-\d{{2}}-\d{{2}}))?"
+                            rf"(?:[ \t]+by[ \t]+(?P<by>{LOG_ID}))?(?=$|[\s:])")
 WAS_CUT = " — was: "
 LOG_AGE_KINDS = ("gate-added", "kept-waiting", "gate-reassigned")
 
@@ -2966,9 +2969,10 @@ def _log_insert(sections: list[tuple[str | None, str]], lines: list[tuple[str, s
 
 
 def _fallback_day(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]) -> str | None:
-    """The date an undated Status note takes: the ``**Resolved:**`` line's, else Added's."""
-    for i in _keyed(sections, "resolved"):
-        m = ISO_DAY_RE.search(sections[i][1])
+    """The date an undated Status note takes: the ``**Resolved:**`` line's (or the older header field's),
+    else Added's."""
+    for text in [sections[i][1] for i in _keyed(sections, "resolved")] + [_value(header, "resolved") or ""]:
+        m = ISO_DAY_RE.search(text)
         if m:
             return m.group(0)
     m = ISO_DAY_RE.search(_value(header, "added") or "")
@@ -3016,9 +3020,10 @@ def status_notes_to_log(text: str) -> str:
     ``**Resolved:**`` line's, else Added's; each ``— was:`` segment one ``was: <Status>`` line, dated
     by its own date or the same. Lines go in among the Log's by date, after any of an equal date; a
     line that would begin with a writer's prefix is written ``note: <text>``. The Status is left as
-    ``<Word> [D] [by <id>]``. An unknown word, a Status with nothing after its head, or text with no
-    date to give it: the text is returned unchanged. Refused for an entry ``canonical()`` refuses and
-    one whose Log is not its body's last section."""
+    ``<Word> [D] [by <id>]``. The word is followed by its end, ``.``, ``:`` or its date, and is not in
+    bold. An unknown word, a Status with nothing after its head, or text with no date to give it: the
+    text is returned as given, not reformatted. Refused for an entry ``canonical()`` refuses, and when
+    there are notes to lift into a Log that is not the body's last section."""
     m, header, body = _entry_parts(canonical(text))
     sections = _entry_sections(body)
     new_header, new_sections, _ = _lift_status(header, sections)
