@@ -54,3 +54,8 @@
 
 **Priority:** Low
 **Status:** Superseded 2026-01-09 by acme/tools#TD-5
+
+## TD-312: Superseded, a period after the successor
+
+**Priority:** Low
+**Status:** Superseded 2026-01-10 BY TD-302.

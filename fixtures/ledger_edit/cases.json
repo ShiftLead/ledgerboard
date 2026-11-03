@@ -1425,6 +1425,13 @@
    "tid": "TD-400",
    "dropped": true,
    "superseded_by": "TD-410"
+  },
+  {
+   "name": "successor_waiting_on_a_dependent_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-411"
   }
  ]
 }

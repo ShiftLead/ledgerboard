@@ -65,3 +65,18 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Blocked by:** acme/tools#TD-11
+
+## TD-332: Blocked by another repo's entry dropped under a newer release's Status
+
+**Priority:** Low
+**Blocked by:** acme/tools#TD-12
+
+## TD-333: Blocked by another repo's entry whose Status the resolver gives malformed
+
+**Priority:** Low
+**Blocked by:** acme/tools#TD-13
+
+## TD-334: Blocked by an entry superseded with a period after its successor
+
+**Priority:** Low
+**Blocked by:** TD-312

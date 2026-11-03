@@ -36,6 +36,9 @@
   "successor_unknown_refused": {
    "refused": "the successor TD-499 names no entry in the ledger or the archive — a successor exists, open or Resolved"
   },
+  "successor_waiting_on_a_dependent_refused": {
+   "refused": "the successor TD-411 waits on TD-401, which is Blocked by TD-400: rewired, they would block on each other — name another successor, or untangle them first"
+  },
   "superseded_by_another_repo": {
    "ok": {
     "rewire": [

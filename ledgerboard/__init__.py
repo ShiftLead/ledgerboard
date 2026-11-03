@@ -476,7 +476,7 @@ def _archived_status(archive: str) -> dict[int, dict]:
     for e in entries(archive):
         status = e["fields"].get("status") or ""
         word = first_word(status)
-        by = re.search(rf"\bby[ \t]+({LOG_ID})(?![\w#/.-])", status) if word == "superseded" else None
+        by = re.search(rf"\bby[ \t]+({LOG_ID})(?![\w#/-]|\.\w)", status, re.IGNORECASE) if word == "superseded" else None
         out.setdefault(_num(e["id"]), {"id": e["id"], "word": word if word in ("superseded", "dropped") else "resolved",
                                        "successor": by.group(1) if by else None})
     return out
@@ -500,7 +500,9 @@ def _chain(start: str, live_nums: set[int], gone: Mapping[int, dict], resolve: R
             x = _resolved(cur, resolve)
             if x["state"] != "archived":
                 return path, x["state"]
-            word, nxt = first_word(str(x.get("status") or "")), x.get("successor")
+            if x.get("status") is not None and not isinstance(x["status"], str):
+                return path, "unresolved"  # a Status the resolver cannot have read: hold
+            word, nxt = first_word(x.get("status") or ""), x.get("successor")
             if word == "dropped":
                 return path, "dropped"
             if word != "superseded":
@@ -3164,6 +3166,19 @@ def archive_plan(ledger: str, archive: str, tid: str, *, superseded_by: str | No
     if own:
         raise Refused(f"{own[0]} is Blocked by {tid} and is its successor: it would block on itself — name another "
                       "successor, or take the blocker off it first")
+    if "#" not in end:  # a successor that waits, through its own blockers, on a dependent would close a loop
+        edges = {_num(e["id"]): [_num(x) for x in parse_gates(e["blocked_raw"])["ids"] if "#" not in x]
+                 for e in entries(ledger)}
+        dep_nums, seen, todo = {_num(d): d for d in deps}, set(), [_num(end)]
+        while todo:
+            n = todo.pop()
+            for m in edges.get(n, []):
+                if m in dep_nums:
+                    raise Refused(f"the successor {end} waits on {dep_nums[m]}, which is Blocked by {tid}: rewired, "
+                                  "they would block on each other — name another successor, or untangle them first")
+                if m not in seen and m != _num(tid):
+                    seen.add(m)
+                    todo.append(m)
     return {"successor": end, "rewire": deps}
 
 

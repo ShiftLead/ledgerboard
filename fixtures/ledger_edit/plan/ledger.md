@@ -23,3 +23,13 @@ Ledgerboard: 2
 ## TD-410: A live successor
 
 **Priority:** Medium
+
+## TD-411: A successor that waits on a dependent
+
+**Priority:** Low
+**Blocked by:** TD-412
+
+## TD-412: Waits on TD-401, a dependent
+
+**Priority:** Low
+**Blocked by:** TD-401
