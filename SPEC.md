@@ -306,14 +306,14 @@ docs/ledger/
   commented-out template there stays whole, a `|` line inside an HTML comment being no table row; of two
   blank lines around the table one kept, none leading or trailing), and a `---` that would follow the prose's own closing `---` with nothing between them, the
   pair that framed the table, is dropped. The archive's text before its first entry is dropped.
+  `split()` refuses another `## ` section, an id twice, and a result that does not read back the same
+  entries (compared by id), the same `Fields:` and version 2, or that `v2_problems()` flags.
   `split_notes(readme)` (v2.4) lists the lines of that `README.md` which may still describe the v1
   layout, as `(line number, line, why)`, for the caller to warn about and nothing rewritten: a line
   naming the summary table (`summary table`, `table below`, `the table`), and one holding a relative
   Markdown link or reference definition, which the move into the v2 directory breaks (a link to the v1
   archive file among them). It is best effort, for a warning: a line inside a fenced code block, a
-  link inside a code span and an escaped one are skipped. It refuses another `## ` section, an id twice, and a result
-  that does not read back the same entries (compared by id), the same `Fields:` and version 2, or
-  that `v2_problems()` flags.
+  link inside a code span and an escaped one are skipped.
 
 ## The next id (v2.4)
 
