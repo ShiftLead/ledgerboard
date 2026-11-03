@@ -1488,7 +1488,10 @@
     "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Parts: TD-15. Due: 2026-01-20.",
     "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Due: 2026-01-20. Lifts: Go.",
     "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13, see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: PR #5 decision (pat). Due: 2026-01-20. Answers: Go | Not yet."
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: PR #5 decision (pat). Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] \tact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
+    "- [ ]  act 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] \u000bact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20."
   ],
   "canonical_items": [
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",

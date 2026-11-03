@@ -274,6 +274,10 @@
    {
     "accepted": false,
     "why": "open: an item line opens `- [ ] ` at column 0, single-spaced"
+   },
+   {
+    "accepted": false,
+    "why": "open: an item line opens `- [ ] ` at column 0, single-spaced"
    }
   ],
   "label": [
