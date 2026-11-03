@@ -50,9 +50,12 @@ archive, or another repo's entry the reader cannot resolve keeps the block. A wr
 (`owner/name`, or deeper for a nested group). Each component is ASCII `[A-Za-z0-9_.-]+`, is not `.`
 or `..`, and does not start with `-`; a leading `.` is allowed (`owner/.github`). So an id holds no
 URL, no host and no path traversal. Before v2.4 a repo was one or two components of `[\w.-]+`,
-non-ASCII and `..` among them. In prose (a Context or `Parts:`), a `<repo>#TD-n` starts the text or
-follows a space or punctuation that ends a word, and an id whose repo is not the grammar is no ref at
-all, never a shorter one: `a/../b#TD-1` names neither `b#TD-1` nor `TD-1`.
+non-ASCII and `..` among them. In prose (a Context or `Parts:`), a `<repo>#TD-n` is read only where
+it does not follow a word character, `/`, `.`, `-`, `@`, `:` or `#` (where it would be the tail of a
+longer word, path or URL), and not when its repo's first component is a `TD-n`; a bare `TD-n` is read
+anywhere but after `#`. So an id whose repo is not the grammar is no ref at all, never a shorter one:
+`a/../b#TD-1` and `git@host:o/r#TD-1` name neither `…#TD-1` nor `TD-1`. Refs are written apart:
+`TD-5/o/r#TD-6` reads `TD-5` alone, where `TD-5, o/r#TD-6` reads both.
 - **A repo is compared case-insensitively** where ids are looked up (`rename_ref`, a resolver) and
   where a Context's refs are de-duplicated (`item_refs()`, `parse_parts()`, a `decide`'s one entry;
   `ref_key()` is the comparison). The text keeps it as written, and an item's key stays byte-exact,
@@ -626,8 +629,8 @@ v2.3 reads the Log as a body section like any other, and reads the shorter Statu
 v2.4 also tightens `<repo>` (*The ledger*): an id or ref whose repo is non-ASCII, holds `.` or `..` as
 a component, starts a component with `-`, or is a URL is no longer read as another repo's id (it is
 an unreadable `Blocked by` item, which keeps the block, and no ref in a Context), while a repo of
-three or more components now is. A Context ref after a `/`, `.` or other word character is read only
-when it is a bare `TD-n`. `origin_key()`, `origin_path()` and `ref_key()` are new, and a repo's case
+three or more components now is. A `<repo>#TD-n` after a word character, `/`, `.`, `-`, `@` or `:` is
+no longer read (a bare `TD-n` still is). `origin_key()`, `origin_path()` and `ref_key()` are new, and a repo's case
 no longer makes two refs of one.
 
 ## Appendix: grammar

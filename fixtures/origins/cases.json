@@ -23,7 +23,10 @@
   "item_refs": [
     "- [ ] act 2026-01-05 (n/a) — Look at both. Context: Acme/Tools#TD-4, acme/tools#TD-4, TD-5/TD-6. Due: 2026-01-20.",
     "- [ ] act 2026-01-05 (n/a) — Three deep and dot-led. Context: group/sub/repo#TD-7, acme/.github#TD-8. Due: 2026-01-20.",
-    "- [ ] act 2026-01-05 (n/a) — No ref from a bad repo. Context: a/../b#TD-9, ./x#TD-9, https://forge.example/acme/tools#TD-9, ünï#TD-9. Due: 2026-01-20."
+    "- [ ] act 2026-01-05 (n/a) — No ref from a bad repo. Context: a/../b#TD-9, ./x#TD-9, https://forge.example/acme/tools#TD-9, ünï#TD-9. Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (n/a) — The tail of a longer word or URL is no ref. Context: é_o/r#TD-1, git@forge.example:o/r#TD-2, a/./b#TD-3. Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (n/a) — After other punctuation a ref reads. Context: x—o/r#TD-1, “o/r#TD-2”, a=o/r#TD-3, `o/r#TD-4`, [o/r#TD-5](https://forge.example). Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (n/a) — Refs run together. Context: TD-5/o/r#TD-6, TD-7, xTD-8. Due: 2026-01-20."
   ],
   "blocked": [
     "group/sub/repo#TD-1, TD-2",

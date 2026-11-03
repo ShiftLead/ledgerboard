@@ -921,10 +921,11 @@ PARTS_RE = re.compile(r"\s+Parts:\s*(?P<ids>.*?)(?=\s+(?:Due|Hide until|Answers|
 # starts a sentence and is read only after the item's Due:, or after its Context: when it has none (an fyi).
 HIDE_RE = re.compile(r"(?:^|(?<=[.?!]\s))Hide until:\s*(?P<date>\d{4}-\d{2}-\d{2})\b")
 HIDE_KEY_RE = re.compile(r"\s*\bHide until:\s*\d{4}-\d{2}-\d{2}\b\.?")  # what item_key strips, as it strips Due:
-# A TD ref in prose (v2.4): `<repo>#TD-n` with the repo as XREPO_ITEM_RE has it, starting the text or
-# after a space or punctuation that ends a word, or a bare `TD-n` with no `#` before it. So a bad repo
-# (`a/../b#TD-1`, `é#TD-1`, a URL) is no ref at all, never a shorter one.
-REF_TD_RE = re.compile(rf"(?<![^\s(\[{{,;:\"'`<>*_]){REPO}#TD-\d+|(?<!#)TD-\d+")
+# A TD ref in prose (v2.4): `<repo>#TD-n` with the repo as XREPO_ITEM_RE has it, not after a word
+# character, `/`, `.`, `-`, `@`, `:` or `#` (where it would be the tail of a longer word, path or URL),
+# and not a repo whose first component is a `TD-n`; or a bare `TD-n` with no `#` before it. So a bad
+# repo (`a/../b#TD-1`, `é_o/r#TD-1`, `git@host:o/r#TD-1`) is no ref at all, never a shorter one.
+REF_TD_RE = re.compile(rf"(?<![\w./@:#-])(?!TD-\d+[/#]){REPO}#TD-\d+|(?<!#)TD-\d+")
 REF_PR_RE = re.compile(r"\bPRs?\s*#\d+(?:\s*(?:/|,|&|and)\s*#\d+)*")  # PR #12 · PRs #12/#13 · PR #12, #13
 REF_BRANCH_RE = re.compile(r"^(?P<said>branch\s+)?`?(?P<name>[A-Za-z0-9][\w./-]*)`?$")
 REF_FILE_RE = re.compile(r"\.\w{1,5}$")  # docs/plans/x.md is a path, not a branch
