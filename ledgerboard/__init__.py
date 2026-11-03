@@ -3493,7 +3493,7 @@ CHECK_OUTCOMES = ("passed", "not yet", "impossible", "error")
 CHECK_N_RE = re.compile(r"[0-9]{1,18}")  # a forge's PR number; capped, so int() never meets a giant
 CHECK_COMMIT_RE = re.compile(r"[0-9a-f]{7,40}")
 REF_BAD_CHARS = set("~^:?*[\\ #%&=+")  # git's, revision syntax's, and URL or query syntax in a forge API call
-PATH_BAD_CHARS = set('*?[]#%&=+"\\')  # a glob character, URL or query syntax in a forge path, the text's quote, a backslash
+PATH_BAD_CHARS = set('*?[]#%"\\')  # a glob character, URL syntax in a forge path, the text's quote, a backslash
 CHECK_ARG_SEP_RE = re.compile(r"[ \t]+")  # arguments are separated by spaces and tabs, never other whitespace
 
 
@@ -3519,7 +3519,7 @@ def _ref_problem(ref: str) -> str | None:
 
 def _path_problem(path: str) -> str | None:
     """Why ``path`` is not a path a check may read (absolute, an empty, ``.``, ``..`` or ``.git`` segment, a
-    leading ``-``, a glob character, ``#%&=+``, a quote, a backslash, whitespace, a control or anything
+    leading ``-``, a glob character, ``#``, ``%``, a quote, a backslash, whitespace, a control or anything
     outside printable ASCII), or None."""
     if not path:
         return "an empty path"
@@ -3533,7 +3533,7 @@ def _path_problem(path: str) -> str | None:
     if any(x in ("", ".") or x.lower() == ".git" for x in segs):
         return f"the path {path!r} has an empty, . or .git segment"
     if any(c in PATH_BAD_CHARS or not " " < c < "\x7f" for c in path):
-        return (f"the path {path!r} holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, "
+        return (f"the path {path!r} holds a glob character, URL syntax (# or %), a quote, a backslash, "
                 "whitespace, a control, or anything outside ASCII")
     return None
 
@@ -3566,6 +3566,8 @@ def parse_check(value: str) -> dict:
             return bad('file-contains needs its text in quotes: file-contains <repo>[@<ref>] <path> "<text>"')
         if rest[rest.rfind('"') + 1:].strip(" \t"):
             return bad("nothing may follow the quoted text")
+        if not rest[:q].endswith((" ", "\t")):
+            return bad("the quoted text is an argument of its own: a space comes before its opening quote")
         text, rest = rest[q + 1: rest.rfind('"')], rest[:q]
         if not text.strip(" \t"):
             return bad("the quoted text is empty")

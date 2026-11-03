@@ -282,6 +282,10 @@
    {
     "accepted": false,
     "why": "its check: nothing may follow the quoted text"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the quoted text is an argument of its own: a space comes before its opening quote"
    }
   ],
   "hex": [
@@ -310,24 +314,24 @@
     "why": null
    },
    {
-    "accepted": false,
-    "why": "its check: the path 'docs/*.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+    "accepted": true,
+    "why": null
    },
    {
     "accepted": false,
-    "why": "its check: the path 'a#b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+    "why": "its check: the path 'docs/*.md' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the path 'a%2e' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+    "why": "its check: the path 'a#b' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the path 'a&b=c' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+    "why": "its check: the path 'a%2e' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the path 'café.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+    "why": "its check: the path 'café.md' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    }
   ],
   "pr-merged": [

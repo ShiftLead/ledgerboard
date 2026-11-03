@@ -584,7 +584,8 @@
         "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools@v2.4 files/a.py \"say \"hi\" now\""
       ],
       "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools a.md \"x\" trailing"
+        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools a.md \"x\" trailing",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a/b x.md\"t\""
       ]
     },
     "ref-includes": {
@@ -649,13 +650,13 @@
     },
     "path-char": {
       "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a .github/x-y_z.md \"v\""
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a .github/x-y_z.md \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a c++/x.h \"v\""
       ],
       "refuse": [
         "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/*.md \"v\"",
         "**Event (ships):** the vendor ships.\ncheck: file-contains a a#b \"v\"",
         "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a a&b=c \"v\"",
         "**Event (ships):** the vendor ships.\ncheck: file-contains a café.md \"v\""
       ]
     },

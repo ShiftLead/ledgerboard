@@ -28,22 +28,6 @@
    "text": "x",
    "type": "file-contains"
   },
-  "file-contains a a&b=c \"x\"": {
-   "path": "a&b=c",
-   "problem": "the path 'a&b=c' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
-   "ref": null,
-   "repo": "a",
-   "text": "x",
-   "type": "file-contains"
-  },
-  "file-contains a a+b \"x\"": {
-   "path": "a+b",
-   "problem": "the path 'a+b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
-   "ref": null,
-   "repo": "a",
-   "text": "x",
-   "type": "file-contains"
-  },
   "file-contains a p.md \"x\u0000y\"": {
    "problem": "the quoted text holds a control character",
    "type": "file-contains"
@@ -78,10 +62,30 @@
   },
   "file-contains a p q \"x\"": {
    "path": "p q",
-   "problem": "the path 'p\\xa0q' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'p\\xa0q' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "a",
    "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a/b a&b=c.md \"t\"": {
+   "path": "a&b=c.md",
+   "problem": null,
+   "ref": null,
+   "repo": "a/b",
+   "text": "t",
+   "type": "file-contains"
+  },
+  "file-contains a/b c++/x.h \"t\"": {
+   "path": "c++/x.h",
+   "problem": null,
+   "ref": null,
+   "repo": "a/b",
+   "text": "t",
+   "type": "file-contains"
+  },
+  "file-contains a/b x.md\"t\"": {
+   "problem": "the quoted text is an argument of its own: a space comes before its opening quote",
    "type": "file-contains"
   },
   "file-contains acme/tools \"x\"": {
@@ -114,7 +118,7 @@
   },
   "file-contains acme/tools a#b \"x\"": {
    "path": "a#b",
-   "problem": "the path 'a#b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'a#b' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -122,7 +126,7 @@
   },
   "file-contains acme/tools a%2e \"x\"": {
    "path": "a%2e",
-   "problem": "the path 'a%2e' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'a%2e' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -158,7 +162,7 @@
   },
   "file-contains acme/tools a?b \"x\"": {
    "path": "a?b",
-   "problem": "the path 'a?b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'a?b' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -166,7 +170,7 @@
   },
   "file-contains acme/tools a[1] \"x\"": {
    "path": "a[1]",
-   "problem": "the path 'a[1]' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'a[1]' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -174,7 +178,7 @@
   },
   "file-contains acme/tools docs/*.md \"x\"": {
    "path": "docs/*.md",
-   "problem": "the path 'docs/*.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "problem": "the path 'docs/*.md' holds a glob character, URL syntax (# or %), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",

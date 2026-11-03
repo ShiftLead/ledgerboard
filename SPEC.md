@@ -123,8 +123,9 @@ check: file-contains acme/vendor files/lib.py "v2.4"
     revision syntax (`a..b`, `@{u}`, `ref:path`) — or holds URL or query syntax (`#%&=+`), whitespace,
     or anything outside printable ASCII, since a ref goes into a forge's API path or query;
   - a `path` that is absolute, has an empty, `.`, `..` or `.git` segment, starts with `-`, or holds a
-    glob character (`*?[]`), URL or query syntax (`#%&=+`), a quote, a backslash, whitespace, a control
-    character or anything outside printable ASCII;
+    glob character (`*?[]`), URL syntax in a forge's API path (`#`, `%`), a quote, a backslash,
+    whitespace, a control character or anything outside printable ASCII (`&`, `=` and `+` are literal in a
+    URL's path, so `c++/x.h` is a path);
   - quoted text that is empty or spaces alone, holds a control character, or has anything after it.
 
   Arguments are separated by spaces and tabs only, so no other whitespace hides a second argument, and a
@@ -875,7 +876,7 @@ ref-includes   ::= "ref-includes " repo "@" ref " " commit
 ref            ::= ref-char+
 ref-char       ::= [^#x0-#x20#x7F-#x10FFFF~^:?*[#x5C#%&=+]
 path           ::= path-char+
-path-char      ::= [^#x0-#x20#x7F-#x10FFFF*?[#x5D#%&=+"#x5C]
+path-char      ::= [^#x0-#x20#x7F-#x10FFFF*?[#x5D#%"#x5C]
 quoted         ::= '"' text-char+ '"'
 text-char      ::= [^#x0-#x1F#x7F]
 commit         ::= hex hex hex hex hex hex hex hex*
