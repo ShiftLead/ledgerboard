@@ -88,6 +88,16 @@
     "why": "head: '2026-1-5' is not a date as YYYY-MM-DD"
    }
   ],
+  "dated-due": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "context: does not end with its period; due: an fyi carries no `Due:`"
+   }
+  ],
   "decide-item": [
    {
     "accepted": true,
@@ -168,6 +178,16 @@
    {
     "accepted": false,
     "why": "parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `"
+   }
+  ],
+  "field-at": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "context: `Context:` stands more than once; text: does not end a sentence (`.`, `?` or `!`)"
    }
   ],
   "field-name": [
@@ -271,7 +291,7 @@
    },
    {
     "accepted": false,
-    "why": "hide: no period after its date; extra: '| Drop it.' after `Hide until:`; hide: `Hide until:` follows Due; answers: `Hide until:` stands after `Answers:`; answers: a decide carries two or more answers"
+    "why": "context: `Context:` stands more than once; answers: no period after its answers; answers: `Context:` stands after `Answers:`; answers: a decide carries two or more answers"
    }
   ],
   "label-start": [
@@ -302,6 +322,10 @@
    {
     "accepted": false,
     "why": "answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or not"
+   },
+   {
+    "accepted": false,
+    "why": "answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or not"
    }
   ],
   "look-item": [
@@ -312,6 +336,16 @@
    {
     "accepted": false,
     "why": "answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or not"
+   }
+  ],
+  "non-word": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "answers: no period after its answers; lifts: not one of the item's answers: it, Drop it; answers: a decide carries two or more answers"
    }
   ],
   "other-item": [
@@ -394,6 +428,10 @@
     "why": null
    },
    {
+    "accepted": true,
+    "why": null
+   },
+   {
     "accepted": false,
     "why": "context: does not end with its period; due: an fyi carries no `Due:`"
    }
@@ -404,8 +442,12 @@
     "why": null
    },
    {
+    "accepted": true,
+    "why": null
+   },
+   {
     "accepted": false,
-    "why": "context: `Context:` stands more than once; text: does not end a sentence (`.`, `?` or `!`)"
+    "why": "text: names a field (Answers:): say it in other words"
    }
   ]
  },
@@ -452,6 +494,18 @@
   ]
  },
  "rank-file": {
+  "comment": [
+   {
+    "accepted": true,
+    "why": []
+   },
+   {
+    "accepted": false,
+    "why": [
+     "ℹ rank line 2: a comment below the first entry — comments come first"
+    ]
+   }
+  ],
   "comment-line": [
    {
     "accepted": true,
@@ -506,7 +560,23 @@
     ]
    }
   ],
+  "rank-entry": [
+   {
+    "accepted": true,
+    "why": []
+   },
+   {
+    "accepted": false,
+    "why": [
+     "⚠ rank line 2: cannot read 'TD-4 0i' — write TD-NNN: <key>"
+    ]
+   }
+  ],
   "rank-file": [
+   {
+    "accepted": true,
+    "why": []
+   },
    {
     "accepted": true,
     "why": []

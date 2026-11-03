@@ -543,7 +543,8 @@ what they repeat, `"…"` is literal text, `[…]` a character class (`^` negate
 ### The open item line (v2.3)
 
 An item line as the writers write it (*The form the writers write*): a line `item_problem()` gives None for.
-Its line ending is not part of it.
+Its line ending is not part of it. `item_problem()` also passes a line whose `- [ ] ` is followed by further
+whitespace other than a space (a tab), which no writer writes; the grammar does not.
 
 ```ebnf
 item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | other-item | decided-item )
@@ -568,8 +569,9 @@ repo-part      ::= [A-Za-z0-9_.-]+
 due            ::= " Due: " date "."
 hide           ::= " Hide until: " date "."
 reply          ::= " — " reply-name ", " date ": " char*
-fyi-reply      ::= " — " reply-name ", " date ": " undated
-undated        ::= char* - ( char* due-name char* )
+fyi-reply      ::= " — " reply-name ", " date ":" undated
+undated        ::= char* - ( char* dated-due char* )
+dated-due      ::= non-word due-name " "* date
 reply-name     ::= [^#x20#x9,—] [^,—]*
 choices        ::= " Answers: " answer ( answer-sep answer )+ "."
 answers        ::= " Answers: " answer ( answer-sep answer )* "."
@@ -577,19 +579,25 @@ look-answers   ::= " Answers: Works" " (default)"? " | Not right: <what>."
 answer         ::= label ( " (default)" )? ( " — " char* )?
 label          ::= label-start label-chars
 label-start    ::= "\|" | [^|#x20#x9#xA]
-label-chars    ::= label-char* - ( label-char* field-name label-char* )
+label-chars    ::= label-char* - ( label-char* field-at label-char* )
 label-char     ::= "\|" | [^|#xA]
 answer-sep     ::= " "* "|" " "*
 lifts          ::= " Lifts: " label ( answer-sep label )* "."
 decided        ::= " Decided: " char+ " (" date ")" "."?
-words          ::= char* - ( char* field-name char* )
+words          ::= char* - ( char* field-at char* )
+field-at       ::= non-word field-name
+non-word       ::= [^A-Za-z0-9_#x80-#x10FFFF#xA]
 field-name     ::= "Context:" | "Parts:" | due-name | "Hide until:" | "Answers:" | "Lifts:" | "Decided:" | "Closed:"
 due-name       ::= [Dd] [Uu] [Ee] ":"
 char           ::= [^#xA]
 ```
 
 What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
-whitespace. A field name counts only at a word's start, and the text's first character starts none. A reply's words are the person's: a field there is not counted, but they hold
+whitespace. A field name counts only at a word's start, after a character that is no letter, digit or `_`
+(`field-at` names the ASCII ones; the module's word boundary also counts one after a letter outside ASCII). A
+field name that opens the text, the Context, a label or a reply's words is not caught by these productions:
+none opens with one, and an fyi's Context holds no `Due:` either. A `Due:` in an fyi's reply is one only with
+its date, not run on into a further digit or letter. A reply's words are the person's: any other field there is not counted, but they hold
 nothing shaped like a reply and end where a trailing field (`Answers:`, `Lifts:`, `Decided:`) starts a sentence
 and runs to the line's end, which ends them with `.`, `?` or `!`; nor does a Context hold a reply's shape. A `reply-name` is at most 40 characters, and a `label` holds no ` — ` and does not end in
 ` (default)`. A `decide`'s answers each have their own label, at most one marked ` (default)`; a decided line's
@@ -613,13 +621,16 @@ person-part    ::= [A-Za-z0-9_-]+
 A rank file the reader reads without a flag (*The rank*): `rank()` gives no ⚠ and no ℹ for it.
 
 ```ebnf
-rank-file      ::= comment-line* rank-line*
-comment-line   ::= "#" line-char* eol
-rank-line      ::= "TD-" [0-9]+ ":" [#x20#x9]+ key [#x20#x9]* eol
+rank-file      ::= comment-line* ( comment | rank-line* rank-entry? )
+comment-line   ::= comment eol
+comment        ::= "#" line-char*
+rank-line      ::= rank-entry eol
+rank-entry     ::= "TD-" [0-9]+ ":" [#x20#x9]+ key [#x20#x9]*
 key            ::= [0-9A-Za-z] [0-9A-Za-z_|./-]*
 eol            ::= #xD #xA | [#xA-#xD#x1C-#x1E#x85#x2028#x2029]
 line-char      ::= [^#xA-#xD#x1C-#x1E#x85#x2028#x2029]
 ```
 
 What the productions leave to prose: the lines are sorted by key (`key_order()`), no id stands twice, and no key
-is longer than 64 characters (`KEY_NOTE_AT`). The last line may end without its `eol`.
+is longer than 64 characters (`KEY_NOTE_AT`). The last line may end without its `eol`, as `comment` and
+`rank-entry` show.

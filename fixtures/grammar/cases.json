@@ -175,7 +175,8 @@
     },
     "undated": {
       "accept": [
-        "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: no date here."
+        "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: no date here.",
+        "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: see Due: now."
       ],
       "refuse": [
         "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: due: 2026-02-01."
@@ -210,7 +211,8 @@
         "- [ ] look 2026-01-05 (n/a) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works (default) | Not right: <what>."
       ],
       "refuse": [
-        "- [ ] look 2026-01-05 (n/a) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works | Not right."
+        "- [ ] look 2026-01-05 (n/a) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works | Not right.",
+        "- [ ] look 2026-01-05 (n/a) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works (Default) | Not right: <what>."
       ]
     },
     "answer": {
@@ -234,7 +236,7 @@
         "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: Keep it | Drop it."
       ],
       "refuse": [
-        "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: Keep it. Hide until: 2026-02-01 | Drop it."
+        "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: Keep Context: it | Drop it."
       ]
     },
     "label-char": {
@@ -272,10 +274,11 @@
     },
     "words": {
       "accept": [
-        "- [ ] act 2026-01-05 (n/a) — Read the context notes. Context: TD-7. Due: 2026-01-20."
+        "- [ ] act 2026-01-05 (n/a) — Read the context notes. Context: TD-7. Due: 2026-01-20.",
+        "- [ ] fyi 2026-01-05 (n/a) — The page moContext:ed. Context: noContext:ne."
       ],
       "refuse": [
-        "- [ ] act 2026-01-05 (n/a) — Read Context: first. Context: TD-7. Due: 2026-01-20."
+        "- [ ] act 2026-01-05 (n/a) — Read it, Answers: soon. Context: TD-7. Due: 2026-01-20."
       ]
     },
     "field-name": {
@@ -310,13 +313,38 @@
       "refuse": [
         "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: x |   | y."
       ]
+    },
+    "field-at": {
+      "accept": [
+        "- [ ] watch 2026-01-05 (n/a) — Recheck theContext:job. Context: none. Due: 2026-01-20."
+      ],
+      "refuse": [
+        "- [ ] watch 2026-01-05 (n/a) — Recheck (Context: the job). Context: none. Due: 2026-01-20."
+      ]
+    },
+    "non-word": {
+      "accept": [
+        "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: Keep xLifts: it | Drop it."
+      ],
+      "refuse": [
+        "- [ ] decide 2026-01-05 (n/a) — Which one? Context: TD-12. Due: 2026-01-20. Answers: Keep (Lifts: it | Drop it."
+      ]
+    },
+    "dated-due": {
+      "accept": [
+        "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: overdue: 2026-02-01."
+      ],
+      "refuse": [
+        "- [ ] fyi 2026-01-05 (n/a) — The page moved. Context: none. — sam, 2026-01-06: (Due:2026-02-01)."
+      ]
     }
   },
   "rank-file": {
     "rank-file": {
       "accept": [
         "# The rank (a comment).\nTD-3: 0h\nTD-1: 2|0|000001\n",
-        ""
+        "",
+        "# only a comment"
       ],
       "refuse": [
         "# The rank (a comment).\nTD-3: 0h\n\nTD-1: 2|0|000001\n"
@@ -362,6 +390,22 @@
       ],
       "refuse": [
         "#\f\nTD-3: 0h\n"
+      ]
+    },
+    "comment": {
+      "accept": [
+        "# a\n# b"
+      ],
+      "refuse": [
+        "TD-3: 0h\n# b"
+      ]
+    },
+    "rank-entry": {
+      "accept": [
+        "TD-3: 0h\nTD-4: 0i"
+      ],
+      "refuse": [
+        "TD-3: 0h\nTD-4 0i"
       ]
     }
   },
