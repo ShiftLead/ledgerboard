@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -649,8 +649,21 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
             L.edit_entry((self.EDIT / "archived.md").read_text(encoding="utf-8"), "reopen", why="x")
         out = L.edit_entry((self.EDIT / "archived.md").read_text(encoding="utf-8"), "reopen", why="x",
                            today=datetime(2026, 2, 1, 13, 5, tzinfo=timezone.utc))
-        self.assertIn("**Status:** Open 2026-02-01: x — was:", out)
+        self.assertIn("**Status:** Open\n", out)
+        self.assertIn("- 2026-02-01: reopened — x\n", out)
         self.assertNotIn("13:05", out)
+
+    def test_a_ledger_date_is_the_utc_date_and_a_naive_datetime_is_refused(self):
+        text = (self.EDIT / "reordered.md").read_text(encoding="utf-8")
+        late = datetime(2026, 2, 1, 22, 30, tzinfo=timezone(timedelta(hours=-5)))  # 03:30 UTC the next day
+        naive = datetime(2026, 2, 1, 12, 0)  # noqa: DTZ001 — the one refused
+        self.assertIn("- 2026-02-02: late\n", L.edit_entry(text, "note", today=late, words="late"))
+        with self.assertRaisesRegex(L.Refused, "naive"):
+            L.edit_entry(text, "note", today=naive, words="x")
+        with self.assertRaisesRegex(L.Refused, "naive"):
+            L.entry_text("TD-1", "t", {"Priority": "Low"}, {},
+                         filed={"today": naive, "who": "a", "session": "s", "words": "w"})
+
 
     def test_an_id_argument_holds_nothing_after_its_number(self):
         text = (self.EDIT / "reordered.md").read_text(encoding="utf-8")
@@ -675,3 +688,78 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
             with self.subTest(renumbered=bool(extra)):
                 got = [r["id"] for r in L.check(after + extra, arc, old=led) if r["kind"] == "archive-open-parts"]
                 self.assertEqual(got, ["TD-001"])
+
+
+class TheLog(unittest.TestCase):
+    """The Log (v2.4): its shapes, its place, the writers' lines, the lifted Status notes, a gate's age."""
+
+    ENTRY = "## TD-5: x\n\n**Priority:** Low\n**Added:** 2026-01-01\n**Status:** Open\n\n**Why:** w\n"
+
+    def test_each_writer_shape_is_read(self):
+        lines = {
+            '- 2026-01-02: filed by Paul, session led-tds, while other/x#TD-3: "say "it""': ("filed", {"while": "other/x#TD-3", "words": 'say "it"'}),
+            "- 2026-01-02: gate added: until 2026-03-01": ("gate-added", {"gate": "until 2026-03-01"}),
+            '- 2026-01-02: gate lifted: decision (Paul) — by Paul; answer "Go"; no board item': ("gate-lifted", {"via": "answer", "suffix": "; no board item"}),
+            "- 2026-01-02: gate lifted: decision (Paul) — by Kim; override: away a month": ("gate-lifted", {"via": "override", "by": "Kim"}),
+            "- 2026-01-02: gate lifted: event (ac-v2-4) — by host1; pr-merged passed; ac#12": ("gate-lifted", {"via": "check", "evidence": "ac#12"}),
+            "- 2026-01-02: gate lifted: until 2026-01-02 — by host1; date reached": ("gate-lifted", {"via": "date"}),
+            "- 2026-01-02: gate lift skipped: TD-4 no longer carries decision (Paul)": ("gate-lift-skipped", {"id": "TD-4"}),
+            '- 2026-01-02: kept waiting: decision (Paul) — by Paul; answer "Not yet"': ("kept-waiting", {"label": "Not yet"}),
+            "- 2026-01-02: gate reassigned: decision (Paul) → decision (Kim) — by Paul; away": ("gate-reassigned", {"to": "decision (Kim)"}),
+            "- 2026-01-02: archived: Dropped — nothing needs it": ("archived", {"word": "Dropped"}),
+            "- 2026-01-02: reopened — it broke": ("reopened", {"why": "it broke"}),
+            "- 2026-01-02: was: Built 2026-01-01: half": ("was", {"status": "Built 2026-01-01: half"}),
+            "- 2026-01-02: reopened the thread": ("note", {}),
+            "- 2026-01-02: gate lifted: by hand": ("malformed", {}),
+        }
+        for line, (kind, parts) in lines.items():
+            with self.subTest(line):
+                got = L.log_line(line)
+                self.assertEqual(got["kind"], kind)
+                self.assertEqual({k: got[k] for k in parts}, parts)
+        self.assertIsNone(L.log_line("- 2026-1-2: x"))
+
+    def test_a_note_never_imitates_a_writer_line(self):
+        for words in ("gate added: decision (Paul)", "was: Open", "reopened — no"):
+            with self.subTest(words), self.assertRaises(L.Refused):
+                L.edit_entry(self.ENTRY, "note", today="2026-01-03", words=words)
+        lifted = L.status_notes_to_log(self.ENTRY.replace("Open", "Open 2026-01-02: was: a slip"))
+        self.assertIn("- 2026-01-02: note: was: a slip\n", lifted)
+
+    def test_the_writers_refuse_a_log_that_is_not_last_and_insert_before_it(self):
+        text = L.edit_entry(self.ENTRY, "note", today="2026-01-03", words="one")
+        self.assertTrue(L.edit_entry(text, "edit", section="Done when", words="d").endswith("- 2026-01-03: one\n"))
+        stray = text + "\n**After:** a section below the Log\n"
+        self.assertEqual([k for k, _ in L.log_problems(stray)], ["log-not-last"])
+        for action, args in (("note", {"words": "two"}), ("reopen", {"why": "w"}), ("archive", {"why": "w"})):
+            with self.subTest(action), self.assertRaises(L.Refused):
+                L.edit_entry(stray, action, today="2026-01-04", **args)
+        with self.assertRaises(L.Refused):
+            L.edit_entry(text, "edit", section="Log", words="- 2026-01-01: rewritten")
+
+    def test_check_flags_a_log_out_of_place_or_shape_and_only_where_the_entry_changed(self):
+        good = L.edit_entry(self.ENTRY, "note", today="2026-01-03", words="one")
+        bad = good + "- 2026-01-04 no colon\n\n**After:** x\n"
+        kinds = sorted(r["kind"] for r in L.check(bad, "") if r["field"] == "log")
+        self.assertEqual(kinds, ["log-line", "log-not-last"])
+        self.assertTrue(all(r["standing"] for r in L.check(bad, "", old=bad) if r["field"] == "log"))
+        self.assertTrue(all(r["level"] == "error" for r in L.check(bad, "", old=good) if r["field"] == "log"))
+        self.assertFalse([r for r in L.check(good, "") if r["field"] == "log"])
+
+    def test_a_status_lifts_only_from_a_word_its_end_a_colon_or_its_date_follow(self):
+        for status in ("In progress: x", "Open, held", "Open; held", "**Open** x", "Openly x", "Open x",
+                       "Resolved 2026-01-05.", "Open 2026-01-01T10:00", "Open 2026-01-01 by TD-9. x"):
+            with self.subTest(status):
+                text = self.ENTRY.replace("**Status:** Open", f"**Status:** {status}")
+                self.assertEqual(L.status_notes_to_log(text), text)
+        text = "## TD-6: x\n\n**Status:** Resolved: built\n**Resolved:** 2026-01-07 (PR #3)\n\n**Why:** w\n"
+        self.assertIn("- 2026-01-07: built\n", L.edit_entry(text, "reopen", today="2026-02-01", why="again"))
+
+    def test_a_gates_age(self):
+        text = self.ENTRY.replace("**Status:** Open", "**Status:** Open\n**Blocked by:** decision (Paul)")
+        self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 1))  # no Log: Added
+        text = L.edit_entry(text, "note", today="2026-01-03", words="looked")
+        self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 3))  # the first Log line
+        text = text.replace("- 2026-01-03: looked", "- 2026-01-03: looked\n- 2026-01-09: kept waiting: decision (paul) — by Paul; answer \"Later\"")
+        self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 9))
+        self.assertEqual(L.gate_age(text, "until 2026-05-01"), date(2026, 1, 3))

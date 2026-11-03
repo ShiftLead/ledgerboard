@@ -42,7 +42,9 @@ Fixtures, each an invented input and its expected JSON:
   entry's writers — ``canonical()`` of each input (and whether a second pass changes it) and
   ``entry_text()`` of each new entry, and ``edit_entry()`` of each case's steps run in order, or why
   each is refused; and ``check()``'s Part of flags of a ledger before and after an archive
-  (``check/``), ``archive-open-parts`` among them.
+  (``check/``), ``archive-open-parts`` among them. From v2.4, the Log: ``entry_text(filed=)``, the
+  writers' Log lines, and per ``log`` case ``log_lines()``, ``log_problems()``, ``status_notes_to_log()``
+  and ``gate_age()`` of each gate the case names.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
   as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
@@ -264,6 +266,14 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         if "ok" in got:
             got["idempotent"] = L.canonical(got["ok"]) == got["ok"]
         return got
+    def log(c):
+        if not hasattr(L, "log_lines"):  # a module older than v2.4
+            return {"missing": "the module has no log_lines — older than v2.4"}
+        t = text(c)
+        return {"log_lines": L.log_lines(t), "log_problems": [list(x) for x in L.log_problems(t)],
+                "status_notes_to_log": _refused(lambda: L.status_notes_to_log(t)),
+                "gate_age": {g: L.gate_age(t, g) for g in c["gates"]}}
+
     def edits(c):
         def run():
             out = text(c)
@@ -277,12 +287,15 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             "edit_entry": {c["name"]: edits(c) for c in spec["edit_entry"]},
             "check": {c["name"]: [r for r in L.check(text({"file": c["ledger"]}), text({"file": c["archive"]}) if c["archive"] else "",
                                                      old=text({"file": c["old"]}) if c.get("old") else None)
-                                  if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown")]
+                                  if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
+                                                   "log-not-last", "log-line")]
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],
-                c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]]))
-                for c in spec["entry_text"]}}
+                c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]],
+                **({"filed": c["filed"]} if "filed" in c else {})))
+                for c in spec["entry_text"]},
+            "log": {c["name"]: log(c) for c in spec.get("log", [])}}
 
 
 def grammar_cases(L, spec: dict) -> dict:
