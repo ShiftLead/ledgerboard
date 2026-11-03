@@ -846,3 +846,20 @@ class TheLog(unittest.TestCase):
         text = text.replace("- 2026-01-03: looked", "- 2026-01-03: looked\n- 2026-01-09: kept waiting: decision (paul) — by Paul; answer \"Later\"")
         self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 9))
         self.assertEqual(L.gate_age(text, "until 2026-05-01"), date(2026, 1, 3))
+
+
+class NextId(unittest.TestCase):
+    """v2.4: the counter's takes judged (SPEC *The next id*)."""
+
+    def test_no_failure_or_warning_prints_a_nonce(self):
+        spec = json.loads((ROOT / "fixtures" / "ids" / "cases.json").read_text(encoding="utf-8"))
+        nonces = {t["take"] for c in spec["judge_takes"] for t in c["takes"]}
+        for c in spec["judge_takes"]:
+            for kind, text in sum(L.judge_takes(c["new"], c["takes"], c["entries"], c["branch"], "main",
+                                                accept_taken_by=c["accept_taken_by"]), []):
+                with self.subTest(case=c["name"], kind=kind):
+                    self.assertFalse([n for n in nonces if n in text], text)
+
+    def test_a_take_read_back_from_the_writers_shape(self):
+        got = L.parse_take("TD-007..TD-009 [skip ci]", "by: kim\nbranch: td7\ntake: " + "ab" * 16 + "\n")
+        self.assertEqual(got, {"ids": [7, 8, 9], "by": "kim", "branch": "td7", "take": "ab" * 16})

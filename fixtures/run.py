@@ -78,6 +78,9 @@ Fixtures, each an invented input and its expected JSON:
   ``reassigns()`` with ``check()``'s note, ``closes()``, ``edit_line(…, close=True)``, ``waiting_only()``,
   ``parse_closed_items()``, ``answered_by()`` and its problems, and the waiting-only label refused by
   ``item_line(lifts=)`` and ``item_problem()``.
+- ``ids/cases.json`` → ``ids/expected.json`` (v2.4): the next id — ``parse_take()`` of takes, a range and commits
+  that are not takes, ``next_id()`` over ``LAST``, ids and a floor, ``ids_held()`` of each layout, and
+  ``judge_takes()`` of each id's ``Id take`` (and, in the transition, its ``Taken by``) against a counter's takes.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -391,6 +394,21 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
     }
 
 
+def ids_cases(L, spec: dict) -> dict:
+    """The next id (v2.4): ``parse_take()`` of counter commits, ``next_id()``, ``ids_held()`` of a v1 pair and a
+    v2 directory (a newer major refused), and ``judge_takes()`` of new ids against a fixture counter's takes."""
+    if not hasattr(L, "judge_takes"):  # a module older than v2.4
+        return {"missing": "the module has no judge_takes — older than v2.4"}
+    return {
+        "parse_take": [L.parse_take(c["subject"], c["body"]) for c in spec["parse_take"]],
+        "next_id": [list(L.next_id(c["last"], c["ids"], c["floor"])) for c in spec["next_id"]],
+        "ids_held": {c["name"]: _refused(lambda c=c: sorted(L.ids_held(c["files"]))) for c in spec["ids_held"]},
+        "judge_takes": {c["name"]: [[list(x) for x in r] for r in L.judge_takes(
+            c["new"], c["takes"], c["entries"], c["branch"], "main", accept_taken_by=c["accept_taken_by"])]
+            for c in spec["judge_takes"]},
+    }
+
+
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
     ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
@@ -502,6 +520,8 @@ def cases(L, root: Path):
     yield root / "events" / "expected.json", event_cases(L, spec)
     spec = json.loads((root / "lift" / "cases.json").read_text(encoding="utf-8"))
     yield root / "lift" / "expected.json", lift_cases(L, spec, root)
+    spec = json.loads((root / "ids" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "ids" / "expected.json", ids_cases(L, spec)
 
 
 def main(argv: list[str] | None = None) -> int:
