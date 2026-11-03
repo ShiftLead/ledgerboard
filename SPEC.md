@@ -238,7 +238,7 @@ when it takes that release.
 
 ## The rank
 
-The rank is a person's order of a ledger's entries; it is the pick order.
+The rank is the order a ledger's people set for its entries; it is the pick order.
 
 **Cards.** A ledger's entries fall into **cards**: the connected components of its entries over
 their `Blocked by` ids (the ids before any `decision (…)`) and their `Part of` parent (v2.1), joined in both directions
@@ -273,7 +273,8 @@ member that is `Part of` it, then by its own key (a cycle is broken by key).
 comment lines first, then one line per entry, `TD-NNN: <key>`, sorted by key; nothing else. It is
 YAML-shaped but read only through `rank()`, which takes every key as a string (`09` is a key, not a
 number). The reader flags a line it cannot read and a repeated id (⚠, the first line holds), and a
-blank line, a comment below the first entry, or a line out of key order (ℹ). The writer
+blank line, a comment below the first entry, a line out of key order, or (v2.3) a key longer than 64
+characters (`KEY_NOTE_AT`), which a respace shortens (ℹ). The writer
 (`set_rank()`) sets or removes the given ids' lines, places a new line at its key's place, and keeps
 every other line byte for byte (a new line takes the file's own line ending). A line for an archived entry is ignored — only open members carry a
 card's key — and harmless until its card is wholly archived.
@@ -281,8 +282,19 @@ card's key — and harmless until its card is wholly archived.
 **Rank writes** are made by a tool, each in a commit (and PR) that changes the rank file alone,
 under a subject `queue: <action> TD-a, TD-b (<tool>)` (`queue_subject()`, ids in id order):
 `rank` sets a moved card's members' lines, `join` gives a card's newcomer the card's key, `prune`
-removes the lines of a card whose members are all archived. `subject_kind()` reads every one as
-`queue`.
+removes the lines of a card whose members are all archived, and (v2.3) `respace` rewrites the keys it
+shortens. `subject_kind()` reads every one as `queue`.
+
+**A respace** (`respace(text, ledger, *, fixed, repo)`, v2.3) shortens the file's keys without moving any
+line relative to a key it does not own. Its **fixed points** are the keys of the ledger's open entries that
+have no line (their implicit keys, `repo` their last component), each key in `fixed` (another repo's, which a
+caller sorts beside this file's), the two ends of each band's range of implicit keys for ids past every id
+read (`<band>|<type>|<next id>` and `<band>|<type>|999999`, where an entry filed later sorts), and any line's
+key equal to one of them. The other lines' keys between two consecutive fixed points are rewritten to short
+keys inside that same gap, in the same order, equal keys staying equal, each by halving the gap with
+`midpoint()`. It returns the file and the ids whose keys changed, and keeps every other line byte for byte; it
+refuses a file the reader flags ⚠, and any result that would not keep every order it read. A second respace
+of its output changes nothing.
 
 ## The board
 
@@ -468,7 +480,9 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
 - **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
   lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
 - **`rank`** — `set_rank()` of the rank file (created when missing), `--set TD-n=<key>` and `--drop TD-n`,
-  under `--action rank|join|prune`.
+  under `--action rank|join|prune`; or (v2.3) `--action respace --ledger <ledger> [--fixed <key>]… [--repo
+  <name>]`, `respace()` of the rank file against that ledger (a file or a v2 directory), which sets and drops
+  nothing itself.
 
 Each write prints the commit subject the module gives (`subject()` with `append` for an add, the edit's,
 `archive_subject()`, `queue_subject()`) and the paths it changed, or one JSON object with `--json`. `fmt` has no
@@ -511,4 +525,4 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
-**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:`, `(by …)`, `Parts:` and `Lifts:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is the first of v2.3's three changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The second: two fields are added for v2.4's lifts, read, ordered and keyed a release ahead (*The board*): `Parts:`, on a `decide` after its Context, and `Lifts:`, after its Answers. A `Context:` now ends at a ` Parts:` or ` Lifts:` as it does at ` Due:`, so a line that held that prose in its Context before v2.3 reads a shorter Context and fewer refs; and the answers end at a ` Lifts:` that starts a sentence, so a line whose last answer held one reads it apart. v2.2 reads a `Parts:`'s ids as Context refs and a `Lifts:` as part of the last answer, so a consumer writes them only once every reader of its board runs v2.3. The third is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:`, `(by …)`, `Parts:` and `Lifts:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also notes a rank key longer than 64 characters and gives the rank its fourth write, `respace` (*The rank*), whose subject `queue: respace …` older readers do not read as `queue`. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is the first of v2.3's three changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The second: two fields are added for v2.4's lifts, read, ordered and keyed a release ahead (*The board*): `Parts:`, on a `decide` after its Context, and `Lifts:`, after its Answers. A `Context:` now ends at a ` Parts:` or ` Lifts:` as it does at ` Due:`, so a line that held that prose in its Context before v2.3 reads a shorter Context and fewer refs; and the answers end at a ` Lifts:` that starts a sentence, so a line whose last answer held one reads it apart. v2.2 reads a `Parts:`'s ids as Context refs and a `Lifts:` as part of the last answer, so a consumer writes them only once every reader of its board runs v2.3. The third is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.

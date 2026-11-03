@@ -16,6 +16,7 @@
     python3 -m ledgerboard.board archive --board PATH --archive PATH
     python3 -m ledgerboard.board fmt     --board PATH
     python3 -m ledgerboard.board rank    --rank PATH --action rank|join|prune [--set TD-n=KEY]... [--drop TD-n]...
+    python3 -m ledgerboard.board rank    --rank PATH --action respace --ledger PATH [--fixed KEY]... [--repo NAME]
         [--tool NAME] [--session NAME] [--today D] [--plan] [--json]
 
 Every write reads its files, applies the module's edit (``edit_line``, ``item_line``, ``decided_line``,
@@ -57,9 +58,11 @@ from . import (
     is_person,
     item_line,
     item_record,
+    load,
     parse_board,
     people_problems,
     queue_subject,
+    respace,
     set_rank,
     subject,
     version_problem,
@@ -349,8 +352,32 @@ def plan_fmt(board: str) -> Plan:
     return Plan("fmt", None, {board: out} if fixed else {}, {"fixed": fixed, "refused": refused})
 
 
+def read_ledger(path: str) -> str:
+    """The open entries' text of the ledger at `path`, a v1 file or a v2 directory (``load()``)."""
+    def ls(p: str) -> list[str] | None:
+        return sorted(n for n in os.listdir(p) if os.path.isfile(os.path.join(p, n))) if os.path.isdir(p) else None
+
+    def rd(p: str) -> str | None:
+        return read(p) if os.path.isfile(p) else None
+    if not os.path.exists(path):
+        raise Refused(f"{path}: no such ledger")
+    return load(path, ls, rd)[0]
+
+
+def plan_respace(rank_file: str, ledger: str, *, fixed: Sequence[str] = (), repo: str = "", tool: str = TOOL) -> Plan:
+    """The rank file's keys shortened without moving anything relative to a key it does not own (``respace()``):
+    the ledger's un-lined entries' implicit keys, and `fixed`, another repo's keys a caller sorts beside them."""
+    old = read(rank_file, missing_ok=True)
+    new, ids = respace(old, read_ledger(ledger), fixed=list(fixed), repo=repo)
+    if not ids:
+        return Plan("rank", None)  # every key already as short as its gap allows: nothing to write
+    return Plan("rank", queue_subject(tool, "respace", ids), {rank_file: new}, {"respaced": ids})
+
+
 def plan_rank(rank_file: str, action: str, lines: Mapping[str, str | None], *, tool: str = TOOL) -> Plan:
     """The rank file with `lines` set (a key) or removed (None) (``set_rank()``), under its queue subject."""
+    if action == "respace":
+        raise Refused("a respace sets no lines of its own: use plan_respace()")
     if action not in QUEUE_ACTIONS:
         raise Refused(f"a rank write is one of {', '.join(QUEUE_ACTIONS)}, not {action!r}")
     if not lines:
@@ -414,6 +441,14 @@ def build(a: argparse.Namespace) -> Plan:
         return plan_archive(a.board, a.archive, tool=a.tool, session=a.session)
     if a.action == "fmt":
         return plan_fmt(a.board)
+    if a.queue == "respace":
+        if a.set or a.drop:
+            raise Refused("a respace sets and drops no lines: it rewrites the keys itself")
+        if not a.ledger:
+            raise Refused("a respace needs --ledger, whose un-lined entries' keys it keeps in place")
+        return plan_respace(a.rank, a.ledger, fixed=a.fixed, repo=a.repo or "", tool=a.tool)
+    if a.ledger or a.fixed or a.repo:
+        raise Refused("--ledger, --fixed and --repo are a respace's")
     return plan_rank(a.rank, a.queue, _pairs(a.set, a.drop), tool=a.tool)
 
 
@@ -429,7 +464,7 @@ TAKES = {
     "reply": {"board", "line", "expect", "text", "by", "today", "tool", "session"},
     "archive": {"board", "archive", "tool", "session"},
     "fmt": {"board"},
-    "rank": {"rank", "queue", "set", "drop", "tool"},
+    "rank": {"rank", "queue", "set", "drop", "tool", "ledger", "fixed", "repo"},
 }
 NEEDS_OPT = {
     "list": ("board",), "add": ("board", "text"), "snooze": ("board", "line", "expect", "to"),
@@ -438,7 +473,7 @@ NEEDS_OPT = {
     "reply": ("board", "line", "expect", "text", "by"), "archive": ("board", "archive"),
     "fmt": ("board",), "rank": ("rank", "queue"),
 }
-DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "lift": [], "set": [], "drop": []}
+DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "lift": [], "set": [], "drop": [], "fixed": []}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -447,9 +482,13 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--board", help="the board file")
     ap.add_argument("--archive", help="archive: the board's archive file (created when missing)")
     ap.add_argument("--rank", help="rank: the rank file (created when missing)")
-    ap.add_argument("--action", dest="queue", help="rank: rank, join or prune")
+    ap.add_argument("--action", dest="queue", help="rank: rank, join, prune or respace")
     ap.add_argument("--set", action="append", default=[], help="rank: TD-n=KEY, a line to set")
     ap.add_argument("--drop", action="append", default=[], help="rank: TD-n, a line to remove")
+    ap.add_argument("--ledger", help="rank --action respace: the ledger (a file or a v2 directory)")
+    ap.add_argument("--fixed", action="append", default=[],
+                    help="rank --action respace: another repo's key sorted beside this file's (repeat)")
+    ap.add_argument("--repo", help="rank --action respace: the last component of this repo's implicit keys")
     ap.add_argument("--line", type=int, help="an edit: the item's 1-based line")
     ap.add_argument("--expect", help="an edit: the start of the item's text as last shown")
     ap.add_argument("--to", help="snooze: the Hide until: date; due: the new Due: date")

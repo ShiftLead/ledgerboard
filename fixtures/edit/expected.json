@@ -935,6 +935,9 @@
   },
   {
    "refused": "not a tool name: 'a (b)'"
+  },
+  {
+   "ok": "queue: respace TD-3, TD-4 (shiftlead)"
   }
  ],
  "rank_paths": {
@@ -969,6 +972,15 @@
   [
    {},
    []
+  ],
+  [
+   {
+    "TD-003": "0h",
+    "TD-004": "0hzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzi"
+   },
+   [
+    "ℹ rank line 4: TD-004's key is 73 characters, over 64 — respace the file"
+   ]
   ]
  ],
  "rank_writes": [
@@ -1000,6 +1012,56 @@
    "refused": "not a key: 'é'"
   }
  ],
+ "respaces": [
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0i\nTD-004: 0r\n",
+    [
+     "TD-003",
+     "TD-004"
+    ]
+   ]
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0i\nTD-004: 0r\n",
+    []
+   ]
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-001: 2|0|000002\nTD-003: 2|0|000004\nTD-004: 2|0|000004\n",
+    [
+     "TD-003",
+     "TD-004"
+    ]
+   ]
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 09\nTD-004: 0r\n",
+    [
+     "TD-003",
+     "TD-004"
+    ]
+   ]
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 2|0|000004\nTD-004: 2|0|000004i\n",
+    [
+     "TD-003",
+     "TD-004"
+    ]
+   ]
+  },
+  {
+   "refused": "the rank file has lines the reader cannot use: ⚠ rank line 4: TD-003 again — its first line holds (0h)"
+  },
+  {
+   "refused": "not a key: '|x'"
+  }
+ ],
  "subject_kinds": {
   "Fix the parser (#12)": null,
   "board_edit: done Ship it (session s-1)": "edit",
@@ -1011,6 +1073,7 @@
   "queue: rank TD-3 (shiftlead) extra": null,
   "queue: rank TD-3 TD-12 (shiftlead)": null,
   "queue: rank TD-3, TD-12 (shiftlead)": "queue",
+  "queue: respace TD-3, TD-4 (shiftlead)": "queue",
   "queue: sort TD-3 (shiftlead)": null,
   "shiftlead: answer A question (from TD-12)": "append",
   "shiftlead: append A new item (session w-1)": "append",
