@@ -1,4 +1,18 @@
 {
+ "archive_subjects": [
+  {
+   "ok": "shiftlead: archive 1 closed item (session w-1)"
+  },
+  {
+   "ok": "shiftlead: archive 12 closed items (session w-1)"
+  },
+  {
+   "ok": "agent-cadence: archive 3 closed items (session n/a)"
+  },
+  {
+   "refused": "a tool is one word with no parenthesis, not 'my tool'"
+  }
+ ],
  "board_problems": [
   [],
   [],
@@ -773,6 +787,8 @@
   "queue: sort TD-3 (shiftlead)": null,
   "shiftlead: answer A question (from TD-12)": "append",
   "shiftlead: append A new item (session w-1)": "append",
+  "shiftlead: archive 1 closed item (session n/a)": "archive",
+  "shiftlead: archive 3 closed items (session w-1)": "archive",
   "shiftlead: board A new item (from TD-12)": "append",
   "shiftlead: board decide TD-12 (person)": "append",
   "shiftlead: reply on Pick a name (session w-1)": "edit"
