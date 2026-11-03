@@ -1,6 +1,6 @@
 # TD-023: notes on a hide that hides nothing or hides the deadline
 
-**Status:** Designed 2026-11-03 (the designer); it waits on Paul's go. Class: **wide**, because it adds to a vendored format that both consumers run: a new public function, and a new key in `item_record()`, which is the board's JSON and the fixtures' shape (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The rounds ended after round 2 by the stop rule, because its design review raised nothing build-changing. The design reviews raised 1 and then 0 build-changing findings. The fact-checks raised none, and nor did the closing fact-check. The findings no review has read are round 2's minor fixes, F11–F17, which only the closing fact-check checked. They go into the build's Fix. The review record is `docs/reviews/TD-023.md`.
+**Status:** Designed 2026-11-03 (the designer); it waits on Paul's go. Class: **wide**, because it adds to a vendored format that both consumers run: a new public function, and a new key in `item_record()`, which is the board's JSON and the fixtures' shape (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The rounds ended after round 2 by the stop rule, because its design review raised nothing build-changing. The design reviews raised 1 and then 0 build-changing findings. The fact-checks raised none, and nor did the closing fact-check. The findings no review has read are round 2's minor fixes, F11–F17, which only the closing fact-check checked. They go into the build's Fix. Since the rounds, v2.3 was tagged (2026-11-03) without the notes, so the build moved to v2.4. The SPEC passages' version labels and *Versions* sentence changed with it, and a fact-check checked that change (F18). The review record is `docs/reviews/TD-023.md`.
 
 **Entry:** [TD-023](../ledger/TD-023.md). It is one of the things the target design's §6 *Hide until* asks for and TD-017's build left out.
 
@@ -49,7 +49,7 @@ The two rules exclude each other (one needs `hidden(today)`, the other its negat
 
 **1. *The board*, a new paragraph right after the `**`Hide until:`** (v2.3)` paragraph:**
 
-> **Notes on a hide** (`item_notes(item, today)`, v2.3, of a parsed open item as `parse_board()` gives it) inform and never refuse: no gate reads them. Each opens with its rule's tag, and D and E stand for the ISO dates of the fields.
+> **Notes on a hide** (`item_notes(item, today)`, v2.4, of a parsed open item as `parse_board()` gives it) inform and never refuse: no gate reads them. Each opens with its rule's tag, and D and E stand for the ISO dates of the fields.
 > - `hide-spent` is a `Hide until:` on an open item that is not hidden today. Either its date has come (`hide-spent: Hide until: D has come, so it hides nothing; a snooze replaces it`), or the item is decided (`hide-spent: a decided item is never hidden, so Hide until: D hides nothing`).
 > - `hide-late` is a hidden item whose `Hide until: D` is later than its `Due: E` (`hide-late: Hide until: D is after Due: E, so the item stays hidden past its deadline`). An `fyi`, or an item whose `Due:` cannot be read, has no deadline, so it never gets a `hide-late`.
 >
@@ -57,13 +57,13 @@ The two rules exclude each other (one needs `hidden(today)`, the other its negat
 
 **2. *The board writer (v2.3)*, a sentence appended to the paragraph that opens "Each write prints the commit subject":**
 
-> A write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()` at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the notes are `notes`, `[{"line", "note"}]` (each names its line, as a write names one, where `item_record()`'s `notes` is the record's own list of strings), always present and `[]` when there are none. Without either, each is printed on stderr as `line n: ℹ <note>`. A note never changes the exit code.
+> From v2.4, a write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()` at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the notes are `notes`, `[{"line", "note"}]` (each names its line, as a write names one, where `item_record()`'s `notes` is the record's own list of strings), always present and `[]` when there are none. Without either, each is printed on stderr as `line n: ℹ <note>`. A note never changes the exit code.
 
-**3. *Versions*, in the v2.3 paragraph, the clause `` `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new `` becomes:**
+**3. *Versions*, a sentence of v2.4's paragraph.** v2.3's paragraph is unchanged. The build adds v2.4's paragraph after it, `**v2.4 …**`, holding this sentence. If another v2.4 build has already added that paragraph, the sentence is appended to it:
 
-> `item_record()` gains `hide_until`, `hidden` and `notes`, and `needs_you()`, `edit_action()` and `item_notes()` are new
+> v2.4 adds notes on a hide (*The board*, *The board writer*): `item_notes()` is new, `item_record()` gains `notes`, and `board.py`'s writes that leave an open line report them. Nothing is read differently: every line reads and keys as in v2.3, and a v2.3 reader of `item_record()` by key ignores the new one.
 
-The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so its wording does not change. Its `edit/cases.json` line gains `item_notes()` (v2.3), and `edit_cases()` gains the `item_notes` group (below), since it reads each group by name.
+The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so its wording does not change. Its `edit/cases.json` line gains `item_notes()` (v2.4), and `edit_cases()` gains the `item_notes` group (below), since it reads each group by name.
 
 ## The fixture cases
 
@@ -78,7 +78,7 @@ The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so 
 - **`board/basic.json`, `board/answers.json` and `board_writer/list/expected.json`** gain `"notes": []` on every record.
 - **`board_writer/snooze/`**: it already snoozes an item due 2026-01-20 to 2026-01-29, so it is the `hide-late` case. Its `expected.json` gains `"notes": [{"line": 7, "note": "hide-late: Hide until: 2026-01-29 is after Due: 2026-01-20, so the item stays hidden past its deadline"}]`, and it still exits 0 and writes the file.
 - **`board_writer/snooze_spent/`** (new): the same board and line, snoozed `--to 2026-01-15` at `--today 2026-01-15`. It exits 0, writes `Hide until: 2026-01-15.`, and its JSON carries `hide-spent: Hide until: 2026-01-15 has come, so it hides nothing; a snooze replaces it` for line 7.
-- **`board_writer/decide_hidden/`** (new): `decide`'s board with ` Hide until: 2026-01-17.` after line 8's `Due: 2026-01-18.`, and `decide`'s command (`--line 8 --answer Disk --today 2026-01-15`). It exits 0, writes the `Decided:`, and its JSON carries `[{"line": 8, "note": "hide-spent: a decided item is never hidden, so Hide until: 2026-01-17 hides nothing"}]`.
+- **`board_writer/decide_hidden/`** (new): `decide`'s board with ` Hide until: 2026-01-17.` after line 9's `Due: 2026-01-18.`, and `decide`'s command (`--line 9 --answer Disk --today 2026-01-15`). It exits 0, writes the `Decided:`, and its JSON carries `[{"line": 9, "note": "hide-spent: a decided item is never hidden, so Hide until: 2026-01-17 hides nothing"}]`.
 - **Every other `expected.json` of `add_*`, `due`, `decide` and `reply`** (`add_act`, `add_answered`, `add_crlf`, `add_decide`, `add_decided`, `add_empty_section`, `add_fyi_no_heading`, `add_hidden`, `due`, `decide`, `reply`) gains `"notes": []`. `add_hidden`'s hide (2026-01-19) is before its `Due:` (2026-01-22), so its list is empty too. The `expected.json` of `done`, `plan_done`, `fmt`, `archive*` and `rank*` does not change. Nor does any refusal's (`add_refused_field`, `edit_moved`, `edit_newer_major`, `edit_not_open`), since a refused write prints only why and so carries no `notes`.
 - **`edit/cases.json`**: an `item_notes` group, `[{"name", "line"}]`. Each line is read as `parse_board(line, warn=False)[0]` and given to `item_notes()` at the file's `today`, and the expected output is each name's list. The group holds:
   - a hide one day before `Due:` (no note);
@@ -94,4 +94,4 @@ One build, `**Part of:** TD-023`: everything above, in one PR with its `SPEC.md`
 
 **Done when:** `item_notes()` returns the two notes as *The rules* say, and `item_record()` and `board.py` report them as *Where the notes are read* says. No gate or edit refuses because of one. The three `SPEC.md` passages above land with the code. The fixtures above pass (`python3 fixtures/run.py`), and so does the suite.
 
-**Which release.** The target design's §6 put these notes in v2.3, and v2.3 is not yet tagged (TD-021). A key added to `item_record()` before a release costs the consumers nothing, since their vendor PRs take v2.3 whole. Added after, it is one more release to vendor. So the build lands in v2.3, and TD-021's `**Blocked by:**` gains the build's id when it is filed.
+**Which release: v2.4.** The target design's §6 put these notes in v2.3, but v2.3 was tagged on 2026-11-03 without them (TD-021), while this design was in review. The change is additive: it adds a function and a record key, and reads no line differently. So it is a minor release's, and it ships in v2.4 beside the target design's other v2.4 builds. Each consumer takes it with its v2.4 vendor PR, and no release entry waits on it.
