@@ -533,7 +533,7 @@ entry it writes.
 
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line and the rank file; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -594,7 +594,9 @@ char           ::= [^#xA]
 
 What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
 whitespace. A field name counts only at a word's start, after a character that is no letter, digit or `_`
-(`field-at` names the ASCII ones; the module's word boundary also counts one after a letter outside ASCII). A
+(`field-at` names the ASCII ones; the module's word boundary also counts one after any other character that is
+no letter, digit or `_`, such as an em dash or a no-break space, so the grammar accepts such a line, which the
+module refuses). A
 field name that opens the text, the Context or a label is one the grammar accepts and the module refuses: none
 opens with one, and an fyi's Context holds no `Due:` either. A `Due:` in an fyi's reply is one only with its
 date, not run on into a further digit or letter. A `Decided:` text is the person's: the writers write
