@@ -1100,6 +1100,11 @@
    "name": "superseded_by_with_no_date",
    "text": "## TD-089: x\n\n**Added:** 2026-01-02\n**Status:** Superseded by TD-90: TD-90 does it all\n\n**Why:** w\n",
    "gates": []
+  },
+  {
+   "name": "was_takes_the_resolved_date",
+   "text": "## TD-092: x\n\n**Added:** 2026-09-01\n**Status:** Open 2026-11-01: looked again — was: Resolved: built\n\n**Why:** w\n\n**Resolved:** 2026-10-01 (PR #3)\n",
+   "gates": []
   }
  ]
 }

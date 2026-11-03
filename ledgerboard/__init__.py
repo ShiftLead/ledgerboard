@@ -3011,7 +3011,7 @@ def _lift_status(header: list[tuple[str, str]], sections: list[tuple[str | None,
         w = w.strip()
         if w:
             inner = STATUS_HEAD_RE.match(w)
-            lines.append(((inner and inner.group("date")) or day, f"was: {w}"))
+            lines.append(((inner and inner.group("date")) or fallback, f"was: {w}"))
     if any(d is None for d, _ in lines):
         return header, sections, False
     return _with(header, "Status", head), _log_insert(sections, lines, by_date=True), True

@@ -138,7 +138,7 @@
    "ok": "## TD-063: Archived the old way, its Resolved a header field\n\n**Priority:** Low\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #16)\n\n**Log:**\n- 2026-01-06: built\n- 2026-01-20: archived: Resolved — built again\n"
   },
   "archive_inserts_its_resolved_line_before_the_log": {
-   "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #12) — `src/thing.py`\n\n**Log:**\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-04: was: Open\n- 2026-01-05: a later line\n- 2026-01-20: archived: Resolved — all built\n"
+   "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #12) — `src/thing.py`\n\n**Log:**\n- 2026-01-02: was: Open\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-05: a later line\n- 2026-01-20: archived: Resolved — all built\n"
   },
   "archive_no_fix": {
    "ok": "## TD-060: A decision with no Fix section\n\n**Priority:** Medium\n**Kind:** decision\n**Status:** Resolved 2026-01-20\n\n**Why:** a choice to make.\n\n**Ask:** which way?\n\n**Done when** it is decided.\n\n**Related:** TD-012.\n\n**Resolved:** 2026-01-20 (PR #14)\n\n**Log:**\n- 2026-01-20: archived: Resolved — decided\n"
@@ -204,7 +204,7 @@
    "ok": "## TD-087: Statuses that only look like a word and a note\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** In progress: the first half\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-20: looked\n"
   },
   "note_lifts_the_status_notes": {
-   "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-04: was: Open\n- 2026-01-05: a later line\n- 2026-01-20: a new note\n"
+   "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-02: was: Open\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-05: a later line\n- 2026-01-20: a new note\n"
   },
   "note_no_status": {
    "ok": "## TD-061: No Status, and only a qualified Fix\n\n**Priority:** Low\n**Added:** 2026-01-03\n\n**Why:** a reason.\n\n**Fix (to design):** the shape first.\n\n**Log:**\n- 2026-01-20: first words\n"
@@ -521,7 +521,7 @@
    ],
    "log_problems": [],
    "status_notes_to_log": {
-    "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-04: was: Open\n- 2026-01-05: a later line\n"
+    "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-02: was: Open\n- 2026-01-03: an earlier line\n- 2026-01-03: was: Resolved 2026-01-03: done too soon\n- 2026-01-04: half built 2026-01-06: the rest built\n- 2026-01-05: a later line\n"
    }
   },
   "log_not_last": {
@@ -578,6 +578,14 @@
    "log_problems": [],
    "status_notes_to_log": {
     "ok": "## TD-082: A Status no lift reads\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** **Live check held** until the next run\n\n**Why:** a reason.\n\n**Fix:** the steps.\n"
+   }
+  },
+  "was_takes_the_resolved_date": {
+   "gate_age": {},
+   "log_lines": [],
+   "log_problems": [],
+   "status_notes_to_log": {
+    "ok": "## TD-092: x\n\n**Added:** 2026-09-01\n**Status:** Open 2026-11-01\n\n**Why:** w\n\n**Resolved:** 2026-10-01 (PR #3)\n\n**Log:**\n- 2026-10-01: was: Resolved: built\n- 2026-11-01: looked again\n"
    }
   }
  }
