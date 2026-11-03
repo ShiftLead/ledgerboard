@@ -21,7 +21,7 @@ Fixtures, each an invented input and its expected JSON:
   ``<case>.v2/`` (``README.md``, ``TD-NNN.md``, ``archive/``, ``rank.yml``), is what ``split()``
   writes from the v1 texts, and ``load()`` of it gives the same ``<case>.json`` (v2.0).
 - ``board/<case>.md`` → ``<case>.json``: every open item's ``item_record()`` at ``TODAY``, plus
-  ``item_key()`` of every item line and ``closed_items()``.
+  ``item_key()`` of every item line and ``closed_items()``, and ``needs_you()`` at ``TODAY`` (v2.3).
 - ``edit/cases.json`` → ``edit/expected.json``: ``edit_line()``, ``subject()``, ``subject_kind()``,
   ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
   ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
@@ -30,7 +30,8 @@ Fixtures, each an invented input and its expected JSON:
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
-  (v2.3), and ``archive_subject()`` (v2.3).
+  (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``edit_action()``, ``item_key()`` of lines
+  that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
@@ -172,6 +173,7 @@ def board_case(L, md: Path) -> dict:
     text = md.read_text(encoding="utf-8")
     items = L.parse_board(text, warn=False)
     return {"items": [L.item_record(i, TODAY) for i in items],
+            "needs_you": [[i.line, cls, days] for i, cls, days in L.needs_you(text, TODAY)],  # v2.3
             "keys": [L.item_key(ln) for ln in text.splitlines() if L.is_item(ln)],
             "closed": L.closed_items(text)}
 
@@ -197,9 +199,11 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             c["tool"], c["action"], c["text"], to=c.get("to"), answer=c.get("answer"), session=c.get("session"))))
     for s in spec["subject_kinds"]:
         out["subject_kinds"][s] = L.subject_kind(s)
+    out["edit_actions"] = {s: L.edit_action(s) for s in spec.get("edit_actions", [])}  # v2.3
+    out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
     for c in spec["compose"]:
         if c["fn"] == "item_line":
-            kw = {k: c[k] for k in ("kind", "answers", "default", "detail") if k in c}  # v2.3's keywords
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until") if k in c}  # v2.3's keywords
             out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
                 c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:

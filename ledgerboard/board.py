@@ -8,7 +8,8 @@
                                          [--answer A]... [--default N] [--detail JSON]
                                          [--session S [--host H]] [--said WORDS --by NAME]
                                          [--decided WORDS] [--under HEADING]
-    python3 -m ledgerboard.board snooze  --board PATH --line N --expect HEAD --to D
+    python3 -m ledgerboard.board snooze  --board PATH --line N --expect HEAD --to D   (hide until D)
+    python3 -m ledgerboard.board due     --board PATH --line N --expect HEAD --to D   (move Due: to D)
     python3 -m ledgerboard.board done    --board PATH --line N --expect HEAD [--why TEXT]
     python3 -m ledgerboard.board decide  --board PATH --line N --expect HEAD --answer TEXT
     python3 -m ledgerboard.board reply   --board PATH --line N --expect HEAD --text TEXT --by NAME
@@ -61,8 +62,8 @@ from . import (
     version_problem,
 )
 
-ACTIONS = ("list", "add", "snooze", "done", "decide", "reply", "archive", "fmt", "rank")
-EDITS = ("snooze", "done", "decide", "reply")
+ACTIONS = ("list", "add", "snooze", "due", "done", "decide", "reply", "archive", "fmt", "rank")
+EDITS = ("snooze", "due", "done", "decide", "reply")
 TOOL = "ledgerboard"
 NEEDS = "## Needs the user"  # where an add goes by default (cadence's board convention), a heading's words
 
@@ -192,7 +193,8 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
              kind: str | None = None, answers: Sequence[str] | None = None, default: int | None = None,
              detail: Mapping | None = None, session: str | None = None, host: str | None = None,
              decided: str | None = None, said: str | None = None, by: str | None = None,
-             under: str | None = NEEDS, today: str | date | None = None, tool: str = TOOL) -> Plan:
+             under: str | None = NEEDS, today: str | date | None = None, tool: str = TOOL,
+             hide_until: str | None = None) -> Plan:
     """A new item at the top of the section `under` names (``item_line()``); with `said`, a question that
     was already answered, `by` and its words following the text as ` — <by>, <today>: <said>` (the
     subject keeps them out); with `decided`, an item already decided by the person (``decided_line()``:
@@ -200,7 +202,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
     day = _today(today).isoformat()
     bare = None
     if decided is not None:
-        if any(v is not None for v in (due, kind, detail, session, host, said, by)):
+        if any(v is not None for v in (due, kind, detail, session, host, said, by, hide_until)):
             raise Refused("a decided item takes its title, context, answers, default and words alone")
         new = decided_line(text, context or "", list(answers or []), default, decided, day)
     else:
@@ -212,7 +214,8 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
             words = " ".join(str(text or "").split()).rstrip(".") + f" — {' '.join(by.split())}, {day}: {said_words}"
         def compose(t: str) -> str:
             return item_line(t, due, day, session, host, context, kind=kind,
-                             answers=list(answers) if answers is not None else None, default=default, detail=detail)
+                             answers=list(answers) if answers is not None else None, default=default, detail=detail,
+                             hide_until=hide_until)
 
         new = compose(words)
         if said is not None:
@@ -255,14 +258,14 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
               why: str | None = None, answer: str | None = None, text: str | None = None,
               by: str | None = None, today: str | date | None = None, tool: str = TOOL,
               session: str | None = None) -> Plan:
-    """One of the four edits (``edit_line()``) of open item `line`, which must still start with `expect`."""
+    """One of the five edits (``edit_line()``) of open item `line`, which must still start with `expect`."""
     if action not in EDITS:
         raise Refused(f"an edit is one of {', '.join(EDITS)}, not {action!r}")
     day = _today(today)
     when = None
-    if action == "snooze":
+    if action in ("snooze", "due"):
         if not to:
-            raise Refused("a snooze needs --to")
+            raise Refused(f"a {action} needs --to")
         when = _today(to)
     if action == "reply" and not (by and by.strip()):
         raise Refused("a reply needs --by, who says it")
@@ -362,7 +365,7 @@ def build(a: argparse.Namespace) -> Plan:
                 raise Refused(f"--detail is a JSON object: {e}") from None
             if not isinstance(detail, dict):
                 raise Refused("--detail is a JSON object")
-        return plan_add(a.board, a.text, due=a.due, context=a.context, kind=a.kind,
+        return plan_add(a.board, a.text, due=a.due, context=a.context, kind=a.kind, hide_until=a.hide_until,
                         answers=a.answer or None, default=a.default, detail=detail, session=a.session,
                         host=a.host, decided=a.decided, said=a.said, by=a.by, under=a.under,
                         today=a.today, tool=a.tool)
@@ -383,8 +386,9 @@ def build(a: argparse.Namespace) -> Plan:
 TAKES = {
     "list": {"board", "today"},
     "add": {"board", "text", "due", "context", "kind", "answer", "default", "detail", "session", "host",
-            "decided", "said", "by", "under", "today", "tool"},
+            "decided", "said", "by", "under", "today", "tool", "hide_until"},
     "snooze": {"board", "line", "expect", "to", "today", "tool", "session"},
+    "due": {"board", "line", "expect", "to", "today", "tool", "session"},
     "done": {"board", "line", "expect", "why", "today", "tool", "session"},
     "decide": {"board", "line", "expect", "answer", "today", "tool", "session"},
     "reply": {"board", "line", "expect", "text", "by", "today", "tool", "session"},
@@ -394,6 +398,7 @@ TAKES = {
 }
 NEEDS_OPT = {
     "list": ("board",), "add": ("board", "text"), "snooze": ("board", "line", "expect", "to"),
+    "due": ("board", "line", "expect", "to"),
     "done": ("board", "line", "expect"), "decide": ("board", "line", "expect", "answer"),
     "reply": ("board", "line", "expect", "text", "by"), "archive": ("board", "archive"),
     "fmt": ("board",), "rank": ("rank", "queue"),
@@ -412,7 +417,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--drop", action="append", default=[], help="rank: TD-n, a line to remove")
     ap.add_argument("--line", type=int, help="an edit: the item's 1-based line")
     ap.add_argument("--expect", help="an edit: the start of the item's text as last shown")
-    ap.add_argument("--to", help="snooze: the new Due: date")
+    ap.add_argument("--to", help="snooze: the Hide until: date; due: the new Due: date")
     ap.add_argument("--why", help="done: why, for the Closed: field")
     ap.add_argument("--answer", action="append", default=[],
                     help="decide: the person's answer; add: one of the item's answers (repeat)")
@@ -420,6 +425,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--by", help="reply, add --said: who says it")
     ap.add_argument("--said", help="add: the answer already given, which follows the text on the line")
     ap.add_argument("--due", help="add: the item's Due: date")
+    ap.add_argument("--hide-until", dest="hide_until", help="add: hide the new item until this date")
     ap.add_argument("--context", help="add: what the item refers to (TD-n, PR #n)")
     ap.add_argument("--kind", help="add: decide, act, look, watch or fyi")
     ap.add_argument("--default", type=int, help="add: the 0-based index of the default answer")

@@ -91,6 +91,9 @@
   },
   {
    "ok": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: on it"
+  },
+  {
+   "refused": "the rewrite would change the line's item key or what the reader reads: fix the line by hand — due: spelled 'due', not `Due:`; due: no period after its date"
   }
  ],
  "components": {
@@ -316,7 +319,7 @@
    "refused": "a decision needs its words: one of the entry's answers, or what you typed"
   },
   {
-   "refused": "an answer may not carry Context:, Answers:, Decided: or Closed: — say it in other words"
+   "refused": "an answer may not carry Context:, Hide until:, Answers:, Decided: or Closed: — say it in other words"
   },
   {
    "ok": "- [ ] decide 2026-01-15 (person) — Where the cache lives. Context: TD-40. Due: 2026-01-15. Answers: On disk (default) — the next run reads it back | In memory — every run starts cold | Not now. Decided: On disk (2026-01-15).\n"
@@ -355,13 +358,13 @@
    "ok": "- [ ] 2026-01-15 (session `w-1` on box-1) — Wait for the mirror... Context: TD-7. Due: 2026-01-20.\n"
   },
   {
-   "refused": "a board line's text may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
-   "refused": "the context may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "the context may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
-   "refused": "the detail block's caveats may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "the detail block's caveats may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   {
    "refused": "a decide offers two or more answers"
@@ -416,8 +419,29 @@
   },
   {
    "refused": "the detail block's context is a string, or a list of strings"
+  },
+  {
+   "ok": "- [ ] act 2026-01-15 (session `w-1`) — Rotate the key. Context: TD-1. Due: 2026-01-20. Hide until: 2026-01-18.\n"
+  },
+  {
+   "ok": "- [ ] fyi 2026-01-15 (n/a) — The mirror moved. Context: none. Hide until: 2026-01-18.\n"
+  },
+  {
+   "refused": "hide_until as YYYY-MM-DD, not '2026-1-18'"
+  },
+  {
+   "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   }
  ],
+ "edit_actions": {
+  "board_edit: done Ship it (session s-1)": "done",
+  "board_edit: due Rotate. to 2026-01-30 (session s-1)": "due",
+  "board_edit: snooze Rotate. to 2026-01-20 (session s-1)": "snooze",
+  "ledgerboard: archive 2 closed items (session n/a)": null,
+  "not a subject": null,
+  "queue: rank TD-1 (shiftlead)": null,
+  "shiftlead: append Ship it (session n/a)": null
+ },
  "edits": {
   "decide-again-rewrites": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: b (2026-01-15)."
@@ -434,29 +458,62 @@
   "done-with-why": {
    "ok": "- [x] 2026-01-05 (session s-1 on h) — Ship it. Due: 2026-01-10. Closed: 2026-01-15 — merged."
   },
+  "due-existing": {
+   "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-20. Answers: now | later."
+  },
+  "due-fyi-refused": {
+   "refused": "after the edit the reader does not read Due: 2026-01-20 with the item's other fields unchanged"
+  },
+  "due-keeps-the-hide": {
+   "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-30. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later."
+  },
+  "due-undated-ahead-of-the-hide": {
+   "ok": "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-20. Hide until: 2026-01-12."
+  },
+  "due-undated-before-answers": {
+   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: a | b."
+  },
+  "due-undated-no-fields": {
+   "ok": "- [ ] 2026-01-05 (session s-1) — Plain. Due: 2026-01-20."
+  },
   "not-an-open-item": {
    "refused": "the line is not an open item"
   },
   "reply-ahead-of-answers": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. — Sam, 2026-01-15: leaning b, ask the team. Answers: a | b."
   },
+  "reply-naming-hide-refused": {
+   "refused": "a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
   "reply-refused-due-on-undated": {
    "refused": "this item has no Due: date, so a reply may not carry one — the reader would take it for the item's; snooze sets its date"
   },
   "reply-refused-field": {
-   "refused": "a reply may not carry Context:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+   "refused": "a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
   },
   "reply-second": {
    "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. — Sam, 2026-01-12: halfway — Sam, 2026-01-15: all done"
   },
   "snooze-existing": {
-   "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-20. Answers: now | later."
+   "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Hide until: 2026-01-20. Answers: now | later."
+  },
+  "snooze-fyi-ahead-of-replies": {
+   "ok": "- [ ] fyi 2026-01-05 (n/a) — The mirror moved. Context: none. Hide until: 2026-01-20. — Pat, 2026-01-06: noted"
+  },
+  "snooze-hides": {
+   "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-20."
+  },
+  "snooze-moves-the-hide": {
+   "ok": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-25. — Pat, 2026-01-06: later. Answers: now | later."
+  },
+  "snooze-no-context-refused": {
+   "refused": "after the edit the reader does not read Hide until: 2026-01-20 with the item's other fields unchanged"
   },
   "snooze-undated-before-answers": {
-   "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: a | b."
+   "refused": "after the edit the reader does not read Hide until: 2026-01-20 with the item's other fields unchanged"
   },
   "snooze-undated-no-fields": {
-   "ok": "- [ ] 2026-01-05 (session s-1) — Plain. Due: 2026-01-20."
+   "refused": "after the edit the reader does not read Hide until: 2026-01-20 with the item's other fields unchanged"
   }
  },
  "implicit_keys": [
@@ -466,6 +523,11 @@
   "3|0|1234567|owner/name",
   "4|0|000003"
  ],
+ "item_keys": {
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Answers: now | later",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Answers: now | later",
+  "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13.": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1"
+ },
  "item_problems": {
   "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
   "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.": "text: does not end a sentence (`.`, `?` or `!`)",
@@ -481,6 +543,11 @@
   "- [ ] 2026-01-15 (session `w-1` on box-1, branch x) — Ship it. Context: TD-7. Due: 2026-01-20.": "head: `(session `w-1` on box-1, branch x)` is not `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`",
   "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "head: `(session w-1 on box-1)` is not `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`",
   "- [ ] Decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a | b.": "kind: 'Decide' is not a kind: one of decide, act, look, watch, fyi, in lower case",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Hide until: 2026-01-13.": "hide: `Hide until:` stands more than once",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-1-12": "hide: '2026-1-12' is not a date as YYYY-MM-DD; hide: no period after its date",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12. Due: 2026-01-10.": "due: `Due:` stands after `Hide until:`; it follows Context; hide: `Hide until:` follows Due",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.": "answers: an act carries no answers: a question with answers is a decide",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later. Hide until: 2026-01-12.": "hide: `Hide until:` follows Due; answers: `Hide until:` stands after `Answers:`; answers: an act carries no answers: a question with answers is a decide",
   "- [ ] act 2026-01-15 (session `w-1` on box-1) — Do it. Context: TD-7. Due: 2026-01-20. Answers: yes | no.": "answers: an act carries no answers: a question with answers is a decide",
   "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South.": "head: `(person)` stands only on a decided line",
   "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South. Decided: North (2026-01-15).": null,
@@ -490,6 +557,7 @@
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: Context: x (2026-01-16).": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: a (2026-01-16).": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: b (default) (2026-01-16).": null,
+  "- [ ] fyi 2026-01-05 (n/a) — Moved. Context: none. Hide until: 2026-01-12.": null,
   "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7.": null,
   "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7. — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).": null,
   "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.": "due: an fyi carries no `Due:`",
@@ -777,6 +845,7 @@
  "subject_kinds": {
   "Fix the parser (#12)": null,
   "board_edit: done Ship it (session s-1)": "edit",
+  "board_edit: due Rotate. to 2026-01-30 (session s-1)": "edit",
   "board_edit: finish Ship it (session s-1)": null,
   "queue: join TD-7 (shiftlead)": "queue",
   "queue: prune TD-1, TD-2 (a-tool)": "queue",
@@ -813,6 +882,12 @@
   },
   {
    "refused": "a snooze needs its date"
+  },
+  {
+   "ok": "board_edit: due Rotate. to 2026-01-30 (session s-1)"
+  },
+  {
+   "refused": "a due needs its date"
   }
  ],
  "versions": [

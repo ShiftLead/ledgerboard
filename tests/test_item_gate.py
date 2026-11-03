@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 import ledgerboard as L  # noqa: E402
 
-EDITS = (("snooze", {"to": date(2026, 3, 1)}), ("decide", {"answer": "Context: x"}),
+EDITS = (("snooze", {"to": date(2026, 3, 1)}), ("due", {"to": date(2026, 3, 2)}), ("decide", {"answer": "Context: x"}),
          ("decide", {"answer": "b (default)"}), ("reply", {"reply": "see Due: 2026-05-01", "by": "w-2"}),
          ("reply", {"reply": "ok", "by": "w-2"}))
 

@@ -2,6 +2,6 @@
  "exit": 3,
  "out": {
   "action": "add",
-  "refused": "a board line's text may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  "refused": "a board line's text may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
  }
 }

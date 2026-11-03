@@ -1,1073 +1,1212 @@
 {
-  "today": "2026-01-15",
-  "edits": [
-    {
-      "name": "done-with-why",
-      "line": "- [ ] 2026-01-05 (session s-1 on h) — Ship it. Due: 2026-01-10.",
-      "action": "done",
-      "why": "merged."
-    },
-    {
-      "name": "done-unpunctuated",
-      "line": "- [ ] 2026-01-05 (session s-1) — Ship it",
-      "action": "done"
-    },
-    {
-      "name": "snooze-existing",
-      "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Answers: now | later.",
-      "action": "snooze",
-      "to": "2026-01-20"
-    },
-    {
-      "name": "snooze-undated-before-answers",
-      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Answers: a | b.",
-      "action": "snooze",
-      "to": "2026-01-20"
-    },
-    {
-      "name": "snooze-undated-no-fields",
-      "line": "- [ ] 2026-01-05 (session s-1) — Plain",
-      "action": "snooze",
-      "to": "2026-01-20"
-    },
-    {
-      "name": "decide-fresh",
-      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default).",
-      "action": "decide",
-      "answer": "b"
-    },
-    {
-      "name": "decide-again-rewrites",
-      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: a (2026-01-11).",
-      "action": "decide",
-      "answer": "b"
-    },
-    {
-      "name": "reply-ahead-of-answers",
-      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b.",
-      "action": "reply",
-      "reply": "leaning b, ask the team",
-      "by": "Sam"
-    },
-    {
-      "name": "reply-second",
-      "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. — Sam, 2026-01-12: halfway",
-      "action": "reply",
-      "reply": "all done",
-      "by": "Sam"
-    },
-    {
-      "name": "reply-refused-field",
-      "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10.",
-      "action": "reply",
-      "reply": "Decided: yes",
-      "by": "Sam"
-    },
-    {
-      "name": "reply-refused-due-on-undated",
-      "line": "- [ ] act 2026-01-05 (session s-1) — Rotate.",
-      "action": "reply",
-      "reply": "Due: 2026-02-01 please",
-      "by": "Sam"
-    },
-    {
-      "name": "decide-refused-empty",
-      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one.",
-      "action": "decide",
-      "answer": "  "
-    },
-    {
-      "name": "not-an-open-item",
-      "line": "- [x] 2026-01-05 (session s-1) — Done already. Closed: 2026-01-06.",
-      "action": "done"
-    }
-  ],
-  "subjects": [
-    {
-      "tool": "board_edit",
-      "action": "snooze",
-      "text": "act 2026-01-05 (session s-1 on h) — **Rotate the key** now. Context: TD-1. Due: 2026-01-10.",
-      "to": "2026-01-20"
-    },
-    {
-      "tool": "shiftlead",
-      "action": "decide",
-      "text": "decide 2026-01-05 (session `ab12` on h) — Pick a   name. Due: 2026-01-10.",
-      "answer": "beta   two"
-    },
-    {
-      "tool": "board_edit",
-      "action": "reply",
-      "text": "2026-01-05 (session s-1) — Say more. Due: 2026-01-10. — Sam, 2026-01-12: secret words"
-    },
-    {
-      "tool": "shiftlead",
-      "action": "append",
-      "text": "2026-01-05 (session `w-1` on h) — A very long item text that goes well past the sixty character limit of a head. Due: 2026-01-10.",
-      "session": "w-1"
-    },
-    {
-      "tool": "board_edit",
-      "action": "done",
-      "text": "2026-01-05 (n/a) — No session named. Due: 2026-01-10."
-    },
-    {
-      "tool": "board_edit",
-      "action": "snooze",
-      "text": "2026-01-05 (session s) — X."
-    }
-  ],
-  "subject_kinds": [
-    "board_edit: done Ship it (session s-1)",
-    "shiftlead: reply on Pick a name (session w-1)",
-    "shiftlead: append A new item (session w-1)",
-    "shiftlead: board A new item (from TD-12)",
-    "shiftlead: answer A question (from TD-12)",
-    "shiftlead: board decide TD-12 (person)",
-    "Fix the parser (#12)",
-    "board_edit: finish Ship it (session s-1)",
-    "queue: rank TD-3, TD-12 (shiftlead)",
-    "queue: join TD-7 (shiftlead)",
-    "queue: prune TD-1, TD-2 (a-tool)",
-    "queue: rank TD-3 TD-12 (shiftlead)",
-    "queue: sort TD-3 (shiftlead)",
-    "queue: rank TD-3",
-    "queue: rank TD-3 (shiftlead) extra",
-    "shiftlead: archive 3 closed items (session w-1)",
-    "shiftlead: archive 1 closed item (session n/a)",
-    "shiftlead: archive 1 closed items (session w-1)",
-    "shiftlead: archive 0 closed items (session w-1)"
-  ],
-  "compose": [
-    {
-      "fn": "item_line",
-      "text": "Look at  the\tdashboard.",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-4"
-    },
-    {
-      "fn": "item_line",
-      "text": "No session",
-      "due": "2026-01-20",
-      "session": null,
-      "host": null,
-      "context": null
-    },
-    {
-      "fn": "item_line",
-      "text": "Bad date",
-      "due": "soon",
-      "session": null,
-      "host": null,
-      "context": null
-    },
-    {
-      "fn": "decided_line",
-      "title": "Choose the store. Answers: none",
-      "ref": "TD-31",
-      "answers": [
-        "files",
-        "a | db"
-      ],
-      "default": 0,
-      "words": "files"
-    },
-    {
-      "fn": "decided_line",
-      "title": "Empty words",
-      "ref": "TD-31",
-      "answers": [],
-      "default": null,
-      "words": " "
-    },
-    {
-      "fn": "decided_line",
-      "title": "Close it",
-      "ref": "TD-31",
-      "answers": [],
-      "default": null,
-      "words": "Closed: yes"
-    },
-    {
-      "fn": "decided_line",
-      "title": "Where the cache lives",
-      "ref": "TD-40",
-      "answers": [
-        "On disk — the next run reads it back",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "default": 0,
-      "words": "On disk"
-    },
-    {
-      "fn": "decided_line",
-      "title": "Pick a region",
-      "ref": "TD-41",
-      "answers": [
-        "North — closer — but dearer",
-        "South"
-      ],
-      "default": 0,
-      "words": "North"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk — the next run reads it back",
-        "In memory",
-        "Not now"
-      ],
-      "default": 1,
-      "detail": {
-        "context": [
-          "The cache is rebuilt on every run, which takes a minute.",
-          "disk: 40 MB",
-          "memory: none"
-        ],
-        "question": "Where should the cache live?",
-        "caveats": "Nobody has measured a cold start yet",
-        "recommended": "nothing to clean up",
-        "otherwise": "On disk, if cold starts hurt; Not now, if neither"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "only you know how often runs restart"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "look",
-      "detail": {
-        "question": "Open the export page and run one export."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "look",
-      "default": 0
-    },
-    {
-      "fn": "item_line",
-      "text": "The nightly job moved to 02:00",
-      "due": null,
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "fyi"
-    },
-    {
-      "fn": "item_line",
-      "text": "Check the queue drains after the deploy",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "PR #12",
-      "kind": "watch"
-    },
-    {
-      "fn": "item_line",
-      "text": "Rotate the test key",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": null,
-      "context": "TD-7"
-    },
-    {
-      "fn": "item_line",
-      "text": "Ship it?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "Files | folders",
-        "Database"
-      ],
-      "default": 0,
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Wait for the mirror...",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7."
-    },
-    {
-      "fn": "item_line",
-      "text": "Check Due: 2026-02-01 first",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7"
-    },
-    {
-      "fn": "item_line",
-      "text": "Rotate the test key",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-1 Due: 2026-03-01"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart.",
-        "caveats": "Answers: none yet"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "detail": {
-        "context": "x",
-        "recommended": "y"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "act",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ]
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "look",
-      "answers": [
-        "Works",
-        "Broken"
-      ]
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "look",
-      "default": 1
-    },
-    {
-      "fn": "item_line",
-      "text": "The nightly job moved to 02:00",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "fyi"
-    },
-    {
-      "fn": "item_line",
-      "text": "Check the queue drains",
-      "due": null,
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "watch"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "default": 3,
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk (default)",
-        "In memory"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk — w-2, 2026-01-14: maybe",
-        "In memory"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "On disk — again"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart."
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": null,
-      "host": "box-1",
-      "context": "TD-7"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "ask"
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "decide",
-      "answers": [
-        "On disk",
-        "In memory — every run starts cold",
-        "Not now"
-      ],
-      "detail": {
-        "context": "The cache is rebuilt on every run.",
-        "question": "Where should it live?",
-        "recommended": "it survives a restart.",
-        "notes": "extra"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "detail": {
-        "context": "x",
-        "otherwise": "y"
-      }
-    },
-    {
-      "fn": "item_line",
-      "text": "Pick the cache store?",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "today": "2026-1-5"
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "kind": "look",
-      "default": false
-    },
-    {
-      "fn": "item_line",
-      "text": "Look at the new export page",
-      "due": "2026-01-20",
-      "session": "w-1",
-      "host": "box-1",
-      "context": "TD-7",
-      "detail": {
-        "context": 5
-      }
-    }
-  ],
-  "predicates": [
-    "## TD-012: A heading",
-    "| TD-012 | A row | Low | Open |",
-    "- [ ] 2026-01-05 (session s-1) — Open.",
-    "  - [x] 2026-01-05 (session s-1) — Closed.",
-    "- [ ]",
-    "Swept: 2026-01-10 (quick, 3 items)",
-    "Swept-deep: 2026-01-01 (deep)",
-    "Fields: Owner = a | b",
-    "Not a stamp: yesterday",
-    "Swept: n/a"
-  ],
-  "versions": [
-    "# Board\n\nLedgerboard: 1\n\n- [ ] 2026-01-05 (session s) — x.\n",
-    "# Board\n\nLedgerboard: 2\n\n- [ ] 2026-01-05 (session s) — x.\n",
-    "# Board\n\n- [ ] 2026-01-05 (session s) — x.\nLedgerboard: 3\n",
-    "# Board\n\n- [docs](x)\nLedgerboard: 2\n\n- [ ] 2026-01-05 (session s) — x.\n",
-    "# T\n\n## Summary\n\nLedgerboard: 2\n\n## TD-001: x\n",
-    "# Ledger\n\nLedgerboard: 3\n\n## TD-001: x\n"
-  ],
-  "bold_heads": [
-    "2026-01-05 (session s-1 on h) — **Fix the export** before Friday. Due: 2026-01-20.",
-    "decide 2026-01-05 (session s-1) — Pick one. Context: TD-004. Due: 2026-01-20. Answers: a | b.",
-    "2026-01-05 (session s-1) — **First**, then **second**. Due: 2026-01-20.",
-    "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head",
-    "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.",
-    "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20.",
-    "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b."
-  ],
-  "not_right_forms": [
-    "Not right: <what>",
-    "Not right:",
-    "Not right:   <say what>",
-    "Not right: wrong repo",
-    "not right: <what>",
+ "today": "2026-01-15",
+ "edits": [
+  {
+   "name": "done-with-why",
+   "line": "- [ ] 2026-01-05 (session s-1 on h) — Ship it. Due: 2026-01-10.",
+   "action": "done",
+   "why": "merged."
+  },
+  {
+   "name": "done-unpunctuated",
+   "line": "- [ ] 2026-01-05 (session s-1) — Ship it",
+   "action": "done"
+  },
+  {
+   "name": "snooze-existing",
+   "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Answers: now | later.",
+   "action": "snooze",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "snooze-undated-before-answers",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Answers: a | b.",
+   "action": "snooze",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "snooze-undated-no-fields",
+   "line": "- [ ] 2026-01-05 (session s-1) — Plain",
+   "action": "snooze",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "decide-fresh",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b (default).",
+   "action": "decide",
+   "answer": "b"
+  },
+  {
+   "name": "decide-again-rewrites",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: a (2026-01-11).",
+   "action": "decide",
+   "answer": "b"
+  },
+  {
+   "name": "reply-ahead-of-answers",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b.",
+   "action": "reply",
+   "reply": "leaning b, ask the team",
+   "by": "Sam"
+  },
+  {
+   "name": "reply-second",
+   "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. — Sam, 2026-01-12: halfway",
+   "action": "reply",
+   "reply": "all done",
+   "by": "Sam"
+  },
+  {
+   "name": "reply-refused-field",
+   "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10.",
+   "action": "reply",
+   "reply": "Decided: yes",
+   "by": "Sam"
+  },
+  {
+   "name": "reply-refused-due-on-undated",
+   "line": "- [ ] act 2026-01-05 (session s-1) — Rotate.",
+   "action": "reply",
+   "reply": "Due: 2026-02-01 please",
+   "by": "Sam"
+  },
+  {
+   "name": "decide-refused-empty",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one.",
+   "action": "decide",
+   "answer": "  "
+  },
+  {
+   "name": "not-an-open-item",
+   "line": "- [x] 2026-01-05 (session s-1) — Done already. Closed: 2026-01-06.",
+   "action": "done"
+  },
+  {
+   "name": "due-undated-before-answers",
+   "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Answers: a | b.",
+   "action": "due",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "due-undated-no-fields",
+   "line": "- [ ] 2026-01-05 (session s-1) — Plain",
+   "action": "due",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "due-existing",
+   "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Answers: now | later.",
+   "action": "due",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "snooze-hides",
+   "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10.",
+   "action": "snooze",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "snooze-moves-the-hide",
+   "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+   "action": "snooze",
+   "to": "2026-01-25"
+  },
+  {
+   "name": "due-keeps-the-hide",
+   "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+   "action": "due",
+   "to": "2026-01-30"
+  },
+  {
+   "name": "snooze-fyi-ahead-of-replies",
+   "line": "- [ ] fyi 2026-01-05 (n/a) — The mirror moved. Context: none. — Pat, 2026-01-06: noted",
+   "action": "snooze",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "due-fyi-refused",
+   "line": "- [ ] fyi 2026-01-05 (n/a) — The mirror moved. Context: none. — Pat, 2026-01-06: noted",
+   "action": "due",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "due-undated-ahead-of-the-hide",
+   "line": "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12.",
+   "action": "due",
+   "to": "2026-01-20"
+  },
+  {
+   "name": "reply-naming-hide-refused",
+   "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10.",
+   "action": "reply",
+   "reply": "Hide until: 2026-02-01 please",
+   "by": "Pat"
+  },
+  {
+   "name": "snooze-no-context-refused",
+   "line": "- [ ] 2026-01-05 (n/a) — Plain",
+   "action": "snooze",
+   "to": "2026-01-20"
+  }
+ ],
+ "subjects": [
+  {
+   "tool": "board_edit",
+   "action": "snooze",
+   "text": "act 2026-01-05 (session s-1 on h) — **Rotate the key** now. Context: TD-1. Due: 2026-01-10.",
+   "to": "2026-01-20"
+  },
+  {
+   "tool": "shiftlead",
+   "action": "decide",
+   "text": "decide 2026-01-05 (session `ab12` on h) — Pick a   name. Due: 2026-01-10.",
+   "answer": "beta   two"
+  },
+  {
+   "tool": "board_edit",
+   "action": "reply",
+   "text": "2026-01-05 (session s-1) — Say more. Due: 2026-01-10. — Sam, 2026-01-12: secret words"
+  },
+  {
+   "tool": "shiftlead",
+   "action": "append",
+   "text": "2026-01-05 (session `w-1` on h) — A very long item text that goes well past the sixty character limit of a head. Due: 2026-01-10.",
+   "session": "w-1"
+  },
+  {
+   "tool": "board_edit",
+   "action": "done",
+   "text": "2026-01-05 (n/a) — No session named. Due: 2026-01-10."
+  },
+  {
+   "tool": "board_edit",
+   "action": "snooze",
+   "text": "2026-01-05 (session s) — X."
+  },
+  {
+   "tool": "board_edit",
+   "action": "due",
+   "text": "act 2026-01-05 (session s-1 on h) — Rotate. Context: TD-1. Due: 2026-01-10.",
+   "to": "2026-01-30"
+  },
+  {
+   "tool": "board_edit",
+   "action": "due",
+   "text": "act 2026-01-05 (n/a) — Rotate. Context: TD-1."
+  }
+ ],
+ "subject_kinds": [
+  "board_edit: done Ship it (session s-1)",
+  "shiftlead: reply on Pick a name (session w-1)",
+  "shiftlead: append A new item (session w-1)",
+  "shiftlead: board A new item (from TD-12)",
+  "shiftlead: answer A question (from TD-12)",
+  "shiftlead: board decide TD-12 (person)",
+  "Fix the parser (#12)",
+  "board_edit: finish Ship it (session s-1)",
+  "queue: rank TD-3, TD-12 (shiftlead)",
+  "queue: join TD-7 (shiftlead)",
+  "queue: prune TD-1, TD-2 (a-tool)",
+  "queue: rank TD-3 TD-12 (shiftlead)",
+  "queue: sort TD-3 (shiftlead)",
+  "queue: rank TD-3",
+  "queue: rank TD-3 (shiftlead) extra",
+  "shiftlead: archive 3 closed items (session w-1)",
+  "shiftlead: archive 1 closed item (session n/a)",
+  "shiftlead: archive 1 closed items (session w-1)",
+  "shiftlead: archive 0 closed items (session w-1)",
+  "board_edit: due Rotate. to 2026-01-30 (session s-1)"
+ ],
+ "compose": [
+  {
+   "fn": "item_line",
+   "text": "Look at  the\tdashboard.",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-4"
+  },
+  {
+   "fn": "item_line",
+   "text": "No session",
+   "due": "2026-01-20",
+   "session": null,
+   "host": null,
+   "context": null
+  },
+  {
+   "fn": "item_line",
+   "text": "Bad date",
+   "due": "soon",
+   "session": null,
+   "host": null,
+   "context": null
+  },
+  {
+   "fn": "decided_line",
+   "title": "Choose the store. Answers: none",
+   "ref": "TD-31",
+   "answers": [
+    "files",
+    "a | db"
+   ],
+   "default": 0,
+   "words": "files"
+  },
+  {
+   "fn": "decided_line",
+   "title": "Empty words",
+   "ref": "TD-31",
+   "answers": [],
+   "default": null,
+   "words": " "
+  },
+  {
+   "fn": "decided_line",
+   "title": "Close it",
+   "ref": "TD-31",
+   "answers": [],
+   "default": null,
+   "words": "Closed: yes"
+  },
+  {
+   "fn": "decided_line",
+   "title": "Where the cache lives",
+   "ref": "TD-40",
+   "answers": [
+    "On disk — the next run reads it back",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "default": 0,
+   "words": "On disk"
+  },
+  {
+   "fn": "decided_line",
+   "title": "Pick a region",
+   "ref": "TD-41",
+   "answers": [
+    "North — closer — but dearer",
+    "South"
+   ],
+   "default": 0,
+   "words": "North"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk — the next run reads it back",
+    "In memory",
+    "Not now"
+   ],
+   "default": 1,
+   "detail": {
+    "context": [
+     "The cache is rebuilt on every run, which takes a minute.",
+     "disk: 40 MB",
+     "memory: none"
+    ],
+    "question": "Where should the cache live?",
+    "caveats": "Nobody has measured a cold start yet",
+    "recommended": "nothing to clean up",
+    "otherwise": "On disk, if cold starts hurt; Not now, if neither"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "only you know how often runs restart"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "look",
+   "detail": {
+    "question": "Open the export page and run one export."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "look",
+   "default": 0
+  },
+  {
+   "fn": "item_line",
+   "text": "The nightly job moved to 02:00",
+   "due": null,
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "fyi"
+  },
+  {
+   "fn": "item_line",
+   "text": "Check the queue drains after the deploy",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "PR #12",
+   "kind": "watch"
+  },
+  {
+   "fn": "item_line",
+   "text": "Rotate the test key",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": null,
+   "context": "TD-7"
+  },
+  {
+   "fn": "item_line",
+   "text": "Ship it?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "Files | folders",
+    "Database"
+   ],
+   "default": 0,
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Wait for the mirror...",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7."
+  },
+  {
+   "fn": "item_line",
+   "text": "Check Due: 2026-02-01 first",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7"
+  },
+  {
+   "fn": "item_line",
+   "text": "Rotate the test key",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-1 Due: 2026-03-01"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart.",
+    "caveats": "Answers: none yet"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "detail": {
+    "context": "x",
+    "recommended": "y"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "act",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ]
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "look",
+   "answers": [
     "Works",
-    "Not right: <a> <b>"
-  ],
-  "not_right_fills": [
-    {
-      "name": "filled",
-      "said": "Not right:  the  button is grey",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    },
-    {
-      "name": "bare-form-offered",
-      "said": "Not right: wrong page",
-      "offered": [
-        "Works",
-        "Not right:"
-      ]
-    },
-    {
-      "name": "form-as-offered",
-      "said": "Not right: <what>",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    },
-    {
-      "name": "prefix-only",
-      "said": "Not right:  ",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    },
-    {
-      "name": "another-answer",
-      "said": "Works",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    },
-    {
-      "name": "no-form-offered",
-      "said": "Not right: wrong repo",
-      "offered": [
-        "Works",
-        "Not right: wrong repo"
-      ]
-    },
-    {
-      "name": "empty",
-      "said": "",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    },
-    {
-      "name": "placeholder-only",
-      "said": "Not right: <b>",
-      "offered": [
-        "Works",
-        "Not right: <what>"
-      ]
-    }
-  ],
-  "queue_subjects": [
-    {
-      "tool": "shiftlead",
-      "action": "rank",
-      "ids": [
-        "TD-12",
-        "TD-3",
-        "TD-12"
-      ]
-    },
-    {
-      "tool": "shiftlead",
-      "action": "join",
-      "ids": [
-        "TD-7"
-      ]
-    },
-    {
-      "tool": "a-tool",
-      "action": "prune",
-      "ids": [
-        "TD-1",
-        "TD-2"
-      ]
-    },
-    {
-      "tool": "shiftlead",
-      "action": "move",
-      "ids": [
-        "TD-1"
-      ]
-    },
-    {
-      "tool": "shiftlead",
-      "action": "rank",
-      "ids": []
-    },
-    {
-      "tool": "shiftlead",
-      "action": "rank",
-      "ids": [
-        "far#TD-1"
-      ]
-    },
-    {
-      "tool": "a (b)",
-      "action": "rank",
-      "ids": [
-        "TD-1"
-      ]
-    }
-  ],
-  "implicit_keys": [
-    {
-      "priority": "High",
-      "type": "debt",
-      "id": "TD-7",
-      "repo": ""
-    },
-    {
-      "priority": "Medium",
-      "type": "feature",
-      "id": "TD-642",
-      "repo": "shiftlead"
-    },
-    {
-      "priority": "medium",
-      "type": null,
-      "id": "TD-642",
-      "repo": "shiftlead"
-    },
-    {
-      "priority": "Low",
-      "type": "debt",
-      "id": "TD-1234567",
-      "repo": "owner/name"
-    },
-    {
-      "priority": "?",
-      "type": "chore",
-      "id": "TD-3",
-      "repo": ""
-    }
-  ],
-  "key_orders": [
-    [
-      "2|1|000642|shiftlead",
-      "2a",
-      "2|0|000642|shiftlead",
-      "1|0|000700",
-      "2",
-      "2|0|000642",
-      "0h",
-      "z",
-      "2|0|000642|dev-cadence",
-      "1i"
-    ]
-  ],
-  "midpoints": [
-    [
-      null,
-      null
-    ],
-    [
-      null,
-      "1|0|000002"
-    ],
-    [
-      null,
-      "0h"
-    ],
-    [
-      "0h",
-      "1|0|000002"
-    ],
-    [
-      "1|0|000002",
-      "2|0|000004"
-    ],
-    [
-      "2|0|000004",
-      "2|0|000005"
-    ],
-    [
-      "2|0|000642|dev-cadence",
-      "2|0|000642|shiftlead"
-    ],
-    [
-      "2|0|000642",
-      "2|0|000642|shiftlead"
-    ],
-    [
-      "3|0|000003",
-      null
-    ],
-    [
-      "z",
-      null
-    ],
-    [
-      "x",
-      "x0h"
-    ],
-    [
-      "x",
-      "x0"
-    ],
-    [
-      "x",
-      "x|"
-    ],
-    [
-      "b",
-      "a"
-    ],
-    [
-      "a",
-      "a"
-    ],
-    [
-      "|a",
-      "b"
-    ],
-    [
-      null,
-      "0"
-    ],
-    [
-      "a",
-      "a|0|"
-    ],
-    [
-      "0",
-      "0|0|"
-    ]
-  ],
-  "rank_reads": [
-    "# comment\nTD-1: 0h\nTD-2: 2|0|000004\n",
-    "TD-1: 0h\n\n# late comment\nTD-1: 1h\nTD-2: 09\nTD-3 0h\nTD-4: |bad\nTD-5: two words\n",
-    ""
-  ],
-  "rank_writes": [
-    {
-      "text": "",
-      "lines": {
-        "TD-5": "2|0|0003"
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\nTD-2: 2|0|000004\n",
-      "lines": {
-        "TD-3": "1i",
-        "TD-9": "0a"
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\nTD-2: 2|0|000004\n",
-      "lines": {
-        "TD-1": "3a",
-        "TD-2": null
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\nstray line\nTD-2: 2|0|000004",
-      "lines": {
-        "TD-4": "z"
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\n",
-      "lines": {
-        "TD-2": "0h"
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\n",
-      "lines": {
-        "far#TD-2": "0h"
-      }
-    },
-    {
-      "text": "# c\nTD-1: 0h\n",
-      "lines": {
-        "TD-2": "|0"
-      }
-    },
-    {
-      "text": "# c\r\nTD-1: 0h\r\n",
-      "lines": {
-        "TD-2": "1a",
-        "TD-1": "0z"
-      }
-    },
-    {
-      "text": "",
-      "lines": {
-        "TD-2": "é"
-      }
-    }
-  ],
-  "rank_paths": [
-    "docs/technical_debt.md",
-    "technical_debt.md",
-    "a/b/ledger.md",
-    "docs/ledger"
-  ],
-  "components": [
-    "ledger/ranked.md",
-    "ledger/ranked.archive.md",
-    "ledger/basic.md",
-    "ledger/parts.md"
-  ],
-  "item_problems": [
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
-    "- [ ] look 2026-01-15 (session `w-1`) — Look at the new export page. Context: PR #12. Due: 2026-01-20. Answers: Works | Not right: <what>.",
-    "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7.",
-    "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South. Decided: North (2026-01-15).",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-02-01.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: a (2026-01-16).",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: on it",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: see Due: 2026-05-01",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: Context: x (2026-01-16).",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: b (default) (2026-01-16).",
-    "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7. — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
-    "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South.",
-    "- [ ] todo 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1, branch x) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
-    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20.",
-    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Do it. Context: TD-7. Due: 2026-01-20. Answers: yes | no.",
-    "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.",
-    "- [ ] Decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a (default) | b (default).",
-    "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at it. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right:.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.  ",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Wait for it.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20."
-  ],
-  "canonical_items": [
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Due: 2026-01-20. Context: TD-7.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Check Due: 2026-02-01 first. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Due: 2026-01-20. Context: TD-7 Answers: a | b.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.",
-    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 Decided: ok (2026-01-16).",
-    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Context: TD-7. Answers: a | b. Due: 2026-01-20.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.\n",
-    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it"
-  ],
-  "board_problems": [
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-02-01.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session w-2) — Rotate the key. Context: TD-8. Due: 2026-01-25.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
-    }
-  ],
-  "archive_subjects": [
-    {
-      "tool": "shiftlead",
-      "count": 1,
-      "session": "w-1"
-    },
-    {
-      "tool": "shiftlead",
-      "count": 12,
-      "session": "w-1"
-    },
-    {
-      "tool": "agent-cadence",
-      "count": 3
-    },
-    {
-      "tool": "my tool",
-      "count": 3,
-      "session": "w-1"
-    }
+    "Broken"
+   ]
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "look",
+   "default": 1
+  },
+  {
+   "fn": "item_line",
+   "text": "The nightly job moved to 02:00",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "fyi"
+  },
+  {
+   "fn": "item_line",
+   "text": "Check the queue drains",
+   "due": null,
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "watch"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "default": 3,
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk (default)",
+    "In memory"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk — w-2, 2026-01-14: maybe",
+    "In memory"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "On disk — again"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart."
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": null,
+   "host": "box-1",
+   "context": "TD-7"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "ask"
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "decide",
+   "answers": [
+    "On disk",
+    "In memory — every run starts cold",
+    "Not now"
+   ],
+   "detail": {
+    "context": "The cache is rebuilt on every run.",
+    "question": "Where should it live?",
+    "recommended": "it survives a restart.",
+    "notes": "extra"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "detail": {
+    "context": "x",
+    "otherwise": "y"
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Pick the cache store?",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "today": "2026-1-5"
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "kind": "look",
+   "default": false
+  },
+  {
+   "fn": "item_line",
+   "text": "Look at the new export page",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": "box-1",
+   "context": "TD-7",
+   "detail": {
+    "context": 5
+   }
+  },
+  {
+   "fn": "item_line",
+   "text": "Rotate the key",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": null,
+   "context": "TD-1",
+   "kind": "act",
+   "hide_until": "2026-01-18"
+  },
+  {
+   "fn": "item_line",
+   "text": "The mirror moved",
+   "due": null,
+   "session": null,
+   "host": null,
+   "context": "none",
+   "kind": "fyi",
+   "hide_until": "2026-01-18"
+  },
+  {
+   "fn": "item_line",
+   "text": "Rotate the key",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": null,
+   "context": "TD-1",
+   "kind": "act",
+   "hide_until": "2026-1-18"
+  },
+  {
+   "fn": "item_line",
+   "text": "wait Hide until: 2026-01-18 first",
+   "due": "2026-01-20",
+   "session": "w-1",
+   "host": null,
+   "context": "TD-1",
+   "kind": "act"
+  }
+ ],
+ "predicates": [
+  "## TD-012: A heading",
+  "| TD-012 | A row | Low | Open |",
+  "- [ ] 2026-01-05 (session s-1) — Open.",
+  "  - [x] 2026-01-05 (session s-1) — Closed.",
+  "- [ ]",
+  "Swept: 2026-01-10 (quick, 3 items)",
+  "Swept-deep: 2026-01-01 (deep)",
+  "Fields: Owner = a | b",
+  "Not a stamp: yesterday",
+  "Swept: n/a"
+ ],
+ "versions": [
+  "# Board\n\nLedgerboard: 1\n\n- [ ] 2026-01-05 (session s) — x.\n",
+  "# Board\n\nLedgerboard: 2\n\n- [ ] 2026-01-05 (session s) — x.\n",
+  "# Board\n\n- [ ] 2026-01-05 (session s) — x.\nLedgerboard: 3\n",
+  "# Board\n\n- [docs](x)\nLedgerboard: 2\n\n- [ ] 2026-01-05 (session s) — x.\n",
+  "# T\n\n## Summary\n\nLedgerboard: 2\n\n## TD-001: x\n",
+  "# Ledger\n\nLedgerboard: 3\n\n## TD-001: x\n"
+ ],
+ "bold_heads": [
+  "2026-01-05 (session s-1 on h) — **Fix the export** before Friday. Due: 2026-01-20.",
+  "decide 2026-01-05 (session s-1) — Pick one. Context: TD-004. Due: 2026-01-20. Answers: a | b.",
+  "2026-01-05 (session s-1) — **First**, then **second**. Due: 2026-01-20.",
+  "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head",
+  "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.",
+  "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20.",
+  "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b."
+ ],
+ "not_right_forms": [
+  "Not right: <what>",
+  "Not right:",
+  "Not right:   <say what>",
+  "Not right: wrong repo",
+  "not right: <what>",
+  "Works",
+  "Not right: <a> <b>"
+ ],
+ "not_right_fills": [
+  {
+   "name": "filled",
+   "said": "Not right:  the  button is grey",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  },
+  {
+   "name": "bare-form-offered",
+   "said": "Not right: wrong page",
+   "offered": [
+    "Works",
+    "Not right:"
+   ]
+  },
+  {
+   "name": "form-as-offered",
+   "said": "Not right: <what>",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  },
+  {
+   "name": "prefix-only",
+   "said": "Not right:  ",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  },
+  {
+   "name": "another-answer",
+   "said": "Works",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  },
+  {
+   "name": "no-form-offered",
+   "said": "Not right: wrong repo",
+   "offered": [
+    "Works",
+    "Not right: wrong repo"
+   ]
+  },
+  {
+   "name": "empty",
+   "said": "",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  },
+  {
+   "name": "placeholder-only",
+   "said": "Not right: <b>",
+   "offered": [
+    "Works",
+    "Not right: <what>"
+   ]
+  }
+ ],
+ "queue_subjects": [
+  {
+   "tool": "shiftlead",
+   "action": "rank",
+   "ids": [
+    "TD-12",
+    "TD-3",
+    "TD-12"
+   ]
+  },
+  {
+   "tool": "shiftlead",
+   "action": "join",
+   "ids": [
+    "TD-7"
+   ]
+  },
+  {
+   "tool": "a-tool",
+   "action": "prune",
+   "ids": [
+    "TD-1",
+    "TD-2"
+   ]
+  },
+  {
+   "tool": "shiftlead",
+   "action": "move",
+   "ids": [
+    "TD-1"
+   ]
+  },
+  {
+   "tool": "shiftlead",
+   "action": "rank",
+   "ids": []
+  },
+  {
+   "tool": "shiftlead",
+   "action": "rank",
+   "ids": [
+    "far#TD-1"
+   ]
+  },
+  {
+   "tool": "a (b)",
+   "action": "rank",
+   "ids": [
+    "TD-1"
+   ]
+  }
+ ],
+ "implicit_keys": [
+  {
+   "priority": "High",
+   "type": "debt",
+   "id": "TD-7",
+   "repo": ""
+  },
+  {
+   "priority": "Medium",
+   "type": "feature",
+   "id": "TD-642",
+   "repo": "shiftlead"
+  },
+  {
+   "priority": "medium",
+   "type": null,
+   "id": "TD-642",
+   "repo": "shiftlead"
+  },
+  {
+   "priority": "Low",
+   "type": "debt",
+   "id": "TD-1234567",
+   "repo": "owner/name"
+  },
+  {
+   "priority": "?",
+   "type": "chore",
+   "id": "TD-3",
+   "repo": ""
+  }
+ ],
+ "key_orders": [
+  [
+   "2|1|000642|shiftlead",
+   "2a",
+   "2|0|000642|shiftlead",
+   "1|0|000700",
+   "2",
+   "2|0|000642",
+   "0h",
+   "z",
+   "2|0|000642|dev-cadence",
+   "1i"
   ]
+ ],
+ "midpoints": [
+  [
+   null,
+   null
+  ],
+  [
+   null,
+   "1|0|000002"
+  ],
+  [
+   null,
+   "0h"
+  ],
+  [
+   "0h",
+   "1|0|000002"
+  ],
+  [
+   "1|0|000002",
+   "2|0|000004"
+  ],
+  [
+   "2|0|000004",
+   "2|0|000005"
+  ],
+  [
+   "2|0|000642|dev-cadence",
+   "2|0|000642|shiftlead"
+  ],
+  [
+   "2|0|000642",
+   "2|0|000642|shiftlead"
+  ],
+  [
+   "3|0|000003",
+   null
+  ],
+  [
+   "z",
+   null
+  ],
+  [
+   "x",
+   "x0h"
+  ],
+  [
+   "x",
+   "x0"
+  ],
+  [
+   "x",
+   "x|"
+  ],
+  [
+   "b",
+   "a"
+  ],
+  [
+   "a",
+   "a"
+  ],
+  [
+   "|a",
+   "b"
+  ],
+  [
+   null,
+   "0"
+  ],
+  [
+   "a",
+   "a|0|"
+  ],
+  [
+   "0",
+   "0|0|"
+  ]
+ ],
+ "rank_reads": [
+  "# comment\nTD-1: 0h\nTD-2: 2|0|000004\n",
+  "TD-1: 0h\n\n# late comment\nTD-1: 1h\nTD-2: 09\nTD-3 0h\nTD-4: |bad\nTD-5: two words\n",
+  ""
+ ],
+ "rank_writes": [
+  {
+   "text": "",
+   "lines": {
+    "TD-5": "2|0|0003"
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\nTD-2: 2|0|000004\n",
+   "lines": {
+    "TD-3": "1i",
+    "TD-9": "0a"
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\nTD-2: 2|0|000004\n",
+   "lines": {
+    "TD-1": "3a",
+    "TD-2": null
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\nstray line\nTD-2: 2|0|000004",
+   "lines": {
+    "TD-4": "z"
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\n",
+   "lines": {
+    "TD-2": "0h"
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\n",
+   "lines": {
+    "far#TD-2": "0h"
+   }
+  },
+  {
+   "text": "# c\nTD-1: 0h\n",
+   "lines": {
+    "TD-2": "|0"
+   }
+  },
+  {
+   "text": "# c\r\nTD-1: 0h\r\n",
+   "lines": {
+    "TD-2": "1a",
+    "TD-1": "0z"
+   }
+  },
+  {
+   "text": "",
+   "lines": {
+    "TD-2": "é"
+   }
+  }
+ ],
+ "rank_paths": [
+  "docs/technical_debt.md",
+  "technical_debt.md",
+  "a/b/ledger.md",
+  "docs/ledger"
+ ],
+ "components": [
+  "ledger/ranked.md",
+  "ledger/ranked.archive.md",
+  "ledger/basic.md",
+  "ledger/parts.md"
+ ],
+ "item_problems": [
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
+  "- [ ] look 2026-01-15 (session `w-1`) — Look at the new export page. Context: PR #12. Due: 2026-01-20. Answers: Works | Not right: <what>.",
+  "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7.",
+  "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South. Decided: North (2026-01-15).",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-02-01.",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: a (2026-01-16).",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: on it",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: see Due: 2026-05-01",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: Context: x (2026-01-16).",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: b (default) (2026-01-16).",
+  "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7. — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
+  "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South.",
+  "- [ ] todo 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1, branch x) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
+  "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20.",
+  "- [ ] act 2026-01-15 (session `w-1` on box-1) — Do it. Context: TD-7. Due: 2026-01-20. Answers: yes | no.",
+  "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.",
+  "- [ ] Decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a (default) | b (default).",
+  "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at it. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right:.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.  ",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Wait for it.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later. Hide until: 2026-01-12.",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12. Due: 2026-01-10.",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-1-12",
+  "- [ ] fyi 2026-01-05 (n/a) — Moved. Context: none. Hide until: 2026-01-12.",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Hide until: 2026-01-13."
+ ],
+ "canonical_items": [
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Due: 2026-01-20. Context: TD-7.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Check Due: 2026-02-01 first. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Due: 2026-01-20. Context: TD-7 Answers: a | b.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.",
+  "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 Decided: ok (2026-01-16).",
+  "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Context: TD-7. Answers: a | b. Due: 2026-01-20.",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.\n",
+  "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
+  "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it",
+  "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. due: 2026-01-10 Hide until: 2026-01-12."
+ ],
+ "board_problems": [
+  {
+   "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+   "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n"
+  },
+  {
+   "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+   "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-02-01.\n"
+  },
+  {
+   "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+   "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session w-2) — Rotate the key. Context: TD-8. Due: 2026-01-25.\n"
+  },
+  {
+   "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+   "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n"
+  },
+  {
+   "old": null,
+   "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
+  }
+ ],
+ "archive_subjects": [
+  {
+   "tool": "shiftlead",
+   "count": 1,
+   "session": "w-1"
+  },
+  {
+   "tool": "shiftlead",
+   "count": 12,
+   "session": "w-1"
+  },
+  {
+   "tool": "agent-cadence",
+   "count": 3
+  },
+  {
+   "tool": "my tool",
+   "count": 3,
+   "session": "w-1"
+  }
+ ],
+ "edit_actions": [
+  "board_edit: due Rotate. to 2026-01-30 (session s-1)",
+  "board_edit: snooze Rotate. to 2026-01-20 (session s-1)",
+  "board_edit: done Ship it (session s-1)",
+  "shiftlead: append Ship it (session n/a)",
+  "queue: rank TD-1 (shiftlead)",
+  "ledgerboard: archive 2 closed items (session n/a)",
+  "not a subject"
+ ],
+ "item_keys": [
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+  "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later.",
+  "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13."
+ ]
 }

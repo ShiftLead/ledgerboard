@@ -772,7 +772,11 @@ BOLD_RE = re.compile(r"\*\*(?P<bold>.+?)\*\*")
 # first name, the host the first word after ` on ` anywhere inside the parentheses.
 HEAD_RE = re.compile(r"^(?:[A-Za-z]+\s+)?\d{4}-\d{2}-\d{2}\s*\(session\s+`?(?P<session>[^\s`,;)]+)`?(?P<rest>[^)]*)")
 HEAD_HOST_RE = re.compile(r"\bon\s+`?([^\s`,;)]+)")
-CONTEXT_RE = re.compile(r"\bContext:\s*(?P<ctx>.*?)(?=\s+(?:Due|Answers|Decided|Closed):|$)")
+CONTEXT_RE = re.compile(r"\bContext:\s*(?P<ctx>.*?)(?=\s+(?:Due|Hide until|Answers|Decided|Closed):|$)")
+# `Hide until: D.` (v2.3): the item is left out of what needs the person until D, its Due: untouched. It
+# starts a sentence and is read only after the item's Due:, or after its Context: when it has none (an fyi).
+HIDE_RE = re.compile(r"(?:^|(?<=[.?!]\s))Hide until:\s*(?P<date>\d{4}-\d{2}-\d{2})\b")
+HIDE_KEY_RE = re.compile(r"\s*\bHide until:\s*\d{4}-\d{2}-\d{2}\b\.?")  # what item_key strips, as it strips Due:
 REF_TD_RE = re.compile(r"(?:[\w.-]+(?:/[\w.-]+)?#)?TD-\d+")
 REF_PR_RE = re.compile(r"\bPRs?\s*#\d+(?:\s*(?:/|,|&|and)\s*#\d+)*")  # PR #12 · PRs #12/#13 · PR #12, #13
 REF_BRANCH_RE = re.compile(r"^(?P<said>branch\s+)?`?(?P<name>[A-Za-z0-9][\w./-]*)`?$")
@@ -853,6 +857,31 @@ def reply_span(text: str) -> tuple[int, int] | None:
     return m.start(), m.start() + len(text[m.start():end].rstrip())
 
 
+def _hide_match(text: str) -> re.Match | None:
+    """The item's `Hide until:` field as the reader finds it: after its Due:, or after its Context: when it
+    has none, and ahead of its replies; None when it has none."""
+    due = DUE_RE.search(text)
+    if due:
+        start = due.end()
+    else:
+        c = CONTEXT_RE.search(text)
+        if c is None:
+            return None
+        start = c.start()
+    span = reply_span(text)
+    m = HIDE_RE.search(text, start)
+    return m if m and not (span and m.start() >= span[0]) else None
+
+
+def parse_hide_until(text: str) -> date | None:
+    """The item's `Hide until:` date, or None: none, or not a date."""
+    m = _hide_match(text)
+    try:
+        return date.fromisoformat(m.group("date")) if m else None
+    except ValueError:
+        return None
+
+
 def parse_replies(text: str) -> list[tuple[str, str, str]]:
     """The item's replies in order, each (by, YYYY-MM-DD, words); [] when it has none."""
     span = reply_span(text)
@@ -881,6 +910,12 @@ class BoardItem:
     # The item's detail block — the lines under it indented deeper than its `-`, common indent
     # removed. No edit touches it: Due:/Answers:/Decided:/replies stay on the head line.
     detail: list[str] = field(default_factory=list)
+    hide_until: date | None = None  # `Hide until:` (v2.3): left out of what needs the person until then
+
+    def hidden(self, today: date) -> bool:
+        """Left out of what needs the person today: a `Hide until:` still ahead. A decided item is a session's
+        work order and is never hidden."""
+        return self.hide_until is not None and self.decided is None and today < self.hide_until
 
     @property
     def todo(self) -> bool:
@@ -901,7 +936,7 @@ class BoardItem:
 
 def item_key(line: str) -> str:
     """An item line with what an edit may change taken out — the tick, the Closed:, Decided: and
-    Due: fields (an edit may also end the sentence before them) and its reply tails — so the open
+    Due: fields and `Hide until:` (v2.3; an edit may also end the sentence before them) and its reply tails — so the open
     and the closed copy of one item, or a snoozed or replied-to one, compare equal.
 
     Indentation is kept (a re-indented line is not an edit), and a collision needs the whole
@@ -913,6 +948,7 @@ def item_key(line: str) -> str:
     span = reply_span(line)
     if span:
         line = line[: span[0]] + line[span[1]:]
+    line = HIDE_KEY_RE.sub("", line)  # v2.3: a hide moves no key (the one exception to the rule above)
     line = re.sub(r"\s*(?:" + DUE_RE.pattern + r")\.?", "", line, flags=re.IGNORECASE)
     return line.rstrip(" .")
 
@@ -970,7 +1006,7 @@ def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
                                default=parse_default(text), consequences=parse_consequences(text),
                                decided=parse_decided(text), bad_due=bad,
                                kind=kind, fyi_due=fyi_due,
-                               detail=detail_block(lines, lineno)))
+                               detail=detail_block(lines, lineno), hide_until=parse_hide_until(text)))
     return items
 
 
@@ -1046,17 +1082,51 @@ def item_record(item: BoardItem, today: date) -> dict:
         "refs": item_refs(item.text),
         "replies": [{"by": by, "date": d, "text": t} for by, d, t in parse_replies(item.text)],
         "detail": item.detail,
+        "hide_until": item.hide_until.isoformat() if item.hide_until else None,
+        "hidden": item.hidden(today),
     }
+
+
+NEEDS_CLASSES = ("decided", "overdue", "due", "bad_due", "undated", "watch", "fyi")
+
+
+def needs_you(board: str, today: date) -> list[tuple[BoardItem, str, int | None]]:
+    """What needs the person (v2.3): every open item not hidden (a decided one never is), each with one class
+    and a signed `days`, in one order. A decided item (`decided`, `days` the decision's age) is a session's
+    work order and comes first, oldest decision first. The person's to-do follow by date: `overdue` (days
+    past due, most first), `due` (0 on the due date, negative days until it; soonest first), then `bad_due`
+    (a Due: the reader cannot read) and `undated`, as the board orders them. Then every `watch` item, ordered
+    the same way and carrying its signed days (None when undated), then every `fyi` (never due: days None)."""
+    def days(it: BoardItem) -> int | None:
+        return (today - it.due).days if it.due else None
+
+    def dated(group: list[BoardItem]) -> list[BoardItem]:
+        on = sorted((it for it in group if it.due), key=lambda it: (-days(it), it.line))
+        return on + [it for it in group if not it.due and it.bad_due] + \
+            [it for it in group if not it.due and not it.bad_due]
+
+    live = [it for it in parse_board(board, warn=False) if not it.hidden(today)]
+    decided = sorted((it for it in live if it.decided), key=lambda it: (it.decided[1], it.line))
+    rest = [it for it in live if not it.decided]
+    out = [(it, "decided", (today - it.decided[1]).days) for it in decided]
+    for it in dated([it for it in rest if it.todo]):
+        d = days(it)
+        cls = "overdue" if d is not None and d > 0 else "due" if d is not None else \
+            "bad_due" if it.bad_due else "undated"
+        out.append((it, cls, d))
+    out += [(it, "watch", days(it)) for it in dated([it for it in rest if it.kind == "watch"])]
+    out += [(it, "fyi", None) for it in rest if it.kind == "fyi"]
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
 # Edits: one item line rewritten, a new item composed, and the commit subject of each write
 # ---------------------------------------------------------------------------------------------
 
-EDIT_ACTIONS = ("snooze", "done", "decide", "reply")
-FIELDS_RE = re.compile(r"\s+\b(?:Context|Due|Answers|Decided):")
-FIELD_NAME_RE = re.compile(r"\b(?:Context|Answers|Decided|Closed):")  # in a reply, the reader would read the field
-ANY_FIELD_RE = re.compile(r"\b(Context|Due|Answers|Decided|Closed):")
+EDIT_ACTIONS = ("snooze", "due", "done", "decide", "reply")  # `due` (v2.3) moves Due:; `snooze` hides until
+FIELDS_RE = re.compile(r"\s+\b(?:Context|Due|Hide until|Answers|Decided):")
+FIELD_NAME_RE = re.compile(r"\b(?:Context|Hide until|Answers|Decided|Closed):")  # in a reply, the reader would read the field
+ANY_FIELD_RE = re.compile(r"\b(Context|Due|Hide until|Answers|Decided|Closed):")
 SESSION_RE = re.compile(r"\(session ([^\s,)]+)")  # as written: a backticked name keeps its backticks
 EDIT_HEAD_CHARS = 60
 
@@ -1122,7 +1192,8 @@ def _trailing_field_start(body: str, after_due: bool = False) -> int | None:
 def edit_line(body: str, action: str, *, to: date | None = None, answer: str | None = None,
               why: str | None = None, reply: str | None = None, by: str | None = None,
               today: date | None = None) -> str:
-    """The open item line `body` (no line ending) after `action` — snooze (to `to`), done (with
+    """The open item line `body` (no line ending) after `action` — snooze (hidden until `to`), due (its
+    Due: moved to `to`), done (with
     `why`), decide (`answer`), reply (`reply`, by `by`); raises Refused. Every edit is re-parsed
     and refused if the reader would not read back what was meant."""
     today = today or date.today()  # noqa: DTZ011  # a civil date, as the readers use
@@ -1140,16 +1211,45 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
                           "text unchanged")
         return new
     text = ITEM_RE.match(body).group("text")
-    if action == "snooze":
-        if to is None:
-            raise Refused("a snooze needs its date")
+    if action in ("snooze", "due") and to is None:
+        raise Refused(f"a {action} needs its date")
+    if action == "snooze":  # v2.3: hide the item until `to`; its Due:, the real deadline, stays
+        h = _hide_match(body)
+        if h:
+            new = body[: h.start("date")] + to.isoformat() + body[h.end("date"):]
+        else:
+            d = DUE_RE.search(body)
+            if d:
+                at = d.end()
+                rest = body[at + 1:] if body[at:at + 1] == "." else body[at:]  # the Due: gets its period
+                new = f"{body[:at]}. Hide until: {to.isoformat()}.{rest}"
+            else:
+                starts = [x for x in ((reply_span(body) or (None,))[0], _trailing_field_start(body)) if x is not None]
+                at = min(starts) if starts else len(body)
+                head, rest = body[:at].rstrip(), body[at:]
+                if rest and not rest.startswith(" "):
+                    rest = " " + rest
+                new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} Hide until: {to.isoformat()}.{rest}"
+        was, got = parse_board(body, warn=False), parse_board(new, warn=False)
+        if not got or not was or got[0].hide_until != to or got[0].due != was[0].due \
+                or (got[0].answers, got[0].consequences, got[0].default, got[0].decided, got[0].kind) \
+                != (was[0].answers, was[0].consequences, was[0].default, was[0].decided, was[0].kind) \
+                or parse_replies(new) != parse_replies(body) or item_refs(new) != item_refs(body) \
+                or item_key(new) != item_key(body):
+            raise Refused(f"after the edit the reader does not read Hide until: {to.isoformat()} "
+                          "with the item's other fields unchanged")
+        return new
+    if action == "due":  # the real deadline moves (what snooze did before v2.3)
         m = DUE_RE.search(body)
         if m:
             new = body[: m.start("due")] + to.isoformat() + body[m.end("due"):]
         else:
             at = _trailing_field_start(body)
             span = reply_span(body)  # a reply is read only after the Due:, so the date goes ahead of it
-            if span:
+            h = _hide_match(body)  # and Due: stands ahead of a Hide until:
+            if h:
+                new = f"{body[: h.start()].rstrip()} Due: {to.isoformat()}. {body[h.start():]}"
+            elif span:
                 head = body[: span[0]].rstrip()
                 new = f"{head}{'' if head.endswith(('.', '?', '!')) else '.'} Due: {to.isoformat()}.{body[span[0]:]}"
             elif at is None:
@@ -1160,7 +1260,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         got = parse_board(new, warn=False)
         if not got or got[0].due != to or got[0].answers != parse_answers(text) \
                 or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
-                or got[0].decided != parse_decided(text):
+                or got[0].decided != parse_decided(text) or got[0].hide_until != parse_hide_until(text):
             raise Refused(f"after the edit the reader does not read Due: {to.isoformat()} "
                           "with the item's other fields unchanged")
         return new
@@ -1188,7 +1288,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         if not words:
             raise Refused("the reply is empty — a reply needs its words")
         if FIELD_NAME_RE.search(words):
-            raise Refused("a reply may not carry Context:, Answers:, Decided: or Closed: — the reader "
+            raise Refused("a reply may not carry Context:, Hide until:, Answers:, Decided: or Closed: — the reader "
                           "would read it as the field; say it in other words")
         if (DUE_RE.search(words) or DUE_ATTEMPT_RE.search(words)) and not DUE_RE.search(body):
             raise Refused("this item has no Due: date, so a reply may not carry one — the "
@@ -1222,7 +1322,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
 DETAIL_PARTS = ("context", "question", "caveats", "recommended")  # a detail block's parts, in order
 DETAIL_KEYS = (*DETAIL_PARTS, "otherwise")  # `otherwise` is written on the Recommended bullet
 DECIDE_NEEDS = ("context", "question", "recommended")
-WRITER_FIELD_RE = re.compile(r"\b(?:Context|Answers|Decided|Closed):|\b(?i:due):")  # Due: in any case, as DUE_RE
+WRITER_FIELD_RE = re.compile(r"\b(?:Context|Hide until|Answers|Decided|Closed):|\b(?i:due):")  # Due: in any case, as DUE_RE
 DATE_ONLY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 HEAD_NAME_BAD_RE = re.compile(r"[\s`,;)]")  # what would end a head's name early, as HEAD_RE reads it
 
@@ -1237,7 +1337,7 @@ def _item_words(value: object, what: str) -> str:
     if not words:
         raise Refused(f"{what} is empty")
     if WRITER_FIELD_RE.search(words):
-        raise Refused(f"{what} may not carry Context:, Due:, Answers:, Decided: or Closed: — the "
+        raise Refused(f"{what} may not carry Context:, Due:, Hide until:, Answers:, Decided: or Closed: — the "
                       "reader would read it as the field; say it in other words")
     return words
 
@@ -1318,9 +1418,9 @@ def _a_kind(kind: str | None) -> str:
 
 def item_line(text: str, due: str | None, today: str, session: str | None, host: str | None,
               context: str | None, *, kind: str | None = None, answers: list[str] | None = None,
-              default: int | None = None, detail: Mapping | None = None) -> str:
+              default: int | None = None, detail: Mapping | None = None, hide_until: str | None = None) -> str:
     """A new item, in the board's own format, with its line ending and its detail block —
-    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Due: <due>.][ Answers: <answers>.]`,
+    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Due: <due>.][ Hide until: <date>.][ Answers: <answers>.]`,
     the head ``session `<name>` on <host>``, ``session `<name>` `` or `n/a`. What each kind takes
     (a decide its answers and detail block, a look the fixed pair, an fyi no Due:) is SPEC
     *Edits*; refused, with why, for what the writer does not write and for any result the
@@ -1375,6 +1475,8 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     body = f"{f'{kind} ' if kind else ''}{today} ({head}) — {words} Context: {ctx}."
     if due is not None:
         body += f" Due: {due}."
+    if hide_until is not None:
+        body += f" Hide until: {_civil_date(hide_until, 'hide_until')}."
     if offered:
         body += f" Answers: {' | '.join(written(lbl, c, i == default) for i, (lbl, c) in enumerate(offered))}."
     new = "".join(f"{ln}\n" for ln in [f"- [ ] {body}", *lines])
@@ -1385,7 +1487,8 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     if len(got) != 1 or closed_items(new) or sum(bool(ANY_ITEM_RE.match(ln)) for ln in new.splitlines()) != 1 \
             or (got[0].kind, got[0].due and got[0].due.isoformat(), got[0].answers, got[0].consequences,
                 got[0].default, item_head(got[0].text), item_refs(got[0].text), got[0].detail) != meant \
-            or got[0].decided is not None or parse_replies(got[0].text) or got[0].fyi_due or got[0].bad_due:
+            or got[0].decided is not None or parse_replies(got[0].text) or got[0].fyi_due or got[0].bad_due \
+            or (got[0].hide_until and got[0].hide_until.isoformat()) != hide_until:
         raise Refused("the board's reader would not read this item back as meant — rephrase it")
     return new
 
@@ -1401,7 +1504,7 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
     if not said:
         raise Refused("a decision needs its words: one of the entry's answers, or what you typed")
     if FIELD_NAME_RE.search(said):
-        raise Refused("an answer may not carry Context:, Answers:, Decided: or Closed: — say it in other words")
+        raise Refused("an answer may not carry Context:, Hide until:, Answers:, Decided: or Closed: — say it in other words")
     if any(REPLY_TAIL_RE.search(" ".join(str(a).split())) for a in answers or ()):
         raise Refused("an answer's consequence may not read as a reply (` — <name>, <date>: `) — say it in other words")
     def opt(a: str, marked: bool) -> str:
@@ -1424,7 +1527,8 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
 # answers, extra.
 GATE_HEAD_RE = re.compile(r"(?P<date>\S+) \((?P<head>[^()]*)\) — ")
 GATE_HEAD_FORM_RE = re.compile(r"session `(?P<session>[^\s`,;)]+)`(?: on (?P<host>[^\s`,;)]+))?|n/a|person")
-GATE_FIELD_RE = re.compile(r"\b(?P<name>Context|Answers|Decided|Closed|(?i:due)):")
+GATE_FIELD_RE = re.compile(r"\b(?P<name>Context|Hide until|Answers|Decided|Closed|(?i:due)):")
+GATE_HIDE_RE = re.compile(r"Hide until:[ \t]*(?P<date>[^\s.]*)(?P<period>\.?)(?P<more>.*)")
 GATE_DUE_RE = re.compile(r"(?P<name>(?i:due)):[ \t]*(?P<date>[^\s.]*)(?P<period>\.?)(?P<more>.*)")
 GATE_DUE_ALONE_RE = re.compile(r"(?i:due):\s*\d{4}-\d{2}-\d{2}\.?")
 LOOK_ANSWERS = ("Works | Not right: <what>", "Works (default) | Not right: <what>")
@@ -1555,6 +1659,25 @@ def item_problem(line: str) -> str | None:
         i = order.index("Due")
         if not moved and i > 0 and order[i - 1] != "Context":
             problems.append(f"due: `Due:` stands after `{order[i - 1]}:`; it follows Context")
+    hides = segs.get("Hide until", [])
+    hide_s = None
+    if len(hides) > 1:
+        problems.append("hide: `Hide until:` stands more than once")
+    elif hides:
+        hd = GATE_HIDE_RE.fullmatch(hides[0])
+        hide_s = hd.group("date")
+        try:
+            _civil_date(hide_s, "")
+        except Refused:
+            problems.append(f"hide: {hide_s!r} is not a date as YYYY-MM-DD")
+        if not hd.group("period"):
+            problems.append("hide: no period after its date")
+        if hd.group("more").strip():
+            problems.append(f"extra: {hd.group('more').strip()!r} after `Hide until:`")
+        i = order.index("Hide until")
+        after = "Due" if "Due" in order else "Context"
+        if i == 0 or order[i - 1] != after:
+            problems.append(f"hide: `Hide until:` follows {after}")
     answers = segs.get("Answers", [])
     raw = None
     if len(answers) > 1:
@@ -1593,7 +1716,8 @@ def item_problem(line: str) -> str | None:
 
     if not problems:
         want = (f"{f'{kind} ' if kind else ''}{date_s} ({head}) — {item_text.strip()} Context: {ctx}"
-                f"{f' Due: {due_s}.' if due_s else ''}{f' Answers: {raw}.' if raw is not None else ''}")
+                f"{f' Due: {due_s}.' if due_s else ''}{f' Hide until: {hide_s}.' if hide_s else ''}"
+                f"{f' Answers: {raw}.' if raw is not None else ''}")
         if body != want:
             problems.append("extra: spacing, or words outside the line's parts")
     return "; ".join(problems) or None
@@ -1640,7 +1764,7 @@ def canonical_item(line: str) -> str:
     was, got = parse_board(line, warn=False), parse_board(new, warn=False)
 
     def fields(it: BoardItem) -> tuple:
-        return (it.kind, it.due, it.answers, it.consequences, it.default, it.decided,
+        return (it.kind, it.due, it.hide_until, it.answers, it.consequences, it.default, it.decided,
                 parse_replies(it.text), item_refs(it.text), item_head(it.text))
     if item_key(new) != item_key(line[: len(line) - len(ending)]) or len(was) != 1 or len(got) != 1 \
             or fields(was[0]) != fields(got[0]):
@@ -1764,7 +1888,7 @@ def archive_subject(tool: str, count: int, session: str | None = None) -> str:
 # The commit subject of one board write: `<tool>: <action> <head>[ to <date> | : <answer>]
 # (session <name>)`; for an append, `<tool>: append <head> (session <name>)`. A reply's words stay
 # on the board, never in the subject.
-EDIT_SUBJECT_RE = re.compile(r"^\S+: (?:snooze|done|decide|reply) .+ \(session [^)]+\)$")
+EDIT_SUBJECT_RE = re.compile(r"^\S+: (?P<action>snooze|due|done|decide|reply) .+ \(session [^)]+\)$")
 APPEND_SUBJECT_RE = re.compile(r"^\S+: append .+ \(session [^)]+\)$")
 ARCHIVE_SUBJECT_RE = re.compile(r"^\S+: archive (?:1 closed item|(?:[2-9]|[1-9]\d+) closed items) \(session [^)\s]+\)\Z")  # v2.3
 # Subjects one consumer wrote for an append before this format had one; still read, so a board PR
@@ -1781,9 +1905,9 @@ def subject(tool: str, action: str, text: str, *, to: date | str | None = None, 
     the line without its `- [ ]`) or an `append` of it. `session` defaults to the one the item names."""
     if action not in (*EDIT_ACTIONS, "append"):
         raise Refused(f"unknown action {action}")
-    if action == "snooze" and not to:
-        raise Refused("a snooze needs its date")
-    what = (f" to {to.isoformat() if isinstance(to, date) else to}" if action == "snooze"
+    if action in ("snooze", "due") and not to:
+        raise Refused(f"a {action} needs its date")
+    what = (f" to {to.isoformat() if isinstance(to, date) else to}" if action in ("snooze", "due")
             else f": {' '.join((answer or '').split())}" if action == "decide" else "")
     sm = SESSION_RE.search(text)
     who = session or (sm.group(1) if sm else "n/a")
@@ -1814,6 +1938,14 @@ def subject_kind(line: str) -> str | None:
     if APPEND_SUBJECT_RE.match(line) or any(r.match(line) for r in LEGACY_APPEND_SUBJECT_RES):
         return "append"
     return None
+
+
+def edit_action(line: str) -> str | None:
+    """The action of a board edit's commit subject (`snooze`, `due`, `done`, `decide` or `reply`), None for any
+    other subject (v2.3). A `snooze … to D` meant a moved Due: before v2.3 and a hide since."""
+    if subject_kind(line) != "edit":
+        return None
+    return EDIT_SUBJECT_RE.match(line).group("action")
 
 
 # ---------------------------------------------------------------------------------------------

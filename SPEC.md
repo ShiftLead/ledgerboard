@@ -293,7 +293,7 @@ Context: … Due: YYYY-MM-DD.` A closed item is ticked: `- [x] … Closed: YYYY-
 are never deleted; closed ones are archived in bulk, ten (`ARCHIVE_AT`) being the threshold a consumer reads. When an open
 item and a closed one have the same key (below), the item is closed: a merge kept both sides.
 
-The archive moves them (`archive_closed(board, archive)`, v2.3): each closed line with its detail block, and any open line whose key a closed line shares, in board order and byte for byte, appended to the archive's text. Every other board line stays byte for byte. It refuses a moving item that is nested, that has a nested item under it, or whose detail block a blank line breaks, since it would split them. When to archive is the consumer's; `ARCHIVE_AT` is the threshold it reads. The archive is not one of the four edits under *Edits*, which each rewrite one line.
+The archive moves them (`archive_closed(board, archive)`, v2.3): each closed line with its detail block, and any open line whose key a closed line shares, in board order and byte for byte, appended to the archive's text. Every other board line stays byte for byte. It refuses a moving item that is nested, that has a nested item under it, or whose detail block a blank line breaks, since it would split them. When to archive is the consumer's; `ARCHIVE_AT` is the threshold it reads. The archive is not one of the five edits under *Edits*, which each rewrite one line.
 
 **The head** — `(session <name> on <host>…)`, either name optionally backticked; the session is the
 first name, the host the first word after ` on ` inside the parentheses; `n/a` names nothing.
@@ -305,6 +305,20 @@ flagged).
 
 **`Due:`** — `Due: YYYY-MM-DD`; an item's first `Due:` is its date. A date-shaped token the reader
 cannot read (`Due: 2026-1-9`) is reported, never silently undated.
+
+**`Hide until:`** (v2.3) — `Hide until: YYYY-MM-DD.`, starting a sentence, read right after the `Due:` field, or
+after `Context:` on an item with no `Due:` (an `fyi`), and ahead of the replies (`parse_hide_until()`). Until that
+date the item is **hidden**: left out of what needs the person, while it stays on the board and its `Due:`, the
+real deadline, is untouched, so once the date comes it shows its true overdue count. A decided item is a
+session's work order and is never hidden (`BoardItem.hidden(today)`). A `Hide until:` elsewhere in the text is
+prose, never the field.
+
+**What needs the person** (`needs_you(board, today)`, v2.3) is every open item not hidden, each with one class
+and a signed `days`, in one order: `decided` (`days` the decision's age; oldest decision first); then the
+person's to-do — `overdue` (days past due; most first), `due` (0 on the due date, negative days until it;
+soonest first), `bad_due` and `undated` (board order); then each `watch` item, ordered the same way and keeping
+its own class and signed days; then each `fyi`, never due. Which of these a consumer shows, and when it
+escalates, is the consumer's.
 
 **`Context:`** — what the item refers to, read as refs in order: `TD-NNN` or `<repo>#TD-NNN`,
 `PR #N` (`PRs #12/#13` and `PR #12, #13` give both), and best-effort `branch <name>`.
@@ -332,17 +346,19 @@ words (its fields' are read: a bold answer with no bold before it is the head), 
 has one. A blank run (`** **`) is none. A line with none has no bold head; what stands in for it is the
 consumer's.
 
-**Replies** — ` — <name>, YYYY-MM-DD: <words>` after the `Due:` and ahead of the trailing fields,
-any number in a row. A reply's words never carry `Context:`, `Answers:`, `Decided:` or `Closed:`,
+**Replies** — ` — <name>, YYYY-MM-DD: <words>` after the `Due:` (and its `Hide until:`) and ahead of the trailing fields,
+any number in a row. A reply's words never carry `Context:`, `Hide until:`, `Answers:`, `Decided:` or `Closed:`,
 nor a `Due:` on an item that has none.
 
 **The detail block** — the lines right under an item indented deeper than its `-`, up to a blank
 line, a line no deeper, or another item. No edit touches it.
 
-**The item key** — the line with the tick, `Closed:`, `Decided:`, `Due:` and the reply tails taken
+**The item key** — the line with the tick, `Closed:`, `Decided:`, `Due:`, `Hide until:` and the reply tails taken
 out, indentation kept. It is what makes an open and a closed copy of one item, or a snoozed or
 replied-to one, equal. **Consumers persist keys, so what the key is for a given line is part of
-the format: changing it is a new major version.**
+the format: changing it is a new major version.** The one exception is v2.3's: the key strips a date-shaped
+`Hide until: D` wherever it stands, as it strips `Due:`, so hiding an item never re-keys it. Only a line that
+already held that prose before v2.3 is keyed differently.
 
 **Preamble lines** — `Name: value` lines before the items (`Kinds:`, `Format:`, a dated stamp
 `Name: YYYY-MM-DD (…)`) are kept byte for byte by every edit. Which stamps a consumer writes and
@@ -352,7 +368,10 @@ what they mean are the consumer's.
 
 Every edit rewrites one open item line and nothing else, and is refused unless the reader reads
 back exactly what was meant:
-- **snooze** sets the item's `Due:` (adding one ahead of the trailing fields when it has none);
+- **snooze** hides the item: it sets its `Hide until:` (adding one right after its `Due:`, or after its Context
+  on an item with no `Due:`), and leaves the `Due:` alone (v2.3; before v2.3 it moved the `Due:`);
+- **due** sets the item's `Due:`, the real deadline (adding one ahead of its `Hide until:` and trailing fields when it
+  has none; v2.3);
 - **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, replacing an earlier one;
 - **reply** appends a reply tail.
@@ -374,7 +393,7 @@ An answer given elsewhere (on a ledger entry) is written as an already decided `
 **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
 - opens `- [ ] ` at column 0;
 - carries an optional lower-case kind, a date, and a head that is ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)`, or `(person)` on a decided line;
-- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, and ` Due: <date>.` on every kind but `fyi`;
+- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, and ` Due: <date>.` on every kind but `fyi`, then, when it has one, ` Hide until: <date>.`;
 - may then carry replies, then `Answers:` as *A new item* says a kind takes them (a decided line may carry any or none), then `Decided:`;
 - holds nothing else, one space between parts.
 
@@ -383,7 +402,8 @@ Fields inside a reply's words or a `Decided:` text are the person's and are not 
 **The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
 
 **The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
-<answer>] (session <name>)` for the four edits, and `<tool>: append <head> (session <name>)` for a
+<answer>] (session <name>)` for the five edits (`edit_action()` reads the action back, v2.3; a `snooze … to D`
+meant a moved `Due:` before v2.3 and a hide since — history, not text a reader acts on), and `<tool>: append <head> (session <name>)` for a
 new item — the head is the item's text after its prefix, before its fields, bold dropped, at most
 60 characters; a reply's words never appear. Subjects written before v1 by one consumer
 (`shiftlead: board|answer <head> (from <ref>)`, `shiftlead: board decide <ref> (person)`) still
@@ -399,13 +419,13 @@ importable library (`plan_add`, `plan_edit`, `plan_archive`, `plan_fmt`, `plan_r
 being the command people run). It reads the files it is given, applies the module's edit, and writes the files
 back; it never runs git, the network or anything of a consumer's. Its actions:
 - **`list`** — every open item's record (`item_record()`), read-only;
-- **`add`** — a new item (`item_line()`, any kind, its answers and detail block); with `--said` and `--by`, a
+- **`add`** — a new item (`item_line()`, any kind, its answers and detail block, `--hide-until`); with `--said` and `--by`, a
   question already answered, its answer following the text as ` — <by>, <date>: <words>`; with `--decided`, an
   item the person decided elsewhere (`decided_line()`). It goes above the first item of the section the
   `--under` heading opens (`## Needs the user` by default), or right under that heading when its section holds
   none; with no such heading, above the board's first item; with no item, at the end. The write is refused when
   `board_problems()` faults the line it adds;
-- **`snooze`, `done`, `decide`, `reply`** — the four edits (`edit_line()`) of the open item on `--line`, refused
+- **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_line()`) of the open item on `--line`, refused
   when that line is not an open item or no longer starts with `--expect` (the board moved since it was read);
   `reply` takes its `--by` from the caller;
 - **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
@@ -455,4 +475,4 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
-**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.2 reads a `Hide until:` as text, so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
