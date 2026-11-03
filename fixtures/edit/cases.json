@@ -80,6 +80,79 @@
       "name": "not-an-open-item",
       "line": "- [x] 2026-01-05 (session s-1) — Done already. Closed: 2026-01-06.",
       "action": "done"
+    },
+    {
+      "name": "due-undated-before-answers",
+      "line": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Answers: a | b.",
+      "action": "due",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "due-undated-no-fields",
+      "line": "- [ ] 2026-01-05 (session s-1) — Plain",
+      "action": "due",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "due-existing",
+      "line": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Answers: now | later.",
+      "action": "due",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "snooze-hides",
+      "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10.",
+      "action": "snooze",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "snooze-moves-the-hide",
+      "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+      "action": "snooze",
+      "to": "2026-01-25"
+    },
+    {
+      "name": "due-keeps-the-hide",
+      "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+      "action": "due",
+      "to": "2026-01-30"
+    },
+    {
+      "name": "snooze-fyi-ahead-of-replies",
+      "line": "- [ ] fyi 2026-01-05 (n/a) — The mirror moved. Context: none. — Pat, 2026-01-06: noted",
+      "action": "snooze",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "due-fyi-refused",
+      "line": "- [ ] fyi 2026-01-05 (n/a) — The mirror moved. Context: none. — Pat, 2026-01-06: noted",
+      "action": "due",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "due-undated-ahead-of-the-hide",
+      "line": "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12.",
+      "action": "due",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "reply-naming-hide-refused",
+      "line": "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10.",
+      "action": "reply",
+      "reply": "Hide until: 2026-02-01 please",
+      "by": "Pat"
+    },
+    {
+      "name": "snooze-no-context-refused",
+      "line": "- [ ] 2026-01-05 (n/a) — Plain",
+      "action": "snooze",
+      "to": "2026-01-20"
+    },
+    {
+      "name": "snooze-answer-holding-a-hide",
+      "line": "- [ ] decide 2026-01-05 (n/a) — Pick. Context: TD-1. Due: 2026-01-20. Answers: A (ok. Hide until: 2030-01-01) | B.",
+      "action": "snooze",
+      "to": "2026-01-25"
     }
   ],
   "subjects": [
@@ -115,6 +188,17 @@
       "tool": "board_edit",
       "action": "snooze",
       "text": "2026-01-05 (session s) — X."
+    },
+    {
+      "tool": "board_edit",
+      "action": "due",
+      "text": "act 2026-01-05 (session s-1 on h) — Rotate. Context: TD-1. Due: 2026-01-10.",
+      "to": "2026-01-30"
+    },
+    {
+      "tool": "board_edit",
+      "action": "due",
+      "text": "act 2026-01-05 (n/a) — Rotate. Context: TD-1."
     }
   ],
   "subject_kinds": [
@@ -136,7 +220,8 @@
     "shiftlead: archive 3 closed items (session w-1)",
     "shiftlead: archive 1 closed item (session n/a)",
     "shiftlead: archive 1 closed items (session w-1)",
-    "shiftlead: archive 0 closed items (session w-1)"
+    "shiftlead: archive 0 closed items (session w-1)",
+    "board_edit: due Rotate. to 2026-01-30 (session s-1)"
   ],
   "compose": [
     {
@@ -619,6 +704,45 @@
       "detail": {
         "context": 5
       }
+    },
+    {
+      "fn": "item_line",
+      "text": "Rotate the key",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-1",
+      "kind": "act",
+      "hide_until": "2026-01-18"
+    },
+    {
+      "fn": "item_line",
+      "text": "The mirror moved",
+      "due": null,
+      "session": null,
+      "host": null,
+      "context": "none",
+      "kind": "fyi",
+      "hide_until": "2026-01-18"
+    },
+    {
+      "fn": "item_line",
+      "text": "Rotate the key",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-1",
+      "kind": "act",
+      "hide_until": "2026-1-18"
+    },
+    {
+      "fn": "item_line",
+      "text": "wait Hide until: 2026-01-18 first",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-1",
+      "kind": "act"
     }
   ],
   "predicates": [
@@ -1007,7 +1131,13 @@
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.  ",
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.",
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Wait for it.",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20."
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+    "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later. Hide until: 2026-01-12.",
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12. Due: 2026-01-10.",
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-1-12",
+    "- [ ] fyi 2026-01-05 (n/a) — Moved. Context: none. Hide until: 2026-01-12.",
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Hide until: 2026-01-13."
   ],
   "canonical_items": [
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
@@ -1025,7 +1155,8 @@
     "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Context: TD-7. Answers: a | b. Due: 2026-01-20.",
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.\n",
     "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
-    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it"
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it",
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. due: 2026-01-10 Hide until: 2026-01-12."
   ],
   "board_problems": [
     {
@@ -1069,5 +1200,19 @@
       "count": 3,
       "session": "w-1"
     }
+  ],
+  "edit_actions": [
+    "board_edit: due Rotate. to 2026-01-30 (session s-1)",
+    "board_edit: snooze Rotate. to 2026-01-20 (session s-1)",
+    "board_edit: done Ship it (session s-1)",
+    "shiftlead: append Ship it (session n/a)",
+    "queue: rank TD-1 (shiftlead)",
+    "ledgerboard: archive 2 closed items (session n/a)",
+    "not a subject"
+  ],
+  "item_keys": [
+    "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
+    "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later.",
+    "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13."
   ]
 }
