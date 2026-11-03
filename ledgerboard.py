@@ -1670,6 +1670,12 @@ def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
     return out
 
 
+def _lf_lines(text: str) -> list[str]:
+    """`text`'s lines, each with its own ending, split at `\\n` alone: a person's text may hold a
+    character `str.splitlines()` also breaks at (U+2028, a form feed), and a move never splits a line."""
+    return re.findall(r"[^\n]*\n|[^\n]+\Z", text)
+
+
 def archive_closed(board: str, archive: str) -> tuple[str, str]:
     """(board, archive) after the archive: each closed item line with its detail block, and each open
     line whose key a closed line shares (its twin, C5) with its block, moved in board order and byte
@@ -1677,7 +1683,7 @@ def archive_closed(board: str, archive: str) -> tuple[str, str]:
     with no closed item, for a shape it would split (a nested moving item, one with an item nested
     under it, one whose block a blank line breaks), and for a result the reader reads otherwise.
     When to archive is the consumer's (ARCHIVE_AT)."""
-    lines = board.splitlines(keepends=True)
+    lines = _lf_lines(board)
     bare = [ln.rstrip("\r\n") for ln in lines]
     closed = {item_key(ln) for ln in bare if CLOSED_ITEM_RE.match(ln)}
     if not closed:
@@ -1728,9 +1734,9 @@ def archive_closed(board: str, archive: str) -> tuple[str, str]:
     if not archive.strip():
         new_archive = tail
     else:
-        eol = "\r\n" if archive.splitlines(keepends=True)[0].endswith("\r\n") else "\n"
+        eol = "\r\n" if _lf_lines(archive)[0].endswith("\r\n") else "\n"
         head = archive if archive.endswith("\n") else archive + eol
-        arch = [ln.rstrip("\r\n") for ln in head.splitlines()]
+        arch = [ln.rstrip("\r\n") for ln in _lf_lines(head)]
         last = next(ln for ln in reversed(arch) if ln.strip())
         if not (ITEM_RE.match(last) or CLOSED_ITEM_RE.match(last) or deep(last)) and arch[-1].strip():
             head += eol
@@ -1760,7 +1766,7 @@ def archive_subject(tool: str, count: int, session: str | None = None) -> str:
 # on the board, never in the subject.
 EDIT_SUBJECT_RE = re.compile(r"^\S+: (?:snooze|done|decide|reply) .+ \(session [^)]+\)$")
 APPEND_SUBJECT_RE = re.compile(r"^\S+: append .+ \(session [^)]+\)$")
-ARCHIVE_SUBJECT_RE = re.compile(r"^\S+: archive [1-9]\d* closed items? \(session [^)\s]+\)$")  # v2.3
+ARCHIVE_SUBJECT_RE = re.compile(r"^\S+: archive (?:1 closed item|(?:[2-9]|[1-9]\d+) closed items) \(session [^)\s]+\)\Z")  # v2.3
 # Subjects one consumer wrote for an append before this format had one; still read, so a board PR
 # in flight across the change classifies as before.
 LEGACY_APPEND_SUBJECT_RES = (

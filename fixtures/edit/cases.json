@@ -134,7 +134,9 @@
     "queue: rank TD-3",
     "queue: rank TD-3 (shiftlead) extra",
     "shiftlead: archive 3 closed items (session w-1)",
-    "shiftlead: archive 1 closed item (session n/a)"
+    "shiftlead: archive 1 closed item (session n/a)",
+    "shiftlead: archive 1 closed items (session w-1)",
+    "shiftlead: archive 0 closed items (session w-1)"
   ],
   "compose": [
     {
