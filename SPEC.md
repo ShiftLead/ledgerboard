@@ -543,8 +543,7 @@ what they repeat, `"…"` is literal text, `[…]` a character class (`^` negate
 ### The open item line (v2.3)
 
 An item line as the writers write it (*The form the writers write*): a line `item_problem()` gives None for.
-Its line ending is not part of it. `item_problem()` also passes a line whose `- [ ] ` is followed by further
-whitespace other than a space (a tab), which no writer writes; the grammar does not.
+Its line ending is not part of it.
 
 ```ebnf
 item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | other-item | decided-item )

@@ -1775,7 +1775,7 @@ def item_problem(line: str) -> str | None:
     if m is None:
         return "open: not an open item"
     problems: list[str] = []
-    if not line.startswith("- [ ] ") or line.startswith("- [ ]  "):
+    if not line.startswith("- [ ] ") or line[6:7].isspace():  # a tab or any other whitespace after the box too
         problems.append("open: an item line opens `- [ ] ` at column 0, single-spaced")
     if line != line.rstrip():
         problems.append("extra: whitespace at the line's end")

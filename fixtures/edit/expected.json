@@ -673,6 +673,8 @@
  },
  "item_problems": {
   "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
+  "- [ ] \tact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
+  "- [ ] \u000bact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
   "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.": "text: does not end a sentence (`.`, `?` or `!`)",
   "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.": "context: does not end with its period",
   "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": null,
@@ -722,6 +724,7 @@
   "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at it. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right:.": "answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or not",
   "- [ ] look 2026-01-15 (session `w-1`) — Look at the new export page. Context: PR #12. Due: 2026-01-20. Answers: Works | Not right: <what>.": null,
   "- [ ] todo 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "kind: 'todo' is not a kind: one of decide, act, look, watch, fyi, in lower case",
+  "- [ ]  act 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
   "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.": "open: not an open item"
  },
  "key_orders": [

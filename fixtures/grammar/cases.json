@@ -6,7 +6,8 @@
       ],
       "refuse": [
         "- [x] act 2026-01-05 (session `w-1` on box-1) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
-        "  - [ ] act 2026-01-05 (session `w-1` on box-1) — Rotate the key. Context: TD-7. Due: 2026-01-20."
+        "  - [ ] act 2026-01-05 (session `w-1` on box-1) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
+        "- [ ] \tact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20."
       ]
     },
     "decide-item": {
