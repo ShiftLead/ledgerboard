@@ -421,26 +421,104 @@
       ]
     }
   },
-  "person": {
-    "person": {
+  "blocked-by": {
+    "blocked-by": {
       "accept": [
-        "pat",
-        "sam.lee",
-        "Sam_Lee-2"
+        "TD-1, decision (pat), until 2026-02-01, event (ships)",
+        "TD-1,TD-2"
       ],
       "refuse": [
-        "sam..lee",
-        "sam lee",
-        ".sam"
+        "TD-1; TD-2"
+      ]
+    },
+    "blocked-item": {
+      "accept": [
+        "other#TD-3"
+      ],
+      "refuse": [
+        "soon"
+      ]
+    },
+    "gate": {
+      "accept": [
+        "until 2026-02-01",
+        "event (a-1)"
+      ],
+      "refuse": [
+        "hold",
+        "decision (pat) — after the review"
+      ]
+    },
+    "event-name": {
+      "accept": [
+        "event (vendor-ships-2)"
+      ],
+      "refuse": [
+        "event (Big)",
+        "event (a_b)"
+      ]
+    },
+    "entry-id": {
+      "accept": [
+        "TD-12"
+      ],
+      "refuse": [
+        "td-12"
+      ]
+    },
+    "repo": {
+      "accept": [
+        "acme/tools#TD-3",
+        "owner/.github#TD-3"
+      ],
+      "refuse": [
+        "a//b#TD-3",
+        "https://h/o/r#TD-3"
+      ]
+    },
+    "repo-part": {
+      "accept": [
+        "my.repo_2#TD-3"
+      ],
+      "refuse": [
+        "-x#TD-3"
+      ]
+    },
+    "digit": {
+      "accept": [
+        "TD-7"
+      ],
+      "refuse": [
+        "TD-x"
+      ]
+    },
+    "date": {
+      "accept": [
+        "until 2026-01-20"
+      ],
+      "refuse": [
+        "until 2026-1-20"
+      ]
+    },
+    "person": {
+      "accept": [
+        "decision (pat)",
+        "decision (sam.lee)",
+        "decision (Sam_Lee-2)"
+      ],
+      "refuse": [
+        "decision (sam..lee)",
+        "decision (sam lee)",
+        "decision (.sam)"
       ]
     },
     "person-part": {
       "accept": [
-        "a-b_c"
+        "decision (a-b_c)"
       ],
       "refuse": [
-        "a+b",
-        ""
+        "decision (a+b)",
+        "decision ()"
       ]
     }
   }

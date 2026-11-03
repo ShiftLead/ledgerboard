@@ -250,6 +250,62 @@
     "session": "plan-7",
     "words": "w"
    }
+  },
+  {
+   "name": "filed_gates_in_canonical_order",
+   "id": "TD-121",
+   "title": "Gates written in their order",
+   "fields": {
+    "Priority": "Medium",
+    "Added": "2026-01-15",
+    "Blocked by": "event (vendor-ships), TD-3, until 2026-02-01, decision (pat), other/repo#TD-9"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ],
+    [
+     "Ask",
+     "pat says go."
+    ]
+   ],
+   "filed": {
+    "today": "2026-01-15",
+    "who": "pat",
+    "session": "plan-7",
+    "words": "file it"
+   }
+  },
+  {
+   "name": "refused_old_form",
+   "id": "TD-122",
+   "title": "t",
+   "fields": {
+    "Priority": "Low",
+    "Blocked by": "TD-3, decision (pat) — once the layout is agreed"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ]
+   ]
+  },
+  {
+   "name": "unreadable_blocked_by_written_as_given",
+   "id": "TD-123",
+   "title": "t",
+   "fields": {
+    "Priority": "Low",
+    "Blocked by": "until soon, TD-3"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ]
+   ]
   }
  ],
  "today": "2026-01-20",
@@ -1013,6 +1069,91 @@
      "args": {
       "why": "replaced",
       "superseded_by": "TD-90"
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_blocked_by_canonical_order",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "until 2026-02-01, Decision (kim), TD-4"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_old_form",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "decision (kim) — after the review"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_gate_on_old_form",
+   "text": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (pat), until 2026-02-01"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_migrates_old_form",
+   "text": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (pat)"
+      }
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Ask",
+      "words": "the board's 2026-01-03 item"
+     }
+    },
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (pat), until 2026-02-01"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_other_field_keeps_old_form",
+   "text": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High"
+      }
      }
     }
    ]

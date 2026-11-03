@@ -1,4 +1,194 @@
 {
+ "blocked-by": {
+  "blocked-by": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "TD-1; TD-2"
+    ]
+   }
+  ],
+  "blocked-item": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "soon"
+    ]
+   }
+  ],
+  "date": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "until 2026-1-20"
+    ]
+   }
+  ],
+  "digit": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "TD-x"
+    ]
+   }
+  ],
+  "entry-id": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "td-12"
+    ]
+   }
+  ],
+  "event-name": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "event (Big)"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "event (a_b)"
+    ]
+   }
+  ],
+  "gate": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "hold"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision (pat) — after the review"
+    ]
+   }
+  ],
+  "person": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision (sam..lee)"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision (sam lee)"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision (.sam)"
+    ]
+   }
+  ],
+  "person-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision (a+b)"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "decision ()"
+    ]
+   }
+  ],
+  "repo": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "a//b#TD-3"
+    ]
+   },
+   {
+    "accepted": false,
+    "why": [
+     "https://h/o/r#TD-3"
+    ]
+   }
+  ],
+  "repo-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": [
+     "-x#TD-3"
+    ]
+   }
+  ]
+ },
  "item-line": {
   "answer": [
    {
@@ -496,48 +686,6 @@
    {
     "accepted": false,
     "why": "text: names a field (Answers:): say it in other words"
-   }
-  ]
- },
- "person": {
-  "person": [
-   {
-    "accepted": true,
-    "why": null
-   },
-   {
-    "accepted": true,
-    "why": null
-   },
-   {
-    "accepted": true,
-    "why": null
-   },
-   {
-    "accepted": false,
-    "why": null
-   },
-   {
-    "accepted": false,
-    "why": null
-   },
-   {
-    "accepted": false,
-    "why": null
-   }
-  ],
-  "person-part": [
-   {
-    "accepted": true,
-    "why": null
-   },
-   {
-    "accepted": false,
-    "why": null
-   },
-   {
-    "accepted": false,
-    "why": null
    }
   ]
  },

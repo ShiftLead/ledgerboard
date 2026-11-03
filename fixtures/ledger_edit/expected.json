@@ -284,11 +284,26 @@
   "reopen_undated_status_takes_the_resolved_date": {
    "ok": "## TD-083: An archived Status with no date of its own\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** Open\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-09 (PR #5)\n\n**Log:**\n- 2026-01-09: built in the first pass\n- 2026-01-20: reopened — not done\n"
   },
+  "set_blocked_by_canonical_order": {
+   "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-4, decision (kim), until 2026-02-01\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+  },
   "set_fields": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** High\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Waits:** the next run\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
   },
+  "set_migrates_old_form": {
+   "ok": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat), until 2026-02-01\n\n**Why:** w\n\n**Ask:** the board's 2026-01-03 item\n"
+  },
+  "set_other_field_keeps_old_form": {
+   "ok": "## TD-120: An entry in the old form\n\n**Priority:** High\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n"
+  },
   "set_refused_field_twice": {
    "refused": "set names one field twice"
+  },
+  "set_refused_gate_on_old_form": {
+   "refused": "the entry's Blocked by is in the old form, whose text would swallow until 2026-02-01 — migrate it first: set decision (<person>) alone, with its text in an **Ask:** section"
+  },
+  "set_refused_old_form": {
+   "refused": "Blocked by in the old form (decision (kim) with text after it) is read but never written — write decision (<person>) and put the text in an **Ask:** section"
   },
   "set_refused_two_lines": {
    "refused": "the Location field is one line (cadence.md §2.12)"
@@ -297,6 +312,9 @@
  "entry_text": {
   "filed": {
    "ok": "## TD-085: Filed with its Log\n\n**Priority:** Low\n**Added:** 2026-01-15\n**Status:** Open\n**Blocked by:** TD-80, decision (Kim)\n\n**Why:** the reason.\n\n**Ask:** go?\n\n**Log:**\n- 2026-01-15: filed by Kim, session plan-7, while TD-80: \"file it\"\n- 2026-01-15: gate added: decision (Kim)\n"
+  },
+  "filed_gates_in_canonical_order": {
+   "ok": "## TD-121: Gates written in their order\n\n**Priority:** Medium\n**Added:** 2026-01-15\n**Blocked by:** TD-3, other/repo#TD-9, decision (pat), until 2026-02-01, event (vendor-ships)\n\n**Why:** w\n\n**Ask:** pat says go.\n\n**Log:**\n- 2026-01-15: filed by pat, session plan-7: \"file it\"\n- 2026-01-15: gate added: decision (pat)\n- 2026-01-15: gate added: until 2026-02-01\n- 2026-01-15: gate added: event (vendor-ships)\n"
   },
   "filed_refused_added_comment": {
    "refused": "a filed entry's Added is the date alone (its words go in the Log), not '2026-01-15 a comment'"
@@ -328,11 +346,17 @@
   "refused_no_fields": {
    "refused": "an entry with sections needs at least one field: the paragraph after the heading is the header block"
   },
+  "refused_old_form": {
+   "refused": "Blocked by in the old form (decision (pat) with text after it) is read but never written — write decision (<person>) and put the text in an **Ask:** section"
+  },
   "refused_title": {
    "refused": "an entry needs its title, on one line"
   },
   "refused_unnamed_later": {
    "refused": "only the first section may have no name — the text before the first lead"
+  },
+  "unreadable_blocked_by_written_as_given": {
+   "ok": "## TD-123: t\n\n**Priority:** Low\n**Blocked by:** until soon, TD-3\n\n**Why:** w\n"
   }
  },
  "log": {

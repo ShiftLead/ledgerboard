@@ -51,12 +51,17 @@ Fixtures, each an invented input and its expected JSON:
   exit code and the JSON it printed: the subject and the paths, the plan, or why it refused).
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
-  ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``is_person()`` of a name.
+  ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
+  whose ``person`` productions hold a person's name).
   ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
 - ``origins/cases.json`` → ``origins/expected.json`` (v2.4): repos and origins — ``origin_key()`` and
   ``origin_path()`` of ssh, https and unreadable URLs; ``item_key()`` of two lines differing only in a repo's
   case (it stays byte-exact); ``item_refs()`` folding a repo's case and reading no ref from a bad repo; and
   ``parse_blocked()`` of ids whose repo is or is not the grammar.
+- ``ledger/gates.md`` (v2.4): ``Blocked by``'s gates at ``TODAY`` — an ``until`` past, reached and ahead, an
+  ``event``, a decision with and without its Ask, each gate repeated, the retired words (``hold``, ``decision
+  (designer)``, the old form, ``Waits``, ``Taken by``, a stage word in Status), a Priority outside the three,
+  items the grammar does not read, the words in any case, and a parent's ``parts_gates``.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -173,12 +178,12 @@ def ledger_case(L, md: Path, texts: tuple[str, str, str | None] | None = None) -
 
     def resolve(item):
         return tuple(table[item]) if item in table else ("unresolved", f"{item} is not in the fixture's resolver")
-    p = L.pickable(text, archive, resolve, rank_text=rank_text)
+    p = L.pickable(text, archive, resolve, rank_text=rank_text, today=TODAY)
     return {"entries": p["entries"], "pickable": [e["id"] for e in p["pickable"]],
             "blocked": [e["id"] for e in p["blocked"]], "flags": p["flag_recs"],
             "declared": p["declared"], "rows": L.rows(text),
-            "check": L.check(text, archive, resolve=resolve, rank_text=rank_text),
-            "check_since_empty": L.check(text, archive, old="", resolve=resolve)}
+            "check": L.check(text, archive, resolve=resolve, rank_text=rank_text, today=TODAY),
+            "check_since_empty": L.check(text, archive, old="", resolve=resolve, today=TODAY)}
 
 
 def board_case(L, md: Path) -> dict:
@@ -290,7 +295,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     return {"canonical": {c["name"]: canon(c) for c in spec["canonical"]},
             "edit_entry": {c["name"]: edits(c) for c in spec["edit_entry"]},
             "check": {c["name"]: [r for r in L.check(text({"file": c["ledger"]}), text({"file": c["archive"]}) if c["archive"] else "",
-                                                     old=text({"file": c["old"]}) if c.get("old") else None)
+                                                     old=text({"file": c["old"]}) if c.get("old") else None,
+                                                     today=spec["today"])
                                   if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
                                                    "log-not-last", "log-line")]
                       for c in spec["check"]},
@@ -304,17 +310,23 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
-    ``item_problem()``, a rank file's ``rank()`` flags, a person's name's ``is_person()``."""
-    if not hasattr(L, "is_person"):  # a module older than v2.3: this case fails, the others still run
-        return {"missing": "the module has no is_person — older than v2.3"}
+    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()`` (v2.4)."""
+    if not hasattr(L, "parse_gates"):  # a module older than v2.4: this case fails, the others still run
+        return {"missing": "the module has no parse_gates — older than v2.4"}
     judge = {
         "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
-        "person": lambda s: (L.is_person(s), None),
+        "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
     }
     return {start: {prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
                     for prod, g in groups.items()}
             for start, groups in spec.items()}
+
+
+def _gates_verdict(g: dict) -> tuple[bool, list[str] | None]:
+    """A ``Blocked by`` value's verdict (v2.4): read with nothing left unread, else the items left unread."""
+    left = [r["item"] for r in g["retired"]] + g["bad"]
+    return (not left, left or None)
 
 
 def origin_cases(L, spec: dict) -> dict:
