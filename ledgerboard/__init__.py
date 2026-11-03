@@ -1981,7 +1981,7 @@ def item_problem(line: str) -> str | None:
             problems.append(f"parts: {_a_kind(kind)} carries no `Parts:`: only a decide asks about a parent's parts")
         if not all(ID_ITEM_RE.fullmatch(x) or XREPO_ITEM_RE.fullmatch(x) for x in ids):
             problems.append("parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `")
-        elif len(set(ids)) != len(ids):
+        elif len({ref_key(x) for x in ids}) != len(ids):  # a repo in any case is one repo
             problems.append("parts: an id stands twice")
         if not pm.group("period"):
             problems.append("parts: no period after its ids")

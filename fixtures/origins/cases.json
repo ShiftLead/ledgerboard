@@ -33,5 +33,8 @@
     "group/sub/repo#TD-1, TD-2",
     "a/../b#TD-1",
     "-x#TD-1, TD-2"
+  ],
+  "item_problem": [
+    "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: Acme/Tools#TD-3, acme/tools#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
   ]
 }

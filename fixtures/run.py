@@ -325,7 +325,8 @@ def origin_cases(L, spec: dict) -> dict:
     return {"origin_key": {u: {"key": L.origin_key(u), "path": L.origin_path(u)} for u in spec["origin_key"]},
             "item_key": {x: L.item_key(x) for x in spec["item_key"]},
             "item_refs": {x: L.item_refs(x) for x in spec["item_refs"]},
-            "blocked": {x: list(L.parse_blocked(x)) for x in spec["blocked"]}}
+            "blocked": {x: list(L.parse_blocked(x)) for x in spec["blocked"]},
+            "item_problem": {x: L.item_problem(x) for x in spec.get("item_problem", [])}}
 
 
 def tree(d: Path) -> dict[str, str]:
