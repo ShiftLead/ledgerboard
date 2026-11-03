@@ -1,0 +1,33 @@
+{
+  "origin_key": [
+    "git@github.example:Acme/Tools.git",
+    "ssh://git@git.example.org:2222/Group/Sub/Repo.git/",
+    "https://bot:s3cret@forge.example:8443/acme/tools.git",
+    "https://forge.example/acme/.github/",
+    "HTTPS://Forge.Example/Acme/Tools",
+    "file:///srv/git/tools.git",
+    "/srv/git/tools.git",
+    "../tools",
+    "https://forge.example/acme//tools",
+    "https://forge.example/acme/../tools",
+    "https://forge.example/-tools",
+    "http://forge.example/acme/tools",
+    "git://forge.example/acme/tools.git",
+    "https://forge.example/",
+    "git@forge.example:~user/tools.git"
+  ],
+  "item_key": [
+    "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: Acme/Tools#TD-4. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: acme/tools#TD-4. Due: 2026-01-20. Answers: Go | Not yet."
+  ],
+  "item_refs": [
+    "- [ ] act 2026-01-05 (n/a) — Look at both. Context: Acme/Tools#TD-4, acme/tools#TD-4, TD-5/TD-6. Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (n/a) — Three deep and dot-led. Context: group/sub/repo#TD-7, acme/.github#TD-8. Due: 2026-01-20.",
+    "- [ ] act 2026-01-05 (n/a) — No ref from a bad repo. Context: a/../b#TD-9, ./x#TD-9, https://forge.example/acme/tools#TD-9, ünï#TD-9. Due: 2026-01-20."
+  ],
+  "blocked": [
+    "group/sub/repo#TD-1, TD-2",
+    "a/../b#TD-1",
+    "-x#TD-1, TD-2"
+  ]
+}

@@ -1,0 +1,106 @@
+{
+ "blocked": {
+  "-x#TD-1, TD-2": [
+   [
+    "TD-2"
+   ],
+   [],
+   [
+    "-x#TD-1"
+   ]
+  ],
+  "a/../b#TD-1": [
+   [],
+   [],
+   [
+    "a/../b#TD-1"
+   ]
+  ],
+  "group/sub/repo#TD-1, TD-2": [
+   [
+    "group/sub/repo#TD-1",
+    "TD-2"
+   ],
+   [],
+   []
+  ]
+ },
+ "item_key": {
+  "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: Acme/Tools#TD-4. Due: 2026-01-20. Answers: Go | Not yet.": "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: Acme/Tools#TD-4. Answers: Go | Not yet",
+  "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: acme/tools#TD-4. Due: 2026-01-20. Answers: Go | Not yet.": "- [ ] decide 2026-01-05 (n/a) — Go on the tools build? Context: acme/tools#TD-4. Answers: Go | Not yet"
+ },
+ "item_refs": {
+  "- [ ] act 2026-01-05 (n/a) — Look at both. Context: Acme/Tools#TD-4, acme/tools#TD-4, TD-5/TD-6. Due: 2026-01-20.": [
+   "Acme/Tools#TD-4",
+   "TD-5",
+   "TD-6"
+  ],
+  "- [ ] act 2026-01-05 (n/a) — No ref from a bad repo. Context: a/../b#TD-9, ./x#TD-9, https://forge.example/acme/tools#TD-9, ünï#TD-9. Due: 2026-01-20.": [],
+  "- [ ] act 2026-01-05 (n/a) — Three deep and dot-led. Context: group/sub/repo#TD-7, acme/.github#TD-8. Due: 2026-01-20.": [
+   "group/sub/repo#TD-7",
+   "acme/.github#TD-8"
+  ]
+ },
+ "origin_key": {
+  "../tools": {
+   "key": null,
+   "path": null
+  },
+  "/srv/git/tools.git": {
+   "key": null,
+   "path": null
+  },
+  "HTTPS://Forge.Example/Acme/Tools": {
+   "key": "forge.example/acme/tools",
+   "path": "acme/tools"
+  },
+  "file:///srv/git/tools.git": {
+   "key": null,
+   "path": null
+  },
+  "git://forge.example/acme/tools.git": {
+   "key": null,
+   "path": null
+  },
+  "git@forge.example:~user/tools.git": {
+   "key": null,
+   "path": null
+  },
+  "git@github.example:Acme/Tools.git": {
+   "key": "github.example/acme/tools",
+   "path": "acme/tools"
+  },
+  "http://forge.example/acme/tools": {
+   "key": null,
+   "path": null
+  },
+  "https://bot:s3cret@forge.example:8443/acme/tools.git": {
+   "key": "forge.example/acme/tools",
+   "path": "acme/tools"
+  },
+  "https://forge.example/": {
+   "key": null,
+   "path": null
+  },
+  "https://forge.example/-tools": {
+   "key": null,
+   "path": null
+  },
+  "https://forge.example/acme/../tools": {
+   "key": null,
+   "path": null
+  },
+  "https://forge.example/acme/.github/": {
+   "key": "forge.example/acme/.github",
+   "path": "acme/.github"
+  },
+  "https://forge.example/acme//tools": {
+   "key": null,
+   "path": null
+  },
+  "ssh://git@git.example.org:2222/Group/Sub/Repo.git/": {
+   "key": "git.example.org/group/sub/repo",
+   "path": "group/sub/repo"
+  }
+ }
+}
