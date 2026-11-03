@@ -369,6 +369,17 @@ The writer refuses text, a context, an answer or a detail value that carries a f
 
 An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line()`, unchanged).
 
+**The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
+- opens `- [ ] ` at column 0;
+- carries an optional lower-case kind, a date, and a head that is ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)`, or `(person)` on a decided line;
+- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, and ` Due: <date>.` on every kind but `fyi`;
+- may then carry replies, then `Answers:` as *A new item* says a kind takes them (a decided line may carry any or none), then `Decided:`;
+- holds nothing else, one space between parts.
+
+Fields inside a reply's words or a `Decided:` text are the person's and are not counted. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
+
+**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day.
+
 **The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
 <answer>] (session <name>)` for the four edits, and `<tool>: append <head> (session <name>)` for a
 new item — the head is the item's text after its prefix, before its fields, bold dropped, at most

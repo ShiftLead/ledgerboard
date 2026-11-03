@@ -26,7 +26,8 @@ Fixtures, each an invented input and its expected JSON:
   ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2); an answer's
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
-  ``today`` in place of the file's (v2.3).
+  ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
+  (v2.3).
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
   and each check; ``components()`` of it joins through the field.
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one
@@ -154,6 +155,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         else:
             out["compose"].append(_refused(lambda c=c: L.decided_line(
                 c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"])))
+    out["item_problems"] = {ln: L.item_problem(ln) for ln in spec["item_problems"]}  # v2.3: the item gate
+    out["canonical_items"] = [_refused(lambda ln=ln: L.canonical_item(ln)) for ln in spec["canonical_items"]]
+    out["board_problems"] = [L.board_problems(c["new"], c["old"]) for c in spec["board_problems"]]
     for ln in spec["predicates"]:
         out["predicates"][ln] = {"entry_id": L.entry_id(ln), "row_id": L.row_id(ln), "is_item": L.is_item(ln),
                                  "is_open_item": L.is_open_item(ln), "is_stamp": L.is_stamp(ln),

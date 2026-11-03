@@ -1417,6 +1417,258 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
     return f"- [ ] {body}\n"
 
 
+# The item gate (v2.3): the form the writers write, said of one line (item_problem), a line
+# rewritten into it where its item key allows (canonical_item), and a board's new lines judged
+# (board_problems). Each problem opens with its rule's tag: open, kind, head, text, context, due,
+# answers, extra.
+GATE_HEAD_RE = re.compile(r"(?P<date>\S+) \((?P<head>[^()]*)\) — ")
+GATE_HEAD_FORM_RE = re.compile(r"session `(?P<session>[^\s`,;)]+)`(?: on (?P<host>[^\s`,;)]+))?|n/a|person")
+GATE_FIELD_RE = re.compile(r"\b(?P<name>Context|Answers|Decided|Closed|(?i:due)):")
+GATE_DUE_RE = re.compile(r"(?P<name>(?i:due)):[ \t]*(?P<date>[^\s.]*)(?P<period>\.?)(?P<more>.*)")
+GATE_DUE_ALONE_RE = re.compile(r"(?i:due):\s*\d{4}-\d{2}-\d{2}\.?")
+LOOK_ANSWERS = ("Works | Not right: <what>", "Works (default) | Not right: <what>")
+
+
+def _gate_body(text: str) -> str:
+    """An item's text after its `- [ ] `, with its reply tails and its `Decided:` field taken out:
+    a reply's words and a Decided: text are the person's, and hold no field of the line's."""
+    span = reply_span(text)
+    if span:
+        text = text[: span[0]] + text[span[1]:]
+    trailer = _trailer(text)
+    d = DECIDED_RE.search(trailer)
+    if d:
+        text = text[: len(text) - len(trailer) + d.start()].rstrip()
+    return text
+
+
+def item_problem(line: str) -> str | None:
+    """Why `line` is not an open item line as the writers write it (SPEC *The form the writers
+    write*), or None. Each problem opens with its rule's tag; several are joined by `; `."""
+    line = line.removesuffix("\n").removesuffix("\r")
+    m = ITEM_RE.match(line)
+    if m is None:
+        return "open: not an open item"
+    problems: list[str] = []
+    if not line.startswith("- [ ] ") or line.startswith("- [ ]  "):
+        problems.append("open: an item line opens `- [ ] ` at column 0, single-spaced")
+    if line != line.rstrip():
+        problems.append("extra: whitespace at the line's end")
+    text = m.group("text").rstrip()
+    decided = parse_decided(text) is not None
+    body = _gate_body(text)
+
+    kind, rest, bad_kind = None, body, False
+    first = body.split(" ", 1)[0]
+    if re.fullmatch(r"[A-Za-z]+", first):  # a word before the date: a kind, or a fault
+        if first in KINDS:
+            kind = first
+        else:
+            problems.append(f"kind: {first!r} is not a kind: one of {', '.join(KINDS)}, in lower case")
+            bad_kind = True  # its answers are judged by no kind's rule
+        rest = body[len(first):].lstrip(" ")
+    h = GATE_HEAD_RE.match(rest)
+    if h is None:
+        problems.append("head: a date then `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` "
+                        "or `(person)`, then ` — `")
+        cut = rest.find(" — ")
+        if cut < 0:
+            return "; ".join(problems)
+        date_s, head, words = None, None, rest[cut + 3:]
+    else:
+        date_s, head, words = h.group("date"), h.group("head"), rest[h.end():]
+        try:
+            _civil_date(date_s, "")
+        except Refused:
+            problems.append(f"head: {date_s!r} is not a date as YYYY-MM-DD")
+        if not GATE_HEAD_FORM_RE.fullmatch(head):
+            problems.append(f"head: `({head})` is not `(session `<name>` on <host>)`, `(session `<name>`)`, "
+                            "`(n/a)` or `(person)`")
+        elif head == "person" and not decided:
+            problems.append("head: `(person)` stands only on a decided line")
+
+    fields = list(GATE_FIELD_RE.finditer(words))
+    named = [(f, "Due" if f.group("name").lower() == "due" else f.group("name")) for f in fields]
+    lowered = [n for _, n in named]
+    if "Context" not in lowered:
+        problems.append("context: no `Context:`")
+    elif lowered.count("Context") > 1:
+        problems.append("context: `Context:` stands more than once")
+    # The text runs to Context:, or with none to the first field; a field inside it is the text's fault,
+    # but a lone `Due: <date>.` right before Context: is a Due: out of its place.
+    text_end = fields[lowered.index("Context")].start() if "Context" in lowered else \
+        (fields[0].start() if fields else len(words))
+    item_text, kept, moved = words[:text_end], [], False
+    for f, n in named:
+        if f.start() >= text_end:
+            kept.append((f, n))
+        elif n == "Due" and "Context" in lowered and not item_text[: f.start()].strip() == "" \
+                and GATE_DUE_ALONE_RE.fullmatch(words[f.start(): text_end].strip()):
+            problems.append("due: `Due:` stands before `Context:`; it follows Context")
+            item_text, moved = words[: f.start()], True
+            kept.append((f, n))
+        else:
+            problems.append(f"text: names a field ({f.group('name')}:): say it in other words")
+    if not item_text.strip():
+        problems.append("text: empty")
+    elif not item_text.rstrip().endswith((".", "?", "!")):
+        problems.append("text: does not end a sentence (`.`, `?` or `!`)")
+    kept.sort(key=lambda fn: fn[0].start())
+    order = [n for _, n in kept]
+    segs: dict[str, list[str]] = {}
+    for i, (f, n) in enumerate(kept):
+        stop = kept[i + 1][0].start() if i + 1 < len(kept) else len(words)
+        if n == "Due" and moved and stop > text_end and f.start() < text_end:
+            stop = text_end
+        segs.setdefault(n, []).append(words[f.start(): stop].strip())
+    ctx = None
+    if lowered.count("Context") == 1:
+        c = re.fullmatch(r"Context:\s*(?P<words>.*)", segs["Context"][0])
+        ctx = c.group("words")
+        if not ctx.rstrip("."):
+            problems.append("context: empty")
+        elif not ctx.endswith("."):
+            problems.append("context: does not end with its period")
+    dues = segs.get("Due", [])
+    due_s = None
+    if kind == "fyi":
+        if dues:
+            problems.append("due: an fyi carries no `Due:`")
+    elif not dues:
+        problems.append("due: no `Due:` (every kind but fyi carries one)")
+    elif len(dues) > 1:
+        problems.append("due: `Due:` stands more than once")
+    else:
+        d = GATE_DUE_RE.fullmatch(dues[0])
+        due_s = d.group("date")
+        if d.group("name") != "Due":
+            problems.append(f"due: spelled {d.group('name')!r}, not `Due:`")
+        try:
+            _civil_date(due_s, "")
+        except Refused:
+            problems.append(f"due: {due_s!r} is not a date as YYYY-MM-DD")
+        if not d.group("period"):
+            problems.append("due: no period after its date")
+        if d.group("more").strip():
+            problems.append(f"extra: {d.group('more').strip()!r} after `Due:`")
+        i = order.index("Due")
+        if not moved and i > 0 and order[i - 1] != "Context":
+            problems.append(f"due: `Due:` stands after `{order[i - 1]}:`; it follows Context")
+    answers = segs.get("Answers", [])
+    raw = None
+    if len(answers) > 1:
+        problems.append("answers: `Answers:` stands more than once")
+    elif answers:
+        a = re.fullmatch(r"Answers:\s*(?P<raw>.*?)(?P<period>\.?)", answers[0])
+        raw = a.group("raw")
+        if not a.group("period"):
+            problems.append("answers: no period after its answers")
+        if order[-1] not in ("Answers", "Due"):  # a Due: after Answers: is the due rule's
+            problems.append(f"answers: `{order[-1]}:` stands after `Answers:`")
+    for name in ("Decided", "Closed"):
+        if name in order:
+            problems.append(f"text: names a field ({name}:) where none is read")
+    offered = [split_answer(x.replace("\\|", "|").strip()) for x in ANSWER_SPLIT_RE.split(raw)] if raw else []
+    marks = sum(mk for _, _, mk in offered)
+    if bad_kind:
+        pass
+    elif decided:
+        if marks > 1:
+            problems.append("answers: more than one marked ` (default)`")
+    elif kind == "decide":
+        labels = [lb for lb, _, _ in offered]
+        if len(offered) < 2:
+            problems.append("answers: a decide carries two or more answers")
+        elif len(set(labels)) != len(labels) or not all(labels):
+            problems.append("answers: each answer has its own label")
+        if marks > 1:
+            problems.append("answers: more than one marked ` (default)`")
+    elif kind == "look":
+        if raw not in LOOK_ANSWERS:
+            problems.append("answers: a look carries exactly `Works | Not right: <what>`, "
+                            "`Works` marked ` (default)` or not")
+    elif raw is not None:
+        problems.append(f"answers: {_a_kind(kind)} carries no answers: a question with answers is a decide")
+
+    if not problems:
+        want = (f"{f'{kind} ' if kind else ''}{date_s} ({head}) — {item_text.strip()} Context: {ctx}"
+                f"{f' Due: {due_s}.' if due_s else ''}{f' Answers: {raw}.' if raw is not None else ''}")
+        if body != want:
+            problems.append("extra: spacing, or words outside the line's parts")
+    return "; ".join(problems) or None
+
+
+def canonical_item(line: str) -> str:
+    """`line`, an open item line, rewritten into the form the writers write, keeping its item key
+    and every word; Refused, naming what a person must fix, where that cannot be done (SPEC
+    *The form the writers write*). It respells the `Due:` field, adds the period after its date,
+    moves a `Due:` that directly follows the text's sentence to after `Context:`, and adds
+    Context's period, each only where the key is kept. Idempotent; the line ending is kept."""
+    ending = line[len(line.rstrip("\r\n")):]
+    new = line[: len(line) - len(ending)]
+    if ITEM_RE.match(new) is None:
+        raise Refused("open: not an open item")
+    d = DUE_RE.search(new)
+    if d:
+        new = new[: d.start()] + "Due:" + new[d.start() + 4:]  # the field DUE_RE first finds, never a reply's
+        d = DUE_RE.search(new)
+        if not new[d.end():].startswith("."):
+            new = new[: d.end()] + "." + new[d.end():]
+    c = CONTEXT_RE.search(new)
+    mv = re.search(r"(?<=[.?!]) (?P<due>Due: \d{4}-\d{2}-\d{2}\.)(?= Context:)", new)
+    if mv and c and c.start() > mv.start():
+        tail = new[mv.end():].rstrip()
+        if re.fullmatch(r" Context: [^:]*?", tail) and not reply_span(new[mv.end():]):
+            ctx = tail[len(" Context: "):]
+            new = f"{new[: mv.start()]} Context: {ctx}{'' if ctx.endswith('.') else '.'} {mv.group('due')}"
+    c = CONTEXT_RE.search(new)
+    if c:
+        end = c.end("ctx")
+        span = reply_span(new)
+        if span and c.start("ctx") <= span[0] < end:  # an fyi's replies follow its Context
+            end = span[0]
+        words = new[c.start("ctx"): end].rstrip()
+        stop = c.start("ctx") + len(words)
+        if words and not words.endswith("."):
+            new = new[:stop] + "." + new[stop:]
+    if new == line[: len(line) - len(ending)]:
+        problem = item_problem(new)
+        if problem:
+            raise Refused(problem)
+        return line
+    was, got = parse_board(line, warn=False), parse_board(new, warn=False)
+
+    def fields(it: BoardItem) -> tuple:
+        return (it.kind, it.due, it.answers, it.consequences, it.default, it.decided,
+                parse_replies(it.text), item_refs(it.text), item_head(it.text))
+    if item_key(new) != item_key(line[: len(line) - len(ending)]) or len(was) != 1 or len(got) != 1 \
+            or fields(was[0]) != fields(got[0]):
+        raise Refused("the rewrite would change the line's item key or what the reader reads: "
+                      "fix the line by hand — " + (item_problem(line) or "its form"))
+    problem = item_problem(new)
+    if problem:
+        raise Refused(problem)
+    return new + ending
+
+
+def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
+    """(1-based line, problem) for each open item line of `board` that item_problem() faults and
+    that is new: no item line of `old`, open or closed, has its item key. Every `- [ ]` line at any
+    indent is judged but an open twin of a closed one; closed lines never are; `old=None`
+    judges every open line. The board's gate: a consumer calls it on the board as the edit leaves
+    it, with the board as the edit found it."""
+    closed = {item_key(ln) for ln in closed_items(board)}
+    known = None if old is None else {item_key(ln) for ln in old.splitlines() if ANY_ITEM_RE.match(ln)}
+    out = []
+    for n, ln in enumerate(board.splitlines(), start=1):
+        if not ITEM_RE.match(ln) or item_key(ln) in closed or (known is not None and item_key(ln) in known):
+            continue
+        problem = item_problem(ln)
+        if problem:
+            out.append((n, problem))
+    return out
+
+
 # The commit subject of one board write: `<tool>: <action> <head>[ to <date> | : <answer>]
 # (session <name>)`; for an append, `<tool>: append <head> (session <name>)`. A reply's words stay
 # on the board, never in the subject.

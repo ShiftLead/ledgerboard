@@ -972,5 +972,77 @@
     "ledger/ranked.archive.md",
     "ledger/basic.md",
     "ledger/parts.md"
+  ],
+  "item_problems": [
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
+    "- [ ] look 2026-01-15 (session `w-1`) — Look at the new export page. Context: PR #12. Due: 2026-01-20. Answers: Works | Not right: <what>.",
+    "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7.",
+    "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South. Decided: North (2026-01-15).",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-02-01.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: a (2026-01-16).",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: on it",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. — w-2, 2026-01-16: see Due: 2026-05-01",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: Context: x (2026-01-16).",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: b (default) (2026-01-16).",
+    "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7. — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
+    "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) | South.",
+    "- [ ] todo 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1, branch x) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
+    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Do it. Context: TD-7. Due: 2026-01-20. Answers: yes | no.",
+    "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.",
+    "- [ ] Decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a | b.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a (default) | b (default).",
+    "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at it. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right:.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.  ",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it  Context: TD-7. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Wait for it.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20."
+  ],
+  "canonical_items": [
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20. Context: TD-7.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Due: 2026-01-20. Context: TD-7.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Check Due: 2026-02-01 first. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Due: 2026-01-20. Context: TD-7 Answers: a | b.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20.",
+    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 Decided: ok (2026-01-16).",
+    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session w-1 on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick? Context: TD-7. Answers: a | b. Due: 2026-01-20.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.\n",
+    "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it"
+  ],
+  "board_problems": [
+    {
+      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n"
+    },
+    {
+      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-02-01.\n"
+    },
+    {
+      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session w-2) — Rotate the key. Context: TD-8. Due: 2026-01-25.\n"
+    },
+    {
+      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
+      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n"
+    },
+    {
+      "old": null,
+      "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
+    }
   ]
 }
