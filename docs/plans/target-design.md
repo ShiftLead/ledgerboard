@@ -1128,6 +1128,7 @@ The item line, with one addition (`Hide until`, below):
 |---|---|---|
 | `item_line(…, kind, answers, default)` | a whole new item of any kind; the detail block is built from named parts (Context, Question, Caveats, Recommended) | v2.3 |
 | `item_problem(line)` | why an open line isn't one the writers would write | v2.3 |
+| `item_notes(item, today)` | the ℹ notes on a hide that hides nothing or outlasts the Due (TD-023) | v2.3 |
 | canonical item writer | the one-time `fmt` pass | v2.3 |
 | `archive_closed(board, archive)` | moves closed items, with their detail blocks | v2.3 |
 | decide lift | answering a **lifting answer** on a `decide` item whose `Context:` names exactly one entry removes that entry's `decision (person)` and logs `gate lifted … by <person>`. When the entry is a parent and the Context lists `parts`, it also removes the gate from each listed part (below). | v2.4 |
