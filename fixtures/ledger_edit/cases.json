@@ -160,6 +160,96 @@
      "a reason."
     ]
    ]
+  },
+  {
+   "name": "filed",
+   "id": "TD-085",
+   "title": "Filed with its Log",
+   "fields": {
+    "Priority": "Low",
+    "Added": "2026-01-15",
+    "Status": "Open",
+    "Blocked by": "TD-80, decision (Kim)"
+   },
+   "sections": [
+    [
+     "Why",
+     "the reason."
+    ],
+    [
+     "Ask",
+     "go?"
+    ]
+   ],
+   "filed": {
+    "today": "2026-01-15",
+    "who": "Kim",
+    "session": "plan-7",
+    "words": "file it",
+    "while": "TD-80"
+   }
+  },
+  {
+   "name": "filed_refused_added_comment",
+   "id": "TD-086",
+   "title": "t",
+   "fields": {
+    "Priority": "Low",
+    "Added": "2026-01-15 a comment"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ]
+   ],
+   "filed": {
+    "today": "2026-01-15",
+    "who": "Kim",
+    "session": "plan-7",
+    "words": "w"
+   }
+  },
+  {
+   "name": "filed_refused_status_note",
+   "id": "TD-086",
+   "title": "t",
+   "fields": {
+    "Priority": "Low",
+    "Status": "Open 2026-01-15: x"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ]
+   ],
+   "filed": {
+    "today": "2026-01-15",
+    "who": "Kim",
+    "session": "plan-7",
+    "words": "w"
+   }
+  },
+  {
+   "name": "filed_refused_who_with_a_space",
+   "id": "TD-086",
+   "title": "t",
+   "fields": {
+    "Priority": "Low"
+   },
+   "sections": [
+    [
+     "Why",
+     "w"
+    ]
+   ],
+   "filed": {
+    "today": "2026-01-15",
+    "who": "Kim Lee",
+    "session": "plan-7",
+    "words": "w"
+   }
   }
  ],
  "today": "2026-01-20",
@@ -763,6 +853,144 @@
      }
     }
    ]
+  },
+  {
+   "name": "note_lifts_the_status_notes",
+   "file": "legacy_status.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "a new note"
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_leaves_an_unknown_status",
+   "file": "unknown_status.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "looked"
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_refused_writer_prefix",
+   "file": "reordered.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "gate lifted: decision (Kim) — by Kim; answer \"Go\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "note_refused_log_not_last",
+   "file": "log_not_last.md",
+   "steps": [
+    {
+     "action": "note",
+     "args": {
+      "words": "x"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_copies_an_unknown_status_whole",
+   "file": "unknown_status.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "held long enough",
+      "pr": 9
+     }
+    }
+   ]
+  },
+  {
+   "name": "reopen_undated_status_takes_the_resolved_date",
+   "file": "undated_status.md",
+   "steps": [
+    {
+     "action": "reopen",
+     "args": {
+      "why": "not done"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_inserts_its_resolved_line_before_the_log",
+   "file": "legacy_status.md",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "all built",
+      "pr": 12,
+      "pointer": "`src/thing.py`"
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_adds_a_section_before_the_log",
+   "file": "legacy_status.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Related",
+      "words": "TD-80."
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_refused_the_log",
+   "file": "legacy_status.md",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Log",
+      "words": "- 2026-01-01: rewritten"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rename_ref_rewrites_a_while_token",
+   "file": "log_shapes.md",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "other-repo#TD-4",
+      "new": "other-repo#TD-40"
+     }
+    }
+   ]
+  },
+  {
+   "name": "renumber_leaves_the_log",
+   "file": "log_shapes.md",
+   "steps": [
+    {
+     "action": "renumber",
+     "args": {
+      "new": "TD-180"
+     }
+    }
+   ]
   }
  ],
  "check": [
@@ -782,6 +1010,45 @@
    "ledger": "check/before.md",
    "archive": "",
    "old": "check/before.md"
+  }
+ ],
+ "log": [
+  {
+   "name": "every_shape",
+   "file": "log_shapes.md",
+   "gates": [
+    "decision (kim)",
+    "decision (Lee)",
+    "until 2026-03-01",
+    "event (tool-v3)",
+    "event (other)"
+   ]
+  },
+  {
+   "name": "legacy_status",
+   "file": "legacy_status.md",
+   "gates": [
+    "decision (Kim)"
+   ]
+  },
+  {
+   "name": "unknown_status",
+   "file": "unknown_status.md",
+   "gates": [
+    "decision (Kim)"
+   ]
+  },
+  {
+   "name": "undated_status",
+   "file": "undated_status.md",
+   "gates": []
+  },
+  {
+   "name": "log_not_last",
+   "file": "log_not_last.md",
+   "gates": [
+    "decision (Kim)"
+   ]
   }
  ]
 }

@@ -18,7 +18,7 @@ Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived
 (cards, keys, the rank file, the pick order); the board
 (items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
 subject of a write and its parser); line predicates for diff walkers; ledger entries and their writers
-(``canonical``, ``entry_text``, ``edit_entry``, v2.2); the format version.
+(``canonical``, ``entry_text``, ``edit_entry``, v2.2; the Log, v2.4); the format version.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from dataclasses import replace as _dc_replace
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 logger = logging.getLogger("ledgerboard")
@@ -467,22 +467,44 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     information, whatever it was. On a changed or new entry, EDIT_ERRORS are errors too. ``rank_text``
     adds the rank file's flags (never standing: the file is a tool's). Also with ``old`` (v2.2): an
     entry that left the ledger while an open entry is still Part of it is an error,
-    ``archive-open-parts``, naming the parts — never standing, since only this edit made it."""
+    ``archive-open-parts``, naming the parts — never standing, since only this edit made it. Each
+    entry's Log (v2.4) adds ``log-not-last`` and ``log-line`` (``log_problems()``), standing when the
+    entry's whole text is unchanged."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text)["flag_recs"]]
+    texts = _entry_texts(ledger)
+    for tid, text in texts.items():
+        for kind, why in log_problems(text):
+            recs.append({"level": "error", "id": tid, "field": "log", "kind": kind, "text": f"⚠ {tid}: {why}",
+                         "standing": False})
     if old is None:
         return recs
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
+    rewritten = {t for t, x in texts.items() if _entry_texts(old).get(t) != x}  # a Log flag's scope: the whole entry
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
-        counts = True if r["kind"] == "rank" else decl_changed if r["id"] is None else r["id"] in changed
+        counts = True if r["kind"] == "rank" else decl_changed if r["id"] is None else \
+            r["id"] in (rewritten if r["kind"] in LOG_KINDS else changed)
         if not counts:
             r["standing"], r["level"] = True, "info"
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
     return recs + _left_with_open_parts(old, ledger)
+
+
+LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
+
+
+def _entry_texts(text: str) -> dict[str, str]:
+    """Each entry's text (its heading to the next ``## `` heading), HTML comments dropped, by id."""
+    text = COMMENT_RE.sub("", text)
+    out = {}
+    for m in HEADING_RE.finditer(text):
+        nxt = SECTION_RE.search(text, m.end())
+        out.setdefault(m.group(1), text[m.start(): nxt.start() if nxt else len(text)])
+    return out
 
 
 def _left_with_open_parts(old: str, ledger: str) -> list[dict]:
@@ -2621,13 +2643,18 @@ def _section_key(lead: str) -> str:
     return field_key(lead.strip().rstrip(":"))
 
 
-def entry_text(tid: str, title: str, fields, sections) -> str:
+def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None = None) -> str:
     """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value} or (name,
     value) pairs, one line each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
     mapping, each written ``**<name>:** <text>``, a whitespace-only line emptied (in a code block
     too); a first pair with no name is the unnamed lead, written as given. Raises Refused for an id that is not ``TD-n``, an empty or multi-line title, a
     field that is not one ``**Name:** value`` line, a field named twice, and sections that would not
-    read back as given (a paragraph of a section's text that opens in bold would start another)."""
+    read back as given (a paragraph of a section's text that opens in bold would start another).
+
+    ``filed`` (v2.4: {today, who, session, words, while}) writes the entry's Log: its first line,
+    ``filed by <who>, session <s>[, while <id>]: "<words>"``, then one ``gate added: decision (<who>)``
+    for each decision its Blocked by is filed with. With it, Added is a bare date, Status (if given)
+    is ``Open``, and no section is named Log; ``today`` is a date, ``YYYY-MM-DD`` or an aware datetime."""
     if not ID_ITEM_RE.match(str(tid)):
         raise Refused(f"an entry's id is TD-n, not {tid!r}")
     title = str(title or "")
@@ -2648,6 +2675,19 @@ def entry_text(tid: str, title: str, fields, sections) -> str:
         seen.add(field_key(name))
         header.append((name, value))
     pairs = list(sections.items()) if isinstance(sections, Mapping) else list(sections or ())
+    if filed is not None:
+        added, status = _value(header, "added"), _value(header, "status")
+        if added is not None and not ISO_DAY_RE.fullmatch(added):
+            raise Refused(f"a filed entry's Added is the date alone (its words go in the Log), not {added!r}")
+        if status is not None and status != "Open":
+            raise Refused(f"a filed entry's Status is Open (its notes go in the Log), not {status!r}")
+        if any(name and _section_key(f"{name}:") == "log" for name, _ in pairs):
+            raise Refused("a filed entry's Log is written from filed, not given as a section")
+        day = utc_day(filed.get("today"), "filed")
+        lines = [f"- {day}: {_filed_line(filed)}"]
+        for who in parse_blocked(_value(header, "blocked by") or "")[1]:
+            lines.append(f"- {day}: gate added: decision ({who})")
+        pairs.append((None, "\n".join([f"**{LOG_LEAD}**", *lines])))  # written as given: lines under the lead
     if pairs and not header:
         raise Refused("an entry with sections needs at least one field: the paragraph after the heading "
                       "is the header block")
@@ -2658,10 +2698,10 @@ def entry_text(tid: str, title: str, fields, sections) -> str:
         if not words.strip():
             raise Refused(f"the section {name or '(unnamed)'!r} is empty")
         if not name:
-            if k:
+            if k and not (filed is not None and k == len(pairs) - 1):
                 raise Refused("only the first section may have no name — the text before the first lead")
             parts.append(words)
-            want.append((None, words))
+            want.append((_section_key(LOG_LEAD) if k else None, words))
             continue
         lead = f"{str(name).strip()}:"
         parts.append(f"**{lead}** {words}")
@@ -2730,30 +2770,323 @@ def _rename(value: str, old: str, new: str) -> str:
     return rx.sub(new, value)
 
 
+# ---------------------------------------------------------------------------------------------
+# The Log (v2.4): an entry's dated history, the body's last section
+# ---------------------------------------------------------------------------------------------
+
+LOG_LEAD = "Log:"
+LOG_LINE_RE = re.compile(r"^- (?P<date>\d{4}-\d{2}-\d{2}): (?P<words>\S.*?)$")
+# The writer prefixes (SPEC *The Log*): `note` refuses words that begin with one, and a lifted
+# Status note that would is written `note: <text>`.
+LOG_PREFIXES = ("filed by ", "gate added:", "gate lifted:", "gate reassigned:", "kept waiting:",
+                "gate lift skipped:", "was:", "archived:", "reopened —")
+LOG_TOKEN = r"[A-Za-z0-9_.@/-]+"  # who, a session, a host: no spaces, commas, colons or quotes
+LOG_ID = r"(?:[\w.-]+(?:/[\w.-]+)?#)?TD-\d+"  # the ids Blocked by takes
+LOG_GATE = r"decision \(" + PERSON + r"\)|until \d{4}-\d{2}-\d{2}|event \([a-z0-9-]+\)"
+LOG_LIFT_SUFFIX = r"; board [\w.-]+(?:/[\w.-]+)?|; no board item|; shared board item left open"
+# Each writer-made shape, tried in this order; a quoted label or words run to the line's last `"`.
+LOG_SHAPES = (
+    ("filed", re.compile(rf"filed by (?P<who>{LOG_TOKEN}), session (?P<session>{LOG_TOKEN})"
+                         rf"(?:, while (?P<while>{LOG_ID}))?: \"(?P<words>.*)\"")),
+    ("gate-added", re.compile(rf"gate added: (?P<gate>{LOG_GATE})")),
+    ("gate-lifted", re.compile(rf"gate lifted: (?P<gate>decision \({PERSON}\)|event \([a-z0-9-]+\)) — by "
+                               rf"(?P<by>{LOG_TOKEN}); answer \"(?P<label>.*)\"(?P<suffix>{LOG_LIFT_SUFFIX})?")),
+    ("gate-lifted", re.compile(rf"gate lifted: (?P<gate>decision \({PERSON}\)) — by (?P<by>{LOG_TOKEN}); "
+                               r"override: (?P<why>\S.*)")),
+    ("gate-lifted", re.compile(rf"gate lifted: (?P<gate>event \([a-z0-9-]+\)) — by (?P<by>{LOG_TOKEN}); "
+                               r"(?P<check>[a-z0-9-]+) passed; (?P<evidence>\S+)")),
+    ("gate-lifted", re.compile(rf"gate lifted: (?P<gate>until \d{{4}}-\d{{2}}-\d{{2}}) — by (?P<by>{LOG_TOKEN}); "
+                               r"date reached")),
+    ("gate-lift-skipped", re.compile(rf"gate lift skipped: (?P<id>{LOG_ID}) no longer carries "
+                                     rf"(?P<gate>decision \({PERSON}\))")),
+    ("kept-waiting", re.compile(rf"kept waiting: (?P<gate>{LOG_GATE}) — by (?P<by>{LOG_TOKEN}); "
+                                r"answer \"(?P<label>.*)\"")),
+    ("gate-reassigned", re.compile(rf"gate reassigned: (?P<gate>decision \({PERSON}\)) → "
+                                   rf"(?P<to>decision \({PERSON}\)) — by (?P<by>{LOG_TOKEN}); (?P<why>\S.*)")),
+    ("archived", re.compile(r"archived: (?P<word>[A-Za-z]+) — (?P<why>\S.*)")),
+    ("reopened", re.compile(r"reopened — (?P<why>\S.*)")),
+    ("was", re.compile(r"was: (?P<status>\S.*)")),
+)
+# The Status words status_notes_to_log() reads (SPEC *The Log*): the four of the target table and
+# the reserved ones v2.5's migrate maps away.
+STATUS_WORDS = ("open", "resolved", "superseded", "dropped", "designed", "built", "partly", "live", "in",
+                "done", "moved", "obe")
+STATUS_HEAD_RE = re.compile(rf"^(?P<word>[A-Za-z]+)\.?(?:[ \t]+(?P<date>\d{{4}}-\d{{2}}-\d{{2}}))?"
+                            rf"(?:[ \t]+by[ \t]+(?P<by>{LOG_ID}))?(?=$|[\s:,;.—])")
+WAS_CUT = " — was: "
+LOG_AGE_KINDS = ("gate-added", "kept-waiting", "gate-reassigned")
+
+
+def log_line(line: str) -> dict | None:
+    """One Log line read: {date, kind, text} and the shape's parts, or None for a line that is not
+    ``- YYYY-MM-DD: words``. ``kind`` is a writer shape's (``filed``, ``gate-added``, ``gate-lifted``,
+    ``gate-lift-skipped``, ``kept-waiting``, ``gate-reassigned``, ``archived``, ``reopened``, ``was``),
+    ``note`` for any other words, or ``malformed`` for words that begin with a writer prefix and do
+    not take its shape. A ``gate-lifted`` line also says ``via``: answer, override, check or date."""
+    m = LOG_LINE_RE.match(line.rstrip("\r"))
+    if not m:
+        return None
+    words = m.group("words")
+    out = {"date": m.group("date"), "text": words}
+    for k, (kind, rx) in enumerate(LOG_SHAPES):
+        s = rx.fullmatch(words)
+        if s:
+            out["kind"] = kind
+            out.update({n: v for n, v in s.groupdict().items() if v is not None})
+            if kind == "gate-lifted":
+                out["via"] = ("answer", "override", "check", "date")[k - 2]
+            return out
+    out["kind"] = "malformed" if words.startswith(LOG_PREFIXES) else "note"
+    return out
+
+
+def _log_section(sections: list[tuple[str | None, str]]) -> int | None:
+    at = _keyed(sections, "log")
+    if len(at) > 1:
+        raise Refused(f"the body has {len(at)} Log sections — merge them by hand")
+    return at[0] if at else None
+
+
+def _log_body_lines(section_text: str) -> list[str]:
+    """A Log section's lines after its lead, blank lines dropped."""
+    first, _, rest = section_text.partition("\n")
+    after = first[first.index("**", 2) + 2:].strip() if first.startswith("**") else first
+    return ([after] if after else []) + [ln for ln in rest.split("\n") if ln.strip()]
+
+
+def log_lines(text: str) -> list[dict]:
+    """The Log of one entry's text, in file order: each line as ``log_line()`` reads it, or
+    {date: None, kind: "unreadable", text} for a line that is not ``- YYYY-MM-DD: words``."""
+    sections = _entry_sections(_entry_parts(text)[2])
+    at = _log_section(sections)
+    if at is None:
+        return []
+    return [log_line(ln) or {"date": None, "kind": "unreadable", "text": ln}
+            for ln in _log_body_lines(sections[at][1])]
+
+
+def log_problems(text: str) -> list[tuple[str, str]]:
+    """Why one entry's Log is not as its writers write it: [(kind, sentence)] — ``log-not-last`` (a
+    section follows the Log, or two Logs) and ``log-line`` (a line that is not ``- YYYY-MM-DD:
+    words``, or a writer prefix not in its shape)."""
+    try:
+        sections = _entry_sections(_entry_parts(text)[2])
+    except Refused:
+        return []
+    at = _keyed(sections, "log")
+    if not at:
+        return []
+    out = []
+    if len(at) > 1:
+        out.append(("log-not-last", f"its body has {len(at)} Log sections — the Log is one section, the body's last"))
+    elif at[0] != len(sections) - 1:
+        out.append(("log-not-last", "a section follows its Log — the Log is the body's last section; "
+                    "move the section above it"))
+    for ln in _log_body_lines(sections[at[-1]][1]):
+        got = log_line(ln)
+        if got is None:
+            out.append(("log-line", f"its Log line {ln!r} is not `- YYYY-MM-DD: words`"))
+        elif got["kind"] == "malformed":
+            out.append(("log-line", f"its Log line {ln!r} begins with a writer's prefix but not in its shape"))
+    return out
+
+
+def _gate_key(gate: str) -> str:
+    """A gate compared: a person's name in any case."""
+    return " ".join(gate.split()).lower()
+
+
+def gate_age(text: str, gate: str) -> date | None:
+    """The date ``gate`` (as written in Blocked by) has waited since, on one entry (SPEC *The Log*):
+    its latest ``gate added``, ``kept waiting`` or ``gate reassigned`` (to it) Log line; else the
+    Log's first line; else the Added date; else None."""
+    key, latest, first = _gate_key(gate), None, None
+    for rec in log_lines(text):
+        if rec["date"] is None:
+            continue
+        first = first or rec["date"]
+        if rec["kind"] in LOG_AGE_KINDS and _gate_key(rec.get("to") or rec["gate"]) == key:
+            latest = rec["date"] if latest is None or rec["date"] >= latest else latest
+    if latest or first:
+        return date.fromisoformat(latest or first)
+    added = ISO_DAY_RE.search(_value(_entry_parts(text)[1], "added") or "")
+    return date.fromisoformat(added.group(0)) if added else None
+
+
+def utc_day(value: object, what: str) -> str:
+    """A ledger date as ``YYYY-MM-DD`` (SPEC: every ledger date is the UTC date): a date, or a
+    ``YYYY-MM-DD`` string, as given; an aware datetime turned into its UTC date. Refused: a naive
+    datetime (its zone unknown), and anything else."""
+    if isinstance(value, datetime):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise Refused(f"{what} is a naive datetime — pass an aware one (it is turned into its UTC date) or a date")
+        return value.astimezone(timezone.utc).date().isoformat()
+    try:
+        if not isinstance(value, date) and not (isinstance(value, str) and ISO_DAY_RE.fullmatch(value)):
+            raise ValueError
+        return (value if isinstance(value, date) else date.fromisoformat(value)).isoformat()
+    except ValueError:
+        raise Refused(f"{what} needs today's date as YYYY-MM-DD, not {value!r}") from None
+
+
+def _log_text(words: str) -> str:
+    """Lifted prose as a Log line's words: one that would read as a writer's line becomes ``note: …``."""
+    return f"note: {words}" if words.startswith(LOG_PREFIXES) else words
+
+
+def _log_insert(sections: list[tuple[str | None, str]], lines: list[tuple[str, str]], *,
+                by_date: bool) -> list[tuple[str | None, str]]:
+    """``sections`` with ``lines`` ([(date, words)]) in the Log, which is made at the end when there is
+    none: appended (a writer's own line), or each among the lines by date, after any of an equal
+    date (a lifted note). Refused when a section follows the Log."""
+    sections = list(sections)
+    at = _log_section(sections)
+    if at is None:
+        sections.append((LOG_LEAD, f"**{LOG_LEAD}**"))
+        at = len(sections) - 1
+    elif at != len(sections) - 1:
+        raise Refused("a section follows the entry's Log, which is the body's last — move it above the Log, by hand")
+    first, _, rest = sections[at][1].partition("\n")
+    have = [ln for ln in rest.split("\n") if ln.strip()]
+    for day, words in lines:
+        new = f"- {day}: {words}"
+        if not by_date:
+            have.append(new)
+            continue
+        pos, last = len(have), None
+        for i, ln in enumerate(have):
+            m = LOG_LINE_RE.match(ln)
+            last = m.group("date") if m else last
+            if last is not None and last > day:
+                pos = i
+                break
+        have.insert(pos, new)
+    sections[at] = (sections[at][0], "\n".join([first, *have]))
+    return sections
+
+
+def _fallback_day(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]) -> str | None:
+    """The date an undated Status note takes: the ``**Resolved:**`` line's, else Added's."""
+    for i in _keyed(sections, "resolved"):
+        m = ISO_DAY_RE.search(sections[i][1])
+        if m:
+            return m.group(0)
+    m = ISO_DAY_RE.search(_value(header, "added") or "")
+    return m.group(0) if m else None
+
+
+def _lift_status(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]
+                 ) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]], bool]:
+    """(header, sections, read): the Status's notes lifted into Log lines (SPEC *The Log*), or the
+    two unchanged when there is nothing to lift; ``read`` is False when the Status is there and not
+    one ``status_notes_to_log()`` reads (an unknown word, or text with no date to give it)."""
+    status = _value(header, "status")
+    if not status or not status.strip():
+        return header, sections, True
+    m = STATUS_HEAD_RE.match(status)
+    if not m or m.group("word").lower() not in STATUS_WORDS:
+        return header, sections, False
+    head = status[:m.end()].rstrip()
+    rest = status[m.end():]
+    if not rest.strip():
+        return header, sections, True
+    tail, *was = rest.split(WAS_CUT)
+    tail = tail.strip()
+    if tail.startswith(":"):
+        tail = tail[1:].strip()
+    fallback = _fallback_day(header, sections)
+    day = m.group("date") or fallback
+    lines = []
+    if tail:
+        lines.append((day, _log_text(tail)))
+    for w in was:
+        w = w.strip()
+        if w:
+            inner = STATUS_HEAD_RE.match(w)
+            lines.append(((inner and inner.group("date")) or day, f"was: {w}"))
+    if any(d is None for d, _ in lines):
+        return header, sections, False
+    return _with(header, "Status", head), _log_insert(sections, lines, by_date=True), True
+
+
+def status_notes_to_log(text: str) -> str:
+    """One entry's text with its Status notes moved into its Log (SPEC *The Log*), in canonical form.
+    The Status read is ``<Word>[.] [D] [by <id>] [[:] <tail>] [ — was: <Status>]…`` with a known word
+    (``STATUS_WORDS``): the tail becomes one Log line, verbatim, dated by the Status's date, else the
+    ``**Resolved:**`` line's, else Added's; each ``— was:`` segment one ``was: <Status>`` line, dated
+    by its own date or the same. Lines go in among the Log's by date, after any of an equal date; a
+    line that would begin with a writer's prefix is written ``note: <text>``. The Status is left as
+    ``<Word> [D] [by <id>]``. An unknown word, a Status with nothing after its head, or text with no
+    date to give it: the text is returned unchanged. Refused for an entry ``canonical()`` refuses and
+    one whose Log is not its body's last section."""
+    m, header, body = _entry_parts(canonical(text))
+    sections = _entry_sections(body)
+    new_header, new_sections, _ = _lift_status(header, sections)
+    if new_header == header:
+        return text
+    return canonical(_render(m.group(1), m.group(3), new_header, "\n\n".join(t for _, t in new_sections)))
+
+
+def _filed_line(filed: Mapping, what: str = "filed") -> str:
+    """``filed by <who>, session <s>[, while <id>]: "<words>"`` from {who, session, words, while}."""
+    who, session, w = (str(filed.get(k) or "") for k in ("who", "session", "while"))
+    for name, v in (("who", who), ("session", session)):
+        if not re.fullmatch(LOG_TOKEN, v):
+            raise Refused(f"{what}: {name} is a token with no spaces, commas, colons or quotes, not {v!r}")
+    if w and not re.fullmatch(LOG_ID, w):
+        raise Refused(f"{what}: while names an entry (TD-n or <repo>#TD-n), not {w!r}")
+    words = _one_line(f"{what}'s words", filed.get("words"))
+    return f"filed by {who}, session {session}{f', while {w}' if w else ''}: \"{words}\""
+
+
+def _before_log(sections: list[tuple[str | None, str]]) -> int:
+    """Where a section a writer adds goes: before the Log, else at the end."""
+    at = _log_section(sections)
+    return len(sections) if at is None else at
+
+
+def _status_to_log(header: list[tuple[str, str]], sections: list[tuple[str | None, str]], day: str
+                   ) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]]]:
+    """Before archive or reopen replace the Status: its notes lifted into the Log; a Status that
+    cannot be read that way copied whole into one ``was: <value>`` line, dated by the fallbacks
+    (the Resolved line, Added), else ``day``."""
+    header, sections, read = _lift_status(header, sections)
+    status = _value(header, "status")
+    if not read and status and status.strip():
+        sections = _log_insert(sections, [(_fallback_day(header, sections) or day, f"was: {status.strip()}")],
+                               by_date=True)
+    return header, sections
+
+
 def edit_entry(text: str, action: str, *, today: date | str | None = None, fields: Mapping[str, str] | None = None,
                words: str | None = None, section: str | None = None, why: str | None = None,
                pr: int | None = None, pointer: str | None = None, as_is: bool = False,
                superseded_by: str | None = None, new: str | None = None, old: str | None = None) -> str:
     """One entry's text after ``action`` (``ENTRY_ACTIONS``), in canonical form; raises Refused. The
-    edits (SPEC *Ledger entries and their edits*):
+    edits (SPEC *Ledger entries and their edits*; from v2.4 note, archive and reopen write the Log):
 
     - ``set`` (``fields``: {name: value}; an empty value removes the field);
-    - ``note`` (``words``): `` <today>: <words>`` appended to Status, whose first word must not change;
-      with no Status, ``**Status:** <today>: <words>``;
+    - ``note`` (``words``): the Status's notes lifted into the Log (``status_notes_to_log``), then
+      ``- <today>: <words>`` appended to it; refused for words that begin with a Log writer's prefix;
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
-      kept; a section the body lacks is added after the first Why, else before the first Done when or
-      Related, else at the end;
+      kept; a section the body lacks is added after the first Why, else before the first Done when,
+      Related or Log, else at the end; the Log itself is refused;
     - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``): the
-      archived form — Status ``Resolved <today>: <why>`` and Fix replaced by ``**Resolved:** <today>
-      (PR #<pr>) — <pointer>`` (after the whole Fix with ``as_is``; at the end of the body when no
-      section is named exactly Fix), any earlier ``**Resolved:**`` section and header ``Resolved``
-      removed; or Status ``Superseded <today> by <id>: <why>`` with the rest kept;
-    - ``reopen`` (``why``): Status ``Open <today>: <why> — was: <old Status>``; a header ``Resolved``
-      moves to a ``**Resolved:**`` section at the end of the body; refused when the entry has both;
+      Status's notes lifted (one it cannot read copied whole into a ``was:`` line), then the archived
+      form — Status ``Resolved <today>`` and Fix replaced by ``**Resolved:** <today> (PR #<pr>) —
+      <pointer>`` (after the whole Fix with ``as_is``; before the Log when no section is named exactly
+      Fix), any earlier ``**Resolved:**`` section and header ``Resolved`` removed, and the Log line
+      ``archived: Resolved — <why>``; or Status ``Superseded <today> by <id>`` and ``archived:
+      Superseded — <why>``, with the rest kept;
+    - ``reopen`` (``why``): the Status lifted as for archive, then ``Open``, and the Log line
+      ``reopened — <why>``; a header ``Resolved`` moves to a ``**Resolved:**`` section before the Log;
+      refused when the entry has both;
     - ``renumber`` (``new``): the heading's id; ``rename_ref`` (``old``, ``new``): that id rewritten in
-      Blocked by and Part of.
+      Blocked by, Part of and a Log ``filed by`` line's ``while``.
 
-    ``today`` is the caller's date, taken by note, archive and reopen only (none is read here). Every edit is refused for an entry
+    ``today`` is the caller's date, taken by note, archive and reopen only (none is read here): a date,
+    ``YYYY-MM-DD``, or an aware datetime, written as its UTC date; a naive datetime is refused. A writer
+    that appends to the Log refuses one that is not the body's last section. Every edit is refused for an entry
     ``canonical()`` refuses, and unless the result reads back exactly the change meant — the id,
     title, fields (as ``entries()`` reads them) and sections — and nothing else. Validity (a
     vocabulary, a Blocked by item, a cycle) is ``check()``'s, which the caller runs on the result."""
@@ -2765,16 +3098,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _DATED_ACTIONS else [])
     if stray:
         raise Refused(f"{action} takes no {', '.join(stray)}")
-    day = ""
-    if action in _DATED_ACTIONS:
-        if isinstance(today, datetime):
-            today = today.date()  # a civil date: a time never reaches the file
-        try:
-            if not isinstance(today, date) and not (isinstance(today, str) and ISO_DAY_RE.fullmatch(today)):
-                raise ValueError
-            day = (today if isinstance(today, date) else date.fromisoformat(today)).isoformat()
-        except ValueError:
-            raise Refused(f"{action} needs today's date as YYYY-MM-DD, not {today!r}") from None
+    day = utc_day(today, action) if action in _DATED_ACTIONS else ""
     m, header, body = _entry_parts(canonical(text))
     tid, title = m.group(1), m.group(3).strip()
     title_read = entries(canonical(text))[0]["title"]  # as the reader reads it: an HTML comment dropped
@@ -2799,15 +3123,18 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             header = _with(header, name, value)
     elif action == "note":
         said = _one_line("a note", words)
-        was = _value(header, "status")
-        now = f"{was} {day}: {said}" if was and was.strip() else f"{day}: {said}"
-        if was and was.strip() and first_word(now) != first_word(was):
-            raise Refused(f"the note would change the Status's first word ({first_word(was)!r}) — say it in other words")
-        header = _with(header, "Status", now)
+        if said.startswith(LOG_PREFIXES):
+            raise Refused(f"a note may not begin with a Log writer's prefix ({', '.join(repr(x.strip()) for x in LOG_PREFIXES)}) "
+                          "— say it in other words")
+        header, sections, _ = _lift_status(header, sections)
+        sections = _log_insert(sections, [(day, said)], by_date=False)
+        body_changed = True
     elif action == "edit":
         name = _one_line("the section's name", section).rstrip(":").strip()
         if not name:
             raise Refused("edit needs the section's name")
+        if _section_key(name) == "log":
+            raise Refused("the Log is written by its writers (note, archive, reopen), never replaced by edit")
         said = "\n".join(ln.rstrip() if not ln.strip() else ln
                          for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
         if not said.strip():
@@ -2819,7 +3146,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")
         else:
             why_at = _keyed(sections, "why")
-            ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related"))
+            ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related") + _keyed(sections, "log"))
             pos = why_at[0] + 1 if why_at else ends[0] if ends else len(sections)
             sections.insert(pos, (f"{name}:", f"**{name}:** {said}"))
         body_changed = True
@@ -2830,7 +3157,10 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 raise Refused("a superseded entry keeps its Why and Fix: no pr, pointer or as_is")
             if not _is_id(superseded_by) or _num(superseded_by) == _num(tid):
                 raise Refused(f"superseded by another entry's TD-n, not {superseded_by!r}")
-            header = _with(header, "Status", f"Superseded {day} by {superseded_by}: {said}")
+            header, sections = _status_to_log(header, sections, day)
+            header = _with(header, "Status", f"Superseded {day} by {superseded_by}")
+            sections = _log_insert(sections, [(day, f"archived: Superseded — {said}")], by_date=False)
+            body_changed = True
         else:
             if pr is not None and (isinstance(pr, bool) or not isinstance(pr, int) or pr < 1):
                 raise Refused(f"a PR is the forge's number, not {pr!r}")
@@ -2838,29 +3168,32 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             if pr is None and PR_IN_TEXT_RE.search(ptr):
                 raise Refused("with no PR, the pointer may not hold #<digits>: a reader would take it for the PR")
             line = f"**Resolved:** {day}{f' (PR #{pr})' if pr is not None else ''}{f' — {ptr}' if ptr else ''}"
-            header = _with(_with(header, "Status", f"Resolved {day}: {said}"), "Resolved", None)
+            header, sections = _status_to_log(header, sections, day)
+            header = _with(_with(header, "Status", f"Resolved {day}"), "Resolved", None)
             sections = [s for i, s in enumerate(sections) if i not in _keyed(sections, "resolved")]
             fix = _keyed(sections, "fix")
             if len(fix) > 1:
                 raise Refused(f"the body has {len(fix)} sections named Fix — archive it by hand")
             if not fix:
-                sections.append(("Resolved:", line))
+                sections.insert(_before_log(sections), ("Resolved:", line))
             elif as_is:
                 sections.insert(fix[0] + 1, ("Resolved:", line))
             else:
                 sections[fix[0]] = ("Resolved:", line)
+            sections = _log_insert(sections, [(day, f"archived: Resolved — {said}")], by_date=False)
             body_changed = True
     elif action == "reopen":
         said = _one_line("the reopen's why", why)
-        was = _value(header, "status")
-        header = _with(header, "Status", f"Open {day}: {said}" + (f" — was: {was}" if was and was.strip() else ""))
         held = _value(header, "resolved")
+        if held is not None and _keyed(sections, "resolved"):
+            raise Refused("it has both a Resolved field and a **Resolved:** section — merge them by hand, then reopen")
+        header, sections = _status_to_log(header, sections, day)
+        header = _with(header, "Status", "Open")
         if held is not None:
-            if _keyed(sections, "resolved"):
-                raise Refused("it has both a Resolved field and a **Resolved:** section — merge them by hand, then reopen")
             header = _with(header, "Resolved", None)
-            sections.append(("Resolved:", f"**Resolved:** {held}".rstrip()))
-            body_changed = True
+            sections.insert(_before_log(sections), ("Resolved:", f"**Resolved:** {held}".rstrip()))
+        sections = _log_insert(sections, [(day, f"reopened — {said}")], by_date=False)
+        body_changed = True
     elif action == "renumber":
         if not _is_id(new):
             raise Refused(f"renumber needs the new TD-n, not {new!r}")
@@ -2875,6 +3208,18 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             v = _value(header, key)
             if v is not None:
                 header = [(n, _rename(x, old, new) if field_key(n) == key else x) for n, x in header]
+        at = _log_section(sections)
+        if at is not None:  # the one Log token rewritten: a filed line's `while`, never other prose
+            first, _, rest = sections[at][1].partition("\n")
+            lines = []
+            for ln in rest.split("\n"):
+                rec = log_line(ln)
+                if rec and rec["kind"] == "filed" and rec.get("while") and _rename(rec["while"], old, new) != rec["while"]:
+                    ln = ln.replace(f", while {rec['while']}: ", f", while {_rename(rec['while'], old, new)}: ", 1)
+                lines.append(ln)
+            if lines != rest.split("\n"):
+                sections[at] = (sections[at][0], "\n".join([first, *lines]))
+                body_changed = True
 
     if body_changed and any(re.search(r"\n[ \t]*\n", c.group(0)) for c in COMMENT_RE.finditer(body)):
         raise Refused("an HTML comment in the body spans paragraphs, so a section's edit could land inside "

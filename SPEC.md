@@ -182,19 +182,74 @@ to lose or duplicate a line of, leaving that for a person to fix:
 
 Its rule: the result reads back the same id, title, fields and body, or nothing is written.
 
-**A new entry** (`entry_text(id, title, fields, sections)`) is that form. Its fields are one line
+**A new entry** (`entry_text(id, title, fields, sections, *, filed=None)`) is that form. Its fields are one line
 each, and an empty value is left out. Each section is written `**<name>:** <text>`; a first section
 with no name is the unnamed one, written as given. It is refused for an id that is not `TD-n`, a
 title that is empty or more than one line, a field that would not read back as one line or is named
 twice, and sections that would not read back as given (a section's paragraph that opens in bold
-would start a section of its own).
+would start a section of its own). With `filed` (v2.4: `today`, `who`, `session`, `words`, and
+optionally `while`), it writes the entry's Log: the `filed by` line, then one `gate added: decision
+(<who>)` line for each decision its `Blocked by` is filed with. A filed entry's `Added` is the date
+alone and its Status, if given, is `Open`, since their words go in the Log; either otherwise is
+refused, as is a section named Log.
 
-**The archived entry.** An entry archived as done has the Status `Resolved YYYY-MM-DD: why`, and
+**The Log (v2.4)** is an entry's dated history, a body section led `**Log:**` whose lines follow
+the lead, one per line, each `- YYYY-MM-DD: words`, oldest first. It is always the body's **last**
+section. `check()` flags a section after it, or a second Log (`log-not-last`), and a line that is not
+`- YYYY-MM-DD: words` or that opens with a writer's prefix but not in its shape (`log-line`). Both
+are errors on an entry this edit changed (its whole text, not only its header) and information on a
+standing one. A writer that appends to the Log refuses one that is not last, and `edit` and
+`archive` put a section they add before it.
+- **Every ledger date is the UTC date.** The entry writers take a date, `YYYY-MM-DD`, or an aware
+  datetime, which they turn into its UTC date; a naive datetime is refused, since its zone is unknown.
+- **The writers' lines have fixed shapes**, which `log_line(line)` reads (`log_lines(text)` reads an
+  entry's Log). Each line's words after the date are one of these. `who`, a session and a host are
+  tokens of `[A-Za-z0-9_.@/-]+`. A gate is `decision (<person>)`, `until YYYY-MM-DD` or `event
+  (<name>)`, with `<name>` of `[a-z0-9-]+`. An id is `TD-n` or `<repo>#TD-n`. A quoted label or words
+  run from the opening `"` to the line's **last** `"`, so they may hold quotes.
+  - `filed by <who>, session <s>[, while <id>]: "<words>"`. `while` names the entry being worked on
+    when this one was found; it never affects pickability.
+  - `gate added: <gate>`.
+  - `gate lifted: decision (<person>) — by <who>; answer "<label>"`, or the same with `event
+    (<name>)`. Either may end with one of `; board <repo>`, `; no board item` or `; shared board item
+    left open`.
+  - `gate lifted: decision (<person>) — by <who>; override: <why>`.
+  - `gate lifted: event (<name>) — by <host>; <check-type> passed; <evidence>`.
+  - `gate lifted: until YYYY-MM-DD — by <host>; date reached`.
+  - `gate lift skipped: <id> no longer carries decision (<person>)`.
+  - `kept waiting: <gate> — by <who>; answer "<label>"`.
+  - `gate reassigned: decision (<a>) → decision (<b>) — by <who>; <why>`.
+  - `archived: <Status word> — <why>`, `reopened — <why>`, and `was: <Status>`.
+  - Any other words are a note, kept byte for byte, an unknown tool's line among them.
+- **The writer prefixes are reserved:** `filed by `, `gate added:`, `gate lifted:`, `gate
+  reassigned:`, `kept waiting:`, `gate lift skipped:`, `was:`, `archived:`, `reopened —`. `note`
+  refuses words that begin with one ("reopened the thread" is still a note), and a lifted Status note
+  that would is written `note: <text>`.
+- **A gate's age** (`gate_age(text, gate)`) is the date of the latest `gate added`, `kept waiting` or
+  `gate reassigned` (to it) line for that gate, a person's name compared in any case. With none, it
+  is the first Log line's date, then the `Added` date.
+- **Status notes become Log lines** through `status_notes_to_log(text)`, which `note`, `archive` and
+  `reopen` run before they write:
+  - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
+    where `<Word>` is a known one: `Open`, `Resolved`, `Superseded`, `Dropped`, or one v2.5's
+    `migrate` maps (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), in any case.
+  - The tail becomes **one** Log line, verbatim (a date inside it stays prose), dated by the Status's
+    date, else the `**Resolved:**` line's, else `Added`'s. Each `— was:` segment becomes its own `was:
+    <Status>` line, dated by its own date or the same fallbacks.
+  - The lines go in among the Log's by date, after any line of an equal date, and the Status is left
+    as `<Word>[.] [YYYY-MM-DD] [by <id>]`.
+  - An unknown word (a bold or prose Status), a Status with nothing after its head, or text with no
+    date to give it: nothing is lifted. `note` leaves such a Status as it is; `archive` and `reopen`,
+    which replace it, first copy it whole into one `was: <value>` line, dated by the fallbacks, else
+    today.
+
+**The archived entry.** An entry archived as done has the Status `Resolved YYYY-MM-DD` (its why in
+the Log's `archived:` line, v2.4; `Resolved YYYY-MM-DD: why` before), and
 its Fix replaced by one line, `**Resolved:** YYYY-MM-DD (PR #n) — <pointer>`, which is its body's
 only `**Resolved:**` section. The pointer names the doc, test or code that now carries what lasts,
 and is optional, as is the PR (with no PR, the parenthesis is left out). An entry archived with
 nothing lasting to move keeps its Fix and has the line after it. An entry overtaken by another has
-the Status `Superseded YYYY-MM-DD by TD-n: why`, and its Why and Fix stay as written. A `Resolved`
+the Status `Superseded YYYY-MM-DD by TD-n` (`… by TD-n: why` before v2.4), and its Why and Fix stay as written. A `Resolved`
 header field is the older form of the line: readers still read it, and the writers move it into
 the body.
 
@@ -203,32 +258,37 @@ and return it in canonical form. Each is refused for an entry `canonical()` refu
 *split first*). It is also refused unless the result reads back exactly the change meant, and
 nothing else: the same id, title, fields and sections but for the change. An edit that rewrites
 the body joins its sections with one blank line, and is refused when an HTML comment there spans
-paragraphs. The date is the caller's (`today`, a date or `YYYY-MM-DD`; a time is never written), and
+paragraphs. The date is the caller's (`today`, a date, `YYYY-MM-DD` or an aware datetime, written as its UTC date; a time is never written, and a naive datetime is refused), and
 an argument the action does not take is refused. What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
   it. A value is one line.
-- **note** (`words`): appends ` YYYY-MM-DD: words` to Status. It is refused if Status's first word
-  would change, or if the words are more than one line. With no Status, it writes
-  `**Status:** YYYY-MM-DD: words`.
+- **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
+  Log, making it at the end of the body if there is none. It is refused if the words begin with a
+  writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
 - **edit** (`section`, `words`): replaces the named section's paragraphs, keeping its lead as
-  written. A section the body lacks is added after the first Why, else before the first Done when
-  or Related, else at the end. It is refused when two sections have the name.
-- **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`) writes the archived
-  entry, above. `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is
-  refused, since a reader would take that for the PR.
+  written. A section the body lacks is added after the first Why, else before the first Done when,
+  Related or Log, else at the end. It is refused when two sections have the name, and for the Log,
+  which only its writers write.
+- **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`) lifts the Status's
+  notes, then writes the archived entry, above, with the Status `Resolved YYYY-MM-DD` and the Log
+  line `archived: Resolved — <why>` (or `Superseded YYYY-MM-DD by TD-n` and `archived: Superseded —
+  <why>`). `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is refused,
+  since a reader would take that for the PR.
   - An earlier `**Resolved:**` section is replaced, never doubled, and a `Resolved` header field is
     removed.
-  - With no section named exactly Fix, the line goes at the end of the body, and a qualified Fix
-    lead is left alone.
+  - With no section named exactly Fix, the line goes at the end of the body, before the Log, and a
+    qualified Fix lead is left alone.
   - A missing Status is added.
   - It is refused if two sections are named Fix.
-- **reopen** (`why`): Status becomes `Open YYYY-MM-DD: why — was: <old Status>`, or `Open
-  YYYY-MM-DD: why` when there was none. The `**Resolved:**` section stays as history, and the caller
-  writes a new Fix with `edit`. A `Resolved` header field moves into a `**Resolved:**` section at
-  the end of the body, never deleted. An entry with both is refused: a person merges them.
-- **renumber** (`new`) rewrites the heading's id to another number. **rename_ref** (`old`, `new`) rewrites that id
-  in `Blocked by` and `Part of`. A local id matches by number; another repo's id matches as
+- **reopen** (`why`): lifts the Status's notes, then sets Status to `Open` and logs `reopened —
+  <why>`. The `**Resolved:**` section stays as history, and the caller writes a new Fix with `edit`.
+  A `Resolved` header field moves into a `**Resolved:**` section before the Log, never deleted. An
+  entry with both is refused: a person merges them. (Before v2.4 the Status became `Open YYYY-MM-DD:
+  why — was: <old Status>`.)
+- **renumber** (`new`) rewrites the heading's id to another number; Log lines are history, and keep
+  theirs. **rename_ref** (`old`, `new`) rewrites that id in `Blocked by`, `Part of` and a `filed by`
+  line's `while`, never other Log prose. A local id matches by number; another repo's id matches as
   `<repo>#TD-n`.
 
 Moving a file into `archive/` or back, and the relative links that move with it, are the caller's.
@@ -530,6 +590,13 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
 **v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:`, `(by …)`, `Parts:` and `Lifts:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also notes a rank key longer than 64 characters and gives the rank its fourth write, `respace` (*The rank*), whose subject `queue: respace …` older readers do not read as `queue`. v2.3 also starts SPEC's grammar appendix (*Appendix: grammar*): the open item line, a person's name and the rank file in EBNF, informative, beside fixtures that are the authority; it changes nothing that is read. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is the first of v2.3's three changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The second: two fields are added for v2.4's lifts, read, ordered and keyed a release ahead (*The board*): `Parts:`, on a `decide` after its Context, and `Lifts:`, after its Answers. A `Context:` now ends at a ` Parts:` or ` Lifts:` as it does at ` Due:`, so a line that held that prose in its Context before v2.3 reads a shorter Context and fewer refs; and the answers end at a ` Lifts:` that starts a sentence, so a line whose last answer held one reads it apart. v2.2 reads a `Parts:`'s ids as Context refs and a `Lifts:` as part of the last answer, so a consumer writes them only once every reader of its board runs v2.3. The third is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
+**v2.4 adds the Log** (*Ledger entries and their edits*): an entry's dated history as its body's last
+section, the writers' fixed line shapes and their reserved prefixes, `log_line()`, `log_lines()`,
+`log_problems()` and `check()`'s `log-not-last` and `log-line`, `gate_age()`, `status_notes_to_log()`,
+and `entry_text(filed=)`. `note`, `archive` and `reopen` now write the Log and leave the Status a word
+and a date: they no longer append to it, and each first lifts the notes already there. Every ledger
+date is the UTC date, and the entry writers refuse a naive datetime. Pickability and every field read as before:
+v2.3 reads the Log as a body section like any other, and reads the shorter Status as before.
 
 ## Appendix: grammar
 
