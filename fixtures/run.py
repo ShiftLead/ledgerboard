@@ -52,7 +52,7 @@ Fixtures, each an invented input and its expected JSON:
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
   ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
-  whose ``person`` productions hold a person's name).
+  whose ``person`` productions hold a person's name), ``parse_event_section()`` of an Event section (v2.4).
   ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
 - ``origins/cases.json`` → ``origins/expected.json`` (v2.4): repos and origins — ``origin_key()`` and
   ``origin_path()`` of ssh, https and unreadable URLs; ``item_key()`` of two lines differing only in a repo's
@@ -62,6 +62,11 @@ Fixtures, each an invented input and its expected JSON:
   ``event``, a decision with and without its Ask, each gate repeated, the retired words (``hold``, ``decision
   (designer)``, the old form, ``Waits``, ``Taken by``, a stage word in Status), a Priority outside the three,
   items the grammar does not read, the words in any case, and a parent's ``parts_gates``.
+- ``ledger/events.md`` (v2.4): ``check()``'s events — a section whose text holds quotes, a gate with no section,
+  sections whose gates are gone (one explained by its ``gate lifted`` Log line), a name twice, and each section
+  the reader refuses.
+- ``events/cases.json`` → ``events/expected.json`` (v2.4): ``parse_check()`` of each check type's value, every
+  argument confinement refusal among them, and ``parse_event_section()`` of sections well and badly formed.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -310,13 +315,14 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
-    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()`` (v2.4)."""
+    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
     if not hasattr(L, "parse_gates"):  # a module older than v2.4: this case fails, the others still run
         return {"missing": "the module has no parse_gates — older than v2.4"}
     judge = {
         "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
+        "event-section": lambda s: (L.parse_event_section(s)["problem"] is None, L.parse_event_section(s)["problem"]),
     }
     return {start: {prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
                     for prod, g in groups.items()}
@@ -339,6 +345,15 @@ def origin_cases(L, spec: dict) -> dict:
             "item_refs": {x: L.item_refs(x) for x in spec["item_refs"]},
             "blocked": {x: list(L.parse_blocked(x)) for x in spec["blocked"]},
             "item_problem": {x: L.item_problem(x) for x in spec.get("item_problem", [])}}
+
+
+def event_cases(L, spec: dict) -> dict:
+    """Events (v2.4): ``parse_check()`` of each check's value (each confinement refusal among them) and
+    ``parse_event_section()`` of each section's text."""
+    if not hasattr(L, "parse_check"):
+        return {"missing": "the module has no parse_check — older than v2.4"}
+    return {"parse_check": {x: L.parse_check(x) for x in spec["parse_check"]},
+            "parse_event_section": {x: L.parse_event_section(x) for x in spec["parse_event_section"]}}
 
 
 def tree(d: Path) -> dict[str, str]:
@@ -405,6 +420,8 @@ def cases(L, root: Path):
     yield root / "grammar" / "expected.json", grammar_cases(L, spec)
     spec = json.loads((root / "origins" / "cases.json").read_text(encoding="utf-8"))
     yield root / "origins" / "expected.json", origin_cases(L, spec)
+    spec = json.loads((root / "events" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "events" / "expected.json", event_cases(L, spec)
 
 
 def main(argv: list[str] | None = None) -> int:

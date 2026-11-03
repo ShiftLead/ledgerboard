@@ -521,5 +521,179 @@
         "decision ()"
       ]
     }
+  },
+  "event-section": {
+    "event-section": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged acme/tools#3"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships."
+      ]
+    },
+    "event-name": {
+      "accept": [
+        "**Event (a-1):** w.\ncheck: pr-merged a#1"
+      ],
+      "refuse": [
+        "**Event (Ships):** w.\ncheck: pr-merged a#1"
+      ]
+    },
+    "event-words": {
+      "accept": [
+        "**Event (ships):** w\ncheck: pr-merged a#1"
+      ],
+      "refuse": [
+        "**Event (ships):**\ncheck: pr-merged a#1"
+      ]
+    },
+    "char": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x y\""
+      ],
+      "refuse": [
+        "**Event (ships):** w\n\ncheck: pr-merged a#1"
+      ]
+    },
+    "check-line": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123abc"
+      ],
+      "refuse": [
+        "**Event (ships):** w.\ncheck:pr-merged a#1"
+      ]
+    },
+    "check": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#1"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: url-up x"
+      ]
+    },
+    "pr-merged": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b/c#7"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b#12a"
+      ]
+    },
+    "file-contains": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools@v2.4 files/a.py \"say \"hi\" now\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools a.md \"x\" trailing",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a/b x.md\"t\""
+      ]
+    },
+    "ref-includes": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools@deploy/prod 0123abc"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools 0123abc"
+      ]
+    },
+    "repo": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged owner/.github#3"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged https://h/o/r#1"
+      ]
+    },
+    "repo-part": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged my.repo_2#3"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged -x#1",
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/..#1"
+      ]
+    },
+    "digit": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#12"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#x"
+      ]
+    },
+    "ref": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@v2.4 0123abc"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ 0123abc"
+      ]
+    },
+    "ref-char": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@release/2026_01 0123abc"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a~1 0123abc",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a^ 0123abc",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ma#in 0123abc",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@mé 0123abc"
+      ]
+    },
+    "path": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/x.md \"v\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a \"v\""
+      ]
+    },
+    "path-char": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a .github/x-y_z.md \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a c++/x.h \"v\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/*.md \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a a#b \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a café.md \"v\""
+      ]
+    },
+    "quoted": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\" \"y\" z",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\u0001y\""
+      ]
+    },
+    "commit": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123456789abcdef0123456789abcdef01234567"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 012345",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF0"
+      ]
+    },
+    "hex": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main abcdef0"
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF1"
+      ]
+    },
+    "text-char": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"tab-free text, quotes \" kept\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"xy\""
+      ]
+    }
   }
 }

@@ -388,6 +388,15 @@ class Gates(unittest.TestCase):
         got = [(r["kind"], r["level"]) for r in L.check(now, "", old=now, today=TODAY) if r["kind"] == "ask-missing"]
         self.assertEqual(got, [("ask-missing", "info")])
 
+    def test_a_crlf_entry_reads_its_event_gate_and_section(self):
+        led = ("# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Blocked by:** event (ships)\n\n"
+               "**Ask:** none.\n\n**Event (ships):** it ships.\ncheck: pr-merged acme/tools#3\n").replace("\n", "\r\n")
+        self.assertEqual([r["kind"] for r in L.check(led, "", today=TODAY) if r["kind"].startswith(("event", "blocked"))], [])
+        self.assertEqual(L.pickable(led, "", today=TODAY)["entries"][0]["blocked_by"], ["event (ships)"])
+
+    def test_a_giant_pr_number_is_refused_not_raised(self):
+        self.assertIn("1 to 18", L.parse_check("pr-merged a#" + "9" * 5000)["problem"])
+
     def test_waits_is_never_a_gate(self):
         led = "# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Waits:** until 2027-01-01\n"
         self.assertEqual([e["id"] for e in L.pickable(led, "", today=TODAY)["pickable"]], ["TD-001"])

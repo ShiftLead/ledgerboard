@@ -47,7 +47,8 @@ entry; `<repo>` as below), then **gates** (v2.4), each one of
   its whole text, as for the Log — ℹ on a standing ledger).
 - `until YYYY-MM-DD` — not before that UTC date. Once today reaches it the gate no longer holds, and
   `check()` notes it (ℹ, `until-past`) until it is dropped.
-- `event (<name>)` — something outside the ledger; `<name>` is `[a-z0-9-]+`. It blocks until the text
+- `event (<name>)` — something outside the ledger; `<name>` is `[a-z0-9-]+`. The entry carries its
+  `**Event (<name>):**` section, which names a typed check (*Events*, below). It blocks until the text
   says otherwise.
 
 The writers write the ids in the order given, then the gates in that order (decisions, `until`,
@@ -80,6 +81,70 @@ unknown:
   decision is still a decision by its holder;
 - the Status words of an open entry `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in
   `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.5's `migrate`'s to map.
+
+**Events** (v2.4). An `event (<name>)` gate pairs with an **Event section** in the entry's body, which
+says what is waited for and how a host tells it happened:
+
+```
+**Event (vendor-ships):** the vendor's repo carries the new release.
+check: file-contains acme/vendor files/lib.py "v2.4"
+```
+
+- It is two lines: the lead `**Event (<name>):**` and the event in plain words, then exactly one
+  `check: <type> <args>`, a **typed check** (`parse_check()`). `parse_event_section()` reads one section,
+  `event_sections()` an entry's. The section is a body section like any other, so it may sit anywhere
+  before the Log.
+- The arguments are separated by spaces, except the quoted text: it runs from its opening `"` to the
+  line's **last** `"`, so it may itself hold quotes, and nothing follows it. The host matches it
+  literally, never as a pattern.
+- **The check types** and their arguments, each with its four outcomes (`CHECK_OUTCOMES`): **passed** —
+  the host lifts the gate; **not yet** — nothing happens; **impossible** — it can never pass as written,
+  and goes to the board at once; **error** — the check could not run (a run past the host's time limit
+  among them), and goes to the board as broken, never read as not yet. When in doubt a result is an
+  error, never impossible.
+
+  | Check | Passed when | Not yet when | Impossible when | Error when |
+  |---|---|---|---|---|
+  | `pr-merged <repo>#<n>` | the forge says the PR is merged | it is open | it is closed unmerged | it is not found (a forge answers 404 for missing and for unauthorised alike), or the forge cannot be read |
+  | `file-contains <repo>[@<ref>] <path> "<text>"` | the file at the ref (none: the default branch; a tag is a ref) contains the text | the file, the ref or the text is not there yet | never | the repo is not found, or cannot be read |
+  | `ref-includes <repo>@<ref> <commit>` | the commit is an ancestor of the ref (a pin at or past it) | the commit or the ref is not there yet | never | the repo is not found, or cannot be read |
+
+  A new type comes in a format PR and states all four outcomes. Every check is also an error when the
+  host's own rule refuses it: a check reaches a repo only on the host's roster and at least as visible as
+  the ledger's own repo, with read-only tokens.
+- **Arguments are confined**, since anyone with PR rights can edit the ledger and a check runs with the
+  host's credentials. `parse_check()` gives a `problem`, and `check()` refuses the section, for:
+  - a `<repo>` outside the `<repo>` grammar (below);
+  - an `n` that is not 1 to 18 of `[0-9]`;
+  - a `commit` that is not 7 to 40 of `[0-9a-f]`;
+  - a `ref` that fails git's `check-ref-format --allow-onelevel` rules (a component starting with `.` or
+    ending `.lock`, a control character, a space, any of `~^:?*[\`, `//`, a trailing `/` or `.`, `@{`, or
+    `@` alone), or that starts with `-` or holds `..` or `:` — no option injection (`--output=x`), no
+    revision syntax (`a..b`, `@{u}`, `ref:path`) — or holds URL or query syntax (`#%&=+`), whitespace,
+    or anything outside printable ASCII, since a ref goes into a forge's API path or query;
+  - a `path` that is absolute, has an empty, `.`, `..` or `.git` segment, starts with `-`, or holds a
+    glob character (`*?[]`), URL syntax in a forge's API path (`#`, `%`), a quote, a backslash,
+    whitespace, a control character or anything outside printable ASCII (`&`, `=` and `+` are literal in a
+    URL's path, so `c++/x.h` is a path);
+  - quoted text that is empty or spaces alone, holds a control character, or has anything after it.
+
+  Arguments are separated by spaces and tabs only, so no other whitespace hides a second argument, and a
+  ref or path read is the one shown: ASCII alone, as `<repo>` is.
+- What `check()` says of an open entry's events (`event_problems()`), each scoped by the entry's whole
+  text, as the Log's flags are (an error on an entry the edit changed, ℹ on a standing ledger):
+  - `event-section` (⚠): an `event (<name>)` gate with no section of its name, or two sections of one name;
+  - `event-check` (⚠): a section `parse_event_section()` refuses — a name outside `[a-z0-9-]+`, no words,
+    no `check:` line, two, a line after it, words past the first line, an unknown type or a confined
+    argument;
+  - `event-ungated` (ℹ): a section with no gate of its name, unless a `gate lifted: event (<name>)` Log line
+    says why.
+- **Lifting is text.** When a check passes, the host's tool PR removes the gate and logs `gate lifted:
+  event (<name>) — by <host>; <type> passed; <evidence>` (*The Log*). **The section stays**, as an Ask stays
+  after its decision lifts, so the entry still says what was waited for and how it was checked. A gate
+  re-added with the same name reuses its section (or edits it); it never adds a second. A lifted gate
+  never re-arms: a later regression is a new entry, or a new gate on a reopened one.
+- What is not an event: anything whose telling needs judgment ("the page looks right") is work, an
+  entry of its own that the waiting entry is blocked by.
 
 **`<repo>`** (v2.4) — the repo in another repo's id, wherever one is written (`Blocked by`, `Part of`,
 `Escaped from`, a Context or `Parts:` ref, a Log line): a name, or `/`-separated components
@@ -695,10 +760,14 @@ gains `priority`, `ask-missing`, `gate-repeated`, `until-past` and `retired`, an
 `parts_gates`. `new` logs a `gate added` line for every gate, not only decisions, and `new` and `set`
 write `Blocked by` in its order and refuse the old form. v2.3 reads every `Blocked by` v2.4 writes, and
 an `until` or `event` there as an unreadable item that keeps the block.
+v2.4 also adds Event sections (*Events*): `parse_check()`, `parse_event_section()`, `event_sections()`,
+`event_problems()`, `CHECK_TYPES` and `CHECK_OUTCOMES`, and `check()`'s `event-section`, `event-check` and
+`event-ungated`. Nothing they read was read before: v2.3 reads an Event section as a body section like any
+other.
 
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by`; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -790,6 +859,36 @@ the words `decision`, `until` and `event` in any case, with any spaces or tabs b
 `until`; it drops the value's leading and trailing spaces and tabs and skips an empty item between commas. The
 writers write what the grammar says, with `, ` between items, the ids first and then the gates in the order of
 `gate`'s choices; an entry names at most one decision per person, one `until` and differently named events.
+
+### An Event section (v2.4)
+
+An Event section the reader reads with no problem (*Events*): `parse_event_section()` gives no `problem` for it.
+Its line ending is `\n`; a writer ends the section there.
+
+```ebnf
+event-section  ::= "**Event (" event-name "):** " event-words #xA check-line
+event-words    ::= [^#x20#x9#xA] char*
+check-line     ::= "check: " check
+check          ::= pr-merged | file-contains | ref-includes
+pr-merged      ::= "pr-merged " repo "#" digit+
+file-contains  ::= "file-contains " repo ( "@" ref )? " " path " " quoted
+ref-includes   ::= "ref-includes " repo "@" ref " " commit
+ref            ::= ref-char+
+ref-char       ::= [^#x0-#x20#x7F-#x10FFFF~^:?*[#x5C#%&=+]
+path           ::= path-char+
+path-char      ::= [^#x0-#x20#x7F-#x10FFFF*?[#x5D#%"#x5C]
+quoted         ::= '"' text-char+ '"'
+text-char      ::= [^#x0-#x1F#x7F]
+commit         ::= hex hex hex hex hex hex hex hex*
+hex            ::= [0-9a-f]
+```
+
+What the productions leave to prose: a `ref` follows git's `check-ref-format --allow-onelevel` rules and more —
+it does not start with `-`, hold `..` or `@{`, or equal `@`; it does not end with `/` or `.`, hold `//`, or have a
+component that starts with `.` or ends with `.lock`. A `path` is not absolute, has no empty, `.`, `..` or `.git`
+segment and does not start with `-`. A `commit` is at most 40 digits, and a PR's number at most 18. The quoted text runs from its first `"` to the line's last, and
+is not spaces alone. The reader also reads any spaces or tabs between the arguments and after `check:`, and drops
+those that end a line; no other whitespace separates arguments.
 
 ### A person's name (v2.3)
 
