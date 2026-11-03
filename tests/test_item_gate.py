@@ -23,16 +23,19 @@ def written() -> list[str]:
     spec = json.loads((ROOT / "fixtures/edit/cases.json").read_text(encoding="utf-8"))
     out = []
     for c in spec["compose"]:
-        kw = {k: c[k] for k in ("kind", "answers", "default", "detail") if k in c}
-        try:
-            if c["fn"] == "item_line":
-                made = L.item_line(c["text"], c["due"], c.get("today", spec["today"]), c["session"],
-                                   c["host"], c["context"], **kw)
-            else:
-                made = L.decided_line(c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"])
-        except L.Refused:
-            continue
-        out.append(made.splitlines()[0])
+        kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until") if k in c}
+        # each item_line case also with a hide (v2.3), so the gate's Hide until rule meets every kind
+        for extra in ({}, {"hide_until": "2026-02-01"}) if c["fn"] == "item_line" else ({},):
+            try:
+                if c["fn"] == "item_line":
+                    made = L.item_line(c["text"], c["due"], c.get("today", spec["today"]), c["session"],
+                                       c["host"], c["context"], **{**kw, **extra})
+                else:
+                    made = L.decided_line(c["title"], c["ref"], c["answers"], c["default"], c["words"],
+                                          spec["today"])
+            except L.Refused:
+                continue
+            out.append(made.splitlines()[0])
     return out
 
 

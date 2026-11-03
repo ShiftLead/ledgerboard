@@ -16,3 +16,5 @@
 - [ ] fyi 2026-01-01 (n/a) — The mirror moved. Context: none. Hide until: 2026-01-14.
 - [ ] fyi 2026-01-01 (n/a) — Hidden fyi. Context: none. Hide until: 2026-02-01.
 - [ ] act 2026-01-01 (n/a) — Prose Hide until: 2026-02-01 is no field. Context: TD-12. Due: 2026-01-16.
+- [ ] decide 2026-01-01 (n/a) — An answer is no hide. Context: TD-13. Due: 2026-01-20. Answers: A (ok. Hide until: 2030-01-01) | B.
+- [ ] decide 2026-01-01 (n/a) — A decision is no hide. Context: TD-14. Due: 2026-01-20. Answers: a | b. Decided: a. Hide until: 2030-01-01 (2026-01-10).

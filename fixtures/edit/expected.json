@@ -494,6 +494,9 @@
   "reply-second": {
    "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. — Sam, 2026-01-12: halfway — Sam, 2026-01-15: all done"
   },
+  "snooze-answer-holding-a-hide": {
+   "ok": "- [ ] decide 2026-01-05 (n/a) — Pick. Context: TD-1. Due: 2026-01-20. Hide until: 2026-01-25. Answers: A (ok. Hide until: 2030-01-01) | B."
+  },
   "snooze-existing": {
    "ok": "- [ ] act 2026-01-05 (session s-1) — Rotate. Due: 2026-01-10. Hide until: 2026-01-20. Answers: now | later."
   },

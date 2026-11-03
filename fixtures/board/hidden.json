@@ -336,6 +336,67 @@
    "session": null,
    "text": "act 2026-01-01 (n/a) — Prose Hide until: 2026-02-01 is no field. Context: TD-12. Due: 2026-01-16.",
    "waiting_on": "person"
+  },
+  {
+   "answers": [
+    "A (ok. Hide until: 2030-01-01)",
+    "B"
+   ],
+   "consequences": [
+    "",
+    ""
+   ],
+   "decided": null,
+   "default": null,
+   "detail": [],
+   "due": "2026-01-20",
+   "due_error": null,
+   "due_tag": "due 2026-01-20",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "decide",
+   "line": 19,
+   "overdue_days": null,
+   "refs": [
+    "TD-13"
+   ],
+   "replies": [],
+   "session": null,
+   "text": "decide 2026-01-01 (n/a) — An answer is no hide. Context: TD-13. Due: 2026-01-20. Answers: A (ok. Hide until: 2030-01-01) | B.",
+   "waiting_on": "person"
+  },
+  {
+   "answers": [
+    "a",
+    "b"
+   ],
+   "consequences": [
+    "",
+    ""
+   ],
+   "decided": {
+    "date": "2026-01-10",
+    "text": "a. Hide until: 2030-01-01"
+   },
+   "default": null,
+   "detail": [],
+   "due": "2026-01-20",
+   "due_error": null,
+   "due_tag": "due 2026-01-20",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "decide",
+   "line": 20,
+   "overdue_days": null,
+   "refs": [
+    "TD-14"
+   ],
+   "replies": [],
+   "session": null,
+   "text": "decide 2026-01-01 (n/a) — A decision is no hide. Context: TD-14. Due: 2026-01-20. Answers: a | b. Decided: a. Hide until: 2030-01-01 (2026-01-10).",
+   "waiting_on": "session"
   }
  ],
  "keys": [
@@ -352,7 +413,9 @@
   "- [ ] watch 2026-01-01 (n/a) — Check the cache. Context: TD-11",
   "- [ ] fyi 2026-01-01 (n/a) — The mirror moved. Context: none",
   "- [ ] fyi 2026-01-01 (n/a) — Hidden fyi. Context: none",
-  "- [ ] act 2026-01-01 (n/a) — Prose is no field. Context: TD-12"
+  "- [ ] act 2026-01-01 (n/a) — Prose is no field. Context: TD-12",
+  "- [ ] decide 2026-01-01 (n/a) — An answer is no hide. Context: TD-13. Answers: A (ok.) | B",
+  "- [ ] decide 2026-01-01 (n/a) — A decision is no hide. Context: TD-14. Answers: a | b"
  ],
  "needs_you": [
   [
@@ -362,6 +425,11 @@
   ],
   [
    8,
+   "decided",
+   5
+  ],
+  [
+   20,
    "decided",
    5
   ],
@@ -389,6 +457,11 @@
    11,
    "due",
    -3
+  ],
+  [
+   19,
+   "due",
+   -5
   ],
   [
    12,

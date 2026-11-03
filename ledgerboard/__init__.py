@@ -868,9 +868,11 @@ def _hide_match(text: str) -> re.Match | None:
         if c is None:
             return None
         start = c.start()
+    # it ends at the first reply or trailing field: an answer's, a Decided: text's or a reply's words are no field
     span = reply_span(text)
-    m = HIDE_RE.search(text, start)
-    return m if m and not (span and m.start() >= span[0]) else None
+    ends = [f.start() for f in (r.search(text, start) for r in (ANSWERS_RE, DECIDED_RE, CLOSED_RE)) if f]
+    end = min([*ends, *([span[0]] if span else []), len(text)])
+    return HIDE_RE.search(text, start, end)
 
 
 def parse_hide_until(text: str) -> date | None:
@@ -1476,7 +1478,8 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     if due is not None:
         body += f" Due: {due}."
     if hide_until is not None:
-        body += f" Hide until: {_civil_date(hide_until, 'hide_until')}."
+        hide_until = _civil_date(hide_until, "hide_until")
+        body += f" Hide until: {hide_until}."
     if offered:
         body += f" Answers: {' | '.join(written(lbl, c, i == default) for i, (lbl, c) in enumerate(offered))}."
     new = "".join(f"{ln}\n" for ln in [f"- [ ] {body}", *lines])
