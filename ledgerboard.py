@@ -1216,23 +1216,177 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
     raise Refused(f"unknown action {action}")
 
 
-def item_line(text: str, due: str, today: str, session: str | None, host: str | None,
-              context: str | None) -> str:
-    """A new item, in the board's own format —
-    `- [ ] <today> (session `<name>` on <host>, or n/a) — <text>. Context: <about>. Due: <date>.`
-    with its line ending. Refused for text that is empty or more than one line."""
-    words = " ".join(str(text or "").split()).rstrip(".")
+# The writer's rules for a new item (v2.3). The reader reads whatever a line carries; these say
+# what a writer writes. An item with no kind takes act's rule.
+DETAIL_PARTS = ("context", "question", "caveats", "recommended")  # a detail block's parts, in order
+DETAIL_KEYS = (*DETAIL_PARTS, "otherwise")  # `otherwise` is written on the Recommended bullet
+DECIDE_NEEDS = ("context", "question", "recommended")
+WRITER_FIELD_RE = re.compile(r"\b(?:Context|Answers|Decided|Closed):|\b(?i:due):")  # Due: in any case, as DUE_RE
+DATE_ONLY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+HEAD_NAME_BAD_RE = re.compile(r"[\s`,;)]")  # what would end a head's name early, as HEAD_RE reads it
+
+
+def _item_words(value: object, what: str) -> str:
+    """`value` with its whitespace collapsed; refused when empty, more than one line, or carrying
+    a field's name (the reader would read it as the field)."""
+    raw = str(value if value is not None else "").strip()
+    if len(raw.splitlines()) > 1:
+        raise Refused(f"{what} is one line: put the rest on that line")
+    words = " ".join(raw.split())
     if not words:
-        raise Refused("a board line needs its text: what is needed, in your words")
-    if "\n" in str(text).strip():
-        raise Refused("a board line is one line: put the rest in the text on one line")
-    try:
-        date.fromisoformat(str(due))
-    except ValueError:
-        raise Refused(f"a board line needs a Due date as YYYY-MM-DD, not {due!r}") from None
-    who = f"session `{session}` on {host}" if session else "n/a"
-    ctx = " ".join(str(context or "").split()) or "none"
-    return f"- [ ] {today} ({who}) — {words}. Context: {ctx}. Due: {due}.\n"
+        raise Refused(f"{what} is empty")
+    if WRITER_FIELD_RE.search(words):
+        raise Refused(f"{what} may not carry Context:, Due:, Answers:, Decided: or Closed: — the "
+                      "reader would read it as the field; say it in other words")
+    return words
+
+
+def _civil_date(value: object, what: str) -> str:
+    """`value` when it is a date written YYYY-MM-DD; refused otherwise."""
+    s = str(value)
+    if DATE_ONLY_RE.fullmatch(s):
+        try:
+            date.fromisoformat(s)
+            return s
+        except ValueError:
+            pass
+    raise Refused(f"{what} as YYYY-MM-DD, not {value!r}")
+
+
+def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
+    """The detail block's lines from `detail`'s parts: each part a bullet two spaces in, its
+    further strings nested bullets four in. `label` opens Recommended (a decide's default)."""
+    if not isinstance(detail, Mapping):
+        raise Refused("detail is a mapping of the block's parts")
+    unknown = sorted(str(k) for k in detail if k not in DETAIL_KEYS)
+    if unknown:
+        raise Refused(f"a detail block's parts are {', '.join(DETAIL_KEYS)}, not {', '.join(unknown)}")
+    if not isinstance(detail.get("otherwise", ""), str):
+        raise Refused("the detail block's otherwise is a string")
+    if "otherwise" in detail and "recommended" not in detail:
+        raise Refused("otherwise is written on the Recommended bullet: give recommended too")
+    out = []
+    for part in DETAIL_PARTS:
+        if part not in detail:
+            continue
+        value = detail[part]
+        if not isinstance(value, (str, list, tuple)) or not all(isinstance(v, str) for v in value):
+            raise Refused(f"the detail block's {part} is a string, or a list of strings")
+        values = [value] if isinstance(value, str) else list(value)
+        if not values:
+            raise Refused(f"the detail block's {part} is empty")
+        words = _sentence(_item_words(values[0], f"the detail block's {part}"))
+        if part == "recommended":
+            if label is not None:
+                words = f"{label}{CONSEQUENCE_SEP}{words}"
+            if "otherwise" in detail:
+                other = _item_words(detail["otherwise"], "the detail block's otherwise")
+                words += f" **Otherwise:** {_sentence(other)}"
+        out.append(f"  - **{part.capitalize()}:** {words}")
+        out += [f"    - {_item_words(v, f'a nested bullet under {part}')}" for v in values[1:]]
+    return out
+
+
+def _answer_parts(answers: object) -> list[tuple[str, str]]:
+    """Each offered answer as (label, consequence), whitespace collapsed; refused where the reader
+    would read it otherwise."""
+    if not isinstance(answers, (list, tuple)) or not all(isinstance(a, str) for a in answers):
+        raise Refused("answers is a list of strings, one answer each")
+    parts = []
+    for a in answers:
+        said = _item_words(a, "an answer")
+        if REPLY_TAIL_RE.search(said):
+            raise Refused("an answer's consequence may not read as a reply (` — <name>, <date>: `) — "
+                          "say it in other words")
+        label, sep, cons = said.partition(CONSEQUENCE_SEP)
+        label, cons = label.strip(), cons.strip()
+        if not label or (sep and not cons):
+            raise Refused(f"an answer is `<label>` or `<label> — <consequence>`, not {said!r}")
+        if DEFAULT_MARK_RE.search(label) or DEFAULT_MARK_RE.search(cons):
+            raise Refused("an answer may not carry ` (default)`: the mark is the writer's — give default")
+        parts.append((label, cons))
+    labels = [p[0] for p in parts]
+    if len(set(labels)) != len(labels):
+        raise Refused("two answers have the same label: each answer needs its own")
+    return parts
+
+
+def _a_kind(kind: str | None) -> str:
+    return "an item with no kind" if kind is None else f"{'an' if kind[0] in 'aeiou' else 'a'} {kind}"
+
+
+def item_line(text: str, due: str | None, today: str, session: str | None, host: str | None,
+              context: str | None, *, kind: str | None = None, answers: list[str] | None = None,
+              default: int | None = None, detail: Mapping | None = None) -> str:
+    """A new item, in the board's own format, with its line ending and its detail block —
+    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Due: <due>.][ Answers: <answers>.]`,
+    the head ``session `<name>` on <host>``, ``session `<name>` `` or `n/a`. What each kind takes
+    (a decide its answers and detail block, a look the fixed pair, an fyi no Due:) is SPEC
+    *Edits*; refused, with why, for what the writer does not write and for any result the
+    reader would not read back as exactly the item meant."""
+    if kind is not None and kind not in KINDS:
+        raise Refused(f"a kind is one of {', '.join(KINDS)}, not {kind!r}")
+    words = _sentence(_item_words(text, "a board line's text"))
+    today = _civil_date(today, "today is written")
+    if kind == "fyi":
+        if due is not None:
+            raise Refused("an fyi carries no Due: date — give due as None")
+    elif due is None:
+        raise Refused(f"{_a_kind(kind)} needs its Due date")
+    else:
+        due = _civil_date(due, "a board line needs a Due date")
+    if host is not None and session is None:
+        raise Refused("a host is written only with its session: give the session too")
+    for what, name in (("session", session), ("host", host)):
+        if name is not None and (not str(name) or HEAD_NAME_BAD_RE.search(str(name))):
+            raise Refused(f"a {what} name holds no whitespace and none of ` , ; ) — not {name!r}")
+    ctx = _item_words(context, "the context").removesuffix(".") if str(context or "").strip() else ""
+    ctx = ctx or "none"
+
+    offered = _answer_parts(answers) if answers is not None else []
+    if kind == "decide":
+        if len(offered) < 2:
+            raise Refused("a decide offers two or more answers")
+        if default is not None and (type(default) is not int or not 0 <= default < len(offered)):
+            raise Refused(f"default is the index of one of the {len(offered)} answers, not {default!r}")
+        missing = [p for p in DECIDE_NEEDS if p not in (detail or {})]
+        if missing:
+            raise Refused(f"a decide needs its detail block's {', '.join(missing)}")
+    elif kind == "look":
+        if answers is not None:
+            raise Refused("a look's answers are the writer's (Works | Not right: <what>): give none")
+        if default is not None and (type(default) is not int or default != 0):
+            raise Refused("a look's default is 0 (Works), or None")
+        offered = [(a, "") for a in LIVE_LOOK_ANSWERS]
+    else:
+        if answers is not None:
+            raise Refused(f"{_a_kind(kind)} carries no answers: a question with answers is a decide")
+        if default is not None:
+            raise Refused("default marks one of a decide's or a look's answers: there are none")
+
+    label = offered[default][0] if offered and default is not None else None
+    lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
+
+    def written(lbl: str, cons: str, marked: bool) -> str:
+        return (lbl.replace("|", "\\|") + (" (default)" if marked else "")
+                + (CONSEQUENCE_SEP + cons.replace("|", "\\|") if cons else ""))
+    head = f"session `{session}`{f' on {host}' if host is not None else ''}" if session is not None else "n/a"
+    body = f"{f'{kind} ' if kind else ''}{today} ({head}) — {words} Context: {ctx}."
+    if due is not None:
+        body += f" Due: {due}."
+    if offered:
+        body += f" Answers: {' | '.join(written(lbl, c, i == default) for i, (lbl, c) in enumerate(offered))}."
+    new = "".join(f"{ln}\n" for ln in [f"- [ ] {body}", *lines])
+
+    got = parse_board(new, warn=False)
+    meant = (kind, due, [lbl for lbl, _ in offered], [c for _, c in offered], label,
+             (session, host), item_refs(f"Context: {ctx}."), [ln[2:] for ln in lines])
+    if len(got) != 1 or closed_items(new) or sum(bool(ANY_ITEM_RE.match(ln)) for ln in new.splitlines()) != 1 \
+            or (got[0].kind, got[0].due and got[0].due.isoformat(), got[0].answers, got[0].consequences,
+                got[0].default, item_head(got[0].text), item_refs(got[0].text), got[0].detail) != meant \
+            or got[0].decided is not None or parse_replies(got[0].text) or got[0].fyi_due or got[0].bad_due:
+        raise Refused("the board's reader would not read this item back as meant — rephrase it")
+    return new
 
 
 def decided_line(title: str, ref: str, answers: list[str], default: int | None, words: str, today: str) -> str:

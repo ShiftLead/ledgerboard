@@ -24,7 +24,9 @@ Fixtures, each an invented input and its expected JSON:
   ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
   ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2); an answer's
-  consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3).
+  consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
+  ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
+  ``today`` in place of the file's (v2.3).
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
   and each check; ``components()`` of it joins through the field.
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one
@@ -146,8 +148,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         out["subject_kinds"][s] = L.subject_kind(s)
     for c in spec["compose"]:
         if c["fn"] == "item_line":
-            out["compose"].append(_refused(lambda c=c: L.item_line(
-                c["text"], c["due"], spec["today"], c["session"], c["host"], c["context"])))
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail") if k in c}  # v2.3's keywords
+            out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
+                c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:
             out["compose"].append(_refused(lambda c=c: L.decided_line(
                 c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"])))

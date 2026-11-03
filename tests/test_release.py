@@ -4,6 +4,7 @@ Each test builds a throwaway origin from this tree's release.sh, ledgerboard.py 
 clones it, and runs the clone's release.sh. git's identity comes from the environment, never config.
 """
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -35,6 +36,11 @@ class ReleaseTag(unittest.TestCase):
         for f in FILES:
             (seed / f).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / f, seed / f)
+        # A PR that changes the module leaves its header stale until the release stamps it (release.sh),
+        # so the seed is stamped here as the release would be: the tag checks a released module.
+        first, rest = (seed / "ledgerboard.py").read_bytes().split(b"\n", 1)
+        (seed / "ledgerboard.py").write_bytes(
+            f"# ledgerboard v{self.version} sha256:{hashlib.sha256(rest).hexdigest()}\n".encode() + rest)
         git(seed, "init", "-q", "-b", "main")
         git(seed, "add", ".")
         git(seed, "commit", "-qm", "seed")
