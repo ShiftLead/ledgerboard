@@ -26,7 +26,7 @@ Fixtures, each an invented input and its expected JSON:
   ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
   ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
-  ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2); an answer's
+  ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2), and ``respace()`` (v2.3); an answer's
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
@@ -235,6 +235,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["midpoints"] = [_refused(lambda a=a, b=b: L.midpoint(a, b)) for a, b in spec["midpoints"]]
     out["rank_reads"] = [list(L.rank(t)) for t in spec["rank_reads"]]
     out["rank_writes"] = [_refused(lambda c=c: L.set_rank(c["text"], c["lines"])) for c in spec["rank_writes"]]
+    out["respaces"] = [_refused(lambda c=c: list(L.respace(c["text"], c["ledger"], fixed=c.get("fixed", ()),  # v2.3
+                                                             repo=c.get("repo", ""))))
+                       for c in spec.get("respaces", [])]
     out["rank_paths"] = {p: L.rank_path(p) for p in spec["rank_paths"]}
     out["components"] = {f: L.components(L.entries((root / f).read_text(encoding="utf-8")))
                          for f in spec["components"]}

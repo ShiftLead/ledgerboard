@@ -314,7 +314,8 @@
     "shiftlead: archive 1 closed item (session n/a)",
     "shiftlead: archive 1 closed items (session w-1)",
     "shiftlead: archive 0 closed items (session w-1)",
-    "board_edit: due Rotate. to 2026-01-30 (session s-1)"
+    "board_edit: due Rotate. to 2026-01-30 (session s-1)",
+    "queue: respace TD-3, TD-4 (shiftlead)"
   ],
   "compose": [
     {
@@ -1225,6 +1226,14 @@
       "ids": [
         "TD-1"
       ]
+    },
+    {
+      "tool": "shiftlead",
+      "action": "respace",
+      "ids": [
+        "TD-4",
+        "TD-3"
+      ]
     }
   ],
   "implicit_keys": [
@@ -1354,7 +1363,8 @@
   "rank_reads": [
     "# comment\nTD-1: 0h\nTD-2: 2|0|000004\n",
     "TD-1: 0h\n\n# late comment\nTD-1: 1h\nTD-2: 09\nTD-3 0h\nTD-4: |bad\nTD-5: two words\n",
-    ""
+    "",
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0h\nTD-004: 0hzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzi\n"
   ],
   "rank_writes": [
     {
@@ -1581,5 +1591,50 @@
     "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13.",
     "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
     "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-25. Hide until: 2026-01-22. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B. Decided: Option A (by pat) (2026-01-21)."
+  ],
+  "respaces": [
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0h\nTD-004: 0hzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzi\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0i\nTD-004: 0r\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-001: 2|0|000002\nTD-003: 2|0|000002zz1\nTD-004: 2|0|000002zz1\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0h\nTD-004: 0hzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzi\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n",
+      "fixed": [
+        "0hzz"
+      ]
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 2|0|000002zzzzzzz1\nTD-004: 2|0|000002zzzzzzz2\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n",
+      "repo": "ledgerboard"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0h\nTD-003: 0i\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-003: 0h\n",
+      "ledger": "# L\n\n## TD-001: x\n\n**Priority:** High\n\n**Why:** x\n\n## TD-002: x\n\n**Priority:** Medium\n\n**Why:** x\n\n## TD-003: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-004: x\n\n**Priority:** Low\n\n**Why:** x\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Why:** x\n\n",
+      "fixed": [
+        "|x"
+      ]
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-005: 2|0|000030i\n",
+      "ledger": "# L\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n## TD-006: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-006: 2|0|000006zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1\nTD-005: 2|0|000030i\n",
+      "ledger": "# L\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n## TD-006: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n"
+    }
   ]
 }

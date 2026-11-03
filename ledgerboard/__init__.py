@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from dataclasses import replace as _dc_replace
 from datetime import date, datetime
@@ -512,12 +512,13 @@ def _left_with_open_parts(old: str, ledger: str) -> list[dict]:
 RANK_LINE_RE = re.compile(r"^(TD-\d+):[ \t]+(\S+)[ \t]*$")
 KEY_RE = re.compile(r"^[0-9A-Za-z][|\w./-]*$", re.ASCII)  # never a leading `|`; the rest of a repo name may ride along
 KEY_SEP = "|"  # the lowest character of the key order, below every other
+KEY_NOTE_AT = 64  # a rank key longer than this is noted (ℹ, v2.3): respace the file; an implicit key is about 20
 KEY_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"  # what midpoint() writes, in key order
 BANDS = {"high": "1", "medium": "2", "low": "3"}  # an implicit key's first component; anything else is 4
 RANK_HEADER = ("# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n"
                "# Written by a tool; read only through ledgerboard's rank().\n")
-QUEUE_ACTIONS = ("rank", "join", "prune")
-QUEUE_SUBJECT_RE = re.compile(r"^queue: (?:rank|join|prune) TD-\d+(?:, TD-\d+)* \([^()\s][^()]*\)$")
+QUEUE_ACTIONS = ("rank", "join", "prune", "respace")
+QUEUE_SUBJECT_RE = re.compile(r"^queue: (?:rank|join|prune|respace) TD-\d+(?:, TD-\d+)* \([^()\s][^()]*\)$")
 
 
 def rank_path(ledger_path: str) -> str:
@@ -588,7 +589,8 @@ def midpoint(a: str | None, b: str | None) -> str:
 
 def rank(text: str) -> tuple[dict[str, str], list[str]]:
     """A rank file's ``{id: key}`` and flags: ⚠ for a line it cannot read or a repeated id (the
-    first wins), ℹ for a blank line, a comment below the first entry, or lines out of key order."""
+    first wins), ℹ for a blank line, a comment below the first entry, lines out of key order, or (v2.3) a
+    key longer than KEY_NOTE_AT characters."""
     keys: dict[str, str] = {}
     flags: list[str] = []
     seen_entry, last = False, None
@@ -611,6 +613,8 @@ def rank(text: str) -> tuple[dict[str, str], list[str]]:
             continue
         if last is not None and key_order(key) < key_order(last):
             flags.append(f"ℹ rank line {n}: {tid} is out of key order — the file is sorted by key")
+        if len(key) > KEY_NOTE_AT:
+            flags.append(f"ℹ rank line {n}: {tid}'s key is {len(key)} characters, over {KEY_NOTE_AT} — respace the file")
         keys[tid], last = key, key
     return keys, flags
 
@@ -647,6 +651,75 @@ def set_rank(text: str, lines: Mapping[str, str | None]) -> str:
     if any(got.get(t) != k for t, k in want.items()) or any(t in got for t, k in lines.items() if k is None):
         raise Refused("the rank file does not read back as written")  # a repeated id it cannot set alone
     return out
+
+
+def _spread(lo: str | None, hi: str | None, n: int) -> list[str]:
+    """`n` keys strictly between `lo` and `hi` (None: open), in order, by halving the gap with midpoint()."""
+    if n <= 0:
+        return []
+    m = midpoint(lo, hi)
+    left = (n - 1) // 2
+    return [*_spread(lo, m, left), m, *_spread(m, hi, n - 1 - left)]
+
+
+def respace(text: str, ledger: str, *, fixed: Iterable[str] = (), repo: str = "") -> tuple[str, list[str]]:
+    """The rank file with its keys shortened, and the ids whose keys changed (v2.3, SPEC *The rank*), moving
+    nothing relative to a key it does not own. The fixed points are the keys of the ledger's open entries
+    that have no line (their implicit keys, ``repo`` their last component), every key in ``fixed`` (another
+    repo's, which a caller sorts beside these), the two ends of each band's range of implicit keys for ids past
+    every id read (where an entry filed later sorts), and any line's key equal to one of them or inside such a range. The other lines' keys
+    between two consecutive fixed points are rewritten to short keys inside that same gap, in the same order,
+    equal keys staying equal. Every other line is kept byte for byte (``set_rank()``). Refused for a rank file
+    the reader flags ⚠."""
+    lines, flags = rank(text)
+    bad = [f for f in flags if f.startswith("⚠")]
+    if bad:
+        raise Refused("the rank file has lines the reader cannot use: " + "; ".join(bad))
+    for k in fixed:
+        if not KEY_RE.match(k):
+            raise Refused(f"not a key: {k!r}")
+    lined_nums = {_num(t) for t in lines}
+    recs = pickable(ledger, "", lambda _x: ("unresolved", "respace reads no other repo"), rank_text="",
+                    repo=repo)["entries"]
+    points = {r["key"] for r in recs if _num(r["id"]) not in lined_nums} | set(fixed)
+    # an entry filed later has an implicit key in its band past every id read: each band's range of those
+    # stays a gap no rewritten key enters, so a respace never moves a line across where a new entry will sort
+    nxt = max([_num(r["id"]) for r in recs] + [_num(t) for t in lines] + [0]) + 1
+    future = []  # each band's range of implicit keys for ids past every id read, both ends included
+    for band in sorted(set(BANDS.values()) | {"4"}):
+        for t in range(len(TYPES)):
+            lo, hi = (f"{band}{KEY_SEP}{t}{KEY_SEP}{n:06d}" for n in (min(nxt, 999999), 999999))
+            future.append(tuple(f"{k}{KEY_SEP}{repo}" if repo else k for k in (lo, hi)))
+    points |= {k for rng in future for k in rng}
+
+    def in_future(k: str) -> bool:
+        return any(key_order(lo) <= key_order(k) <= key_order(hi) for lo, hi in future)
+    # a line's key equal to a fixed point, or inside a future range (where an id the ledger has not read, an
+    # archived one's successor, may sort on either side of it), is itself fixed
+    points |= {k for k in lines.values() if k in points or in_future(k)}
+    order = sorted(points, key=key_order)
+    gaps: dict[tuple[str | None, str | None], list[str]] = {}
+    for k in sorted({k for k in lines.values() if k not in points}, key=key_order):
+        lo = next((p for p in reversed(order) if key_order(p) < key_order(k)), None)
+        hi = next((p for p in order if key_order(p) > key_order(k)), None)
+        gaps.setdefault((lo, hi), []).append(k)
+    new_key: dict[str, str] = {}
+    for (lo, hi), ks in gaps.items():
+        new_key.update(zip(ks, _spread(lo, hi, len(ks))))
+    changed = {t: new_key[k] for t, k in lines.items() if k in new_key and new_key[k] != k}
+    if not changed:
+        return text, []
+    out = set_rank(text, changed)
+    got, _ = rank(out)
+    before = sorted(points | set(lines.values()), key=key_order)
+    def rel(a: str, b: str) -> int:
+        return (key_order(a) > key_order(b)) - (key_order(a) < key_order(b))
+    after = {k: new_key.get(k, k) for k in before}
+    if any(rel(after[a], after[b]) != rel(a, b) for a in before for b in before) \
+            or any(in_future(k) or in_future(v) for k, v in new_key.items()) \
+            or any(got[t] != new_key.get(k, k) for t, k in lines.items()):
+        raise Refused("the respaced keys would not keep the file's order: nothing written")
+    return out, sorted(changed, key=_num)
 
 
 def components(ents: list[dict]) -> list[dict]:
