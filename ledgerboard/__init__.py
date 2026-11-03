@@ -57,10 +57,11 @@ REPO_PART = r"(?!\.\.?(?![A-Za-z0-9_.-]))(?!-)[A-Za-z0-9_.-]+"
 REPO = rf"{REPO_PART}(?:/{REPO_PART})*"
 REPO_RE = re.compile(REPO)
 XREPO_ITEM_RE = re.compile(rf"^({REPO})#(TD-\d+)$")
-DECISION_RE = re.compile(r"\bdecision\s*\(([^)]+)\)", re.IGNORECASE)
+ASK_RE = re.compile(r"^\*\*Ask:\*\*", re.MULTILINE)  # the body section a decision gate pairs with (v2.4)
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
-EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part")  # information on a standing ledger, an error in a new edit
+EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part", "priority", "ask-missing",
+               "gate-repeated")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
@@ -174,23 +175,133 @@ def rows(text: str) -> list[dict]:
 
 
 def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
-    """(entry ids — ``TD-NNN`` or ``<repo>#TD-NNN`` — decision holders, unreadable items) of one Blocked by value."""
-    ids, who, bad = [], [], []
-    d = DECISION_RE.search(raw)
-    if d:
-        who.append(d.group(1).strip())
-        rest = raw[d.end():].strip()
-        if rest.startswith(","):  # a list continuing past the decision: it was not written last
-            bad.append(f"after the decision: {rest[1:].strip()}")
-        raw = raw[: d.start()]  # otherwise what follows the decision is its pointer, never read
-    for item in (x.strip() for x in raw.split(",")):
+    """(entry ids — ``TD-NNN`` or ``<repo>#TD-NNN`` — decision holders, every other item) of one
+    Blocked by value: ``parse_gates()`` seen as three lists. The third holds what is neither an id nor
+    a decision, as written: an ``until`` or ``event`` gate (v2.4), a retired item, an unreadable one —
+    so a caller that reads the three as before keeps every block. A retired ``decision (designer)``
+    and the old form's holder are decision holders."""
+    g = parse_gates(raw)
+    who = g["decisions"] + [r["holder"] for r in g["retired"] if r["kind"] != "gate"]
+    rest = [f"until {d}" for d in g["until"]] + [f"event ({n})" for n in g["events"]] + \
+        [r["item"] for r in g["retired"] if r["kind"] == "gate"] + g["bad"]
+    return g["ids"], who, rest
+
+
+# The gates of `Blocked by` (v2.4, SPEC *The ledger*): after the ids, `decision (<person>)`,
+# `until YYYY-MM-DD` and `event (<name>)`. The words are read in any case and written lower.
+GATE_DECISION_RE = re.compile(r"^decision[ \t]*\((?P<who>[^()]*)\)", re.IGNORECASE)
+GATE_UNTIL_RE = re.compile(r"^until[ \t]+(?P<date>\S+)$", re.IGNORECASE)
+GATE_EVENT_RE = re.compile(r"^event[ \t]*\((?P<name>[^()]*)\)$", re.IGNORECASE)
+EVENT_NAME_RE = re.compile(r"[a-z0-9-]+")
+GATE_ITEM_SEP_RE = re.compile(r"[ \t]*,[ \t]*")
+RETIRED_ROLES = ("designer",)  # a role in `decision (…)`, reserved by name (SPEC *Retired words*)
+# The retired words (SPEC *Retired words*): each with what replaces it. The list grows only.
+RETIRED_FIELDS = {"waits": "a gate in Blocked by — until YYYY-MM-DD or event (<name>)",
+                  "taken by": "Id take, the counter take's nonce",
+                  "resolved": "the **Resolved:** body line of an archived entry"}
+RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
+RETIRED_STATUS = {"designed": "Open, with Kind build", "built": "Open, with Kind live-check", "partly": "Open",
+                  "live": "Open", "in": "Open"}  # an open entry's; the archived ones are migrate's to map
+OLD_FORM_REPLACES = "decision (<person>), with the text in an **Ask:** section"
+
+
+def parse_gates(raw: str | None) -> dict:
+    """One Blocked by value read (v2.4, SPEC *The ledger*): ``{ids, decisions, until, events, retired,
+    old_form, bad}``, each in the order written.
+
+    - ``ids``: ``TD-n`` and ``<repo>#TD-n`` items; ``decisions``: each ``decision (<person>)``'s person;
+      ``until``: each ``until YYYY-MM-DD``'s date (a real day); ``events``: each ``event (<name>)``'s name,
+      ``[a-z0-9-]+``. The words ``decision``, ``until`` and ``event`` are read in any case.
+    - ``old_form``: ``(holder, text)`` for the old form ``decision (<who>) <text>``, read only as the last
+      item: a decision followed by anything but a comma or the end runs to the end of the line, which is
+      its text (so it is last by construction). Else None.
+    - ``retired``: ``[{item, replace, kind, holder}]``, each retired item with what replaces it: ``kind``
+      ``old-form`` (and its ``holder``), ``role`` (a role in ``decision (…)``, its ``holder``) or ``gate``
+      (``hold``; ``holder`` None).
+    - ``bad``: every other item, as written. An empty item between commas is skipped.
+    A retired or unreadable item keeps the block; ``pickable()`` reads the rest."""
+    out: dict = {"ids": [], "decisions": [], "until": [], "events": [], "retired": [], "old_form": None, "bad": []}
+    rest = (raw or "").strip(" \t")
+    while rest:
+        m = GATE_ITEM_SEP_RE.search(rest)
+        item, after = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
+        d = GATE_DECISION_RE.match(item)
+        if d and item[d.end():].strip(" \t"):  # the old form: its text runs to the end of the line
+            who, text = d.group("who").strip(" \t"), rest[d.end():].strip(" \t")
+            out["old_form"] = (who, text)
+            out["retired"].append({"item": rest, "replace": OLD_FORM_REPLACES, "kind": "old-form", "holder": who})
+            break
+        rest = after
         if not item:
             continue
+        u, e = GATE_UNTIL_RE.match(item), GATE_EVENT_RE.match(item)
         if ID_ITEM_RE.match(item) or XREPO_ITEM_RE.match(item):
-            ids.append(item)  # a `<repo>#TD-NNN` item is resolved by pickable()'s resolver, not here
+            out["ids"].append(item)  # a `<repo>#TD-NNN` item is resolved by pickable()'s resolver, not here
+        elif d and d.group("who").lower() in RETIRED_ROLES:
+            out["retired"].append({"item": item, "kind": "role", "holder": d.group("who"),
+                                   "replace": f"decision (<person>): {d.group('who')} is a role, reserved by name"})
+        elif d and is_person(d.group("who")):
+            out["decisions"].append(d.group("who"))
+        elif u and _real_day(u.group("date")):
+            out["until"].append(u.group("date"))
+        elif e and EVENT_NAME_RE.fullmatch(e.group("name")):
+            out["events"].append(e.group("name"))
+        elif item.lower() in RETIRED_GATES:
+            out["retired"].append({"item": item, "replace": RETIRED_GATES[item.lower()], "kind": "gate", "holder": None})
         else:
-            bad.append(item)
-    return ids, who, bad
+            out["bad"].append(item)
+    return out
+
+
+def _real_day(text: str) -> bool:
+    try:
+        return bool(ISO_DAY_RE.fullmatch(text)) and date.fromisoformat(text).isoformat() == text
+    except ValueError:
+        return False
+
+
+def gate_items(g: Mapping) -> list[str]:
+    """The gates of a ``parse_gates()`` result, each as the writers write it, in the canonical order:
+    decisions, then ``until``, then events (each group in the order written)."""
+    return ([f"decision ({w})" for w in g["decisions"]] + [f"until {d}" for d in g["until"]]
+            + [f"event ({n})" for n in g["events"]])
+
+
+def gate_repeats(g: Mapping) -> list[str]:
+    """What a ``parse_gates()`` result names more than the grammar allows: a second decision for one
+    person (compared case-insensitively), a second ``until``, an event name twice."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for key, shown in ([(f"decision {w.lower()}", f"decision ({w})") for w in g["decisions"]]
+                       + [(f"event {n}", f"event ({n})") for n in g["events"]]):
+        if key in seen and shown not in out:
+            out.append(shown)
+        seen.add(key)
+    if len(g["until"]) > 1:
+        out.append(f"until (written {len(g['until'])} times)")
+    return out
+
+
+def _written_blocked(value: str, current: str | None = None) -> str:
+    """A Blocked by value as a writer writes it (v2.4, SPEC *The ledger*): its ids in the order written,
+    then its gates in the canonical order (``gate_items()``); a value holding an item the grammar does
+    not read is written as given, for ``check()`` to flag. Raises Refused for the old form, which is read
+    but never written, and for a gate added to an entry whose ``current`` value still holds the old form,
+    whose text would swallow it."""
+    g = parse_gates(value)
+    if g["old_form"]:
+        raise Refused(f"Blocked by in the old form (decision ({g['old_form'][0]}) with text after it) is read "
+                      "but never written — write decision (<person>) and put the text in an **Ask:** section")
+    was = parse_gates(current)
+    if was["old_form"]:
+        had = {_gate_key(x) for x in gate_items(was)} | {_gate_key(f"decision ({was['old_form'][0]})")}
+        added = [x for x in gate_items(g) if _gate_key(x) not in had]
+        if added:
+            raise Refused(f"the entry's Blocked by is in the old form, whose text would swallow {added[0]} — "
+                          "migrate it first: set decision (<person>) alone, with its text in an **Ask:** section")
+    if g["bad"] or g["retired"]:
+        return value
+    return ", ".join(g["ids"] + gate_items(g))
 
 
 def ref_key(ref: str) -> str:
@@ -369,20 +480,28 @@ class _Flags(list):
 
 
 def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclared: bool = False,
-             rank_text: str | None = None, repo: str = "") -> dict:
+             rank_text: str | None = None, repo: str = "", *, today: date | str) -> dict:
     """Every live entry in pick order, with its derived pickable, open blockers and raw fields; plus flags.
 
     **Pickable is derived, never written:** an entry is pickable when it has no Blocked by field,
-    or every entry it names is archived and it names no decision — and no open entry is Part of
-    it (v2.1; its ``parts_open``, kept apart from ``blocked_by``). ``resolve`` answers a
-    ``<repo>#TD-NNN`` item (see ``Resolve``); without one, such an item keeps its block.
-    ``undeclared`` also flags a header field with no vocabulary, when the ledger declares any.
+    or every entry it names is archived and it has no ``decision``, no ``event`` and no ``until`` after
+    ``today`` (v2.4) — and no open entry is Part of it (v2.1; its ``parts_open``, kept apart from
+    ``blocked_by``). ``today`` is required: the UTC date, a date or ``YYYY-MM-DD`` (an aware datetime
+    is taken as its UTC date). ``resolve`` answers a ``<repo>#TD-NNN`` item (see ``Resolve``); without
+    one, such an item keeps its block. ``undeclared`` also flags a header field with no vocabulary,
+    when the ledger declares any. A parent's record carries ``parts_gates`` (v2.4): each gate that holds
+    on one of its open direct parts, keyed in its canonical form, with the parts carrying it.
 
     **Pick order is the rank** (SPEC *The rank*): ``rank_text`` is the rank file's text (None or
     "": no lines), ``repo`` the last component of an implicit key. Each record carries its ``key``
     (its line's, else its implicit key) and its ``card_key``; entries sort by card, then within a
     card by dependency (after its blockers and its parts), then key."""
+    try:
+        day = utc_day(today, "pickable()'s today")
+    except Refused as why:
+        raise ValueError(str(why)) from None
     live = entries(ledger)
+    texts = _entry_texts(ledger)
     live_nums = {_num(e["id"]) for e in live}
     archived = heading_nums(archive)
     parent_of, part_of = _parents(live)
@@ -402,9 +521,21 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
         flags.add(text, None, "rank", "rank")
     keys: dict[str, str] = {}
     pick, blocked = [], []
+    holding: dict[str, list[str]] = {}  # each entry's gates that hold today, as written (parts_gates)
     for e in live:
         n = _num(e["id"])
         prio = e["priority"] or table.get(n) or "?"
+        if first_word(prio) not in PRIORITIES:
+            flags.add(f"ℹ {e['id']}: Priority {prio!r} is not High, Medium or Low — read after Low",
+                      e["id"], "priority", "priority")
+        for key in e["fields"]:
+            if key in RETIRED_FIELDS:
+                flags.add(f"ℹ {e['id']}: the {key.capitalize()} field is retired — write "
+                          f"{RETIRED_FIELDS[key]} (SPEC *Retired words*)", e["id"], key, "retired")
+        status = first_word(e["fields"].get("status"))
+        if status in RETIRED_STATUS:
+            flags.add(f"ℹ {e['id']}: the Status word {status.capitalize()!r} is retired — write "
+                      f"{RETIRED_STATUS[status]} (SPEC *Retired words*)", e["id"], "status", "retired")
         etype = (e["type_raw"] or TYPES[0]).lower()
         for key in e["below"]:
             flags.add(f"ℹ {e['id']}: its {key.capitalize()} line is below the header block — "
@@ -426,7 +557,7 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
         keys.setdefault(e["id"], lined.get(n) or implicit_key(prio, etype, e["id"], repo))
         rec = {"id": e["id"], "title": e["title"], "priority": prio, "type": etype,
                "blocked_by": [], "cross_repo": [], "pickable": True, "fields": e["fields"],
-               "key": keys[e["id"]], "card_key": "", "part_of": None, "parts_open": []}
+               "key": keys[e["id"]], "card_key": "", "part_of": None, "parts_open": [], "parts_gates": {}}
         par, why = part_of.get(e["id"], (None, None))
         if why:
             flags.add(f"⚠ {e['id']}: its Part of {why}", e["id"], "part of", "part-of-item")
@@ -443,10 +574,31 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
             rec["parts_open"] = list(parts_open[e["id"]])
             rec["pickable"] = False
         if e["blocked_raw"] is not None:
-            ids, who, bad = parse_blocked(e["blocked_raw"])
+            g = parse_gates(e["blocked_raw"])
+            ids, bad = g["ids"], g["bad"]
             for item in bad:
-                flags.add(f"⚠ {e['id']}: cannot read Blocked by item {item!r} — "
-                          "write TD-NNN or decision (<who>)", e["id"], "blocked by", "blocked-item")
+                flags.add(f"⚠ {e['id']}: cannot read Blocked by item {item!r} — write TD-n, <repo>#TD-n, "
+                          "decision (<person>), until YYYY-MM-DD or event (<name>)", e["id"], "blocked by",
+                          "blocked-item")
+            for r in g["retired"]:
+                flags.add(f"ℹ {e['id']}: Blocked by item {r['item']!r} is retired — write {r['replace']}; "
+                          "it keeps the block (SPEC *Retired words*)", e["id"], "blocked by", "retired")
+            rep = gate_repeats(g)
+            if rep:
+                flags.add(f"ℹ {e['id']}: Blocked by names {', '.join(rep)} more than once — at most one "
+                          "decision per person, one until and differently named events", e["id"], "blocked by",
+                          "gate-repeated")
+            for d in g["until"]:
+                if d <= day:
+                    flags.add(f"ℹ {e['id']}: until {d} is reached — the gate no longer holds; drop it from "
+                              "Blocked by (the gate sweep lifts it)", e["id"], "blocked by", "until-past")
+            gates = [f"decision ({w})" for w in g["decisions"]] + [f"until {d}" for d in g["until"] if d > day] \
+                + [f"event ({x})" for x in g["events"]]
+            holding[e["id"]] = gates
+            if g["decisions"] and "ask" not in e["fields"] and not ASK_RE.search(texts.get(e["id"], "")):
+                flags.add(f"ℹ {e['id']}: Blocked by names {', '.join(f'decision ({w})' for w in g['decisions'])} "
+                          "and the entry has no **Ask:** — say what the person owes, a go included",
+                          e["id"], "blocked by", "ask-missing")
             open_ids = []
             for b in ids:
                 if "#" in b:
@@ -466,12 +618,15 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                     flags.add(f"⚠ {e['id']}: Blocked by {b}, which names no entry in the ledger or the archive",
                               e["id"], "blocked by", "blocked-unknown")
                     open_ids.append(b)  # unknown: keep the block — the safe direction
-            if not open_ids and not who and not bad:
-                now = "pickable; " if rec["pickable"] else "it still waits on its open parts; "
-                flags.add(f"ℹ {e['id']}: every blocker is archived ({', '.join(ids)}) — {now}"
-                          "the Blocked by field can go", e["id"], "blocked by", "blockers-archived")
+            kept = [f"decision ({r['holder']})" if r["holder"] is not None else repr(r["item"]) for r in g["retired"]] \
+                + [repr(b) for b in bad]  # a retired decision still names who it waits on
+            if not open_ids and not gates and not kept:
+                if ids:
+                    now = "pickable; " if rec["pickable"] else "it still waits on its open parts; "
+                    flags.add(f"ℹ {e['id']}: every blocker is archived ({', '.join(ids)}) — {now}"
+                              "the Blocked by field can go", e["id"], "blocked by", "blockers-archived")
             else:
-                rec["blocked_by"] = open_ids + [f"decision ({w})" for w in who] + [repr(b) for b in bad]
+                rec["blocked_by"] = open_ids + gates + kept
                 rec["pickable"] = False
             below_me = _descendants(e["id"], parts_open)
             legacy = [b for b in ids if "#" not in b and any(_num(b) == _num(d) for d in below_me)]
@@ -491,6 +646,17 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                 else "waits on itself"
             flags.add(f"ℹ {t}: {on} — none of it can be picked; break it (a part is never blocked "
                       "by its parent or an ancestor)", t, "blocked by", "cycle")
+    by_id = {r["id"]: r for r in pick + blocked}
+    for par, kids in parts_open.items():
+        if par not in by_id:
+            continue
+        pg: dict[str, list[str]] = {}
+        canon: dict[str, str] = {}
+        for kid in sorted(kids, key=_num):
+            for gate in holding.get(kid, []):
+                canon.setdefault(_gate_key(gate), gate)  # the lowest-numbered part's spelling
+                pg.setdefault(canon[_gate_key(gate)], []).append(kid)
+        by_id[par]["parts_gates"] = pg
     order = _card_order(live, keys, lined, parent_of)
     for r in pick + blocked:
         r["card_key"] = order[r["id"]][1]
@@ -502,7 +668,7 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
 
 
 def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | None = None,
-          rank_text: str | None = None) -> list[dict]:
+          rank_text: str | None = None, *, today: date | str) -> list[dict]:
     """The ledger's flags: {level, id, field, kind, text, standing}. ``old`` is the ledger before
     an edit (None: every ⚠ is an error and nothing is standing). With it, a flag on an entry whose
     header block is unchanged — or a Fields: flag under an unchanged declaration — is standing:
@@ -511,9 +677,11 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     entry that left the ledger while an open entry is still Part of it is an error,
     ``archive-open-parts``, naming the parts — never standing, since only this edit made it. Each
     open entry's Log (v2.4) adds ``log-not-last`` and ``log-line`` (``log_problems()``), standing when the
-    entry's whole text is unchanged; an archived entry's Log is not read."""
+    entry's whole text is unchanged; an archived entry's Log is not read. ``today`` is ``pickable()``'s
+    (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
-            for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text)["flag_recs"]]
+            for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
+                              today=today)["flag_recs"]]
     texts = _entry_texts(ledger)
     for tid, text in texts.items():
         for kind, why in log_problems(text):
@@ -745,7 +913,7 @@ def respace(text: str, ledger: str, *, fixed: Iterable[str] = (), repo: str = ""
             raise Refused(f"not a key: {k!r}")
     lined_nums = {_num(t) for t in lines}
     recs = pickable(ledger, "", lambda _x: ("unresolved", "respace reads no other repo"), rank_text="",
-                    repo=repo)["entries"]
+                    repo=repo, today=date.min)["entries"]  # keys and order only: neither reads today
     points = {r["key"] for r in recs if _num(r["id"]) not in lined_nums} | set(fixed)
     # an entry filed later has an implicit key in its band past every id read: each band's range of those
     # stays a gap no rewritten key enters, so a respace never moves a line across where a new entry will sort
@@ -2700,9 +2868,12 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
     field that is not one ``**Name:** value`` line, a field named twice, and sections that would not
     read back as given (a paragraph of a section's text that opens in bold would start another).
 
+    A Blocked by (v2.4) is written with its ids first, then its gates in the canonical order; the old
+    form ``decision (<who>) <text>`` is refused.
+
     ``filed`` (v2.4: {today, who, session, words, while}) writes the entry's Log: its first line,
-    ``filed by <who>, session <s>[, while <id>]: "<words>"``, then one ``gate added: decision (<who>)``
-    for each decision its Blocked by is filed with. With it, Added is a bare date, Status (if given)
+    ``filed by <who>, session <s>[, while <id>]: "<words>"``, then one ``gate added: <gate>`` for each
+    gate its Blocked by is filed with, in the canonical order. With it, Added is a bare date, Status (if given)
     is ``Open``, and no section is named Log; ``today`` is a date, ``YYYY-MM-DD`` or an aware datetime."""
     if not ID_ITEM_RE.match(str(tid)):
         raise Refused(f"an entry's id is TD-n, not {tid!r}")
@@ -2722,7 +2893,7 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
         if field_key(name) in seen:
             raise Refused(f"the field {name!r} is named twice")
         seen.add(field_key(name))
-        header.append((name, value))
+        header.append((name, _written_blocked(value) if field_key(name) == "blocked by" else value))
     pairs = list(sections.items()) if isinstance(sections, Mapping) else list(sections or ())
     if filed is not None:
         added, status = _value(header, "added"), _value(header, "status")
@@ -2734,8 +2905,8 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
             raise Refused("a filed entry's Log is written from filed, not given as a section")
         day = utc_day(filed.get("today"), "filed")
         lines = [f"- {day}: {_filed_line(filed)}"]
-        for who in parse_blocked(_value(header, "blocked by") or "")[1]:
-            lines.append(f"- {day}: gate added: decision ({who})")
+        for gate in gate_items(parse_gates(_value(header, "blocked by"))):
+            lines.append(f"- {day}: gate added: {gate}")
         pairs.append((None, "\n".join([f"**{LOG_LEAD}**", *lines])))  # written as given: lines under the lead
     if pairs and not header:
         raise Refused("an entry with sections needs at least one field: the paragraph after the heading "
@@ -3122,7 +3293,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     """One entry's text after ``action`` (``ENTRY_ACTIONS``), in canonical form; raises Refused. The
     edits (SPEC *Ledger entries and their edits*; from v2.4 note, archive and reopen write the Log):
 
-    - ``set`` (``fields``: {name: value}; an empty value removes the field);
+    - ``set`` (``fields``: {name: value}; an empty value removes the field); a Blocked by (v2.4) is
+      written with its ids first, then its gates in the canonical order, and refused in the old form,
+      or when it adds a gate to an entry whose Blocked by still holds the old form;
     - ``note`` (``words``): the Status's notes lifted into the Log (``status_notes_to_log``), then
       ``- <today>: <words>`` appended to it; refused for words that begin with a Log writer's prefix;
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
@@ -3174,6 +3347,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 header = _with(header, name, None)
                 continue
             value = _one_line(f"the {name} field", value)
+            if field_key(name) == "blocked by":
+                value = _written_blocked(value, _value(header, "blocked by"))
             fm = FIELD_RE.match(f"**{name}:** {value}")
             if not fm or fm.group(1) != name or fm.group(2) != value:
                 raise Refused(f"{name!r}: {value!r} would not read back as one field")

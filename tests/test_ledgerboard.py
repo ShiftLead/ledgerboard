@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import ledgerboard as L  # noqa: E402
 
+TODAY = date(2026, 1, 15)  # the UTC date pickable() and check() take (v2.4)
+
 LEDGER = """# Ledger
 
 ## TD-001: One
@@ -47,21 +49,21 @@ class Purity(unittest.TestCase):
 
 class Resolver(unittest.TestCase):
     def test_no_resolver_keeps_the_block(self):
-        r = L.pickable(LEDGER, "")
+        r = L.pickable(LEDGER, "", today=TODAY)
         self.assertEqual([e["id"] for e in r["blocked"]], ["TD-001"])
         self.assertIn("no resolver", r["entries"][0]["cross_repo"][0]["why"])
 
     def test_a_tuple_resolver(self):
-        r = L.pickable(LEDGER, "", lambda item: ("archived", ""))
+        r = L.pickable(LEDGER, "", lambda item: ("archived", ""), today=TODAY)
         self.assertEqual([e["id"] for e in r["pickable"]], ["TD-001", "TD-002"])
 
     def test_a_mapping_resolver_keeps_its_extra_keys(self):
-        r = L.pickable(LEDGER, "", lambda item: {"state": "open", "why": "", "root": "/x", "source": "origin/main"})
+        r = L.pickable(LEDGER, "", lambda item: {"state": "open", "why": "", "root": "/x", "source": "origin/main"}, today=TODAY)
         x = r["entries"][0]["cross_repo"][0]
         self.assertEqual((x["item"], x["state"], x["root"], x["source"]), ("far#TD-009", "open", "/x", "origin/main"))
 
     def test_an_unknown_state_is_unresolved(self):
-        r = L.pickable(LEDGER, "", lambda item: ("maybe", ""))
+        r = L.pickable(LEDGER, "", lambda item: ("maybe", ""), today=TODAY)
         self.assertEqual(r["entries"][0]["cross_repo"][0]["state"], "unresolved")
         self.assertFalse(r["entries"][0]["pickable"])
 
@@ -69,7 +71,7 @@ class Resolver(unittest.TestCase):
 class OddResolvers(unittest.TestCase):
     def test_odd_output_is_unresolved_never_an_error(self):
         for got in (None, ("open",), ("a", "b", "c"), {"state": "open"}, {"why": None}, {"state": "archived", "why": None}):
-            x = L.pickable(LEDGER, "", lambda item, got=got: got)["entries"][0]["cross_repo"][0]
+            x = L.pickable(LEDGER, "", lambda item, got=got: got, today=TODAY)["entries"][0]["cross_repo"][0]
             self.assertIn(x["state"], ("open", "archived", "unresolved"), got)
             self.assertIsInstance(x["why"], str, got)
 
@@ -77,9 +79,9 @@ class OddResolvers(unittest.TestCase):
 class Check(unittest.TestCase):
     def test_a_standing_flag_is_information(self):
         bad = LEDGER.replace("**Priority:** Low", "**Priority:** Low\n**Type:** chore")
-        recs = L.check(bad, "", old=bad)
+        recs = L.check(bad, "", old=bad, today=TODAY)
         self.assertTrue(all(r["level"] == "info" and r["standing"] for r in recs if r["kind"] == "type"))
-        recs = L.check(bad, "", old=LEDGER)
+        recs = L.check(bad, "", old=LEDGER, today=TODAY)
         self.assertTrue(any(r["level"] == "error" and r["kind"] == "type" for r in recs))
 
 
@@ -122,7 +124,7 @@ RANKED = """# Ledger
 
 
 def _order(ledger, rank_text=None, **kw):
-    return [e["id"] for e in L.pickable(ledger, "", rank_text=rank_text, **kw)["entries"]]
+    return [e["id"] for e in L.pickable(ledger, "", rank_text=rank_text, **kw, today=TODAY)["entries"]]
 
 
 class Rank(unittest.TestCase):
@@ -141,17 +143,17 @@ class Rank(unittest.TestCase):
 
     def test_a_newcomer_takes_its_cards_key(self):
         led = RANKED + "\n## TD-005: New build\n\n**Priority:** High\n**Blocked by:** TD-004\n"
-        r = L.pickable(led, "", rank_text="TD-004: 3z\n")
+        r = L.pickable(led, "", rank_text="TD-004: 3z\n", today=TODAY)
         keys = {e["id"]: (e["key"], e["card_key"]) for e in r["entries"]}
         self.assertEqual(keys["TD-005"], ("1|0|000005", "3z"))
         self.assertEqual([e["id"] for e in r["entries"]][-2:], ["TD-004", "TD-005"])
 
     def test_the_repo_is_the_implicit_keys_last_component(self):
-        r = L.pickable(RANKED, "", repo="far")
+        r = L.pickable(RANKED, "", repo="far", today=TODAY)
         self.assertEqual(r["entries"][0]["key"], "1|0|000001|far")
 
     def test_rank_flags_reach_check(self):
-        recs = L.check(RANKED, "", old=RANKED, rank_text="TD-1 0h\n")
+        recs = L.check(RANKED, "", old=RANKED, rank_text="TD-1 0h\n", today=TODAY)
         self.assertEqual([(r["kind"], r["level"], r["standing"]) for r in recs], [("rank", "error", False)])
 
     def test_set_rank_round_trips_and_keeps_other_lines(self):
@@ -191,7 +193,7 @@ class Rank(unittest.TestCase):
             L.set_rank("", {"TD-002": "\u00e9"})
         led = "## TD-7: low\n\n**Priority:** Low\n\n## TD-008: high\n\n**Priority:** High\n**Blocked by:** TD-007\n"
         self.assertEqual(_order(led), ["TD-7", "TD-008"])
-        self.assertEqual(L.pickable(led, "", rank_text="TD-0007: 0h\n")["entries"][0]["key"], "0h")
+        self.assertEqual(L.pickable(led, "", rank_text="TD-0007: 0h\n", today=TODAY)["entries"][0]["key"], "0h")
 
 
 class Header(unittest.TestCase):
@@ -346,6 +348,43 @@ class AnswerConsequences(unittest.TestCase):
         self.assertIn("Answers: A (default) — x | B | C.", line)
 
 
+
+class Gates(unittest.TestCase):
+    """v2.4: `Blocked by`'s gates, and the today pickable() and check() take (SPEC *The ledger*)."""
+
+    UNTIL = "# Ledger\n\n## TD-001: Waits for a date\n\n**Priority:** Low\n**Blocked by:** until 2026-01-15\n"
+
+    def picked(self, today):
+        return [e["id"] for e in L.pickable(self.UNTIL, "", today=today)["pickable"]]
+
+    def test_today_is_required(self):
+        with self.assertRaises(TypeError):
+            L.pickable(self.UNTIL, "")
+        with self.assertRaises(TypeError):
+            L.check(self.UNTIL, "")
+
+    def test_an_until_holds_before_its_date_and_lifts_on_it(self):
+        self.assertEqual(self.picked(date(2026, 1, 14)), [])
+        self.assertEqual(self.picked("2026-01-15"), ["TD-001"])
+
+    def test_today_is_the_utc_date(self):
+        late = datetime(2026, 1, 14, 23, 30, tzinfo=timezone(timedelta(hours=-5)))  # 04:30 UTC on the 15th
+        self.assertEqual(self.picked(late), ["TD-001"])
+        for bad in (datetime(2026, 1, 15, 12, 0), "15 Jan", None):  # noqa: DTZ001 — a naive datetime is refused
+            with self.subTest(today=bad), self.assertRaises(ValueError):
+                L.pickable(self.UNTIL, "", today=bad)
+
+    def test_parse_blocked_keeps_every_block_for_its_callers(self):
+        self.assertEqual(L.parse_blocked("TD-1, decision (pat), until 2026-02-01, event (x), hold, soon"),
+                         (["TD-1"], ["pat"], ["until 2026-02-01", "event (x)", "hold", "soon"]))
+        self.assertEqual(L.parse_blocked("decision (designer), decision (kim) — after it, TD-9"),
+                         ([], ["designer", "kim"], []))
+
+    def test_waits_is_never_a_gate(self):
+        led = "# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Waits:** until 2027-01-01\n"
+        self.assertEqual([e["id"] for e in L.pickable(led, "", today=TODAY)["pickable"]], ["TD-001"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -369,7 +408,7 @@ class LedgerDirectory(unittest.TestCase):
         self.assertTrue(led.startswith("# Ledger\n\nLedgerboard: 2\n\n## TD-002"))
         self.assertEqual(L.format_major(led), 2)
         self.assertIsNone(L.version_problem(led))
-        self.assertEqual([e["id"] for e in L.pickable(led, arc)["pickable"]], ["TD-002", "TD-10"])
+        self.assertEqual([e["id"] for e in L.pickable(led, arc, today=TODAY)["pickable"]], ["TD-002", "TD-10"])
 
     def test_load_reads_a_v1_file_and_its_archive_beside_it(self):
         files = {"docs/technical_debt.md": LEDGER, "docs/technical_debt_archive.md": "## TD-009: x\n"}
@@ -460,10 +499,10 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
     ARCHIVE = _entry(4, "Medium", "**Part of:** TD-001")
 
     def kinds(self, led, arc="", old=None):
-        return [(r["id"], r["kind"], r["level"]) for r in L.check(led, arc, old=old)]
+        return [(r["id"], r["kind"], r["level"]) for r in L.check(led, arc, old=old, today=TODAY)]
 
     def test_a_parent_with_open_parts_is_not_pickable_and_keeps_its_blockers_apart(self):
-        r = L.pickable(self.DESIGN, self.ARCHIVE)
+        r = L.pickable(self.DESIGN, self.ARCHIVE, today=TODAY)
         rec = {e["id"]: e for e in r["entries"]}
         self.assertFalse(rec["TD-001"]["pickable"])
         self.assertEqual(rec["TD-001"]["parts_open"], ["TD-002", "TD-003"])
@@ -474,9 +513,9 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
 
     def test_a_parent_whose_parts_are_all_archived_is_pickable(self):
         led = _entry(1, "Medium", "**Blocked by:** TD-009") + _entry(2, "Low", "**Part of:** TD-001")
-        text = [f for f in L.pickable(led, _entry(9))["flags"] if "every blocker is archived" in f]
+        text = [f for f in L.pickable(led, _entry(9), today=TODAY)["flags"] if "every blocker is archived" in f]
         self.assertIn("still waits on its open parts", text[0])  # review of #22: not "pickable"
-        r = L.pickable(_entry(1), self.ARCHIVE)
+        r = L.pickable(_entry(1), self.ARCHIVE, today=TODAY)
         self.assertEqual([e["id"] for e in r["pickable"]], ["TD-001"])
         self.assertEqual(r["entries"][0]["parts_open"], [])
 
@@ -488,7 +527,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
 
     def test_parts_do_not_inherit_their_parents_blockers(self):
         led = _entry(1, "Medium", "**Blocked by:** TD-009") + _entry(2, "Low", "**Part of:** TD-001") + _entry(9)
-        self.assertCountEqual([e["id"] for e in L.pickable(led, "")["pickable"]], ["TD-002", "TD-009"])
+        self.assertCountEqual([e["id"] for e in L.pickable(led, "", today=TODAY)["pickable"]], ["TD-002", "TD-009"])
 
     def test_cards_join_by_part_of(self):
         led = _entry(1) + _entry(2, "Low", "**Part of:** TD-001") + _entry(5, "Low", "**Part of:** TD-007")
@@ -514,7 +553,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
     def test_a_part_blocked_by_its_parent_is_a_cycle(self):
         led = _entry(1) + _entry(2, "Medium", "**Part of:** TD-001", "**Blocked by:** TD-001")
         self.assertEqual([t for t, k, _ in self.kinds(led) if k == "cycle"], ["TD-001", "TD-002"])
-        self.assertEqual(L.pickable(led, "")["pickable"], [])
+        self.assertEqual(L.pickable(led, "", today=TODAY)["pickable"], [])
 
     def test_a_blocked_by_cycle_alone_is_flagged_too(self):
         led = _entry(1, "Medium", "**Blocked by:** TD-002") + _entry(2, "Medium", "**Blocked by:** TD-001")
@@ -523,7 +562,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
     def test_the_legacy_edge_is_carried_by_the_parent(self):
         led = (_entry(1, "Medium", "**Blocked by:** TD-002, TD-003, TD-009") + _entry(2, "Medium", "**Part of:** TD-001")
                + _entry(3, "Medium", "**Part of:** TD-002") + _entry(9))
-        legacy = [r for r in L.check(led, "") if r["kind"] == "legacy-part"]
+        legacy = [r for r in L.check(led, "", today=TODAY) if r["kind"] == "legacy-part"]
         self.assertEqual([(r["id"], r["level"]) for r in legacy], [("TD-001", "info")])
         self.assertIn("TD-002, TD-003", legacy[0]["text"])  # a part and a part's part; TD-009 is a real blocker
         self.assertNotIn("cycle", [k for _, k, _ in self.kinds(led)])  # a parallel edge, no cycle
@@ -543,7 +582,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
                           ("TD-003", "part-of-archived", "info"), ("TD-004", "part-of-item", "error"),
                           ("TD-007", "part-of-item", "error")])
         # an unreadable or cross-repo line makes no parent: TD-005 stays pickable
-        self.assertIn("TD-005", [e["id"] for e in L.pickable(led, _entry(8))["pickable"]])
+        self.assertIn("TD-005", [e["id"] for e in L.pickable(led, _entry(8), today=TODAY)["pickable"]])
 
     def test_part_of_is_a_cadence_field(self):
         led = "Fields: Owner = a | b\n\n" + _entry(1) + _entry(2, "Low", "**Part of:** TD-001")
@@ -556,7 +595,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
         self.assertIn("escaped from", L.CADENCE_FIELDS)
 
     def test_a_ledger_with_no_part_of_reads_as_before(self):
-        r = L.pickable(RANKED, "")
+        r = L.pickable(RANKED, "", today=TODAY)
         self.assertTrue(all(e["part_of"] is None and e["parts_open"] == [] for e in r["entries"]))
 
 
@@ -603,7 +642,7 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
 
     def test_id_take_is_a_cadence_field(self):
         led = "Fields: Owner = a | b\n\n" + _entry(1, "Low", "**Id take:** 0123456789abcdef0123456789abcdef")
-        self.assertNotIn("undeclared-field", [r["kind"] for r in L.check(led, "", old="")])
+        self.assertNotIn("undeclared-field", [r["kind"] for r in L.check(led, "", old="", today=TODAY)])
         self.assertIn("id take", L.CADENCE_FIELDS)
 
     def test_a_new_entry_reads_back_its_fields(self):
@@ -675,18 +714,18 @@ class EntryWriters(unittest.TestCase):  # v2.2: one entry's canonical form (ledg
     def test_a_parent_archived_ahead_of_its_parts_is_an_error_no_edit_demotes(self):
         led = _entry(1) + _entry(2, "Low", "**Part of:** TD-001") + _entry(3, "Low", "**Part of:** TD-001")
         after = _entry(2, "Low", "**Part of:** TD-001") + _entry(3, "Low", "**Part of:** TD-001")
-        got = [r for r in L.check(after, _entry(1), old=led) if r["kind"] == "archive-open-parts"]
+        got = [r for r in L.check(after, _entry(1), old=led, today=TODAY) if r["kind"] == "archive-open-parts"]
         self.assertEqual([(r["id"], r["level"], r["standing"]) for r in got], [("TD-001", "error", False)])
         self.assertIn("TD-002, TD-003 are still Part of it", got[0]["text"])
         # parts archived with it, or re-parented in the same edit: nothing
-        self.assertFalse([r for r in L.check("", _entry(1) + after, old=led) if r["kind"] == "archive-open-parts"])
+        self.assertFalse([r for r in L.check("", _entry(1) + after, old=led, today=TODAY) if r["kind"] == "archive-open-parts"])
         moved = _entry(2, "Low", "**Part of:** TD-004") + _entry(3) + _entry(4)
-        self.assertFalse([r for r in L.check(moved, _entry(1), old=led + _entry(4)) if r["kind"] == "archive-open-parts"])
-        self.assertFalse([r for r in L.check(after, _entry(1)) if r["kind"] == "archive-open-parts"])
+        self.assertFalse([r for r in L.check(moved, _entry(1), old=led + _entry(4), today=TODAY) if r["kind"] == "archive-open-parts"])
+        self.assertFalse([r for r in L.check(after, _entry(1), today=TODAY) if r["kind"] == "archive-open-parts"])
         # deleted outright, or renumbered with its parts left pointing at the old id: the same error
         for arc, extra in (("", ""), ("", _entry(9))):
             with self.subTest(renumbered=bool(extra)):
-                got = [r["id"] for r in L.check(after + extra, arc, old=led) if r["kind"] == "archive-open-parts"]
+                got = [r["id"] for r in L.check(after + extra, arc, old=led, today=TODAY) if r["kind"] == "archive-open-parts"]
                 self.assertEqual(got, ["TD-001"])
 
 
@@ -740,11 +779,11 @@ class TheLog(unittest.TestCase):
     def test_check_flags_a_log_out_of_place_or_shape_and_only_where_the_entry_changed(self):
         good = L.edit_entry(self.ENTRY, "note", today="2026-01-03", words="one")
         bad = good + "- 2026-01-04 no colon\n\n**After:** x\n"
-        kinds = sorted(r["kind"] for r in L.check(bad, "") if r["field"] == "log")
+        kinds = sorted(r["kind"] for r in L.check(bad, "", today=TODAY) if r["field"] == "log")
         self.assertEqual(kinds, ["log-line", "log-not-last"])
-        self.assertTrue(all(r["standing"] for r in L.check(bad, "", old=bad) if r["field"] == "log"))
-        self.assertTrue(all(r["level"] == "error" for r in L.check(bad, "", old=good) if r["field"] == "log"))
-        self.assertFalse([r for r in L.check(good, "") if r["field"] == "log"])
+        self.assertTrue(all(r["standing"] for r in L.check(bad, "", old=bad, today=TODAY) if r["field"] == "log"))
+        self.assertTrue(all(r["level"] == "error" for r in L.check(bad, "", old=good, today=TODAY) if r["field"] == "log"))
+        self.assertFalse([r for r in L.check(good, "", today=TODAY) if r["field"] == "log"])
 
     def test_a_status_lifts_only_from_a_word_its_end_a_colon_or_its_date_follow(self):
         for status in ("In progress: x", "Open, held", "Open; held", "**Open** x", "Openly x", "Open x",

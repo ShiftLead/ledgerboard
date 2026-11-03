@@ -22,6 +22,8 @@ first wins. Names compare case- and separator-insensitively (`Blocked by`, `bloc
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
 feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` and `Id take` (v2.2). A
 `Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged.
+A `Priority` other than High, Medium or Low (v2.4) is read after Low and flagged (`priority`): an error on
+an entry the edit changed, ℹ on a standing ledger.
 
 **`Escaped from`** (v2.2) — `**Escaped from:** TD-n` or `<repo>#TD-n`, on a defect: the design entry
 whose review should first have caught it. Its value is free, so no `Fields:` line declares it; the
@@ -37,13 +39,47 @@ the first entry: `Fields: Owner = builder | designer; Kind = build | design-firs
 field's value outside its vocabulary is an error; an undeclared field is read but not validated.
 The format's own fields are never redeclared.
 
-**`Blocked by`** — comma-separated items, each `TD-NNN` or `<repo>#TD-NNN` (another repo's
-entry; `<repo>` as below), then optionally `decision (<who>)` last, whose pointer
-runs to the end of the line. **Pickable is derived, never written:** an entry is pickable when it
-has no `Blocked by`, or every entry it names is archived and it names no decision — and no open
-entry is `Part of` it (below). An item that cannot be read, an entry in neither the ledger nor the
-archive, or another repo's entry the reader cannot resolve keeps the block. A written
-`**Pickable:**` line is only a field.
+**`Blocked by`** — comma-separated items: ids, each `TD-NNN` or `<repo>#TD-NNN` (another repo's
+entry; `<repo>` as below), then **gates** (v2.4), each one of
+- `decision (<person>)` — a person owes an answer, a go included; `<person>` is a person's name (*Appendix:
+  grammar*), compared case-insensitively. The entry carries an `**Ask:**` section saying what the
+  person owes: without one, `check()` flags it (`ask-missing`; an error on an entry the edit changed,
+  ℹ on a standing ledger).
+- `until YYYY-MM-DD` — not before that UTC date. Once today reaches it the gate no longer holds, and
+  `check()` notes it (ℹ, `until-past`) until it is dropped.
+- `event (<name>)` — something outside the ledger; `<name>` is `[a-z0-9-]+`. It blocks until the text
+  says otherwise.
+
+The writers write the ids in the order given, then the gates in that order (decisions, `until`,
+events), and the words lower-case; the reader reads the gates' words in any case. An entry names at most one decision per person,
+one `until`, and differently named events; more is flagged (`gate-repeated`; an error on an entry the
+edit changed, ℹ on a standing ledger). A `Waits` field is never read as a gate.
+
+**Pickable is derived, never written:** `pickable(…, *, today)` takes `today`, the UTC date, always.
+An entry is pickable when it has no `Blocked by`, or every entry it names is archived and it has
+no `decision`, no `event` and no `until` after today — and no open entry is `Part of` it (below).
+An item that cannot be read, a retired item (below), an entry in neither the ledger nor the
+archive, or another repo's entry the reader cannot resolve keeps the block. Each record's
+`blocked_by` lists what holds it: its open ids, then its gates that hold, then each item that keeps the
+block unread. A written `**Pickable:**` line is only a field.
+
+**The old form** `decision (<who>) <text>` — a decision followed by anything but a comma or the end of
+the line — is read only as the last item: its text runs to the end of the line, so nothing after it
+is read. It holds as a decision by `<who>`, and is a retired item. The writers never write it: `new`
+(`entry_text()`) and `set` refuse a `Blocked by` value in the old form, and `set` refuses to add any gate
+to an entry whose `Blocked by` still holds it, whose text would swallow the gate: migrate it first,
+to `decision (<person>)` with its text in `**Ask:**`. v3.0 stops reading it.
+
+**Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. Where
+v2.x still reads one, `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than
+unknown:
+- the fields `Waits` (a gate: `until` or `event`), `Taken by` (`Id take`) and `Resolved` as a header
+  field (the `**Resolved:**` body line of an archived entry);
+- in `Blocked by`, the gate `hold` (`decision (<person>)` with an Ask), the old form above, and a role in
+  `decision (…)`, reserved by name — today `designer`. A retired gate keeps the block, and a retired
+  decision is still a decision by its holder;
+- the Status words of an open entry `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in
+  `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.5's `migrate`'s to map.
 
 **`<repo>`** (v2.4) — the repo in another repo's id, wherever one is written (`Blocked by`, `Part of`,
 `Escaped from`, a Context or `Parts:` ref, a Log line): a name, or `/`-separated components
@@ -79,8 +115,16 @@ It keeps `Blocked by` apart from the parts: a parent's `Blocked by` names only w
 land first, and its parts keep it unpicked while any is open — what listing them in `Blocked by`
 did before. A parent's record carries `parts_open` (its open parts, never in `blocked_by`) and a
 part's carries `part_of` (the id as written; ids match by number, `TD-7` is `TD-007`).
-- A part's own pickable comes from its own `Blocked by` alone: parts do not inherit their parent's
-  blockers. A part that also waits on its parent's blocker names it in its own `Blocked by`.
+- A part's own pickable comes from its own `Blocked by` alone: **a part never inherits its parent's
+  ids or gates**. A part that also waits on its parent's blocker, decision or event names it in its own
+  `Blocked by`.
+- A gate is written on the entry whose work it stops, usually a part; a parent carries one only for
+  its own work. A parent's record carries `parts_gates` (v2.4), derived and never written, as
+  `parts_open` is: each gate that holds on one of its open **direct** parts (an `until` only while it is
+  after today), keyed in its canonical form — a person's name as the lowest-numbered part carrying
+  it writes it — with the parts carrying it in id order:
+  `{"decision (Pat)": ["TD-111", "TD-112"], "event (x)": ["TD-112"]}`. It does not change the parent's
+  pickable, which its open parts already decide.
 - **A part is never blocked by its parent or any ancestor**: the parent waits on the part's archive
   and the part on the parent's, so neither moves.
 - What `ledger --check` says, ids normalised as a blocker's are, on the entry as the edit leaves it
@@ -213,9 +257,10 @@ each, and an empty value is left out. Each section is written `**<name>:** <text
 with no name is the unnamed one, written as given. It is refused for an id that is not `TD-n`, a
 title that is empty or more than one line, a field that would not read back as one line or is named
 twice, and sections that would not read back as given (a section's paragraph that opens in bold
-would start a section of its own). With `filed` (v2.4: `today`, `who`, `session`, `words`, and
-optionally `while`), it writes the entry's Log: the `filed by` line, then one `gate added: decision
-(<who>)` line for each decision its `Blocked by` is filed with. A filed entry's `Added` is the date
+would start a section of its own). A `Blocked by` is written as the writers write it (*The ledger*):
+its ids, then its gates in their order; the old form is refused. With `filed` (v2.4: `today`, `who`, `session`, `words`, and
+optionally `while`), it writes the entry's Log: the `filed by` line, then one `gate added: <gate>` line
+for each gate its `Blocked by` is filed with, in their order, so a gate ages from the day it was filed. A filed entry's `Added` is the date
 alone and its Status, if given, is `Open`, since their words go in the Log; either otherwise is
 refused, as is a section named Log.
 
@@ -292,7 +337,9 @@ paragraphs. The date is the caller's (`today`, a date, `YYYY-MM-DD` or an aware 
 an argument the action does not take is refused. What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
-  it. A value is one line.
+  it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order;
+  it is refused in the old form, and when it adds a gate to an entry whose `Blocked by` still holds the
+  old form. A value holding an item the grammar does not read is written as given, for `check()`.
 - **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
   Log, making it at the end of the body if there is none. It is refused if the words begin with a
   writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
@@ -633,10 +680,23 @@ an unreadable `Blocked by` item, which keeps the block, and no ref in a Context)
 three or more components now is. A `<repo>#TD-n` is read only after the characters *The ledger* lists
 (a bare `TD-n` still is anywhere but after `#`). `origin_key()`, `origin_path()` and `ref_key()` are new, and a repo's case
 no longer makes two refs of one.
+v2.4 also gives `Blocked by` its gates (*The ledger*): `until YYYY-MM-DD` and `event (<name>)` beside
+`decision (<person>)`, read by `parse_gates()`, and `pickable()` and `check()` now take `today`, the UTC
+date, as a required keyword, so each consumer's vendor PR fixes its callers. What changes in what is
+read: an `until` whose date today has reached and an `event` were unreadable items and are now gates,
+the first lifted by its date; a `decision (<who>)` whose `<who>` is not a person's name (`decision (the
+owner)`) is now an unreadable item, and a `decision (designer)` and `hold` are retired items — each still
+keeps the block; a decision followed by a comma no longer makes what follows unreadable, but reads it
+as the next item. `parse_blocked()` keeps its three lists, the third now every item that is neither an
+id nor a decision, gates included, so a caller that reads it as before keeps every block. `check()`
+gains `priority`, `ask-missing`, `gate-repeated`, `until-past` and `retired`, and the record
+`parts_gates`. `new` logs a `gate added` line for every gate, not only decisions, and `new` and `set`
+write `Blocked by` in its order and refuse the old form. v2.3 reads every `Blocked by` v2.4 writes, and
+an `until` or `event` there as an unreadable item that keeps the block.
 
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line, a person's name and the rank file; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by`; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -710,11 +770,31 @@ too, at most one marked. A `Parts:` names each id once. A `Lifts:` names each la
 answers (compared case-insensitively), and never `Go` alone. A `decide` whose Context names a gate, or that
 carries `Parts:` or `Lifts:`, names exactly one entry in its Context.
 
+### `Blocked by` (v2.4)
+
+A `Blocked by` value the reader reads with no item left unread (*The ledger*): `parse_gates()` gives no `bad` and no
+`retired` item for it.
+
+```ebnf
+blocked-by     ::= blocked-item ( [#x20#x9]* "," [#x20#x9]* blocked-item )*
+blocked-item   ::= entry-id | gate
+gate           ::= "decision (" person ")" | "until " date | "event (" event-name ")"
+event-name     ::= [a-z0-9-]+
+```
+
+What the productions leave to prose: an `until`'s date is a real day of the calendar. `designer` is a person's
+name by the grammar and a retired role in a decision, which the reader reads as retired. The reader also reads
+the words `decision`, `until` and `event` in any case, with any spaces or tabs before a `(` and one or more after
+`until`; it drops the value's leading and trailing spaces and tabs and skips an empty item between commas. The
+writers write what the grammar says, with `, ` between items, the ids first and then the gates in the order of
+`gate`'s choices; an entry names at most one decision per person, one `until` and differently named events.
+
 ### A person's name (v2.3)
 
 A person's name (*The board*, `People:`), as `is_person()` reads it: who answered, in a `Decided:` text's final
 `(by <person>)` before its date (which is otherwise part of the text the `decided` production reads), each name
-of a `People:` line, and the person of a `decision (<person>)` gate. Names compare case-insensitively.
+of a `People:` line, and the person of a `decision (<person>)` gate (whose fixtures, from v2.4, are
+`blocked-by`'s). Names compare case-insensitively.
 
 ```ebnf
 person         ::= person-part ( "." person-part )*
