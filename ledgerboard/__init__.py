@@ -681,8 +681,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     entry that left the ledger while an open entry is still Part of it is an error,
     ``archive-open-parts``, naming the parts — never standing, since only this edit made it. Each
     open entry's Log (v2.4) adds ``log-not-last`` and ``log-line`` (``log_problems()``), standing when the
-    entry's whole text is unchanged; an archived entry's Log is not read. ``today`` is ``pickable()``'s
-    (v2.4): the UTC date, required."""
+    entry's whole text is unchanged; an archived entry's Log is not read. Each open entry's events (v2.4)
+    add ``event-section``, ``event-check`` and ``event-ungated`` (``event_problems()``), scoped the same way.
+    ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
@@ -691,6 +692,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         for kind, why in log_problems(text):
             recs.append({"level": "error", "id": tid, "field": "log", "kind": kind, "text": f"⚠ {tid}: {why}",
                          "standing": False})
+        for level, kind, why in event_problems(text):
+            recs.append({"level": level, "id": tid, "field": "event", "kind": kind,
+                         "text": f"{'⚠' if level == 'error' else 'ℹ'} {tid}: {why}", "standing": False})
     if old is None:
         return recs
     before = {e["id"]: e["fields"] for e in entries(old)}
@@ -710,7 +714,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
 
 
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
-TEXT_KINDS = LOG_KINDS + ("ask-missing",)  # flags that read the body: scoped by the entry's whole text
+EVENT_KINDS = ("event-section", "event-check", "event-ungated")  # check()'s flags on an entry's events (v2.4)
+TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing",)  # flags that read the body: scoped by the entry's whole text
 
 
 def _entry_texts(text: str) -> dict[str, str]:
@@ -3471,6 +3476,198 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     if got != want:
         raise Refused(f"after the {action} the entry would not read back as meant, with the rest unchanged — "
                       "rephrase it, or edit by hand")
+    return out
+
+
+# ---------------------------------------------------------------------------------------------
+# Events (v2.4): an event gate's section and its typed check
+# ---------------------------------------------------------------------------------------------
+
+EVENT_LEAD_RE = re.compile(r"^Event \((?P<name>[^()]*)\):$")  # a section's lead, as _entry_sections gives it
+CHECK_LINE_RE = re.compile(r"^check:[ \t]+(?P<check>\S.*?)[ \t]*$")
+# The check types (SPEC *Events*): each type's arguments, as written after its name. A new type states
+# its four outcomes (CHECK_OUTCOMES) in SPEC and comes in a format PR.
+CHECK_TYPES = {"pr-merged": "<repo>#<n>", "file-contains": '<repo>[@<ref>] <path> "<text>"',
+               "ref-includes": "<repo>@<ref> <commit>"}
+CHECK_OUTCOMES = ("passed", "not yet", "impossible", "error")
+CHECK_N_RE = re.compile(r"[0-9]+")
+CHECK_COMMIT_RE = re.compile(r"[0-9a-f]{7,40}")
+REF_BAD_CHARS = set("~^:?*[\\ ")  # git's, and the ones that make revision syntax
+PATH_BAD_CHARS = set('*?[]#%"\\')  # a glob character, URL syntax in a forge path, the text's quote, a backslash
+
+
+def _ref_problem(ref: str) -> str | None:
+    """Why ``ref`` is not a ref a check may name (git's ``check-ref-format --allow-onelevel`` rules, a
+    leading ``-``, ``..``, ``@{``, ``:`` and any of ``^~?*[\\`` or whitespace), or None."""
+    if not ref:
+        return "an empty ref"
+    if ref.startswith("-"):
+        return f"the ref {ref!r} starts with - (it would read as an option)"
+    if ".." in ref or "@{" in ref or ref == "@":
+        return f"the ref {ref!r} holds .., @{{ or is @ (revision syntax)"
+    if any(c in REF_BAD_CHARS or ord(c) < 0x20 or ord(c) == 0x7F or c.isspace() for c in ref):
+        return f"the ref {ref!r} holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+    if ref.endswith(("/", ".")) or "//" in ref:
+        return f"the ref {ref!r} ends with / or ., or holds //"
+    if any(not part or part.startswith(".") or part.endswith(".lock") for part in ref.split("/")):
+        return f"the ref {ref!r} has a component that starts with . or ends with .lock"
+    return None
+
+
+def _path_problem(path: str) -> str | None:
+    """Why ``path`` is not a path a check may read (absolute, a ``..`` segment, a leading ``-``, a glob
+    character, ``#``, ``%``, a quote, a backslash, whitespace or a control), or None."""
+    if not path:
+        return "an empty path"
+    if path.startswith("/"):
+        return f"the path {path!r} is absolute"
+    if path.startswith("-"):
+        return f"the path {path!r} starts with - (it would read as an option)"
+    if ".." in path.split("/"):
+        return f"the path {path!r} has a .. segment"
+    if any(c in PATH_BAD_CHARS or c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F for c in path):
+        return f"the path {path!r} holds a glob character, #, %, a quote, a backslash, a space or a control"
+    return None
+
+
+def _repo_problem(repo: str) -> str | None:
+    return None if REPO_RE.fullmatch(repo) else \
+        f"the repo {repo!r} is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)"
+
+
+def parse_check(value: str) -> dict:
+    """One ``check:`` line's value read (v2.4, SPEC *Events*): ``{type, repo, …, problem}``. By type:
+    ``pr-merged`` gives ``n`` (an int); ``file-contains`` ``ref`` (None: the default branch), ``path`` and
+    ``text``; ``ref-includes`` ``ref`` and ``commit``. ``problem`` is None, or why ``check()`` refuses
+    it: an unknown type, a missing or extra argument, or an argument outside its confinement. Arguments
+    are separated by spaces; the text runs from its opening ``"`` to the line's last ``"`` and nothing
+    follows it. Text is matched literally by the host, never as a pattern."""
+    value = (value or "").strip(" \t")
+    kind, _, rest = value.partition(" ")
+    out: dict = {"type": kind, "problem": None}
+
+    def bad(why: str) -> dict:
+        out["problem"] = why
+        return out
+    if kind not in CHECK_TYPES:
+        return bad(f"unknown check type {kind!r} — one of {', '.join(CHECK_TYPES)}")
+    text = None
+    if kind == "file-contains":
+        q = rest.find('"')
+        if q < 0 or rest.rfind('"') == q:
+            return bad('file-contains needs its text in quotes: file-contains <repo>[@<ref>] <path> "<text>"')
+        if rest[rest.rfind('"') + 1:].strip(" \t"):
+            return bad("nothing may follow the quoted text")
+        text, rest = rest[q + 1: rest.rfind('"')], rest[:q]
+        if not text.strip():
+            return bad("the quoted text is empty")
+    args = rest.split()
+    want = {"pr-merged": 1, "file-contains": 2, "ref-includes": 2}[kind]
+    if len(args) != want:
+        return bad(f"{kind} takes {CHECK_TYPES[kind]}")
+    if kind == "pr-merged":
+        repo, sep, n = args[0].rpartition("#")
+        out.update(repo=repo)
+        if not sep:
+            return bad(f"pr-merged takes {CHECK_TYPES[kind]}")
+        if not CHECK_N_RE.fullmatch(n):
+            return bad(f"the PR number {n!r} is not [0-9]+")
+        out["n"] = int(n)
+        return bad(_repo_problem(repo)) if _repo_problem(repo) else out
+    repo, at, ref = args[0].partition("@")
+    out.update(repo=repo, ref=ref if at else None)
+    if _repo_problem(repo):
+        return bad(_repo_problem(repo))
+    if kind == "ref-includes" and not at:
+        return bad(f"ref-includes takes {CHECK_TYPES[kind]}: the ref is required")
+    if at and _ref_problem(ref):
+        return bad(_ref_problem(ref))
+    if kind == "file-contains":
+        out.update(path=args[1], text=text)
+        return bad(_path_problem(args[1])) if _path_problem(args[1]) else out
+    out["commit"] = args[1]
+    if not CHECK_COMMIT_RE.fullmatch(args[1]):
+        return bad(f"the commit {args[1]!r} is not 7 to 40 of [0-9a-f]")
+    return out
+
+
+def parse_event_section(text: str) -> dict:
+    """One ``**Event (<name>):**`` section read (v2.4, SPEC *Events*): ``{name, words, check, problem}``.
+    It is two lines: the lead and the event in plain words, then exactly one ``check: <type> <args>``
+    (``check`` is ``parse_check()``'s reading of it, or None). ``problem`` is None, or why ``check()``
+    refuses the section: a name outside ``[a-z0-9-]+``, no words, no ``check:`` line, more than one, a
+    line after it, words past the first line, or the check's own problem."""
+    lines = [ln.rstrip(" \t") for ln in text.replace("\r\n", "\n").split("\n")]
+    while lines and not lines[-1]:
+        lines.pop()
+    m = re.match(r"^\*\*Event \((?P<name>[^()]*)\):\*\*(?P<words>.*)$", lines[0] if lines else "")
+    out: dict = {"name": m.group("name") if m else None, "words": "", "check": None, "problem": None}
+    if not m:
+        out["problem"] = "not an Event section: its lead is **Event (<name>):**"
+        return out
+    out["words"] = m.group("words").strip()
+    checks = [i for i, ln in enumerate(lines) if ln.startswith("check:")]
+    if not EVENT_NAME_RE.fullmatch(out["name"]):
+        out["problem"] = f"the event name {out['name']!r} is not [a-z0-9-]+"
+    elif not m.group("words").strip():
+        out["problem"] = "its first line says the event in plain words, after the lead"
+    elif not checks:
+        out["problem"] = "it has no check: line — the last line is check: <type> <args>"
+    elif len(checks) > 1:
+        out["problem"] = f"it has {len(checks)} check: lines — exactly one"
+    elif checks[0] != len(lines) - 1:
+        out["problem"] = "a line follows its check: line — the check is the section's last line"
+    elif checks[0] != 1:
+        out["problem"] = "its words run past the first line — the event in plain words is one line, the check the second"
+    else:
+        cm = CHECK_LINE_RE.match(lines[checks[0]])
+        out["check"] = parse_check(cm.group("check")) if cm else None
+        if out["check"] is None:
+            out["problem"] = "its check: line names no check"
+        elif out["check"]["problem"]:
+            out["problem"] = f"its check: {out['check']['problem']}"
+    return out
+
+
+def event_sections(text: str) -> list[dict]:
+    """Every ``**Event (…):**`` section of one entry's text, in order, each as ``parse_event_section()``
+    reads it."""
+    try:
+        body = _entry_parts(text)[2]
+    except Refused:
+        body = text.split("\n", 1)[1] if "\n" in text else ""
+    return [parse_event_section(t) for lead, t in _entry_sections(body.replace("\r\n", "\n"))
+            if lead is not None and lead.startswith("Event (")]
+
+
+def event_problems(text: str) -> list[tuple[str, str, str]]:
+    """What ``check()`` says of one open entry's events (v2.4, SPEC *Events*): [(level, kind, sentence)].
+    ``event-section`` (error): an ``event (<name>)`` gate with no section, or two sections of one name;
+    ``event-check`` (error): a section ``parse_event_section()`` refuses; ``event-ungated`` (info): a
+    section whose gate is gone with no ``gate lifted: event (<name>)`` Log line to say why."""
+    found = entries(text)
+    gates = parse_gates(found[0]["blocked_raw"])["events"] if found else []
+    secs = event_sections(text)
+    out: list[tuple[str, str, str]] = []
+    names = [x["name"] for x in secs]
+    for n in dict.fromkeys(gates):
+        if n not in names:
+            out.append(("error", "event-section", f"Blocked by names event ({n}) and the entry has no "
+                        f"**Event ({n}):** section — its words, then check: <type> <args>"))
+    for n in dict.fromkeys(names):
+        if names.count(n) > 1:
+            out.append(("error", "event-section", f"it has {names.count(n)} **Event ({n}):** sections — one per "
+                        "name; a re-added gate reuses its section"))
+    try:
+        lifted = {r["gate"] for r in log_lines(text) if r["kind"] == "gate-lifted"}
+    except Refused:
+        lifted = set()
+    for x in secs:
+        if x["problem"]:
+            out.append(("error", "event-check", f"its **Event ({x['name']}):** section: {x['problem']}"))
+        if x["name"] not in gates and f"event ({x['name']})" not in lifted:
+            out.append(("info", "event-ungated", f"its **Event ({x['name']}):** section has no event "
+                        f"({x['name']}) gate, and no gate lifted: event ({x['name']}) Log line says why"))
     return out
 
 

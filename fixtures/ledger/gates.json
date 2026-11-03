@@ -166,6 +166,46 @@
    "level": "info",
    "standing": false,
    "text": "ℹ TD-118: Blocked by item 'decision (designer)' is retired — write decision (<person>): designer is a role, reserved by name; it keeps the block (SPEC *Retired words*)"
+  },
+  {
+   "field": "event",
+   "id": "TD-103",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-103: Blocked by names event (vendor-ships) and the entry has no **Event (vendor-ships):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-105",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-105: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-112",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-112: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-115",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-115: Blocked by names event (y) and the entry has no **Event (y):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-117",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-117: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
   }
  ],
  "check_since_empty": [
@@ -320,6 +360,46 @@
    "level": "info",
    "standing": false,
    "text": "ℹ TD-118: Blocked by item 'decision (designer)' is retired — write decision (<person>): designer is a role, reserved by name; it keeps the block (SPEC *Retired words*)"
+  },
+  {
+   "field": "event",
+   "id": "TD-103",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-103: Blocked by names event (vendor-ships) and the entry has no **Event (vendor-ships):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-105",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-105: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-112",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-112: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-115",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-115: Blocked by names event (y) and the entry has no **Event (y):** section — its words, then check: <type> <args>"
+  },
+  {
+   "field": "event",
+   "id": "TD-117",
+   "kind": "event-section",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-117: Blocked by names event (x) and the entry has no **Event (x):** section — its words, then check: <type> <args>"
   }
  ],
  "declared": {},

@@ -189,6 +189,210 @@
    }
   ]
  },
+ "event-section": {
+  "char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its words run past the first line — the event in plain words is one line, the check the second"
+   }
+  ],
+  "check": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: unknown check type 'url-up' — one of pr-merged, file-contains, ref-includes"
+   }
+  ],
+  "check-line": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: line names no check"
+   }
+  ],
+  "commit": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the commit '012345' is not 7 to 40 of [0-9a-f]"
+   }
+  ],
+  "digit": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the PR number 'x' is not [0-9]+"
+   }
+  ],
+  "event-name": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "the event name 'Ships' is not [a-z0-9-]+"
+   }
+  ],
+  "event-section": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "it has no check: line — the last line is check: <type> <args>"
+   }
+  ],
+  "event-words": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its first line says the event in plain words, after the lead"
+   }
+  ],
+  "file-contains": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: nothing may follow the quoted text"
+   }
+  ],
+  "hex": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the commit 'ABCDEF1' is not 7 to 40 of [0-9a-f]"
+   }
+  ],
+  "path": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: file-contains takes <repo>[@<ref>] <path> \"<text>\""
+   }
+  ],
+  "path-char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the path 'docs/*.md' holds a glob character, #, %, a quote, a backslash, a space or a control"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the path 'a#b' holds a glob character, #, %, a quote, a backslash, a space or a control"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the path 'a%2e' holds a glob character, #, %, a quote, a backslash, a space or a control"
+   }
+  ],
+  "pr-merged": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the PR number '12a' is not [0-9]+"
+   }
+  ],
+  "quoted": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the quoted text is empty"
+   }
+  ],
+  "ref": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: an empty ref"
+   }
+  ],
+  "ref-char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the ref 'a~1' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the ref 'a^' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+   }
+  ],
+  "ref-includes": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: ref-includes takes <repo>@<ref> <commit>: the ref is required"
+   }
+  ],
+  "repo": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the repo 'https://h/o/r' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)"
+   }
+  ],
+  "repo-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the repo '-x' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)"
+   }
+  ]
+ },
  "item-line": {
   "answer": [
    {
