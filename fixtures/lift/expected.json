@@ -280,6 +280,9 @@
   "decision_waiting_only_refused": {
    "refused": "'Keep waiting' only keeps the gate waiting — it never lifts"
   },
+  "event_bad_answered_by_refused": {
+   "refused": "Answered by is owner or any, not 'bogus'"
+  },
   "event_host_file": {
    "ok": "## TD-531: Waits on a line in another repo's file\n\n**Priority:** Low\n**Type:** debt\n**Added:** 2026-01-05\n**Status:** Open\n**Blocked by:** TD-9, until 2026-03-01\n\n**Why:** the pin must move first.\n\n**Event (pin-bumped):** the consumer pins the new release.\ncheck: file-contains acme/app docs/pin.toml \"version = 2.4\"\n\n**Log:**\n- 2026-01-15: gate lifted: event (pin-bumped) — by box-1; file-contains passed; Acme/App@0123abc\n"
   },
@@ -364,6 +367,7 @@
  "reassigns": [
   3,
   2,
+  0,
   0
  ],
  "same_text": [

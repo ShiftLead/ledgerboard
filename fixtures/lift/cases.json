@@ -754,6 +754,17 @@
    "by": "PAT",
    "answer": "db",
    "suffix": "no board item"
+  },
+  {
+   "name": "event_bad_answered_by_refused",
+   "file": "TD-530",
+   "gate": "event (vendor-ships)",
+   "by": "pat",
+   "answer": "Drop the gate",
+   "people": [
+    "pat"
+   ],
+   "answered_by": "bogus"
   }
  ],
  "same_text": [
@@ -840,11 +851,16 @@
   [
    "TD-500",
    "decision (pat)"
+  ],
+  [
+   "TD-572",
+   "decision (lee)"
   ]
  ],
  "check": [
   "TD-570",
-  "TD-571"
+  "TD-571",
+  "TD-572"
  ],
  "closes": [
   {

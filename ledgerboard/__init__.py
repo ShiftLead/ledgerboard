@@ -3966,6 +3966,8 @@ def lift_gate(text: str, gate: str, by: str, *, answer: str | None = None, evide
             raise Refused(f"{said!r} only keeps the gate waiting — it never lifts")
         return said
     on = {x.lower() for x in people or []}
+    if answered_by is not None and answered_by.lower() not in ANSWERED_BY:
+        raise Refused(f"Answered by is owner or any, not {answered_by!r}")
     if gate.startswith("decision"):
         person = gate[len("decision ("):-1]
         if not is_person(by):
@@ -3985,8 +3987,6 @@ def lift_gate(text: str, gate: str, by: str, *, answer: str | None = None, evide
             if not LIFT_SUFFIX_RE.fullmatch(s):
                 raise Refused(f"a suffix is board <repo>, no board item or shared board item left open, not {suffix!r}")
             tail = f"; {s}"
-        if answered_by is not None and answered_by.lower() not in ANSWERED_BY:
-            raise Refused(f"Answered by is owner or any, not {answered_by!r}")
         if people is not None and (answered_by or "").lower() == "any":
             if by.lower() not in on:
                 raise Refused(f"{by} is not on the board's People: ({', '.join(people)}) — only a listed person answers")
@@ -4062,11 +4062,14 @@ def reassign_gate(text: str, frm: str, to: str, *, by: str, why: str, today: dat
 
 def reassigns(text: str, gate: str) -> int:
     """How many times the gate ``gate`` (as the entry carries it) was reassigned to reach it: the run of
-    ``gate reassigned`` Log lines leading to it, newest first (v2.4; check() notes one past two)."""
+    ``gate reassigned`` Log lines leading to it, newest first, ending at a ``gate added`` or ``gate lifted`` of the
+    gate it has reached (v2.4; check() notes one past two)."""
     n, cur = 0, _gate_key(gate)
     for rec in reversed(log_lines(text)):
         if rec["kind"] == "gate-reassigned" and _gate_key(rec["to"]) == cur:
             n, cur = n + 1, _gate_key(rec["gate"])
+        elif rec["kind"] in ("gate-added", "gate-lifted") and _gate_key(rec["gate"]) == cur:
+            break  # the gate was added afresh (or lifted, before it): the run ends there
     return n
 
 
