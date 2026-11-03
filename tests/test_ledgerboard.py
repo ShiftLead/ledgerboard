@@ -3,6 +3,7 @@
 import ast
 import hashlib
 import importlib
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -257,11 +258,11 @@ class Package(unittest.TestCase):
         r = subprocess.run([sys.executable, str(ROOT / "fixtures" / "run.py"), "--module", str(pkg)],
                            capture_output=True, text=True, check=False)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        sys.path.insert(0, str(ROOT / "fixtures"))
-        try:
-            import run as fixture_run
-        finally:
-            sys.path.remove(str(ROOT / "fixtures"))
+        before = set(sys.modules)
+        self.addCleanup(lambda: [sys.modules.pop(m) for m in set(sys.modules) - before])
+        spec = importlib.util.spec_from_file_location("_fixture_run", ROOT / "fixtures" / "run.py")
+        fixture_run = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixture_run)
         mod = fixture_run.load(pkg)
         self.assertIs(importlib.import_module(mod.__name__ + ".probe").KEY, mod.item_key)
 
