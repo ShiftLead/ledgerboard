@@ -322,11 +322,12 @@ push are the consumer's; what the text means is the module's:
   to its text): headings and table rows outside HTML comments, and each entry file's name. It refuses a file
   that declares a newer major than the module reads, since its ids cannot be judged.
 - `next_id(last, ids, floor)` is `(n, warnings)`: one above the highest of `LAST` (absent or not a number is
-  ignored, with a warning), the ids (the default branch's, and any the caller adds, such as open PRs' on a first
+  ignored, with a warning, as is one of more than 18 digits), the ids (the default branch's, and any the caller adds, such as open PRs' on a first
   take) and the floor (a front end's own last-given id).
 - `parse_take(subject, body)` reads one counter commit: `{ids, by, branch, host, take}`, the fields it has, or
   None for a commit that is not a take (another subject, a range that runs backwards, or one wider than 100 ids —
-  the writers take at most 10).
+  the writers take at most 10; an id of more than nine digits is not read). A field's name is read as written,
+  lower-case, the first of a name wins, and a `take` that is not 32 lower-case hex digits is left out.
 - `judge_takes(new_ids, takes, entries, branch, default, accept_taken_by=False)` is the merge gate's judgement
   of the ids a change adds, as `(fails, warns)` of `(kind, text)`. `takes` are every take the counter holds,
   each `parse_take()`'s record with its commit's `sha` and `date`, all kept, so an id given twice is judged
@@ -338,7 +339,9 @@ push are the consumer's; what the text means is the module's:
     take, naming both ids, or of no take.
   - No `Id take` is `id-no-take` (fail), unless `accept_taken_by`, the consumer's flag while its writers still
     write `Taken by`: then a `Taken by` naming a giving take's `by` warns `id-no-take`, one naming another fails
-    `id-taken-by`, and none warns `id-no-taken-by`.
+    `id-taken-by`, and none warns `id-no-taken-by` when a giving take has a `by` and the ledger declares no
+    `Fields:` vocabulary, whose check would refuse the field. An entry's nonce is compared exactly.
+  - An id whose entry is in none of `entries` is judged only as `id-untaken` or `id-before-counter`.
   - `id-branch` (warn): the take names a branch that is neither `default` nor `branch`. `id-by-unhashed` (warn):
     its `by` is a bare session id or an email address.
   - A text names a take by its `by`, date and short sha, never its nonce.

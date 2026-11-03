@@ -3871,7 +3871,7 @@ def next_id(last: str | None, ids: Iterable[int], floor: int | None = None) -> t
     warnings: list[str] = []
     raw = (last or "").strip()
     top = [*ids, floor or 0]
-    if raw.isascii() and raw.isdigit():
+    if raw.isascii() and raw.isdigit() and len(raw) <= 18:  # a number a counter could reach, never a giant
         top.append(int(raw))
     else:
         warnings.append(f"the counter's {COUNTER_FILE} is {'not a number (' + raw[:20] + ')' if raw else 'absent'}"
@@ -3893,8 +3893,9 @@ def parse_take(subject: str, body: str) -> dict | None:
     out: dict = {"ids": list(range(lo, hi + 1))}
     for ln in (body or "").splitlines():
         k, sep, v = ln.partition(":")
-        if sep and k.strip() in TAKE_FIELDS and k.strip() not in out:
-            out[k.strip()] = v.strip()
+        if sep and k.strip() in TAKE_FIELDS and k.strip() not in out:  # names as written; the first wins
+            if k.strip() != "take" or TAKE_NONCE_RE.fullmatch(v.strip()):  # a nonce is 32 lower-case hex, or none
+                out[k.strip()] = v.strip()
     return out
 
 
@@ -3917,7 +3918,9 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
       (a range's for each of its ids; either take of an id given twice); ``id-take`` (fail): a nonce of
       another id's take (naming both ids) or of no take. A missing one is ``id-no-take`` (fail), unless
       ``accept_taken_by`` (the consumer's transition): then a ``Taken by`` naming a giving take's ``by`` warns
-      ``id-no-take``, one naming another fails ``id-taken-by``, and none warns ``id-no-taken-by``.
+      ``id-no-take``, one naming another fails ``id-taken-by``, and none warns ``id-no-taken-by`` when a giving
+      take has a ``by`` and the ledger declares no ``Fields:`` vocabulary (whose check would refuse the field).
+    - An id whose entry is in none of ``entries`` is not judged past ``id-untaken``.
     - ``id-branch`` (warn): the take names a branch that is neither ``default`` nor ``branch``;
       ``id-by-unhashed`` (warn): its ``by`` is a bare session id or an email address.
     A failure names a take by its by, date and short sha, never its nonce."""
@@ -3944,11 +3947,13 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
         warns.append(("id-before-counter", f"{', '.join(map(_tid, before))} below the counter's first take "
                       f"({_tid(first)}): older than the counter, not judged against it"))
     fields: dict[int, dict] = {}
-    for t in entries:
-        for e in _entries(t or ""):
+    texts = [t or "" for t in entries]
+    for t in texts:
+        for e in _entries(t):
             fields.setdefault(_num(e["id"]), e["fields"])
+    vocab = bool(texts) and bool(declared(texts[0])[0])  # a Fields: line refuses Taken by, so none is asked for
     wrong, missing, legacy, mismatch, untagged, elsewhere, unhashed = [], [], [], [], [], [], []
-    for n in (n for n in new if n in gave):
+    for n in (n for n in new if n in gave and n in fields):  # an id with no entry given is not judged
         mine = gave[n]
         f = fields.get(n, {})
         nonce = (f.get("id take") or "").strip()
@@ -3975,8 +3980,9 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
                 used = hit
                 legacy.append(_tid(n))
             elif said:
-                mismatch.append(f"{_tid(n)} was handed to {'; '.join((t.get('by') or 'unknown') for t in mine)}, not {said}")
-            elif any(t.get("by") for t in mine):
+                handed = ", ".join(dict.fromkeys((t.get("by") or "unknown") for t in mine))
+                mismatch.append(f"{_tid(n)} was handed to {handed}, not {said}")
+            elif any(t.get("by") for t in mine) and not vocab:
                 untagged.append(_tid(n))
         if any((t.get("branch") or "").strip() and (t.get("branch") or "").strip() not in (default, branch or "")
                for t in used):
