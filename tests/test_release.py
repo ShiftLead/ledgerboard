@@ -1,6 +1,6 @@
 """release.sh --tag: it tags from any checkout whose HEAD is origin/main, and from nowhere else (TD-009).
 
-Each test builds a throwaway origin from this tree's release.sh, ledgerboard.py and fixtures/run.py,
+Each test builds a throwaway origin from this tree's release.sh, ledgerboard/ and fixtures/run.py,
 clones it, and runs the clone's release.sh. git's identity comes from the environment, never config.
 """
 
@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FILES = ("release.sh", "ledgerboard.py", "fixtures/run.py")
+FILES = ("release.sh", "ledgerboard/__init__.py", "fixtures/run.py")
 ENV = {
     **{k: v for k, v in os.environ.items() if not k.startswith("GIT_")},  # no stray GIT_DIR from a hook
     "GIT_AUTHOR_NAME": "test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
@@ -31,15 +31,15 @@ class ReleaseTag(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp)
-        self.version = (ROOT / "ledgerboard.py").read_text(encoding="utf-8").split()[2][1:]  # "# ledgerboard v2.2 …"
+        self.version = (ROOT / "ledgerboard" / "__init__.py").read_text(encoding="utf-8").split()[2][1:]  # "# ledgerboard v2.2 …"
         seed = self.tmp / "seed"
         for f in FILES:
             (seed / f).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / f, seed / f)
         # A PR that changes the module leaves its header stale until the release stamps it (release.sh),
         # so the seed is stamped here as the release would be: the tag checks a released module.
-        first, rest = (seed / "ledgerboard.py").read_bytes().split(b"\n", 1)
-        (seed / "ledgerboard.py").write_bytes(
+        first, rest = (seed / "ledgerboard" / "__init__.py").read_bytes().split(b"\n", 1)
+        (seed / "ledgerboard" / "__init__.py").write_bytes(
             f"# ledgerboard v{self.version} sha256:{hashlib.sha256(rest).hexdigest()}\n".encode() + rest)
         git(seed, "init", "-q", "-b", "main")
         git(seed, "add", ".")

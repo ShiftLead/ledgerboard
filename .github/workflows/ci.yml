@@ -2,7 +2,7 @@ name: ci
 # The merge gate is the local precheck (docs/cadence.toml's `precheck`, run by
 # `agent-cadence run precheck.py --pr <n>`, TD-003): the account's repos share one pool of Actions
 # minutes. This workflow runs on a PR from a fork, whose code then runs in GitHub's sandbox rather
-# than on a machine; on a release tag, whose module must carry its header; and by hand. A PR from
+# than on a machine; on a release tag, whose package files must carry its header; and by hand. A PR from
 # this repo skips the job: the precheck already runs the same checks.
 on:
   pull_request:
@@ -30,4 +30,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           python fixtures/run.py --check-header
-          head -1 ledgerboard.py | grep -q "^# ledgerboard ${GITHUB_REF_NAME} sha256:"
+          for f in ledgerboard/*.py; do head -1 "$f" | grep -q "^# ledgerboard ${GITHUB_REF_NAME} sha256:"; done

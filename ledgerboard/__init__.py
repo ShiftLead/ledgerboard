@@ -1,5 +1,5 @@
 # ledgerboard v2.2 sha256:068bf1019da08e2077d54af447c571d353310c4bac53d17d4bc9638d87938cb9
-# SYNCED FILE — canonical copy: ShiftLead/ledgerboard ledgerboard.py (vendored by agent-cadence as files/scripts/ledgerboard.py)
+# SYNCED FILE — canonical copy: ShiftLead/ledgerboard ledgerboard/__init__.py (vendored by agent-cadence as files/scripts/ledgerboard/__init__.py)
 # Edit it there and release; an edit made in a consumer's copy is overwritten by the next vendor or sync.
 """The ledger and board formats, defined once (SPEC.md).
 
@@ -11,7 +11,7 @@ trailing ``Due:``/``Answers:``/``Decided:`` fields, reply tails and a detail blo
 
 Everything here is a pure function over text: no git, no network, no file system, no roster.
 What a caller needs from outside the text is passed in — the cross-repo resolver of
-``pickable()``, today's date. Two consumers vendor this file (agent-cadence's scripts, ShiftLead);
+``pickable()``, today's date. Two consumers vendor this package (agent-cadence's scripts, ShiftLead);
 neither keeps a second parser of either format.
 
 Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived pickable, ``check``); the rank

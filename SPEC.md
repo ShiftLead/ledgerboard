@@ -1,6 +1,6 @@
 # The ledger and board formats — versions 1 and 2
 
-This is the formats' one definition in prose; `ledgerboard.py` is the one implementation and
+This is the formats' one definition in prose; the module, `ledgerboard/__init__.py`, is the one implementation and
 `fixtures/` the cases any implementation must reproduce. Where this text and the module disagree,
 the fixtures decide, and the disagreement is a bug here. *What to do* with a field — lanes,
 routing, who may write what, when a sweep runs — is a consumer's, never the format's.

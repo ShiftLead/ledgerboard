@@ -7,7 +7,7 @@
 # Kind. The techlead's review stage reads every PR on a `held:` path and merges it for an
 # unattended author. A release (stamp and tag) stays Paul's: the consumers vendor tags only.
 # The team's own rules are not held: a PR touching them is left for Paul (the grinder brief).
-held: ["ledgerboard.py", "SPEC.md", "fixtures/**", "release.sh", "tests/**"]
+held: ["ledgerboard/**", "SPEC.md", "fixtures/**", "release.sh", "tests/**"]
 
 # The repo's whole check (AGENTS.md *Commands*); stdlib only, so a fresh worktree needs nothing.
 commands:
