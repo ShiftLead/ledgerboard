@@ -402,6 +402,33 @@ class Gates(unittest.TestCase):
         self.assertEqual([e["id"] for e in L.pickable(led, "", today=TODAY)["pickable"]], ["TD-001"])
 
 
+class Lifts(unittest.TestCase):
+    """v2.4: lifting a gate writes the UTC date, and the decide lift composes lift_gate (SPEC *Lifting a gate*)."""
+
+    ENTRY = "## TD-001: x\n\n**Priority:** Low\n**Blocked by:** until 2026-01-15\n\n**Why:** w.\n"
+    ITEM = ("- [ ] decide 2026-01-10 (n/a) — Go? Context: TD-002 decision (pat). Due: 2026-01-20. "
+            "Answers: Go | Not yet.")
+    GATED = "## TD-002: y\n\n**Priority:** Low\n**Blocked by:** decision (pat)\n\n**Ask:** go?\n"
+
+    def test_a_lift_is_dated_by_the_utc_day(self):
+        late = datetime(2026, 1, 14, 23, 30, tzinfo=timezone(timedelta(hours=-5)))  # 04:30 UTC on the 15th
+        self.assertIn("- 2026-01-15: gate lifted: until 2026-01-15 — by box-1; date reached",
+                      L.lift_gate(self.ENTRY, "until 2026-01-15", "box-1", today=late))
+        with self.assertRaises(L.Refused):
+            L.lift_gate(self.ENTRY, "until 2026-01-15", "box-1", today=datetime(2026, 1, 15, 12, 0))  # noqa: DTZ001
+
+    def test_the_decide_lift_writes_what_lift_gate_writes(self):
+        got = L.decide_lift(self.ITEM, {"TD-002": self.GATED}, "go", "pat", TODAY, ["pat"], None)
+        self.assertEqual(got, {"TD-002": L.lift_gate(self.GATED, "decision (pat)", "pat", answer="go", today=TODAY)})
+        self.assertTrue(L.closes(self.ITEM, "go", got))
+        self.assertFalse(L.closes(self.ITEM, "go", {"TD-002": self.GATED}))
+
+    def test_a_lifted_entry_is_pickable(self):
+        got = L.decide_lift(self.ITEM, {"TD-002": self.GATED}, "Go", "pat", TODAY, ["pat"], None)["TD-002"]
+        self.assertEqual([e["id"] for e in L.pickable("# Ledger\n\n" + got, "", today=TODAY)["pickable"]], ["TD-002"])
+        self.assertEqual([r for r in L.check("# Ledger\n\n" + got, "", today=TODAY) if r["level"] == "error"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
 

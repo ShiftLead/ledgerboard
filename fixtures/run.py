@@ -71,6 +71,13 @@ Fixtures, each an invented input and its expected JSON:
   the reader refuses.
 - ``events/cases.json`` → ``events/expected.json`` (v2.4): ``parse_check()`` of each check type's value, every
   argument confinement refusal among them, and ``parse_event_section()`` of sections well and badly formed.
+- ``lift/cases.json`` (+ ``lift/entries/``) → ``lift/expected.json`` (v2.4): lifting a gate — ``lift_gate()`` of
+  each shape and each refusal, ``decide_lift()`` of a parent's go (a lift, a kept-waiting and a work-order answer,
+  a skipped part, a parent without the gate, a person in another case, an emptied ``Blocked by``, two lifting
+  labels, an event's three answers, each refusal), the two compared byte for byte, ``reassign_gate()`` and
+  ``reassigns()`` with ``check()``'s note, ``closes()``, ``edit_line(…, close=True)``, ``waiting_only()``,
+  ``parse_closed_items()``, ``answered_by()`` and its problems, and the waiting-only label refused by
+  ``item_line(lifts=)`` and ``item_problem()``.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -329,6 +336,61 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             "archive_plan": {c["name"]: plan(c) for c in spec.get("archive_plan", [])}}
 
 
+def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
+    """Lifting a gate (v2.4): ``lift_gate()``, ``decide_lift()`` and their outputs compared, ``reassign_gate()`` and
+    ``reassigns()``, ``check()``'s reassign note, ``closes()``, ``edit_line(close=)``, ``waiting_only()``,
+    ``parse_closed_items()``, ``answered_by()`` and its problems, and the waiting-only refusals of ``item_line()``
+    and ``item_problem()``. Each entry is a file of ``lift/entries/``; a line is named from ``lines``."""
+    if not hasattr(L, "decide_lift"):  # a module older than v2.4
+        return {"missing": "the module has no decide_lift — older than v2.4"}
+    d = root / "lift" / "entries"
+    today = date.fromisoformat(spec["today"])
+
+    def entry(tid):
+        return (d / f"{tid}.md").read_text(encoding="utf-8")
+    lines = spec["lines"]
+    decided = {c["name"]: _refused(lambda c=c: L.decide_lift(
+        lines[c["line"]], {t: entry(t) for t in c["entries"]}, c["label"], c["by"], spec["today"],
+        c["people"], c["answered_by"])) for c in spec["decide_lift"]}
+    lifted = {c["name"]: _refused(lambda c=c: L.lift_gate(
+        entry(c["file"]), c["gate"], c["by"], today=c.get("today", spec["today"]),
+        **{k: c[k] for k in ("answer", "evidence", "suffix", "override", "people", "answered_by") if k in c}))
+        for c in spec["lift_gate"]}
+
+    def after(c):
+        base = {t: entry(t) for t in ("TD-500", "TD-501", "TD-502", "TD-521", "TD-530")}
+        return {**base, **decided[c["after"]]["ok"]} if "after" in c else base
+
+    def close(c):
+        return _refused(lambda: L.edit_line(lines[c["line"]][2:].join(["- ", ""]), c.get("action", "decide"),
+                                            answer=c.get("answer"), reply=c.get("reply"), by=c["by"],
+                                            today=today, close=True))
+    ledger = "# Ledger\n\nLedgerboard: 2\n\n" + "\n".join(entry(t) for t in spec["check"])
+    return {
+        "decide_lift": decided,
+        "lift_gate": lifted,
+        "same_text": [decided[c["decide"]]["ok"][c["id"]] == lifted[c["lift"]]["ok"] for c in spec["same_text"]],
+        "reassign": {c["name"]: _refused(lambda c=c: L.reassign_gate(
+            entry(c["file"]), c["frm"], c["to"], by=c["by"], why=c["why"], today=spec["today"]))
+            for c in spec["reassign"]},
+        "reassigns": [L.reassigns(entry(t), g) for t, g in spec["reassigns"]],
+        "check": [r for r in L.check(ledger, "", today=spec["today"]) if r["kind"] == "gate-reassigned-often"],
+        "closes": [L.closes(lines[c["line"]], c["label"], after(c)) for c in spec["closes"]],
+        "close": {c["name"]: close(c) for c in spec["close"]},
+        "waiting_only": {x: L.waiting_only(x) for x in spec["waiting_only"]},
+        "closed_items": [[{"line": it.line, "text": it.text, "kind": it.kind, "answers": it.answers, "lifts": it.lifts,
+                           "parts": it.parts, "decided": it.decided, "decided_by": it.decided_by, "detail": it.detail}
+                          for it in L.parse_closed_items(b)] for b in spec["closed_items"]],
+        "answered_by": [{"value": L.answered_by(b), "problems": [list(x) for x in L.answered_by_problems(b)]}
+                        for b in spec["answered_by"]],
+        "item_lines": [_refused(lambda c=c: L.item_line(
+            c["text"], c["due"], spec["today"], c["session"], c["host"], c["context"],
+            **{k: c[k] for k in ("kind", "answers", "default", "detail", "lifts") if k in c}))
+            for c in spec["item_lines"]],
+        "item_problems": {ln: L.item_problem(ln) for ln in spec["item_problems"]},
+    }
+
+
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
     ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
@@ -438,6 +500,8 @@ def cases(L, root: Path):
     yield root / "origins" / "expected.json", origin_cases(L, spec)
     spec = json.loads((root / "events" / "cases.json").read_text(encoding="utf-8"))
     yield root / "events" / "expected.json", event_cases(L, spec)
+    spec = json.loads((root / "lift" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "lift" / "expected.json", lift_cases(L, spec, root)
 
 
 def main(argv: list[str] | None = None) -> int:

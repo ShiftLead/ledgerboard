@@ -44,7 +44,9 @@ entry; `<repo>` as below), then **gates** (v2.4), each one of
 - `decision (<person>)` — a person owes an answer, a go included; `<person>` is a person's name (*Appendix:
   grammar*), compared case-insensitively. The entry carries an `**Ask:**` section saying what the
   person owes: without one, `check()` flags it (`ask-missing`; an error on an entry the edit changed —
-  its whole text, as for the Log — ℹ on a standing ledger).
+  its whole text, as for the Log — ℹ on a standing ledger). A decision reassigned more than twice to
+  reach the person it names now is noted (ℹ, `gate-reassigned-often`, v2.4; `reassigns()` counts the run of
+  `gate reassigned` Log lines that led to it), scoped by the entry's whole text.
 - `until YYYY-MM-DD` — not before that UTC date. Once today reaches it the gate no longer holds, and
   `check()` notes it (ℹ, `until-past`) until it is dropped.
 - `event (<name>)` — something outside the ledger; `<name>` is `[a-z0-9-]+`. The entry carries its
@@ -385,7 +387,7 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
   - `gate lifted: decision (<person>) — by <who>; override: <why>`.
   - `gate lifted: event (<name>) — by <host>; <check-type> passed; <evidence>`.
   - `gate lifted: until YYYY-MM-DD — by <host>; date reached`.
-  - `gate lift skipped: <id> no longer carries decision (<person>)`.
+  - `gate lift skipped: <id> no longer carries <gate>`, the gate a `decision (<person>)` or an `event (<name>)`.
   - `kept waiting: <gate> — by <who>; answer "<label>"`.
   - `gate reassigned: decision (<a>) → decision (<b>) — by <who>; <why>`.
   - `archived: <Status word> — <why>`, `reopened — <why>`, and `was: <Status>`.
@@ -466,6 +468,33 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   theirs. **rename_ref** (`old`, `new`) rewrites that id in `Blocked by`, `Part of` and a `filed by`
   line's `while`, never other Log prose. A local id matches by number; another repo's id matches as
   `<repo>#TD-n`. A `Blocked by` that then names an id twice keeps its first copy (v2.4).
+
+**Lifting a gate** (v2.4) is one text edit, `lift_gate(text, gate, by, *, answer, evidence, suffix, override,
+today, people, answered_by)`, which every route writes: a person's answer through the `set` route, a host's
+event and `until` lifts, the cross-repo decision lift, and the decide lift (*The board*), which composes it.
+It removes the gate from the open entry's `Blocked by` (an emptied field is removed; the other items keep their
+order, canonical when all are readable) and appends the matching `gate lifted` line, dated `today` (the UTC
+date), with the gate as the entry writes it (its person's spelling) and `by` as given. Its inputs match one
+shape exactly, and anything else is refused:
+- **a decision:** `answer`, and at most one `suffix`: `board <repo>` (the item is on another repo's board),
+  `no board item` or `shared board item left open`. `by` is the gate's person, compared case-insensitively,
+  unless the caller passes the board's `People:` as `people` and `Answered by: any`, when it is anyone listed.
+  Or `override`, its why required, when `by` may be any person: `gate lifted: decision (<p>) — by <who>;
+  override: <why>`.
+- **an event lifted by a person** (from a sweep's item): `answer`, with `by` on `people`, which is then
+  required. No suffix.
+- **an event lifted by a host:** `evidence`, `<repo>#<n>` for a `pr-merged` check (its own repo and PR) or
+  `<repo>@<sha>` for the other two (its own repo, and the commit the file or ref was read at); the check type is
+  read from the entry's `**Event (<name>):**` section, never passed in. `by` is the host's token.
+- **`until D`:** none of them; `today` must have reached D.
+
+A waiting-only answer (*The board*) is refused, as is a gate the entry does not carry, an archived entry, and a
+decision still in the old form (*migrate it first*). **The reassign** (`reassign_gate(text, frm, to, *, by,
+why, today)`) replaces `decision (<frm>)` by `decision (<to>)` and logs `gate reassigned: decision (<frm>) →
+decision (<to>) — by <by>; <why>`, which resets the gate's age. It is refused for the same person in another
+case, an entry that does not carry `frm`'s decision or already carries `to`'s, and an empty why. Who may run a
+lift, a reassign or an override (a session a person started), and whether `to` has a board, are the
+consumer's to check.
 
 Moving a file into `archive/` or back, and the relative links that move with it, are the caller's.
 
@@ -606,7 +635,10 @@ line's end, in this order:
   answers' labels (compared case-insensitively), `\|` for a literal bar (`parse_lifts()`, `BoardItem.lifts`,
   `item_record()`'s `lifts`). It is read only after the item's `Answers:` and ahead of its `Decided:`, starting a
   sentence, so a reply's or a `Decided:` text's words are never it, and the answers end where it begins. It is written only when it is not `Go` alone: no `Lifts:` means `Go`. It is part
-  of the item key. What a lift does is v2.4's.
+  of the item key. An answer **lifts** when it is one of `Lifts:` (or `Go` when the item has none), compared
+  case-insensitively (v2.4). The two **waiting-only** answers, `Keep waiting` and `Not yet` (any case; a final
+  period dropped; `waiting_only(label)`), never lift: `item_line(lifts=)` refuses one and `item_problem()` faults
+  one.
 - `Decided: <label> (by <person>) (YYYY-MM-DD).` — the person's answer, and (v2.3) who gave it. A decided item
   stays open and due; it now waits on whoever acts on it, not on the person. Only a final `(by <person>)` before
   the date, `<person>` a person's name (below), is split off (`parse_decided_by()`, `BoardItem.decided_by`,
@@ -640,6 +672,40 @@ case-insensitively. It is read only above the board's first item, and only the f
 (`board_people(content)`: the names as written, in order, or None for a board with none). A v2.2 reader reads
 no preamble line, so it ignores it.
 
+**`Answered by: owner | any`** (v2.4) — a preamble line saying who may give a lifting answer on the board:
+`owner` (the default, when the line is absent), only the gate's named person; `any`, anyone on its `People:`.
+It is read as `People:` is (`answered_by(content)`: the value as written, or None). A one-person board reads
+the same either way.
+
+**A closed item** is read as an open one is, once its trailing `Closed:` field is cut (`parse_closed_items(content)`,
+v2.4, of a board or its archive: each a `BoardItem` with its line and detail block).
+
+**The decide lift** (v2.4) is what a lifting answer on a `decide` item whose Context names one entry and one gate
+does to the ledger: `decide_lift(item_line, entries, label, by, today, board_people, answered_by)` returns `{id:
+new text}` for each entry it changes, from the base item line, the base texts of the Context entry and each
+`Parts:` id, and the base board's `People:` (None: none, and the board checks below are skipped) and `Answered
+by:`. It covers a `decision (<p>)` and an `event (<name>)` alike:
+- a lifting answer lifts the gate through `lift_gate()` on the Context entry, if it carries it, and on each
+  listed part that does; each listed part that no longer carries it is logged on the Context entry as `gate lift
+  skipped: <id> no longer carries <gate>`;
+- a waiting-only answer logs `kept waiting: <gate> — by <by>; answer "<label>"` on each of those that still
+  carries it, which resets the gate's age; for a decision, so does every other answer (a work order such as
+  `One more round`); for an event, any other answer (`Rewrite the check`, `Drop the entry`) writes nothing;
+- `<p>` is compared case-insensitively, and the Log writes the entry's own spelling.
+
+It refuses an item that is not a `decide` naming one entry and one gate; another repo's entry (its lift is a
+tool PR in that repo); a Context entry missing or archived; a `Parts:` id missing, of another repo, or not `Part
+of` the Context entry (the snapshot does not match); a gate's person not on `People:`; an answerer not on
+`People:`, or, for a decision under `owner`, not the gate's person. An event has no gate person, so anyone on
+`People:` may answer it. Its output for an entry is byte for byte `lift_gate()`'s for the same answer.
+
+**Closing on the answer** (v2.4): `closes(item, label, entries_after)` says whether answering closes the item in
+the same write. On an item whose Context names a gate, a waiting-only answer closes it, and a lifting one does
+when the Context names this repo's entry (a bare `TD-n`) and nothing listed still carries the gate after the write
+— neither that entry nor any `Parts:` id (an id `entries_after` lacks carries nothing). Every other answer is a
+work order, and the item stays open until whoever acts on it closes it; a lifting answer on another repo's entry
+stays open until that repo's lift merges.
+
 **Preamble lines** — `Name: value` lines before the items (`Kinds:`, `Format:`, a dated stamp
 `Name: YYYY-MM-DD (…)`) are kept byte for byte by every edit. Which stamps a consumer writes and
 what they mean are the consumer's.
@@ -655,7 +721,10 @@ back exactly what was meant:
 - **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, or with `by` (v2.3) `Decided: <answer> (by <by>) (YYYY-MM-DD).`,
   replacing an earlier one. It refuses a `by` that is not a person's name, and an answer that itself ends in
-  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered;
+  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered. With `close` (v2.4), on
+  an item whose Context names a gate, it also ticks the item and appends `Closed: YYYY-MM-DD — kept waiting.` for
+  a waiting-only answer or `Closed: YYYY-MM-DD — lifted.` for a lifting one, and refuses any other answer (`closes()`
+  says when to pass it);
 - **reply** appends a reply tail.
 
 **A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>. Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
@@ -681,7 +750,7 @@ An answer given elsewhere (on a ledger entry) is written as an already decided `
 
 Fields inside a reply's words or a `Decided:` text are the person's and are not counted. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
 
-**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day. Two rules join it in v2.3, for who may answer. First come the board's `People:` problems (`people_problems(board)`, line 0 for a missing line): a board with no `People:` line is noted, its text opening `ℹ`, which is no fault (nobody is named who may answer it, so a consumer sends a lift on it to ordinary review); a `People:` line that lists no name, a name that is not a person's name or the same name twice, and a second `People:` line above the first item, are faults. Then a new `decide` line whose Context names a gate, `decision (<person>)`, is faulted when the board has a `People:` line that does not list that person.
+**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day. Two rules join it in v2.3, for who may answer. First come the board's `People:` problems (`people_problems(board)`, line 0 for a missing line): a board with no `People:` line is noted, its text opening `ℹ`, which is no fault (nobody is named who may answer it, so a consumer sends a lift on it to ordinary review); a `People:` line that lists no name, a name that is not a person's name or the same name twice, and a second `People:` line above the first item, are faults. Then a new `decide` line whose Context names a gate, `decision (<person>)`, is faulted when the board has a `People:` line that does not list that person. From v2.4 the board's `Answered by:` problems follow its `People:` ones (`answered_by_problems(board)`): a value other than `owner` or `any`, and a second such line above the first item.
 
 **The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
 <answer>] (session <name>)` for the five edits (`edit_action()` reads the action back, v2.3; a `snooze … to D`
@@ -805,6 +874,12 @@ them blocked, where v2.3 released both; `check()` gains `blocker-superseded`, `b
 `archive_plan()` and `dependents()` are new; `edit_entry`'s `archive` writes `Dropped` and a successor in
 another repo, and `rename_ref` keeps one copy of an id. A v2.3 reader releases what v2.4 keeps blocked, so a
 consumer archives an entry Superseded or Dropped only once every reader of its ledger runs v2.4.
+v2.4 also lifts gates (*Lifting a gate*, *The board*): `lift_gate()`, `reassign_gate()`, `reassigns()`,
+`decide_lift()`, `closes()`, `waiting_only()`, `parse_closed_items()`, `answered_by()` and
+`answered_by_problems()` are new, `edit_line`'s `decide` takes `close`, and `check()` gains
+`gate-reassigned-often`. One verdict changes: `item_problem()` faults a `Lifts:` naming a waiting-only answer,
+which v2.3 passed, and `item_line()` refuses one. A v2.3 reader reads an `Answered by:` line as a preamble line it
+keeps, and a closed item as before.
 
 ## Appendix: grammar
 
