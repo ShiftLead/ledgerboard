@@ -181,6 +181,137 @@
    "session": "w-3",
    "text": "fyi 2026-01-09 (session `w-3`) — Read the notes. Context: TD-22 Parts: TD-23. Hide until: 2026-01-12.",
    "waiting_on": "person"
+  },
+  {
+   "answers": [
+    "Go",
+    "No"
+   ],
+   "consequences": [
+    "",
+    ""
+   ],
+   "decided": {
+    "date": "2026-01-14",
+    "text": "Go. Lifts: none"
+   },
+   "decided_by": null,
+   "default": null,
+   "detail": [],
+   "due": "2026-01-20",
+   "due_error": null,
+   "due_tag": "due 2026-01-20",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "decide",
+   "lifts": null,
+   "line": 12,
+   "overdue_days": null,
+   "parts": [],
+   "refs": [
+    "TD-24"
+   ],
+   "replies": [],
+   "session": "w-3",
+   "text": "decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-24. Due: 2026-01-20. Answers: Go | No. Decided: Go. Lifts: none (2026-01-14).",
+   "waiting_on": "session"
+  },
+  {
+   "answers": [],
+   "consequences": [],
+   "decided": null,
+   "decided_by": null,
+   "default": null,
+   "detail": [],
+   "due": "2026-01-20",
+   "due_error": null,
+   "due_tag": "due 2026-01-20",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "decide",
+   "lifts": null,
+   "line": 13,
+   "overdue_days": null,
+   "parts": [],
+   "refs": [
+    "TD-25"
+   ],
+   "replies": [
+    {
+     "by": "sam",
+     "date": "2026-01-11",
+     "text": "done. Lifts: Go."
+    }
+   ],
+   "session": "w-3",
+   "text": "decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-25. Due: 2026-01-20. — sam, 2026-01-11: done. Lifts: Go.",
+   "waiting_on": "person"
+  },
+  {
+   "answers": [],
+   "consequences": [],
+   "decided": null,
+   "decided_by": null,
+   "default": null,
+   "detail": [],
+   "due": null,
+   "due_error": null,
+   "due_tag": "no due date",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "fyi",
+   "lifts": null,
+   "line": 14,
+   "overdue_days": null,
+   "parts": [],
+   "refs": [
+    "TD-26"
+   ],
+   "replies": [
+    {
+     "by": "sam",
+     "date": "2026-01-11",
+     "text": "done. Parts: TD-27."
+    }
+   ],
+   "session": "w-3",
+   "text": "fyi 2026-01-10 (session `w-3`) — Read it. Context: TD-26. — sam, 2026-01-11: done. Parts: TD-27.",
+   "waiting_on": "person"
+  },
+  {
+   "answers": [
+    "Go",
+    "No"
+   ],
+   "consequences": [
+    "then Lifts: x",
+    ""
+   ],
+   "decided": null,
+   "decided_by": null,
+   "default": null,
+   "detail": [],
+   "due": "2026-01-20",
+   "due_error": null,
+   "due_tag": "due 2026-01-20",
+   "hidden": false,
+   "hide_until": null,
+   "host": null,
+   "kind": "decide",
+   "lifts": null,
+   "line": 15,
+   "overdue_days": null,
+   "parts": [],
+   "refs": [
+    "TD-28"
+   ],
+   "replies": [],
+   "session": "w-3",
+   "text": "decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-28. Due: 2026-01-20. Answers: Go — then Lifts: x | No.",
+   "waiting_on": "person"
   }
  ],
  "keys": [
@@ -188,11 +319,20 @@
   "- [ ] decide 2026-01-06 (session `w-1`) — Which store? Context: TD-13 decision (pat). Answers: Files \\| disk | Db | Not now. Lifts: Files \\| disk | Db",
   "- [ ] decide 2026-01-07 (session `w-2`) — Keep waiting? Context: TD-14 event (vendor-v2). Answers: Drop the gate | Keep waiting. Lifts: Drop the gate",
   "- [ ] act 2026-01-08 (session `w-2`) — Check it. Context: TD-20. Answers: done | not yet",
-  "- [ ] fyi 2026-01-09 (session `w-3`) — Read the notes. Context: TD-22 Parts: TD-23"
+  "- [ ] fyi 2026-01-09 (session `w-3`) — Read the notes. Context: TD-22 Parts: TD-23",
+  "- [ ] decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-24. Answers: Go | No",
+  "- [ ] decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-25",
+  "- [ ] fyi 2026-01-10 (session `w-3`) — Read it. Context: TD-26",
+  "- [ ] decide 2026-01-10 (session `w-3`) — Ship it? Context: TD-28. Answers: Go — then Lifts: x | No"
  ],
  "needs_you": [
   [
    8,
+   "decided",
+   1
+  ],
+  [
+   12,
    "decided",
    1
   ],
@@ -207,7 +347,22 @@
    -5
   ],
   [
+   13,
+   "due",
+   -5
+  ],
+  [
+   15,
+   "due",
+   -5
+  ],
+  [
    11,
+   "fyi",
+   null
+  ],
+  [
+   14,
    "fyi",
    null
   ]

@@ -991,6 +991,84 @@
       "lifts": [
         "Go"
       ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on it?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "context": "TD-12, TD-13",
+      "lifts": [
+        "Not yet"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on it?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "context": "none",
+      "lifts": [
+        "Not yet"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on it?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "context": "TD-12, TD-13 decision (pat)"
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on it?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "context": "TD-12, TD-13 see the decision (made last week)"
     }
   ],
   "predicates": [
@@ -1398,7 +1476,9 @@
     "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12 decision (pat), TD-13. Due: 2026-01-20. Answers: Go | Not yet.",
     "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13. Due: 2026-01-20. Answers: Go | Not yet.",
     "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Parts: TD-15. Due: 2026-01-20.",
-    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Due: 2026-01-20. Lifts: Go."
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Due: 2026-01-20. Lifts: Go.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13, see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: PR #5 decision (pat). Due: 2026-01-20. Answers: Go | Not yet."
   ],
   "canonical_items": [
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",

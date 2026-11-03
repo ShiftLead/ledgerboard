@@ -515,6 +515,18 @@
   },
   {
    "refused": "only a decide names the answers that lift (lifts)"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "refused": "a decide that lifts a gate names exactly one entry in its context"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1`) — Go on it? Context: TD-12, TD-13 see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.\n  - **Context:** The design is done.\n  - **Question:** Go?\n  - **Recommended:** it is ready.\n"
   }
  ],
  "edit_actions": {
@@ -689,11 +701,13 @@
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Not yet. Lifts: Later.": "lifts: not one of the item's answers: Later",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Lifts: Go. Answers: Go | Not yet.": "lifts: `Lifts: Go.` is what no `Lifts:` means: leave it out; lifts: `Lifts:` follows Answers",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Parts: TD-15. Answers: Go | Not yet.": "parts: `Parts:` follows Context",
-  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15 and TD-16. Due: 2026-01-20. Answers: Go | Not yet.": "parts: `Parts:` lists entry ids, `TD-n`, separated by `, `",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15 and TD-16. Due: 2026-01-20. Answers: Go | Not yet.": "parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-15. Due: 2026-01-20. Answers: Go | Not yet.": "parts: an id stands twice",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Not yet. Lifts: Option A.": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Hide until: 2026-01-18. Answers: Option A | Not yet. Lifts: Option A.": null,
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: PR #5 decision (pat). Due: 2026-01-20. Answers: Go | Not yet.": "context: a decide that lifts a gate names exactly one entry in its Context",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12 decision (pat), TD-13. Due: 2026-01-20. Answers: Go | Not yet.": "context: a decide that lifts a gate names exactly one entry in its Context",
+  "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13, see the decision (made last week). Due: 2026-01-20. Answers: Go | Not yet.": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13. Due: 2026-01-20. Answers: Go | Not yet.": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20.": "answers: a decide carries two or more answers",
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Due: 2026-01-20. Answers: a (default) | b (default).": "answers: more than one marked ` (default)`",

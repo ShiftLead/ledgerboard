@@ -741,11 +741,11 @@ DUE_RE = re.compile(r"\bDue:\s*(?P<due>\d{4}-\d{2}-\d{2})\b", re.IGNORECASE)
 # so "check Answers: yes" in an item's prose, dated or not, parses as neither field.
 DECIDED_RE = re.compile(r"(?:^|(?<=[.?!]\s))Decided:\s*(?P<text>(?:(?!\bDecided:).)+?)\s*"
                         r"\((?P<date>\d{4}-\d{2}-\d{2})\)\.?\s*$")
-ANSWERS_RE = re.compile(r"(?:^|(?<=[.?!]\s))Answers:\s*(?P<answers>(?:(?!\bAnswers:).)*?)\.?\s*"
-                        r"(?:\b(?:Lifts|Decided):.*)?$")
+ANSWERS_RE = re.compile(r"(?:^|(?<=[.?!]\s))Answers:\s*(?P<answers>(?:(?!\bAnswers:).)*?)"
+                        r"(?:[.?!]\s+Lifts:.*|\.?\s*(?:\bDecided:.*)?)$")
 # `Lifts: a | b.` (v2.3): which of a decide's answers lift the gate its Context names, after its Answers: and
 # ahead of its Decided:; written only when it is not `Go` alone, so none means `Go`. What a lift does is v2.4's.
-LIFTS_RE = re.compile(r"(?:^|(?<=[.?!]\s))Lifts:\s*(?P<lifts>(?:(?!\b(?:Lifts|Answers):).)*?)\.?\s*(?:\bDecided:.*)?$")
+LIFTS_RE = re.compile(r"(?<=[.?!]\s)Lifts:\s*(?P<lifts>(?:(?!\b(?:Lifts|Answers):).)*?)\.?\s*(?:\bDecided:.*)?$")
 # A reply — what the person said back on the item's own line: ` — <name>, YYYY-MM-DD: <words>`,
 # after the item's Due: and ahead of its trailing Answers:/Decided:/Closed: fields, any number of
 # them in a row. <name> is any short run with no comma or dash.
@@ -845,7 +845,7 @@ PERSON = r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*"
 PERSON_RE = re.compile(PERSON)
 DECIDED_BY_RE = re.compile(r"^(?P<label>.*\S)\s+\(by (?P<by>" + PERSON + r")\)$")
 PEOPLE_RE = re.compile(r"^People:(?P<names>.*)$")
-CONTEXT_ANY_GATE_RE = re.compile(r"\b(?:decision|event) \(")  # a gate the Context names (v2.3: its one entry)
+CONTEXT_ANY_GATE_RE = re.compile(r"\b(?:decision \(" + PERSON + r"\)|event \([A-Za-z0-9][\w.-]*\))")  # a gate the Context names (v2.3: its one entry)
 CONTEXT_GATE_RE = re.compile(r"\bdecision \((?P<person>" + PERSON + r")\)")
 
 
@@ -911,7 +911,7 @@ def reply_span(text: str) -> tuple[int, int] | None:
     m = REPLY_TAIL_RE.search(text, due.end() if due else 0)
     if m is None:
         return None
-    ends = [f.start() for f in (r.search(text, m.end()) for r in (ANSWERS_RE, LIFTS_RE, DECIDED_RE, CLOSED_RE)) if f]
+    ends = [f.start() for f in (r.search(text, m.end()) for r in (ANSWERS_RE, DECIDED_RE, CLOSED_RE)) if f]  # a Lifts: follows Answers:
     end = min(ends) if ends else len(text)
     return m.start(), m.start() + len(text[m.start():end].rstrip())
 
@@ -929,7 +929,7 @@ def _hide_match(text: str) -> re.Match | None:
         start = c.start()
     # it ends at the first reply or trailing field: an answer's, a Decided: text's or a reply's words are no field
     span = reply_span(text)
-    ends = [f.start() for f in (r.search(text, start) for r in (ANSWERS_RE, LIFTS_RE, DECIDED_RE, CLOSED_RE)) if f]
+    ends = [f.start() for f in (r.search(text, start) for r in (ANSWERS_RE, DECIDED_RE, CLOSED_RE)) if f]
     end = min([*ends, *([span[0]] if span else []), len(text)])
     return HIDE_RE.search(text, start, end)
 
@@ -937,7 +937,12 @@ def _hide_match(text: str) -> re.Match | None:
 def parse_lifts(text: str) -> list[str] | None:
     """The labels of the item's `Lifts:` field (v2.3), `\\|` read as a bar, or None when it has none (which
     means `Go`). Read as Answers: is, in the trailer after its Due:."""
-    m = LIFTS_RE.search(_trailer(text))
+    trailer = _trailer(text)
+    a = ANSWERS_RE.search(trailer)
+    if not a:
+        return None  # it follows Answers: — a reply's or a Decided: text's words are never the field
+    d = DECIDED_RE.search(trailer, a.start())
+    m = LIFTS_RE.search(trailer[: d.start()] if d else trailer, a.start())
     if not m:
         return None
     parts = (a.replace("\\|", "|").strip() for a in ANSWER_SPLIT_RE.split(m.group("lifts")))
@@ -946,9 +951,13 @@ def parse_lifts(text: str) -> list[str] | None:
 
 def parse_parts(text: str) -> list[str]:
     """The ids of the item's `Parts:` field (v2.3), in order, each once, or [] when it has none: every
-    `TD-NNN` (or `<repo>#TD-NNN`) in it. It is read only where the item's Context: ends, as its next field."""
+    `TD-NNN` (or `<repo>#TD-NNN`) in it. It is read only where the item's Context: ends, as its next field, and
+    never inside a reply's words."""
     c = CONTEXT_RE.search(text)
     m = PARTS_RE.match(text, c.end()) if c else None
+    span = reply_span(text)
+    if m and span and span[0] <= m.start("ids") < span[1]:
+        m = None
     out: list[str] = []
     for x in REF_TD_RE.finditer(m.group("ids") if m else ""):
         if x.group(0) not in out:
@@ -1275,8 +1284,7 @@ def _trailing_field_start(body: str, after_due: bool = False) -> int | None:
     `after_due`, a reply: then only as the reader finds the fields, after the Due:."""
     due = DUE_RE.search(body) if after_due else None
     off = due.end() if due else 0
-    starts = [m.start() for m in (ANSWERS_RE.search(body, off), LIFTS_RE.search(body, off), DECIDED_RE.search(body, off))
-              if m]
+    starts = [m.start() for m in (ANSWERS_RE.search(body, off), DECIDED_RE.search(body, off)) if m]
     return min(starts) if starts else None
 
 
@@ -1587,6 +1595,9 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
             raise Refused("lifts names one or more of the answers, or is None (`Go`)")
         if [x.lower() for x in lifted] == ["go"]:
             lifted = []  # `Go` alone is what no Lifts: means: it is not written
+    if kind == "decide" and (lifted or lifts is not None or CONTEXT_ANY_GATE_RE.search(ctx)) \
+            and len({x.group(0) for x in REF_TD_RE.finditer(ctx)}) != 1:
+        raise Refused("a decide that lifts a gate names exactly one entry in its context")
     label = offered[default][0] if offered and default is not None else None
     lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
 
@@ -1825,7 +1836,7 @@ def item_problem(line: str) -> str | None:
         if kind != "decide":
             problems.append(f"parts: {_a_kind(kind)} carries no `Parts:`: only a decide asks about a parent's parts")
         if not all(REF_TD_RE.fullmatch(x) for x in ids):
-            problems.append("parts: `Parts:` lists entry ids, `TD-n`, separated by `, `")
+            problems.append("parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `")
         elif len(set(ids)) != len(ids):
             problems.append("parts: an id stands twice")
         if not pm.group("period"):
