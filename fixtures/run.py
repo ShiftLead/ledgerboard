@@ -27,7 +27,9 @@ Fixtures, each an invented input and its expected JSON:
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
-  (v2.3).
+  (v2.3), and ``archive_subject()`` (v2.3).
+- ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
+  two, read as bytes, or its refusal.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
   and each check; ``components()`` of it joins through the field.
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one
@@ -134,6 +136,14 @@ def board_case(L, md: Path) -> dict:
             "closed": L.closed_items(text)}
 
 
+def archive_case(L, md: Path) -> dict:
+    """``archive_closed()`` of a board and its archive, read as bytes so a CRLF case keeps its line endings."""
+    board = md.read_bytes().decode("utf-8")
+    archive = md.with_name(md.name.replace(".board.md", ".archive.md")).read_bytes().decode("utf-8")
+    got = _refused(lambda: L.archive_closed(board, archive))
+    return {"refused": got["refused"]} if "refused" in got else {"board": got["ok"][0], "archive": got["ok"][1]}
+
+
 def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     today = date.fromisoformat(spec["today"])
     out: dict = {"edits": {}, "subjects": [], "subject_kinds": {}, "compose": [], "predicates": {}, "versions": []}
@@ -158,6 +168,8 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["item_problems"] = {ln: L.item_problem(ln) for ln in spec["item_problems"]}  # v2.3: the item gate
     out["canonical_items"] = [_refused(lambda ln=ln: L.canonical_item(ln)) for ln in spec["canonical_items"]]
     out["board_problems"] = [L.board_problems(c["new"], c["old"]) for c in spec["board_problems"]]
+    out["archive_subjects"] = [_refused(lambda c=c: L.archive_subject(c["tool"], c["count"], c.get("session")))
+                               for c in spec["archive_subjects"]]
     for ln in spec["predicates"]:
         out["predicates"][ln] = {"entry_id": L.entry_id(ln), "row_id": L.row_id(ln), "is_item": L.is_item(ln),
                                  "is_open_item": L.is_open_item(ln), "is_stamp": L.is_stamp(ln),
@@ -244,6 +256,8 @@ def cases(L, root: Path):
                 yield (md.with_suffix(".json"), "v2"), v2_case(L, md)
     for md in sorted((root / "board").glob("*.md")):
         yield md.with_suffix(".json"), board_case(L, md)
+    for md in sorted((root / "archive").glob("*.board.md")):
+        yield md.with_name(md.name.removesuffix(".board.md") + ".json"), archive_case(L, md)
     spec = json.loads((root / "edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "edit" / "expected.json", edit_cases(L, spec, root)
     spec = json.loads((root / "ledger_edit" / "cases.json").read_text(encoding="utf-8"))

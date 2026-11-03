@@ -290,8 +290,10 @@ A board is a Markdown file (by convention `docs/user_attention.md`) of items for
 
 **An item** is one line: `- [ ] [kind] YYYY-MM-DD (session <name> on <host>, or n/a) — text.
 Context: … Due: YYYY-MM-DD.` A closed item is ticked: `- [x] … Closed: YYYY-MM-DD — why.` Items
-are never deleted; closed ones are archived in bulk once ten or more sit on the board. When an open
+are never deleted; closed ones are archived in bulk, ten (`ARCHIVE_AT`) being the threshold a consumer reads. When an open
 item and a closed one have the same key (below), the item is closed: a merge kept both sides.
+
+The archive moves them (`archive_closed(board, archive)`, v2.3): each closed line with its detail block, and any open line whose key a closed line shares, in board order and byte for byte, appended to the archive's text. Every other board line stays byte for byte. It refuses a moving item that is nested, that has a nested item under it, or whose detail block a blank line breaks, since it would split them. When to archive is the consumer's; `ARCHIVE_AT` is the threshold it reads. The archive is not one of the four edits under *Edits*, which each rewrite one line.
 
 **The head** — `(session <name> on <host>…)`, either name optionally backticked; the session is the
 first name, the host the first word after ` on ` inside the parentheses; `n/a` names nothing.
@@ -386,7 +388,8 @@ new item — the head is the item's text after its prefix, before its fields, bo
 60 characters; a reply's words never appear. Subjects written before v1 by one consumer
 (`shiftlead: board|answer <head> (from <ref>)`, `shiftlead: board decide <ref> (person)`) still
 read as appends.
-`subject_kind()` names a subject `edit`, `append` or (a rank write, above) `queue`.
+The archive's subject is `<tool>: archive <n> closed items (session <name>)` (`archive_subject()`), `<n>` the closed items moved.
+`subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write, above) `queue`.
 
 ## Versions
 
@@ -419,3 +422,4 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key.

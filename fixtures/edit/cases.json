@@ -132,7 +132,11 @@
     "queue: rank TD-3 TD-12 (shiftlead)",
     "queue: sort TD-3 (shiftlead)",
     "queue: rank TD-3",
-    "queue: rank TD-3 (shiftlead) extra"
+    "queue: rank TD-3 (shiftlead) extra",
+    "shiftlead: archive 3 closed items (session w-1)",
+    "shiftlead: archive 1 closed item (session n/a)",
+    "shiftlead: archive 1 closed items (session w-1)",
+    "shiftlead: archive 0 closed items (session w-1)"
   ],
   "compose": [
     {
@@ -1043,6 +1047,27 @@
     {
       "old": null,
       "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
+    }
+  ],
+  "archive_subjects": [
+    {
+      "tool": "shiftlead",
+      "count": 1,
+      "session": "w-1"
+    },
+    {
+      "tool": "shiftlead",
+      "count": 12,
+      "session": "w-1"
+    },
+    {
+      "tool": "agent-cadence",
+      "count": 3
+    },
+    {
+      "tool": "my tool",
+      "count": 3,
+      "session": "w-1"
     }
   ]
 }

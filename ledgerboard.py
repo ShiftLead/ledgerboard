@@ -27,6 +27,7 @@ import logging
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from dataclasses import replace as _dc_replace
 from datetime import date, datetime
 from typing import Any
 
@@ -1669,11 +1670,103 @@ def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
     return out
 
 
+def _lf_lines(text: str) -> list[str]:
+    """`text`'s lines, each with its own ending, split at `\\n` alone: a person's text may hold a
+    character `str.splitlines()` also breaks at (U+2028, a form feed), and a move never splits a line."""
+    return re.findall(r"[^\n]*\n|[^\n]+\Z", text)
+
+
+def archive_closed(board: str, archive: str) -> tuple[str, str]:
+    """(board, archive) after the archive: each closed item line with its detail block, and each open
+    line whose key a closed line shares (its twin, C5) with its block, moved in board order and byte
+    for byte to the archive's end; every other board line kept byte for byte. Refused for a board
+    with no closed item, for a shape it would split (a nested moving item, one with an item nested
+    under it, one whose block a blank line breaks), and for a result the reader reads otherwise.
+    When to archive is the consumer's (ARCHIVE_AT)."""
+    lines = _lf_lines(board)
+    bare = [ln.rstrip("\r\n") for ln in lines]
+    closed = {item_key(ln) for ln in bare if CLOSED_ITEM_RE.match(ln)}
+    if not closed:
+        raise Refused("the board has no closed item to archive")
+
+    def deep(ln: str) -> int:
+        return len(ln) - len(ln.lstrip())
+
+    def blank(i: int) -> bool:
+        return not bare[i].strip()
+
+    def item(i: int) -> bool:
+        return bool(ITEM_RE.match(bare[i]) or CLOSED_ITEM_RE.match(bare[i]))
+    runs: list[tuple[int, int]] = []
+    for i, ln in enumerate(bare):
+        if not (CLOSED_ITEM_RE.match(ln) or (ITEM_RE.match(ln) and item_key(ln) in closed)):
+            continue
+        where = f"line {i + 1}"
+        if deep(ln):
+            raise Refused(f"{where}: a closed item nested under another: move it to the left edge first")
+        j = i + 1
+        while j < len(bare) and not blank(j) and deep(bare[j]) > deep(ln) and not item(j):
+            j += 1
+        if j < len(bare) and item(j) and deep(bare[j]) > deep(ln):
+            raise Refused(f"{where}: an item nested under a closed one would be left behind: move it out first")
+        if j < len(bare) and blank(j):
+            k = j
+            while k < len(bare) and blank(k):
+                k += 1
+            if k < len(bare) and deep(bare[k]) > deep(ln):
+                raise Refused(f"{where}: a blank line breaks the closed item's detail block: join it first")
+        runs.append((i, j))
+    moved = [i for s, e in runs for i in range(s, e)]
+    kept = [True] * len(lines)
+    for i in moved:
+        kept[i] = False
+    for s, e in runs:  # a removal leaves no two blank lines in a row, and the file's ends as they were
+        p = next((i for i in range(s - 1, -1, -1) if kept[i]), None)
+        n = next((i for i in range(e, len(lines)) if kept[i]), None)
+        if p is not None and n is not None and blank(p) and blank(n):
+            kept[p] = False
+        elif p is None and n is not None and blank(n):
+            kept[n] = False
+        elif n is None and p is not None and blank(p):
+            kept[p] = False
+    new_board = "".join(ln for ln, k in zip(lines, kept) if k)
+    tail = "".join(lines[i] for i in moved)
+    if not archive.strip():
+        new_archive = tail
+    else:
+        eol = "\r\n" if _lf_lines(archive)[0].endswith("\r\n") else "\n"
+        head = archive if archive.endswith("\n") else archive + eol
+        arch = [ln.rstrip("\r\n") for ln in _lf_lines(head)]
+        last = next(ln for ln in reversed(arch) if ln.strip())
+        if not (ITEM_RE.match(last) or CLOSED_ITEM_RE.match(last) or deep(last)) and arch[-1].strip():
+            head += eol
+        new_archive = head + tail
+
+    def read(text: str) -> list[BoardItem]:
+        return [_dc_replace(it, line=0) for it in parse_board(text, warn=False)]
+    if read(new_board) != read(board) or closed_items(new_board) or not new_archive.endswith(tail):
+        raise Refused("the board's reader would not read the board back unchanged but for its closed items")
+    return new_board, new_archive
+
+
+def archive_subject(tool: str, count: int, session: str | None = None) -> str:
+    """The commit subject of an archive write: `<tool>: archive <count> closed items (session <name>)`
+    (`closed item` for one; `n/a` with no session), `count` the closed items moved, twins not counted."""
+    if not tool or re.search(r"[\s()]", str(tool)):
+        raise Refused(f"a tool is one word with no parenthesis, not {tool!r}")
+    if type(count) is not int or count < 1:
+        raise Refused(f"the count is the closed items moved, 1 or more, not {count!r}")
+    if session is not None and (not session or re.search(r"[\s()]", str(session))):
+        raise Refused(f"a session name holds no whitespace or parenthesis, not {session!r}")
+    return f"{tool}: archive {count} closed item{'' if count == 1 else 's'} (session {session or 'n/a'})"
+
+
 # The commit subject of one board write: `<tool>: <action> <head>[ to <date> | : <answer>]
 # (session <name>)`; for an append, `<tool>: append <head> (session <name>)`. A reply's words stay
 # on the board, never in the subject.
 EDIT_SUBJECT_RE = re.compile(r"^\S+: (?:snooze|done|decide|reply) .+ \(session [^)]+\)$")
 APPEND_SUBJECT_RE = re.compile(r"^\S+: append .+ \(session [^)]+\)$")
+ARCHIVE_SUBJECT_RE = re.compile(r"^\S+: archive (?:1 closed item|(?:[2-9]|[1-9]\d+) closed items) \(session [^)\s]+\)\Z")  # v2.3
 # Subjects one consumer wrote for an append before this format had one; still read, so a board PR
 # in flight across the change classifies as before.
 LEGACY_APPEND_SUBJECT_RES = (
@@ -1710,10 +1803,12 @@ def queue_subject(tool: str, action: str, ids: list[str]) -> str:
 
 
 def subject_kind(line: str) -> str | None:
-    """`edit` or `append` for a board write's commit subject, `queue` for a rank file write's (or a PR
+    """`edit`, `append` or `archive` for a board write's commit subject, `queue` for a rank file write's (or a PR
     title carrying one); None otherwise."""
     if QUEUE_SUBJECT_RE.match(line):
         return "queue"
+    if ARCHIVE_SUBJECT_RE.match(line):
+        return "archive"
     if EDIT_SUBJECT_RE.match(line):
         return "edit"
     if APPEND_SUBJECT_RE.match(line) or any(r.match(line) for r in LEGACY_APPEND_SUBJECT_RES):
