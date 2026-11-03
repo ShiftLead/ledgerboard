@@ -36,7 +36,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
     - Not read by any review: the closing fact-check's fixes F37–F39 (when `canonical_item()` may add Context's period). They go into B2's Fix for the builder to check.
     - `item_line()` writes four inputs differently from v2.2 (C8). Lines already on a board are untouched.
   - **Recommended:** Go — the last design review raised nothing that changes what gets built, and the closing fixes narrow one rewrite that the key read-back already guards. **Otherwise:** One more round if you want F37–F39 reviewed before B2. Hold if C1's trade (old lines keep their keys, so the format pass does little) is the wrong one.
-- [ ] act 2026-11-03 (n/a) — Merge PR #67 (ledgerboard becomes the package `ledgerboard/__init__.py`). Context: TD-015 / PR #67. Due: 2026-11-03.
+- [x] act 2026-11-03 (n/a) — Merge PR #67 (ledgerboard becomes the package `ledgerboard/__init__.py`). Context: TD-015 / PR #67. Due: 2026-11-03. Closed: 2026-11-03 — PR #67 (TD-015) merged 2026-11-03.
   - **Context:** Built, reviewed (SHIP), gated, and passed by the techlead. It is yours because it touches `AGENTS.md`, `.shiftlead.yml` and `.github/workflows/ci.yml`. TD-016..TD-019 (the board writer and its successors) wait on it. Once it merges, the briefs and the techlead primer still say `ledgerboard.py`; those files are yours to update.
   - **Question:** Squash-merge #67 (`gh pr merge 67 --squash`).
 
