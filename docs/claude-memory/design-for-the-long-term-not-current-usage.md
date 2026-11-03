@@ -4,7 +4,6 @@ description: "Ledgerboard format decisions follow the long-term best design, nev
 metadata:
   node_type: memory
   type: feedback
-  originSessionId: ca9ba866-d7f9-4da4-b11b-9d425b13cf6f
   modified: 2026-11-01T04:29:19.524Z
 ---
 
@@ -12,4 +11,4 @@ Make every ledgerboard format decision on the long-term best design. Never shape
 
 **Why:** Paul, 2026-10-31, during the target-design rounds (TD-010): "This repo (ledgerboard) is a major foundational piece of what we are doing with shiftlead, so we want to make sure we make it right."
 
-**How to apply:** When a design option is justified by "ShiftLead does X today" or "this keeps the migration small", restate the reason on design merit or drop the option. Example: ShiftLead's open-entry Status stages (Designed, Built) and moving them to `Kind`. When independent reviewers cite consumer code, use it as evidence for the migration, not as a constraint on the target. Related: [[agree-the-shape-before-reviews]].
+**How to apply:** When a design option is justified by "ShiftLead does X today" or "this keeps the migration small", restate the reason on design merit or drop the option. Example: ShiftLead's open-entry Status stages (Designed, Built) and moving them to `Kind`. When independent reviewers cite consumer code, use it as evidence for the migration, not as a constraint on the target.
