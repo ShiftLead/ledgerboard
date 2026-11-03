@@ -2912,7 +2912,7 @@ def split(ledger: str, archive: str) -> dict[str, str]:
                     continue
                 title, _, rest = part.partition("\n")
                 if not where and title.strip().lower() == "## summary":
-                    kept += [ln for ln in rest.splitlines() if ln.strip() and not ln.lstrip().startswith("|")]
+                    kept += _summary_kept(rest)
                     continue
                 raise Refused(f"{title!r} in the {'archive' if where else 'ledger'} is not an entry — "
                               "move it into an entry or the README first; nothing was split")
@@ -2935,14 +2935,68 @@ def split(ledger: str, archive: str) -> dict[str, str]:
     return files
 
 
+def _summary_kept(rest: str) -> list[str]:
+    """The ``## Summary`` section's lines but its table, verbatim (v2.4): blank lines kept, the table's
+    rows taken out, and of the blank lines on its two sides one kept; leading and trailing blanks dropped."""
+    out: list[str] = []
+    lines = rest.split("\n")
+    i = 0
+    while i < len(lines):
+        if lines[i].lstrip().startswith("|"):
+            while i < len(lines) and lines[i].lstrip().startswith("|"):
+                i += 1
+            if out and not out[-1].strip() and i < len(lines) and not lines[i].strip():
+                i += 1  # the table stood between two blank lines: one of them stays
+            continue
+        out.append(lines[i])
+        i += 1
+    while out and not out[0].strip():
+        out.pop(0)
+    while out and not out[-1].strip():
+        out.pop()
+    return out
+
+
 def _v2_readme(text: str, kept: list[str]) -> str:
     """``README.md`` from a v1 ledger's opening prose: ``Ledgerboard: 2`` under its title (any
-    ``Ledgerboard: 1`` line dropped), then ``kept`` — the Summary section's lines that are not table."""
+    ``Ledgerboard: 1`` line dropped), then ``kept`` — the Summary section's lines that are not table
+    (``_summary_kept()``). A ``---`` that would follow the prose's own closing ``---`` with nothing
+    between them (the pair that framed the table) is dropped (v2.4)."""
     lines = [ln for ln in text.rstrip("\n").split("\n") if not VERSION_RE.match(ln)] if text.strip() else []
     at = 1 if lines and lines[0].startswith("# ") else 0
     lines[at:at] = (["", "Ledgerboard: 2"] if at else ["Ledgerboard: 2", ""])
     out = "\n".join(lines).rstrip("\n") + "\n"
+    kept = list(kept)
+    if kept and kept[0].strip() == "---" and lines and lines[-1].strip() == "---":
+        kept.pop(0)
+        while kept and not kept[0].strip():
+            kept.pop(0)
     return out + ("\n" + "\n".join(kept) + "\n" if kept else "")
+
+
+SPLIT_TABLE_RE = re.compile(r"\b(?:summary table|table below|the table)\b", re.IGNORECASE)
+SPLIT_LINK_RE = re.compile(r"\]\((?![a-z][a-z0-9+.-]*:|#|/)(?P<target>[^)\s]+)\)", re.IGNORECASE)
+
+
+def split_notes(readme: str) -> list[tuple[int, str, str]]:
+    """The lines of a ``README.md`` that ``split()`` wrote which may still describe the v1 layout (v2.4), for a
+    caller to warn about: ``(line number, line, why)`` for a line naming the summary table, which a v2 ledger
+    has none of, and for one holding a relative Markdown link, which the move from beside the v1 file into the
+    v2 directory breaks (a link to the v1 archive file among them). Lines inside a fenced code block are
+    skipped; nothing is rewritten."""
+    out, fence = [], None
+    for n, line in enumerate(readme.split("\n"), 1):
+        f = FENCE_RE.match(line)
+        if f:
+            fence = None if fence and f.group("fence")[0] == fence else (fence or f.group("fence")[0])
+            continue
+        if fence:
+            continue
+        if SPLIT_TABLE_RE.search(line):
+            out.append((n, line, "names the summary table: a v2 ledger has none"))
+        for m in SPLIT_LINK_RE.finditer(line):
+            out.append((n, line, f"links {m.group('target')} relatively: the README moved into the ledger directory"))
+    return out
 
 
 def v2_problems(path: str, ls: Ls, read: Read) -> list[str]:

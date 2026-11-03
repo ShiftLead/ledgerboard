@@ -1639,5 +1639,9 @@
       "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-006: 2|0|000006zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1\nTD-005: 2|0|000030i\n",
       "ledger": "# L\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n## TD-006: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n"
     }
+  ],
+  "split_notes": [
+    "# Ledger\n\nLedgerboard: 2\n\nEach open entry is a file here; the table below is gone, and [the old archive](../ledger_archive.md) moved.\nSee [the cadence](https://example.com/cadence.md), [this section](#entries) and [the root](/docs/x.md).\n\n```\nA [link in a fence](kept.md) and the summary table.\n```\n",
+    "# Ledger\n\nLedgerboard: 2\n\nNothing here names the old layout.\n"
   ]
 }
