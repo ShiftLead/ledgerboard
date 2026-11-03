@@ -85,14 +85,6 @@
    "level": "error",
    "standing": false,
    "text": "⚠ TD-205: its **Event (Bad-Name):** section: the event name 'Bad-Name' is not [a-z0-9-]+"
-  },
-  {
-   "field": "event",
-   "id": "TD-205",
-   "kind": "event-ungated",
-   "level": "info",
-   "standing": false,
-   "text": "ℹ TD-205: its **Event (Bad-Name):** section has no event (Bad-Name) gate, and no gate lifted: event (Bad-Name) Log line says why"
   }
  ],
  "check_since_empty": [
@@ -175,14 +167,6 @@
    "level": "error",
    "standing": false,
    "text": "⚠ TD-205: its **Event (Bad-Name):** section: the event name 'Bad-Name' is not [a-z0-9-]+"
-  },
-  {
-   "field": "event",
-   "id": "TD-205",
-   "kind": "event-ungated",
-   "level": "info",
-   "standing": false,
-   "text": "ℹ TD-205: its **Event (Bad-Name):** section has no event (Bad-Name) gate, and no gate lifted: event (Bad-Name) Log line says why"
   }
  ],
  "declared": {},

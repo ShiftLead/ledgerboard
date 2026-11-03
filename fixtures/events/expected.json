@@ -4,6 +4,86 @@
    "problem": "unknown check type '' — one of pr-merged, file-contains, ref-includes",
    "type": ""
   },
+  "file-contains\ta\tp.md\t\"x\"": {
+   "path": "p.md",
+   "problem": null,
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a ./p \"x\"": {
+   "path": "./p",
+   "problem": "the path './p' has an empty, . or .git segment",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a .git/config \"x\"": {
+   "path": ".git/config",
+   "problem": "the path '.git/config' has an empty, . or .git segment",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a a&b=c \"x\"": {
+   "path": "a&b=c",
+   "problem": "the path 'a&b=c' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a a+b \"x\"": {
+   "path": "a+b",
+   "problem": "the path 'a+b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a p.md \"x\u0000y\"": {
+   "problem": "the quoted text holds a control character",
+   "type": "file-contains"
+  },
+  "file-contains a p.md \"x\ry\"": {
+   "problem": "the quoted text holds a control character",
+   "type": "file-contains"
+  },
+  "file-contains a p/ \"x\"": {
+   "path": "p/",
+   "problem": "the path 'p/' has an empty, . or .git segment",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a p/./q \"x\"": {
+   "path": "p/./q",
+   "problem": "the path 'p/./q' has an empty, . or .git segment",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a p// \"x\"": {
+   "path": "p//",
+   "problem": "the path 'p//' has an empty, . or .git segment",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
+  "file-contains a p q \"x\"": {
+   "path": "p q",
+   "problem": "the path 'p\\xa0q' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
+   "ref": null,
+   "repo": "a",
+   "text": "x",
+   "type": "file-contains"
+  },
   "file-contains acme/tools \"x\"": {
    "problem": "file-contains takes <repo>[@<ref>] <path> \"<text>\"",
    "type": "file-contains"
@@ -34,7 +114,7 @@
   },
   "file-contains acme/tools a#b \"x\"": {
    "path": "a#b",
-   "problem": "the path 'a#b' holds a glob character, #, %, a quote, a backslash, a space or a control",
+   "problem": "the path 'a#b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -42,7 +122,7 @@
   },
   "file-contains acme/tools a%2e \"x\"": {
    "path": "a%2e",
-   "problem": "the path 'a%2e' holds a glob character, #, %, a quote, a backslash, a space or a control",
+   "problem": "the path 'a%2e' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -78,7 +158,7 @@
   },
   "file-contains acme/tools a?b \"x\"": {
    "path": "a?b",
-   "problem": "the path 'a?b' holds a glob character, #, %, a quote, a backslash, a space or a control",
+   "problem": "the path 'a?b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -86,7 +166,7 @@
   },
   "file-contains acme/tools a[1] \"x\"": {
    "path": "a[1]",
-   "problem": "the path 'a[1]' holds a glob character, #, %, a quote, a backslash, a space or a control",
+   "problem": "the path 'a[1]' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -94,7 +174,7 @@
   },
   "file-contains acme/tools docs/*.md \"x\"": {
    "path": "docs/*.md",
-   "problem": "the path 'docs/*.md' holds a glob character, #, %, a quote, a backslash, a space or a control",
+   "problem": "the path 'docs/*.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII",
    "ref": null,
    "repo": "acme/tools",
    "text": "x",
@@ -127,19 +207,19 @@
    "type": "file-contains"
   },
   "file-contains acme/tools@a^ a.md \"x\"": {
-   "problem": "the ref 'a^' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)",
+   "problem": "the ref 'a^' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
    "ref": "a^",
    "repo": "acme/tools",
    "type": "file-contains"
   },
   "file-contains acme/tools@a~1 a.md \"x\"": {
-   "problem": "the ref 'a~1' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)",
+   "problem": "the ref 'a~1' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
    "ref": "a~1",
    "repo": "acme/tools",
    "type": "file-contains"
   },
   "file-contains acme/tools@ref:path a.md \"x\"": {
-   "problem": "the ref 'ref:path' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)",
+   "problem": "the ref 'ref:path' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
    "ref": "ref:path",
    "repo": "acme/tools",
    "type": "file-contains"
@@ -172,8 +252,19 @@
    "repo": "../x",
    "type": "pr-merged"
   },
+  "pr-merged a#123456789012345678": {
+   "n": 123456789012345678,
+   "problem": null,
+   "repo": "a",
+   "type": "pr-merged"
+  },
+  "pr-merged a#9999999999999999999": {
+   "problem": "the PR number '9999999999999999999' is not 1 to 18 of [0-9]",
+   "repo": "a",
+   "type": "pr-merged"
+  },
   "pr-merged a/b#12a": {
-   "problem": "the PR number '12a' is not [0-9]+",
+   "problem": "the PR number '12a' is not 1 to 18 of [0-9]",
    "repo": "a/b",
    "type": "pr-merged"
   },
@@ -184,7 +275,7 @@
    "type": "pr-merged"
   },
   "pr-merged acme#": {
-   "problem": "the PR number '' is not [0-9]+",
+   "problem": "the PR number '' is not 1 to 18 of [0-9]",
    "repo": "acme",
    "type": "pr-merged"
   },
@@ -208,6 +299,58 @@
    "problem": "the repo 'https://h/o/r' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)",
    "repo": "https://h/o/r",
    "type": "pr-merged"
+  },
+  "pr-merged a#1": {
+   "problem": "unknown check type 'pr-merged\\xa0a#1' — one of pr-merged, file-contains, ref-includes",
+   "type": "pr-merged a#1"
+  },
+  "ref-includes a@a+b abcdef1": {
+   "problem": "the ref 'a+b' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "a+b",
+   "repo": "a",
+   "type": "ref-includes"
+  },
+  "ref-includes a@ma#in abcdef1": {
+   "problem": "the ref 'ma#in' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "ma#in",
+   "repo": "a",
+   "type": "ref-includes"
+  },
+  "ref-includes a@ma%2e abcdef1": {
+   "problem": "the ref 'ma%2e' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "ma%2e",
+   "repo": "a",
+   "type": "ref-includes"
+  },
+  "ref-includes a@ma&x=1 abcdef1": {
+   "problem": "the ref 'ma&x=1' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "ma&x=1",
+   "repo": "a",
+   "type": "ref-includes"
+  },
+  "ref-includes a@main\u001cabcdef1": {
+   "problem": "ref-includes takes <repo>@<ref> <commit>",
+   "type": "ref-includes"
+  },
+  "ref-includes a@main abcdef1": {
+   "problem": "ref-includes takes <repo>@<ref> <commit>",
+   "type": "ref-includes"
+  },
+  "ref-includes a@main abcdef1": {
+   "problem": "ref-includes takes <repo>@<ref> <commit>",
+   "type": "ref-includes"
+  },
+  "ref-includes a@ma‮in abcdef1": {
+   "problem": "the ref 'ma\\u202ein' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "ma‮in",
+   "repo": "a",
+   "type": "ref-includes"
+  },
+  "ref-includes a@mаin abcdef1": {
+   "problem": "the ref 'mаin' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII",
+   "ref": "mаin",
+   "repo": "a",
+   "type": "ref-includes"
   },
   "ref-includes acme/tools 0123abc": {
    "problem": "ref-includes takes <repo>@<ref> <commit>: the ref is required",
@@ -294,32 +437,37 @@
  "parse_event_section": {
   "**Event (Ships):** the vendor ships.\ncheck: pr-merged acme/tools#3": {
    "check": null,
+   "first": "**Event (Ships):** the vendor ships.",
    "name": "Ships",
    "problem": "the event name 'Ships' is not [a-z0-9-]+",
    "words": "the vendor ships."
   },
   "**Event (ships):**\ncheck: pr-merged acme/tools#3": {
    "check": null,
+   "first": "**Event (ships):**",
    "name": "ships",
    "problem": "its first line says the event in plain words, after the lead",
    "words": ""
   },
   "**Event (ships):** the vendor ships,\nonce its release is cut.\ncheck: pr-merged acme/tools#3": {
    "check": null,
+   "first": "**Event (ships):** the vendor ships,",
    "name": "ships",
    "problem": "its words run past the first line — the event in plain words is one line, the check the second",
    "words": "the vendor ships,"
   },
   "**Event (ships):** the vendor ships.": {
    "check": null,
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
    "problem": "it has no check: line — the last line is check: <type> <args>",
    "words": "the vendor ships."
   },
   "**Event (ships):** the vendor ships.\ncheck:": {
    "check": null,
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
-   "problem": "its check: line names no check",
+   "problem": "its check: line names no check — check: <type> <args>, a space after the colon",
    "words": "the vendor ships."
   },
   "**Event (ships):** the vendor ships.\ncheck: pr-merged a/../b#3": {
@@ -329,6 +477,7 @@
     "repo": "a/../b",
     "type": "pr-merged"
    },
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
    "problem": "its check: the repo 'a/../b' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)",
    "words": "the vendor ships."
@@ -340,24 +489,42 @@
     "repo": "acme/tools",
     "type": "pr-merged"
    },
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
    "problem": null,
    "words": "the vendor ships."
   },
   "**Event (ships):** the vendor ships.\ncheck: pr-merged acme/tools#3\ncheck: pr-merged acme/tools#4": {
    "check": null,
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
    "problem": "it has 2 check: lines — exactly one",
    "words": "the vendor ships."
   },
   "**Event (ships):** the vendor ships.\ncheck: pr-merged acme/tools#3\nmore words": {
    "check": null,
+   "first": "**Event (ships):** the vendor ships.",
    "name": "ships",
    "problem": "a line follows its check: line — the check is the section's last line",
    "words": "the vendor ships."
   },
+  "**Event (ships):** the vendor ships.\ncheck:pr-merged a#1": {
+   "check": null,
+   "first": "**Event (ships):** the vendor ships.",
+   "name": "ships",
+   "problem": "its check: line names no check — check: <type> <args>, a space after the colon",
+   "words": "the vendor ships."
+  },
   "**Waits:** not an event": {
    "check": null,
+   "first": "**Waits:** not an event",
+   "name": null,
+   "problem": "not an Event section: its lead is **Event (<name>):**",
+   "words": ""
+  },
+  "**event (ships):** the vendor ships.\ncheck: pr-merged a#1": {
+   "check": null,
+   "first": "**event (ships):** the vendor ships.",
    "name": null,
    "problem": "not an Event section: its lead is **Event (<name>):**",
    "words": ""

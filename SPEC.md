@@ -115,15 +115,20 @@ check: file-contains acme/vendor files/lib.py "v2.4"
 - **Arguments are confined**, since anyone with PR rights can edit the ledger and a check runs with the
   host's credentials. `parse_check()` gives a `problem`, and `check()` refuses the section, for:
   - a `<repo>` outside the `<repo>` grammar (below);
-  - an `n` that is not `[0-9]+`;
+  - an `n` that is not 1 to 18 of `[0-9]`;
   - a `commit` that is not 7 to 40 of `[0-9a-f]`;
   - a `ref` that fails git's `check-ref-format --allow-onelevel` rules (a component starting with `.` or
     ending `.lock`, a control character, a space, any of `~^:?*[\`, `//`, a trailing `/` or `.`, `@{`, or
     `@` alone), or that starts with `-` or holds `..` or `:` — no option injection (`--output=x`), no
-    revision syntax (`a..b`, `@{u}`, `ref:path`);
-  - a `path` that is absolute, has a `..` segment, starts with `-`, or holds a glob character (`*?[]`),
-    `#`, `%`, a quote, a backslash, whitespace or a control character;
-  - quoted text that is empty or spaces alone, or anything after it.
+    revision syntax (`a..b`, `@{u}`, `ref:path`) — or holds URL or query syntax (`#%&=+`), whitespace,
+    or anything outside printable ASCII, since a ref goes into a forge's API path or query;
+  - a `path` that is absolute, has an empty, `.`, `..` or `.git` segment, starts with `-`, or holds a
+    glob character (`*?[]`), URL or query syntax (`#%&=+`), a quote, a backslash, whitespace, a control
+    character or anything outside printable ASCII;
+  - quoted text that is empty or spaces alone, holds a control character, or has anything after it.
+
+  Arguments are separated by spaces and tabs only, so no other whitespace hides a second argument, and a
+  ref or path read is the one shown: ASCII alone, as `<repo>` is.
 - What `check()` says of an open entry's events (`event_problems()`), each scoped by the entry's whole
   text, as the Log's flags are (an error on an entry the edit changed, ℹ on a standing ledger):
   - `event-section` (⚠): an `event (<name>)` gate with no section of its name, or two sections of one name;
@@ -868,20 +873,21 @@ pr-merged      ::= "pr-merged " repo "#" digit+
 file-contains  ::= "file-contains " repo ( "@" ref )? " " path " " quoted
 ref-includes   ::= "ref-includes " repo "@" ref " " commit
 ref            ::= ref-char+
-ref-char       ::= [^#x0-#x20#x7F~^:?*[#x5C]
+ref-char       ::= [^#x0-#x20#x7F-#x10FFFF~^:?*[#x5C#%&=+]
 path           ::= path-char+
-path-char      ::= [^#x0-#x20#x7F*?[#x5D#%"#x5C]
-quoted         ::= '"' char+ '"'
+path-char      ::= [^#x0-#x20#x7F-#x10FFFF*?[#x5D#%&=+"#x5C]
+quoted         ::= '"' text-char+ '"'
+text-char      ::= [^#x0-#x1F#x7F]
 commit         ::= hex hex hex hex hex hex hex hex*
 hex            ::= [0-9a-f]
 ```
 
 What the productions leave to prose: a `ref` follows git's `check-ref-format --allow-onelevel` rules and more —
 it does not start with `-`, hold `..` or `@{`, or equal `@`; it does not end with `/` or `.`, hold `//`, or have a
-component that starts with `.` or ends with `.lock`. A `path` is not absolute, has no `..` segment and does not
-start with `-`. A `commit` is at most 40 digits. The quoted text runs from its first `"` to the line's last, and
+component that starts with `.` or ends with `.lock`. A `path` is not absolute, has no empty, `.`, `..` or `.git`
+segment and does not start with `-`. A `commit` is at most 40 digits, and a PR's number at most 18. The quoted text runs from its first `"` to the line's last, and
 is not spaces alone. The reader also reads any spaces or tabs between the arguments and after `check:`, and drops
-those that end a line.
+those that end a line; no other whitespace separates arguments.
 
 ### A person's name (v2.3)
 

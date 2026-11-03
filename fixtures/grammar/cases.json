@@ -608,7 +608,8 @@
         "**Event (ships):** the vendor ships.\ncheck: pr-merged my.repo_2#3"
       ],
       "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged -x#1"
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged -x#1",
+        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/..#1"
       ]
     },
     "digit": {
@@ -633,7 +634,9 @@
       ],
       "refuse": [
         "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a~1 0123abc",
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a^ 0123abc"
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a^ 0123abc",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ma#in 0123abc",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@mé 0123abc"
       ]
     },
     "path": {
@@ -651,7 +654,9 @@
       "refuse": [
         "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/*.md \"v\"",
         "**Event (ships):** the vendor ships.\ncheck: file-contains a a#b \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\""
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a a&b=c \"v\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a café.md \"v\""
       ]
     },
     "quoted": {
@@ -659,7 +664,9 @@
         "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"\""
       ],
       "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\""
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\" \"y\" z",
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\u0001y\""
       ]
     },
     "commit": {
@@ -667,7 +674,8 @@
         "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123456789abcdef0123456789abcdef01234567"
       ],
       "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 012345"
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 012345",
+        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF0"
       ]
     },
     "hex": {
@@ -676,6 +684,14 @@
       ],
       "refuse": [
         "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF1"
+      ]
+    },
+    "text-char": {
+      "accept": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"tab-free text, quotes \" kept\""
+      ],
+      "refuse": [
+        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"xy\""
       ]
     }
   }

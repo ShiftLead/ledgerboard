@@ -217,7 +217,7 @@
    },
    {
     "accepted": false,
-    "why": "its check: line names no check"
+    "why": "its check: line names no check — check: <type> <args>, a space after the colon"
    }
   ],
   "commit": [
@@ -228,6 +228,10 @@
    {
     "accepted": false,
     "why": "its check: the commit '012345' is not 7 to 40 of [0-9a-f]"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the commit 'ABCDEF0' is not 7 to 40 of [0-9a-f]"
    }
   ],
   "digit": [
@@ -237,7 +241,7 @@
    },
    {
     "accepted": false,
-    "why": "its check: the PR number 'x' is not [0-9]+"
+    "why": "its check: the PR number 'x' is not 1 to 18 of [0-9]"
    }
   ],
   "event-name": [
@@ -307,15 +311,23 @@
    },
    {
     "accepted": false,
-    "why": "its check: the path 'docs/*.md' holds a glob character, #, %, a quote, a backslash, a space or a control"
+    "why": "its check: the path 'docs/*.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the path 'a#b' holds a glob character, #, %, a quote, a backslash, a space or a control"
+    "why": "its check: the path 'a#b' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the path 'a%2e' holds a glob character, #, %, a quote, a backslash, a space or a control"
+    "why": "its check: the path 'a%2e' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the path 'a&b=c' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the path 'café.md' holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, whitespace, a control, or anything outside ASCII"
    }
   ],
   "pr-merged": [
@@ -325,7 +337,7 @@
    },
    {
     "accepted": false,
-    "why": "its check: the PR number '12a' is not [0-9]+"
+    "why": "its check: the PR number '12a' is not 1 to 18 of [0-9]"
    }
   ],
   "quoted": [
@@ -336,6 +348,14 @@
    {
     "accepted": false,
     "why": "its check: the quoted text is empty"
+   },
+   {
+    "accepted": false,
+    "why": "its check: nothing may follow the quoted text"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the quoted text holds a control character"
    }
   ],
   "ref": [
@@ -355,11 +375,19 @@
    },
    {
     "accepted": false,
-    "why": "its check: the ref 'a~1' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+    "why": "its check: the ref 'a~1' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII"
    },
    {
     "accepted": false,
-    "why": "its check: the ref 'a^' holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+    "why": "its check: the ref 'a^' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the ref 'ma#in' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the ref 'mé' holds a character it may not: one git refuses or revision, URL or query syntax uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII"
    }
   ],
   "ref-includes": [
@@ -390,6 +418,20 @@
    {
     "accepted": false,
     "why": "its check: the repo '-x' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)"
+   },
+   {
+    "accepted": false,
+    "why": "its check: the repo 'a/..' is not a name or /-separated components of ASCII [A-Za-z0-9_.-] (none . or .., none starting with -)"
+   }
+  ],
+  "text-char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "its check: the quoted text holds a control character"
    }
   ]
  },

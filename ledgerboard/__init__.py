@@ -222,7 +222,7 @@ def parse_gates(raw: str | None) -> dict:
     - ``bad``: every other item, as written. An empty item between commas is skipped.
     A retired or unreadable item keeps the block; ``pickable()`` reads the rest."""
     out: dict = {"ids": [], "decisions": [], "until": [], "events": [], "retired": [], "old_form": None, "bad": []}
-    rest = (raw or "").strip(" \t")
+    rest = (raw or "").strip(" \t\r")  # a CRLF file's line ending is no part of the value
     while rest:
         m = GATE_ITEM_SEP_RE.search(rest)
         item, after = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
@@ -3483,30 +3483,33 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
 # Events (v2.4): an event gate's section and its typed check
 # ---------------------------------------------------------------------------------------------
 
-EVENT_LEAD_RE = re.compile(r"^Event \((?P<name>[^()]*)\):$")  # a section's lead, as _entry_sections gives it
+EVENT_NEAR_RE = re.compile(r"^event\s*\(", re.IGNORECASE)  # a lead read as an Event section's, to say what is wrong with it
 CHECK_LINE_RE = re.compile(r"^check:[ \t]+(?P<check>\S.*?)[ \t]*$")
 # The check types (SPEC *Events*): each type's arguments, as written after its name. A new type states
 # its four outcomes (CHECK_OUTCOMES) in SPEC and comes in a format PR.
 CHECK_TYPES = {"pr-merged": "<repo>#<n>", "file-contains": '<repo>[@<ref>] <path> "<text>"',
                "ref-includes": "<repo>@<ref> <commit>"}
 CHECK_OUTCOMES = ("passed", "not yet", "impossible", "error")
-CHECK_N_RE = re.compile(r"[0-9]+")
+CHECK_N_RE = re.compile(r"[0-9]{1,18}")  # a forge's PR number; capped, so int() never meets a giant
 CHECK_COMMIT_RE = re.compile(r"[0-9a-f]{7,40}")
-REF_BAD_CHARS = set("~^:?*[\\ ")  # git's, and the ones that make revision syntax
-PATH_BAD_CHARS = set('*?[]#%"\\')  # a glob character, URL syntax in a forge path, the text's quote, a backslash
+REF_BAD_CHARS = set("~^:?*[\\ #%&=+")  # git's, revision syntax's, and URL or query syntax in a forge API call
+PATH_BAD_CHARS = set('*?[]#%&=+"\\')  # a glob character, URL or query syntax in a forge path, the text's quote, a backslash
+CHECK_ARG_SEP_RE = re.compile(r"[ \t]+")  # arguments are separated by spaces and tabs, never other whitespace
 
 
 def _ref_problem(ref: str) -> str | None:
     """Why ``ref`` is not a ref a check may name (git's ``check-ref-format --allow-onelevel`` rules, a
-    leading ``-``, ``..``, ``@{``, ``:`` and any of ``^~?*[\\`` or whitespace), or None."""
+    leading ``-``, ``..``, ``@{``, ``:``, any of ``^~?*[\\#%&=+``, whitespace or anything outside
+    printable ASCII), or None."""
     if not ref:
         return "an empty ref"
     if ref.startswith("-"):
         return f"the ref {ref!r} starts with - (it would read as an option)"
     if ".." in ref or "@{" in ref or ref == "@":
         return f"the ref {ref!r} holds .., @{{ or is @ (revision syntax)"
-    if any(c in REF_BAD_CHARS or ord(c) < 0x20 or ord(c) == 0x7F or c.isspace() for c in ref):
-        return f"the ref {ref!r} holds a character git refuses or revision syntax uses (~^:?*[\\, a space or a control)"
+    if any(c in REF_BAD_CHARS or not " " < c < "\x7f" for c in ref):
+        return (f"the ref {ref!r} holds a character it may not: one git refuses or revision, URL or query syntax "
+                "uses (~^:?*[\\#%&=+), whitespace, a control, or anything outside ASCII")
     if ref.endswith(("/", ".")) or "//" in ref:
         return f"the ref {ref!r} ends with / or ., or holds //"
     if any(not part or part.startswith(".") or part.endswith(".lock") for part in ref.split("/")):
@@ -3515,18 +3518,23 @@ def _ref_problem(ref: str) -> str | None:
 
 
 def _path_problem(path: str) -> str | None:
-    """Why ``path`` is not a path a check may read (absolute, a ``..`` segment, a leading ``-``, a glob
-    character, ``#``, ``%``, a quote, a backslash, whitespace or a control), or None."""
+    """Why ``path`` is not a path a check may read (absolute, an empty, ``.``, ``..`` or ``.git`` segment, a
+    leading ``-``, a glob character, ``#%&=+``, a quote, a backslash, whitespace, a control or anything
+    outside printable ASCII), or None."""
     if not path:
         return "an empty path"
     if path.startswith("/"):
         return f"the path {path!r} is absolute"
     if path.startswith("-"):
         return f"the path {path!r} starts with - (it would read as an option)"
-    if ".." in path.split("/"):
+    segs = path.split("/")
+    if ".." in segs:
         return f"the path {path!r} has a .. segment"
-    if any(c in PATH_BAD_CHARS or c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F for c in path):
-        return f"the path {path!r} holds a glob character, #, %, a quote, a backslash, a space or a control"
+    if any(x in ("", ".") or x.lower() == ".git" for x in segs):
+        return f"the path {path!r} has an empty, . or .git segment"
+    if any(c in PATH_BAD_CHARS or not " " < c < "\x7f" for c in path):
+        return (f"the path {path!r} holds a glob character, URL or query syntax (#%&=+), a quote, a backslash, "
+                "whitespace, a control, or anything outside ASCII")
     return None
 
 
@@ -3543,7 +3551,7 @@ def parse_check(value: str) -> dict:
     are separated by spaces; the text runs from its opening ``"`` to the line's last ``"`` and nothing
     follows it. Text is matched literally by the host, never as a pattern."""
     value = (value or "").strip(" \t")
-    kind, _, rest = value.partition(" ")
+    kind, rest = (CHECK_ARG_SEP_RE.split(value, maxsplit=1) + [""])[:2]
     out: dict = {"type": kind, "problem": None}
 
     def bad(why: str) -> dict:
@@ -3559,9 +3567,11 @@ def parse_check(value: str) -> dict:
         if rest[rest.rfind('"') + 1:].strip(" \t"):
             return bad("nothing may follow the quoted text")
         text, rest = rest[q + 1: rest.rfind('"')], rest[:q]
-        if not text.strip():
+        if not text.strip(" \t"):
             return bad("the quoted text is empty")
-    args = rest.split()
+        if any(c < " " or c == "\x7f" for c in text):
+            return bad("the quoted text holds a control character")
+    args = [a for a in CHECK_ARG_SEP_RE.split(rest) if a]
     want = {"pr-merged": 1, "file-contains": 2, "ref-includes": 2}[kind]
     if len(args) != want:
         return bad(f"{kind} takes {CHECK_TYPES[kind]}")
@@ -3571,7 +3581,7 @@ def parse_check(value: str) -> dict:
         if not sep:
             return bad(f"pr-merged takes {CHECK_TYPES[kind]}")
         if not CHECK_N_RE.fullmatch(n):
-            return bad(f"the PR number {n!r} is not [0-9]+")
+            return bad(f"the PR number {n!r} is not 1 to 18 of [0-9]")
         out["n"] = int(n)
         return bad(_repo_problem(repo)) if _repo_problem(repo) else out
     repo, at, ref = args[0].partition("@")
@@ -3592,7 +3602,8 @@ def parse_check(value: str) -> dict:
 
 
 def parse_event_section(text: str) -> dict:
-    """One ``**Event (<name>):**`` section read (v2.4, SPEC *Events*): ``{name, words, check, problem}``.
+    """One ``**Event (<name>):**`` section read (v2.4, SPEC *Events*): ``{name, words, check, problem,
+    first}`` (``first``: its first line as written; ``name`` None when its lead is not an Event's).
     It is two lines: the lead and the event in plain words, then exactly one ``check: <type> <args>``
     (``check`` is ``parse_check()``'s reading of it, or None). ``problem`` is None, or why ``check()``
     refuses the section: a name outside ``[a-z0-9-]+``, no words, no ``check:`` line, more than one, a
@@ -3601,7 +3612,8 @@ def parse_event_section(text: str) -> dict:
     while lines and not lines[-1]:
         lines.pop()
     m = re.match(r"^\*\*Event \((?P<name>[^()]*)\):\*\*(?P<words>.*)$", lines[0] if lines else "")
-    out: dict = {"name": m.group("name") if m else None, "words": "", "check": None, "problem": None}
+    out: dict = {"name": m.group("name") if m else None, "words": "", "check": None, "problem": None,
+                 "first": lines[0] if lines else ""}
     if not m:
         out["problem"] = "not an Event section: its lead is **Event (<name>):**"
         return out
@@ -3623,7 +3635,7 @@ def parse_event_section(text: str) -> dict:
         cm = CHECK_LINE_RE.match(lines[checks[0]])
         out["check"] = parse_check(cm.group("check")) if cm else None
         if out["check"] is None:
-            out["problem"] = "its check: line names no check"
+            out["problem"] = "its check: line names no check — check: <type> <args>, a space after the colon"
         elif out["check"]["problem"]:
             out["problem"] = f"its check: {out['check']['problem']}"
     return out
@@ -3637,7 +3649,7 @@ def event_sections(text: str) -> list[dict]:
     except Refused:
         body = text.split("\n", 1)[1] if "\n" in text else ""
     return [parse_event_section(t) for lead, t in _entry_sections(body.replace("\r\n", "\n"))
-            if lead is not None and lead.startswith("Event (")]
+            if lead is not None and EVENT_NEAR_RE.match(lead)]
 
 
 def event_problems(text: str) -> list[tuple[str, str, str]]:
@@ -3664,7 +3676,10 @@ def event_problems(text: str) -> list[tuple[str, str, str]]:
         lifted = set()
     for x in secs:
         if x["problem"]:
-            out.append(("error", "event-check", f"its **Event ({x['name']}):** section: {x['problem']}"))
+            led = f"**Event ({x['name']}):**" if x["name"] is not None else repr(x["first"])
+            out.append(("error", "event-check", f"its {led} section: {x['problem']}"))
+        if x["problem"] and (x["name"] is None or not EVENT_NAME_RE.fullmatch(x["name"])):
+            continue  # its lead or name is refused already: no gate could name it
         if x["name"] not in gates and f"event ({x['name']})" not in lifted:
             out.append(("info", "event-ungated", f"its **Event ({x['name']}):** section has no event "
                         f"({x['name']}) gate, and no gate lifted: event ({x['name']}) Log line says why"))
