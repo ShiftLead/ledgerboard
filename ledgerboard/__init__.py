@@ -3827,6 +3827,184 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
 
 
 # ---------------------------------------------------------------------------------------------
+# The next id (v2.4): the counter's reading, and the merge gate's judgement of each new id's take
+# ---------------------------------------------------------------------------------------------
+
+COUNTER_BRANCH = "cadence/ledger-ids"  # the counter: a branch on origin, never merged, holding one file
+COUNTER_FILE = "LAST"  # the last id given, as a number
+TAKE_SUBJECT_RE = re.compile(r"^TD-(\d{1,9})(?:\.\.TD-(\d{1,9}))? \[skip ci\]$")
+TAKE_NONCE_RE = re.compile(r"[0-9a-f]{32}")
+TAKE_RANGE_MAX = 100  # the widest range a take is read as giving; the writers take at most 10
+TAKE_FIELDS = ("by", "branch", "host", "take")
+UNHASHED_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[^\s@]+@[^\s@]+\.[^\s@]+",
+                         re.IGNORECASE)  # a bare session id or an email address, which a take publishes
+
+
+def _tid(n: int) -> str:
+    """An id at the ledger's width: three digits, more past 999."""
+    return f"TD-{n:03d}"
+
+
+def ids_held(files: Mapping[str, str]) -> set[int]:
+    """Every id the files of a ledger and its archive hold (v2.4, SPEC *The next id*), as numbers: each
+    file's headings and table rows outside HTML comments, and each entry file's name (``TD-NNN.md``, its
+    path's last part). ``files`` maps a path to its text, in either layout. Refused when a file declares a
+    newer major of the format than this module reads: its ids cannot be judged."""
+    out: set[int] = set()
+    for path, text in files.items():
+        text = text or ""
+        if format_major(text) > FORMAT_MAJOR:
+            raise Refused(f"{path} declares Ledgerboard: {format_major(text)}, newer than this module reads "
+                          f"({FORMAT_MAJOR}) — its ids are not read")
+        m = ENTRY_FILE_RE.match(str(path).replace("\\", "/").rsplit("/", 1)[-1])
+        if m:
+            out.add(int(m.group(1)))
+        bare = COMMENT_RE.sub("", text)
+        out |= heading_nums(bare) | {int(r.group(2)) for r in ROW_RE.finditer(bare)}
+    return out
+
+
+def next_id(last: str | None, ids: Iterable[int], floor: int | None = None) -> tuple[int, list[str]]:
+    """(the next id's number, warnings) (v2.4): one above the highest of the counter's ``LAST`` (its text;
+    absent or not a number is ignored, with a warning), ``ids`` (ids_held() of the default branch, and any
+    the caller adds) and ``floor`` (a front end's own last-given id)."""
+    warnings: list[str] = []
+    raw = (last or "").strip()
+    top = [*ids, floor or 0]
+    if raw.isascii() and raw.isdigit():
+        top.append(int(raw))
+    else:
+        warnings.append(f"the counter's {COUNTER_FILE} is {'not a number (' + raw[:20] + ')' if raw else 'absent'}"
+                        " — ignored; the ledger, archive and floor decide")
+    return max(top) + 1, warnings
+
+
+def parse_take(subject: str, body: str) -> dict | None:
+    """One counter commit read as a take (v2.4, SPEC *The next id*): ``{ids, by, branch, host, take}`` — the
+    ids its subject gives (``TD-n [skip ci]`` or the range ``TD-a..TD-b [skip ci]``, in order) and its body's
+    ``name: value`` fields, those it has. None for a commit that is not a take's: another subject, a range that
+    runs backwards or is wider than ``TAKE_RANGE_MAX``."""
+    m = TAKE_SUBJECT_RE.match((subject or "").strip())
+    if not m:
+        return None
+    lo, hi = int(m.group(1)), int(m.group(2) or m.group(1))
+    if lo < 1 or hi < lo or hi - lo + 1 > TAKE_RANGE_MAX:
+        return None
+    out: dict = {"ids": list(range(lo, hi + 1))}
+    for ln in (body or "").splitlines():
+        k, sep, v = ln.partition(":")
+        if sep and k.strip() in TAKE_FIELDS and k.strip() not in out:
+            out[k.strip()] = v.strip()
+    return out
+
+
+def _take_named(t: Mapping) -> str:
+    """A take as a failure names it: its by, date and short sha, never its nonce."""
+    return f"{t.get('by') or 'unknown'} on {str(t.get('date') or '?')[:10]} ({str(t.get('sha') or '?')[:7]})"
+
+
+def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Iterable[str], branch: str | None,
+                default: str, accept_taken_by: bool = False) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """The merge gate's judgement of each new id against the counter's takes (v2.4, SPEC *The next id*):
+    (fails, warns), each a list of (kind, text). ``takes`` are every take the counter holds, each a record
+    of ``ids``, ``sha``, ``date``, ``by``, ``branch``, ``host`` and ``take`` (parse_take()'s, with the commit's
+    sha and date); ``entries`` the ledger and archive texts holding the new entries; ``branch`` the one they
+    are for and ``default`` the default branch. With no takes, nothing is judged.
+
+    - ``id-untaken`` (fail): an id no take gave, at or above the counter's first; ``id-before-counter``
+      (warn): one below it.
+    - An id's ``Id take`` is judged alone wherever it is present: the nonce of any take that gave it passes
+      (a range's for each of its ids; either take of an id given twice); ``id-take`` (fail): a nonce of
+      another id's take (naming both ids) or of no take. A missing one is ``id-no-take`` (fail), unless
+      ``accept_taken_by`` (the consumer's transition): then a ``Taken by`` naming a giving take's ``by`` warns
+      ``id-no-take``, one naming another fails ``id-taken-by``, and none warns ``id-no-taken-by``.
+    - ``id-branch`` (warn): the take names a branch that is neither ``default`` nor ``branch``;
+      ``id-by-unhashed`` (warn): its ``by`` is a bare session id or an email address.
+    A failure names a take by its by, date and short sha, never its nonce."""
+    takes = [t for t in takes if t.get("ids")]
+    fails: list[tuple[str, str]] = []
+    warns: list[tuple[str, str]] = []
+    if not takes:
+        return fails, warns
+    gave: dict[int, list[Mapping]] = {}
+    by_nonce: dict[str, list[Mapping]] = {}
+    for t in takes:
+        for n in t["ids"]:
+            gave.setdefault(int(n), []).append(t)
+        if t.get("take"):
+            by_nonce.setdefault(str(t["take"]).strip(), []).append(t)
+    first = min(gave)
+    new = sorted({int(n) for n in new_ids})
+    nobody = [n for n in new if n not in gave and n >= first]
+    before = [n for n in new if n not in gave and n < first]
+    if nobody:
+        fails.append(("id-untaken", f"{', '.join(map(_tid, nobody))} handed out by nobody: the counter gave no such "
+                      "id — take ids from the counter, and an id its fallback printed with its claim"))
+    if before:
+        warns.append(("id-before-counter", f"{', '.join(map(_tid, before))} below the counter's first take "
+                      f"({_tid(first)}): older than the counter, not judged against it"))
+    fields: dict[int, dict] = {}
+    for t in entries:
+        for e in _entries(t or ""):
+            fields.setdefault(_num(e["id"]), e["fields"])
+    wrong, missing, legacy, mismatch, untagged, elsewhere, unhashed = [], [], [], [], [], [], []
+    for n in (n for n in new if n in gave):
+        mine = gave[n]
+        f = fields.get(n, {})
+        nonce = (f.get("id take") or "").strip()
+        used = mine
+        if nonce:
+            hit = [t for t in mine if str(t.get("take") or "").strip() == nonce]
+            if hit:
+                used = hit
+            else:
+                other = by_nonce.get(nonce, [])
+                if other:
+                    ids = sorted({int(x) for t in other for x in t["ids"]})
+                    wrong.append(f"{_tid(n)}'s Id take is the take of {', '.join(map(_tid, ids))} "
+                                 f"({_take_named(other[0])}), not one of {_tid(n)}'s ({'; '.join(map(_take_named, mine))})")
+                else:
+                    wrong.append(f"{_tid(n)}'s Id take names no take the counter holds — {_tid(n)} was handed out "
+                                 f"by {'; '.join(map(_take_named, mine))}")
+        elif not accept_taken_by:
+            missing.append(f"{_tid(n)} (handed out by {'; '.join(map(_take_named, mine))})")
+        else:
+            said = first_word(f.get("taken by"))
+            hit = [t for t in mine if said and first_word(t.get("by")) == said]
+            if hit:
+                used = hit
+                legacy.append(_tid(n))
+            elif said:
+                mismatch.append(f"{_tid(n)} was handed to {'; '.join((t.get('by') or 'unknown') for t in mine)}, not {said}")
+            elif any(t.get("by") for t in mine):
+                untagged.append(_tid(n))
+        if any((t.get("branch") or "").strip() and (t.get("branch") or "").strip() not in (default, branch or "")
+               for t in used):
+            elsewhere.append(f"{_tid(n)} ({', '.join(dict.fromkeys(str(t.get('branch')).strip() for t in used))})")
+        if any(UNHASHED_RE.search(str(t.get("by") or "")) for t in used):
+            unhashed.append(_tid(n))
+    if wrong:
+        fails.append(("id-take", "; ".join(wrong) + " — write the Id take of the take that gave this id"))
+    if missing:
+        fails.append(("id-no-take", f"no **Id take:** on {', '.join(missing)} — write its take's nonce in the header"))
+    if mismatch:
+        fails.append(("id-taken-by", "; ".join(mismatch) + " — an id is the session's the counter handed it to; "
+                      "take this entry its own"))
+    if legacy:
+        warns.append(("id-no-take", f"a matching **Taken by:** but no **Id take:** on {', '.join(legacy)} — write its "
+                      "take's nonce in the header"))
+    if untagged:
+        warns.append(("id-no-taken-by", f"no **Id take:** or **Taken by:** on {', '.join(untagged)} — write its "
+                      "take's nonce in the header"))
+    if elsewhere:
+        warns.append(("id-branch", f"taken for another branch: {', '.join(elsewhere)}"))
+    if unhashed:
+        warns.append(("id-by-unhashed", f"{', '.join(unhashed)} taken by a bare session id or an email address, "
+                      "which the counter publishes — take ids with a hashed by"))
+    return fails, warns
+
+
+# ---------------------------------------------------------------------------------------------
 # Lifting a gate (v2.4): one text edit every route writes, and the decide lift that composes it
 # ---------------------------------------------------------------------------------------------
 

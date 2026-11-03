@@ -31,8 +31,9 @@ format only parses it, and what it resolves to is the consumer's.
 
 **`Id take`** (v2.2) — `**Id take:** <nonce>`: the 32-hex `take:` nonce of the counter take that
 handed the entry its id. It is provenance, never an assignment, and nothing routes on it. It is
-judged only where its id is new; after the merge it is inert, and no tool strips it. Which counter
-and what judges it are the consumer's.
+judged only where its id is new; after the merge it is inert, and no tool strips it. From v2.4 the
+format defines the counter and the judgement (*The next id*); reading and writing the counter are the
+consumer's.
 
 **`Fields:`** — a ledger may declare its own fields' vocabularies once, on one preamble line before
 the first entry: `Fields: Owner = builder | designer; Kind = build | design-first`. A declared
@@ -305,6 +306,42 @@ docs/ledger/
   before its first entry is dropped. It refuses another `## ` section, an id twice, and a result
   that does not read back the same entries (compared by id), the same `Fields:` and version 2, or
   that `v2_problems()` flags.
+
+## The next id (v2.4)
+
+A ledger's ids are handed out by **a counter**: the branch `cadence/ledger-ids` on the repo's origin, never
+merged and never checked out. Its tip's tree holds one file, `LAST`, the last id given as a number. **A take**
+is one commit whose parent is the tip it read, pushed as a fast-forward, so the server takes it only if nobody
+moved the tip. Its subject is the id, or the range it gives, then `[skip ci]`: `TD-125 [skip ci]`,
+`TD-126..TD-127 [skip ci]`. Its body is `name: value` lines: `by` (who took it: a name, or a hash of a session's
+id — the counter is public with its repo, so never the id or an address itself), `branch` (the branch the ids
+are for, left out when there is none), `host` (optional), and `take`, a 32-hex nonce, so no two takes are one
+commit. An entry carries its take's nonce as `**Id take:**`. Probing, fetching, pushing and retrying a refused
+push are the consumer's; what the text means is the module's:
+- `ids_held(files)` is every id the files of a ledger and its archive hold, in either layout (`files` maps a path
+  to its text): headings and table rows outside HTML comments, and each entry file's name. It refuses a file
+  that declares a newer major than the module reads, since its ids cannot be judged.
+- `next_id(last, ids, floor)` is `(n, warnings)`: one above the highest of `LAST` (absent or not a number is
+  ignored, with a warning), the ids (the default branch's, and any the caller adds, such as open PRs' on a first
+  take) and the floor (a front end's own last-given id).
+- `parse_take(subject, body)` reads one counter commit: `{ids, by, branch, host, take}`, the fields it has, or
+  None for a commit that is not a take (another subject, a range that runs backwards, or one wider than 100 ids —
+  the writers take at most 10).
+- `judge_takes(new_ids, takes, entries, branch, default, accept_taken_by=False)` is the merge gate's judgement
+  of the ids a change adds, as `(fails, warns)` of `(kind, text)`. `takes` are every take the counter holds,
+  each `parse_take()`'s record with its commit's `sha` and `date`, all kept, so an id given twice is judged
+  against both. With no takes, nothing is judged.
+  - `id-untaken` (fail): an id no take gave, at or above the counter's first; `id-before-counter` (warn): one
+    below it, which is older than the counter.
+  - An id's `Id take` is judged alone wherever it is present. The nonce of any take that gave the id passes: a
+    range's for each of its ids, either take of an id given twice. `id-take` (fail): the nonce of another id's
+    take, naming both ids, or of no take.
+  - No `Id take` is `id-no-take` (fail), unless `accept_taken_by`, the consumer's flag while its writers still
+    write `Taken by`: then a `Taken by` naming a giving take's `by` warns `id-no-take`, one naming another fails
+    `id-taken-by`, and none warns `id-no-taken-by`.
+  - `id-branch` (warn): the take names a branch that is neither `default` nor `branch`. `id-by-unhashed` (warn):
+    its `by` is a bare session id or an email address.
+  - A text names a take by its `by`, date and short sha, never its nonce.
 
 ## Ledger entries and their edits (v2.2)
 
@@ -874,6 +911,8 @@ them blocked, where v2.3 released both; `check()` gains `blocker-superseded`, `b
 `archive_plan()` and `dependents()` are new; `edit_entry`'s `archive` writes `Dropped` and a successor in
 another repo, and `rename_ref` keeps one copy of an id. A v2.3 reader releases what v2.4 keeps blocked, so a
 consumer archives an entry Superseded or Dropped only once every reader of its ledger runs v2.4.
+v2.4 also defines the counter (*The next id*): `ids_held()`, `next_id()`, `parse_take()` and `judge_takes()` are
+new; nothing a reader reads changes.
 v2.4 also lifts gates (*Lifting a gate*, *The board*): `lift_gate()`, `reassign_gate()`, `reassigns()`,
 `decide_lift()`, `closes()`, `waiting_only()`, `parse_closed_items()`, `answered_by()` and
 `answered_by_problems()` are new, `edit_line`'s `decide` takes `close`, and `check()` gains
