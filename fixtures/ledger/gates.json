@@ -3,6 +3,8 @@
   "TD-102",
   "TD-104",
   "TD-111",
+  "TD-117",
+  "TD-118",
   "TD-112",
   "TD-110",
   "TD-103",
@@ -19,7 +21,7 @@
    "kind": "until-past",
    "level": "info",
    "standing": false,
-   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -91,7 +93,7 @@
    "kind": "priority",
    "level": "info",
    "standing": false,
-   "text": "ℹ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low"
+   "text": "ℹ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low; write High, Medium or Low"
   },
   {
    "field": "blocked by",
@@ -99,7 +101,7 @@
    "kind": "until-past",
    "level": "info",
    "standing": false,
-   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -148,6 +150,22 @@
    "level": "info",
    "standing": false,
    "text": "ℹ TD-116: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-117",
+   "kind": "gate-repeated",
+   "level": "info",
+   "standing": false,
+   "text": "ℹ TD-117: Blocked by names decision (Zed) more than once — at most one decision per person, one until and differently named events"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-118",
+   "kind": "retired",
+   "level": "info",
+   "standing": false,
+   "text": "ℹ TD-118: Blocked by item 'decision (designer)' is retired — write decision (<person>): designer is a role, reserved by name; it keeps the block (SPEC *Retired words*)"
   }
  ],
  "check_since_empty": [
@@ -157,7 +175,7 @@
    "kind": "until-past",
    "level": "info",
    "standing": false,
-   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -229,7 +247,7 @@
    "kind": "priority",
    "level": "error",
    "standing": false,
-   "text": "⚠ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low"
+   "text": "⚠ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low; write High, Medium or Low"
   },
   {
    "field": "blocked by",
@@ -237,7 +255,7 @@
    "kind": "until-past",
    "level": "info",
    "standing": false,
-   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -286,6 +304,22 @@
    "level": "info",
    "standing": false,
    "text": "ℹ TD-116: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-117",
+   "kind": "gate-repeated",
+   "level": "error",
+   "standing": false,
+   "text": "⚠ TD-117: Blocked by names decision (Zed) more than once — at most one decision per person, one until and differently named events"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-118",
+   "kind": "retired",
+   "level": "info",
+   "standing": false,
+   "text": "ℹ TD-118: Blocked by item 'decision (designer)' is retired — write decision (<person>): designer is a role, reserved by name; it keeps the block (SPEC *Retired words*)"
   }
  ],
  "declared": {},
@@ -389,6 +423,50 @@
    "type": "debt"
   },
   {
+   "blocked_by": [
+    "decision (zed)",
+    "decision (Zed)",
+    "event (x)"
+   ],
+   "card_key": "2|0|000110",
+   "cross_repo": [],
+   "fields": {
+    "blocked by": "decision (zed), decision (Zed), event (x)",
+    "part of": "TD-110",
+    "priority": "Low"
+   },
+   "id": "TD-117",
+   "key": "3|0|000117",
+   "part_of": "TD-110",
+   "parts_gates": {},
+   "parts_open": [],
+   "pickable": false,
+   "priority": "Low",
+   "title": "A part naming one gate twice",
+   "type": "debt"
+  },
+  {
+   "blocked_by": [
+    "decision (designer)"
+   ],
+   "card_key": "2|0|000110",
+   "cross_repo": [],
+   "fields": {
+    "blocked by": "decision (designer)",
+    "part of": "TD-110",
+    "priority": "Low"
+   },
+   "id": "TD-118",
+   "key": "3|0|000118",
+   "part_of": "TD-110",
+   "parts_gates": {},
+   "parts_open": [],
+   "pickable": false,
+   "priority": "Low",
+   "title": "A part waiting on a role",
+   "type": "debt"
+  },
+  {
    "blocked_by": [],
    "card_key": "2|0|000110",
    "cross_repo": [],
@@ -443,14 +521,23 @@
      "TD-111",
      "TD-112"
     ],
+    "decision (designer)": [
+     "TD-118"
+    ],
+    "decision (zed)": [
+     "TD-117"
+    ],
     "event (x)": [
-     "TD-112"
+     "TD-112",
+     "TD-117"
     ]
    },
    "parts_open": [
     "TD-111",
     "TD-112",
-    "TD-113"
+    "TD-113",
+    "TD-117",
+    "TD-118"
    ],
    "pickable": false,
    "priority": "Medium",
@@ -616,7 +703,7 @@
    "id": "TD-101",
    "kind": "until-past",
    "level": "info",
-   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-101: until 2026-01-10 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -679,14 +766,14 @@
    "id": "TD-108",
    "kind": "priority",
    "level": "info",
-   "text": "ℹ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low"
+   "text": "ℹ TD-108: Priority 'Urgent' is not High, Medium or Low — read after Low; write High, Medium or Low"
   },
   {
    "field": "blocked by",
    "id": "TD-113",
    "kind": "until-past",
    "level": "info",
-   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by (the gate sweep lifts it)"
+   "text": "ℹ TD-113: until 2026-01-15 is reached — the gate no longer holds; drop it from Blocked by"
   },
   {
    "field": "blocked by",
@@ -729,6 +816,20 @@
    "kind": "retired",
    "level": "info",
    "text": "ℹ TD-116: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-117",
+   "kind": "gate-repeated",
+   "level": "info",
+   "text": "ℹ TD-117: Blocked by names decision (Zed) more than once — at most one decision per person, one until and differently named events"
+  },
+  {
+   "field": "blocked by",
+   "id": "TD-118",
+   "kind": "retired",
+   "level": "info",
+   "text": "ℹ TD-118: Blocked by item 'decision (designer)' is retired — write decision (<person>): designer is a role, reserved by name; it keeps the block (SPEC *Retired words*)"
   }
  ],
  "pickable": [

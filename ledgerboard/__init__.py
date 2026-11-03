@@ -177,7 +177,8 @@ def rows(text: str) -> list[dict]:
 def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
     """(entry ids — ``TD-NNN`` or ``<repo>#TD-NNN`` — decision holders, every other item) of one
     Blocked by value: ``parse_gates()`` seen as three lists. The third holds what is neither an id nor
-    a decision, as written: an ``until`` or ``event`` gate (v2.4), a retired item, an unreadable one —
+    a decision: an ``until`` or ``event`` gate (v2.4) as the writers write it, and a retired or
+    unreadable item as written —
     so a caller that reads the three as before keeps every block. A retired ``decision (designer)``
     and the old form's holder are decision holders."""
     g = parse_gates(raw)
@@ -526,7 +527,8 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
         n = _num(e["id"])
         prio = e["priority"] or table.get(n) or "?"
         if first_word(prio) not in PRIORITIES:
-            flags.add(f"ℹ {e['id']}: Priority {prio!r} is not High, Medium or Low — read after Low",
+            said = "has no Priority" if prio == "?" else f"Priority {prio!r} is not High, Medium or Low"
+            flags.add(f"ℹ {e['id']}: {said} — read after Low; write High, Medium or Low",
                       e["id"], "priority", "priority")
         for key in e["fields"]:
             if key in RETIRED_FIELDS:
@@ -591,10 +593,10 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
             for d in g["until"]:
                 if d <= day:
                     flags.add(f"ℹ {e['id']}: until {d} is reached — the gate no longer holds; drop it from "
-                              "Blocked by (the gate sweep lifts it)", e["id"], "blocked by", "until-past")
+                              "Blocked by", e["id"], "blocked by", "until-past")
             gates = [f"decision ({w})" for w in g["decisions"]] + [f"until {d}" for d in g["until"] if d > day] \
                 + [f"event ({x})" for x in g["events"]]
-            holding[e["id"]] = gates
+            holding[e["id"]] = gates + [f"decision ({r['holder']})" for r in g["retired"] if r["holder"] is not None]
             if g["decisions"] and "ask" not in e["fields"] and not ASK_RE.search(texts.get(e["id"], "")):
                 flags.add(f"ℹ {e['id']}: Blocked by names {', '.join(f'decision ({w})' for w in g['decisions'])} "
                           "and the entry has no **Ask:** — say what the person owes, a go included",
@@ -655,7 +657,9 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
         for kid in sorted(kids, key=_num):
             for gate in holding.get(kid, []):
                 canon.setdefault(_gate_key(gate), gate)  # the lowest-numbered part's spelling
-                pg.setdefault(canon[_gate_key(gate)], []).append(kid)
+                carriers = pg.setdefault(canon[_gate_key(gate)], [])
+                if kid not in carriers:  # a gate written twice on one part is one carrier
+                    carriers.append(kid)
         by_id[par]["parts_gates"] = pg
     order = _card_order(live, keys, lined, parent_of)
     for r in pick + blocked:
@@ -696,7 +700,7 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
         counts = True if r["kind"] == "rank" else decl_changed if r["id"] is None else \
-            r["id"] in (rewritten if r["kind"] in LOG_KINDS else changed)
+            r["id"] in (rewritten if r["kind"] in TEXT_KINDS else changed)
         if not counts:
             r["standing"], r["level"] = True, "info"
         elif r["kind"] in EDIT_ERRORS:
@@ -706,6 +710,7 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
 
 
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
+TEXT_KINDS = LOG_KINDS + ("ask-missing",)  # flags that read the body: scoped by the entry's whole text
 
 
 def _entry_texts(text: str) -> dict[str, str]:

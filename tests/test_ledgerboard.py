@@ -380,6 +380,14 @@ class Gates(unittest.TestCase):
         self.assertEqual(L.parse_blocked("decision (designer), decision (kim) — after it, TD-9"),
                          ([], ["designer", "kim"], []))
 
+    def test_an_ask_removed_is_an_error_on_the_edit(self):
+        was = "# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Blocked by:** decision (pat)\n\n**Ask:** go?\n"
+        now = was.replace("**Ask:** go?", "**Why:** w")
+        got = [(r["kind"], r["level"]) for r in L.check(now, "", old=was, today=TODAY) if r["kind"] == "ask-missing"]
+        self.assertEqual(got, [("ask-missing", "error")])
+        got = [(r["kind"], r["level"]) for r in L.check(now, "", old=now, today=TODAY) if r["kind"] == "ask-missing"]
+        self.assertEqual(got, [("ask-missing", "info")])
+
     def test_waits_is_never_a_gate(self):
         led = "# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Waits:** until 2027-01-01\n"
         self.assertEqual([e["id"] for e in L.pickable(led, "", today=TODAY)["pickable"]], ["TD-001"])

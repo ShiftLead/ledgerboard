@@ -89,3 +89,17 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Waits:** until 2026-02-01
+
+## TD-117: A part naming one gate twice
+
+**Priority:** Low
+**Part of:** TD-110
+**Blocked by:** decision (zed), decision (Zed), event (x)
+
+**Ask:** zed says go.
+
+## TD-118: A part waiting on a role
+
+**Priority:** Low
+**Part of:** TD-110
+**Blocked by:** decision (designer)

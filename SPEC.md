@@ -43,8 +43,8 @@ The format's own fields are never redeclared.
 entry; `<repo>` as below), then **gates** (v2.4), each one of
 - `decision (<person>)` — a person owes an answer, a go included; `<person>` is a person's name (*Appendix:
   grammar*), compared case-insensitively. The entry carries an `**Ask:**` section saying what the
-  person owes: without one, `check()` flags it (`ask-missing`; an error on an entry the edit changed,
-  ℹ on a standing ledger).
+  person owes: without one, `check()` flags it (`ask-missing`; an error on an entry the edit changed —
+  its whole text, as for the Log — ℹ on a standing ledger).
 - `until YYYY-MM-DD` — not before that UTC date. Once today reaches it the gate no longer holds, and
   `check()` notes it (ℹ, `until-past`) until it is dropped.
 - `event (<name>)` — something outside the ledger; `<name>` is `[a-z0-9-]+`. It blocks until the text
@@ -121,7 +121,7 @@ part's carries `part_of` (the id as written; ids match by number, `TD-7` is `TD-
 - A gate is written on the entry whose work it stops, usually a part; a parent carries one only for
   its own work. A parent's record carries `parts_gates` (v2.4), derived and never written, as
   `parts_open` is: each gate that holds on one of its open **direct** parts (an `until` only while it is
-  after today), keyed in its canonical form — a person's name as the lowest-numbered part carrying
+  after today; a retired decision as `decision (<holder>)`), keyed in its canonical form — a person's name as the lowest-numbered part carrying
   it writes it — with the parts carrying it in id order:
   `{"decision (Pat)": ["TD-111", "TD-112"], "event (x)": ["TD-112"]}`. It does not change the parent's
   pickable, which its open parts already decide.
@@ -687,7 +687,9 @@ read: an `until` whose date today has reached and an `event` were unreadable ite
 the first lifted by its date; a `decision (<who>)` whose `<who>` is not a person's name (`decision (the
 owner)`) is now an unreadable item, and a `decision (designer)` and `hold` are retired items — each still
 keeps the block; a decision followed by a comma no longer makes what follows unreadable, but reads it
-as the next item. `parse_blocked()` keeps its three lists, the third now every item that is neither an
+as the next item; a `decision (…)` that does not open its item (`TD-3 decision (pat)`) is no longer
+found inside it, so the item is unreadable and names no holder; and a gate's words are separated by
+spaces and tabs only (a no-break space before the `(` makes the item unreadable). Each still keeps the block. `parse_blocked()` keeps its three lists, the third now every item that is neither an
 id nor a decision, gates included, so a caller that reads it as before keeps every block. `check()`
 gains `priority`, `ask-missing`, `gate-repeated`, `until-past` and `retired`, and the record
 `parts_gates`. `new` logs a `gate added` line for every gate, not only decisions, and `new` and `set`
