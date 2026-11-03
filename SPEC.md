@@ -583,7 +583,7 @@ label-chars    ::= label-char* - ( label-char* field-at label-char* )
 label-char     ::= "\|" | [^|#xA]
 answer-sep     ::= " "* "|" " "*
 lifts          ::= " Lifts: " label ( answer-sep label )* "."
-decided        ::= " Decided: " char+ " (" date ")" "."?
+decided        ::= " Decided:" char* "(" date ")" "."?
 words          ::= char* - ( char* field-at char* )
 field-at       ::= non-word field-name
 non-word       ::= [^A-Za-z0-9_#x80-#x10FFFF#xA]
@@ -595,9 +595,10 @@ char           ::= [^#xA]
 What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
 whitespace. A field name counts only at a word's start, after a character that is no letter, digit or `_`
 (`field-at` names the ASCII ones; the module's word boundary also counts one after a letter outside ASCII). A
-field name that opens the text, the Context, a label or a reply's words is not caught by these productions:
-none opens with one, and an fyi's Context holds no `Due:` either. A `Due:` in an fyi's reply is one only with
-its date, not run on into a further digit or letter. A reply's words are the person's: any other field there is not counted, but they hold
+field name that opens the text, the Context or a label is one the grammar accepts and the module refuses: none
+opens with one, and an fyi's Context holds no `Due:` either. A `Due:` in an fyi's reply is one only with its
+date, not run on into a further digit or letter. A `Decided:` text is the person's: the writers write
+` Decided: <text> (<date>).`, and the module reads any spacing around the text, or none. A reply's words are the person's: any other field there is not counted, but they hold
 nothing shaped like a reply and end where a trailing field (`Answers:`, `Lifts:`, `Decided:`) starts a sentence
 and runs to the line's end, which ends them with `.`, `?` or `!`; nor does a Context hold a reply's shape. A `reply-name` is at most 40 characters, and a `label` holds no ` — ` and does not end in
 ` (default)`. A `decide`'s answers each have their own label, at most one marked ` (default)`; a decided line's

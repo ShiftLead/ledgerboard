@@ -118,6 +118,18 @@
     "why": null
    },
    {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "text: names a field (Decided:) where none is read"
+   },
+   {
     "accepted": false,
     "why": "text: names a field (Decided:) where none is read"
    }
