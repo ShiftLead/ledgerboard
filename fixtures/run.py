@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Run every ledgerboard fixture against a copy of ledgerboard.py; exit 1 on any difference.
+"""Run every ledgerboard fixture against a copy of the ledgerboard package; exit 1 on any difference.
 
     python3 fixtures/run.py [--module PATH] [--write]
     python3 fixtures/run.py --check-header [--module PATH]
 
-``--module`` is the copy to test (default: ../ledgerboard.py beside this directory), so a consumer
-that vendors the module and these fixtures checks its own copy. ``--write`` regenerates every
-expected ``*.json`` from the module instead of comparing — for the ledgerboard repo only, after a
-deliberate format change; review the diff. ``--check-header`` checks only the module's first line:
-a release's ``# ledgerboard v<x.y> sha256:<hex>`` whose hash is that of every byte after the first
-line (exit 1 when it is not a release header, or the hash does not match). Stdlib only.
+``--module`` is the copy to test (default: ../ledgerboard/ beside this directory), so a consumer
+that vendors the package and these fixtures checks its own copy. It is the package's directory,
+loaded as a package so its files' relative imports resolve (a single module file, a copy from
+before the package, is loaded as a module). ``--write`` regenerates every expected ``*.json`` from
+the module instead of comparing — for the ledgerboard repo only, after a deliberate format change;
+review the diff. ``--check-header`` checks only the first line of every ``*.py`` file in the
+package: a release's ``# ledgerboard v<x.y> sha256:<hex>`` whose hash is that of every byte after
+the first line, the same release in each (exit 1 when one is not a release header, its hash does
+not match, or two name different releases). Stdlib only.
 
 Fixtures, each an invented input and its expected JSON:
 - ``ledger/<case>.md`` (+ ``<case>.archive.md``, optional ``<case>.resolve.json`` mapping a
@@ -71,8 +74,36 @@ def header_problem(raw: bytes) -> str | None:
     return None
 
 
+def package_files(path: Path) -> list[Path]:
+    """The files that carry a release header: every ``*.py`` of a package directory, or the one module file."""
+    return sorted(path.glob("*.py")) if path.is_dir() else [path]
+
+
+def headers_problem(path: Path) -> str | None:
+    """Why the package (or module file) at `path` is not one intact release, or None."""
+    files = package_files(path)
+    if not files:
+        return f"{path} holds no *.py file"
+    releases = set()
+    for f in files:
+        raw = f.read_bytes()
+        why = header_problem(raw)
+        if why:
+            return f"{f.name}: {why}"
+        releases.add(raw.split(b" ", 3)[2].decode())
+    if len(releases) > 1:
+        return f"the files name different releases: {', '.join(sorted(releases))}"
+    return None
+
+
 def load(path: Path):
-    spec = importlib.util.spec_from_file_location("ledgerboard_under_test", path)
+    """The package at directory `path` (its ``__init__.py``, with relative imports resolved inside it),
+    or the module file at `path`."""
+    if path.is_dir():
+        spec = importlib.util.spec_from_file_location(
+            "ledgerboard_under_test", path / "__init__.py", submodule_search_locations=[str(path)])
+    else:
+        spec = importlib.util.spec_from_file_location("ledgerboard_under_test", path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod  # dataclasses resolve their module by name
     spec.loader.exec_module(mod)
@@ -266,13 +297,15 @@ def cases(L, root: Path):
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    ap.add_argument("--module", type=Path, default=HERE.parent / "ledgerboard.py")
+    ap.add_argument("--module", type=Path, default=HERE.parent / "ledgerboard",
+                    help="the package directory to test (or a single module file)")
     ap.add_argument("--write", action="store_true", help="regenerate the expected JSON (ledgerboard repo only)")
-    ap.add_argument("--check-header", action="store_true", help="check only the module's release header")
+    ap.add_argument("--check-header", action="store_true", help="check only the release header of each package file")
     a = ap.parse_args(argv)
     if a.check_header:
-        why = header_problem(a.module.read_bytes())
-        print(f"header: {why}" if why else f"header: ok ({a.module.read_bytes().split(b' ', 3)[2].decode()})")
+        why = headers_problem(a.module)
+        print(f"header: {why}" if why else
+              f"header: ok ({package_files(a.module)[0].read_bytes().split(b' ', 3)[2].decode()})")
         return 1 if why else 0
     L = load(a.module)
     bad = 0

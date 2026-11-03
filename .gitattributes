@@ -10,5 +10,5 @@
 
 # Byte for byte, never converted: a release's header hashes every byte of the module after line 1,
 # and the fixtures are inputs read exactly as written.
-ledgerboard.py -text
+ledgerboard/** -text
 fixtures/** -text

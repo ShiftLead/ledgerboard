@@ -38,13 +38,16 @@ as a skill of the same name): `docs/procedures/stranded-work.md` (the periodic s
 
 ## What this repo is
 
-The ledger and board formats, defined once (README). Three things live here and nothing else:
-`SPEC.md` (the formats in prose), `ledgerboard.py` (one stdlib-only module: pure functions over
-text — parse, check, edit, the commit subject of an edit), and `fixtures/` (a Markdown input and
-its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md):
+The ledger and board formats, defined once (README). These live here and nothing else: `SPEC.md`
+(the formats in prose); the `ledgerboard/` package, vendored whole — `__init__.py`, the module (one
+stdlib-only file of pure functions over text: parse, check, edit, the commit subject of an edit),
+and beside it the two file-level writers, `ledger.py` and `board.py`, as they land (target design
+§1.1), which import the module relatively so the same bytes load as a top-level package and as a
+subpackage; and `fixtures/` (a Markdown input and its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary is [ShiftLead's ADR 2026-10-12](https://github.com/ShiftLead/shiftlead/blob/main/docs/decisions/2026-10-12-ledgerboard-dev-cadence-shiftlead.md), as `docs/plans/target-design.md` §1.1 amends it (the ADR's own amendment is ShiftLead's PR):
 
-- **Never in `ledgerboard.py`:** git, the network, the machine roster, forges, trackers, delivery,
-  sweeps, sessions, or logic that knows either consumer. What a caller needs from outside the text is
+- **Never in the package:** git, the network, the machine roster, forges, trackers, delivery,
+  sweeps, sessions, or logic that knows either consumer. The module reads no file; the writers read
+  and write only the files they are given. What a caller needs from outside the text is
   passed in (the cross-repo resolver of `pickable()`). Two named exceptions: the release header's
   SYNCED FILE line names agent-cadence as the vendoring repo, and the subject parser still reads the
   three `shiftlead: …` insert subjects written before ledgerboard existed.
@@ -59,7 +62,7 @@ its expected JSON per case). **Status:** v1.0 is TD-001's release. Its boundary 
 
 ```bash
 python3 -m unittest discover -s tests   # the suite (stdlib only)
-python3 fixtures/run.py                 # every fixture against ledgerboard.py (--check-header: a release's header)
+python3 fixtures/run.py                 # every fixture against ledgerboard/ (--check-header: each file's release header)
 ./release.sh <x.y>   # stamp on a branch and PR it
 git checkout --detach origin/main && ./release.sh --tag <x.y>   # once it merges: tag (HEAD at origin/main; any worktree)
 ```

@@ -1,10 +1,14 @@
-"""Unit tests for ledgerboard.py: the properties the fixtures do not show on their own."""
+"""Unit tests for the ledgerboard package: the properties the fixtures do not show on their own."""
 
 import ast
 import hashlib
+import importlib
+import importlib.util
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -28,15 +32,15 @@ LEDGER = """# Ledger
 
 class Purity(unittest.TestCase):
     def test_imports_nothing_that_reaches_outside_the_text(self):
-        tree = ast.parse((ROOT / "ledgerboard.py").read_text(encoding="utf-8"))
+        tree = ast.parse((ROOT / "ledgerboard" / "__init__.py").read_text(encoding="utf-8"))
         names = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
         names |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
         self.assertLessEqual(names, {"__future__", "logging", "re", "collections", "dataclasses", "datetime", "typing"})
 
     def test_stdlib_only_and_no_shebang(self):
-        first = (ROOT / "ledgerboard.py").read_text(encoding="utf-8").splitlines()[:3]
+        first = (ROOT / "ledgerboard" / "__init__.py").read_text(encoding="utf-8").splitlines()[:3]
         self.assertTrue(first[0].startswith("# ledgerboard "))
-        self.assertIn("SYNCED FILE — canonical copy: ShiftLead/ledgerboard ledgerboard.py", first[1])
+        self.assertIn("SYNCED FILE — canonical copy: ShiftLead/ledgerboard ledgerboard/__init__.py", first[1])
         self.assertFalse(first[0].startswith("#!"))
         self.assertNotIn("SYNCED FILE", L.__doc__)
 
@@ -203,6 +207,85 @@ class Header(unittest.TestCase):
             self.assertEqual(subprocess.run([*run, str(tmp)], capture_output=True, check=False).returncode, 1)
         finally:
             tmp.unlink(missing_ok=True)
+
+
+def _stamped(body: bytes, version: str = "1.0") -> bytes:
+    return f"# ledgerboard v{version} sha256:{hashlib.sha256(body).hexdigest()}\n".encode() + body
+
+
+class Package(unittest.TestCase):
+    """TD-015: the module is a package, ``ledgerboard/``, vendored whole. Its files import each other
+    relatively, so the same bytes load as a top-level package and as a subpackage. A probe file stands in
+    for the writers to come, importing the module the way they will."""
+
+    PROBE = b"# probe\nfrom . import item_key\n\nKEY = item_key\n"
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+
+    def copy(self, into: Path) -> Path:
+        pkg = into / "ledgerboard"
+        shutil.copytree(ROOT / "ledgerboard", pkg, ignore=shutil.ignore_patterns("__pycache__"))
+        (pkg / "probe.py").write_bytes(self.PROBE)
+        return pkg
+
+    def py(self, path: Path, code: str):
+        return subprocess.run([sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(path)!r}); {code}"],
+                              capture_output=True, text=True, check=False)
+
+    def test_no_module_file_beside_the_package(self):  # Python would prefer the package; a stale file confuses readers
+        self.assertFalse((ROOT / "ledgerboard.py").exists())
+        self.assertEqual(Path(L.__file__).resolve(), ROOT / "ledgerboard" / "__init__.py")
+
+    def test_loads_as_a_top_level_package(self):
+        self.copy(self.tmp)
+        r = self.py(self.tmp, "import ledgerboard; from ledgerboard import probe; "
+                              "assert probe.KEY is ledgerboard.item_key; print(ledgerboard.__name__)")
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "ledgerboard"), r.stderr)
+
+    def test_loads_as_a_subpackage(self):
+        (self.tmp / "outer").mkdir()
+        (self.tmp / "outer" / "__init__.py").write_text("")
+        self.copy(self.tmp / "outer")
+        r = self.py(self.tmp, "from outer import ledgerboard; from outer.ledgerboard import probe; "
+                              "assert probe.KEY is ledgerboard.item_key; import sys; "
+                              "assert 'ledgerboard' not in sys.modules; print(ledgerboard.__name__)")
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "outer.ledgerboard"), r.stderr)
+
+    def test_the_fixtures_run_against_a_package_copy(self):  # --module takes the directory, its imports resolved
+        pkg = self.copy(self.tmp)
+        r = subprocess.run([sys.executable, str(ROOT / "fixtures" / "run.py"), "--module", str(pkg)],
+                           capture_output=True, text=True, check=False)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        before = set(sys.modules)
+        self.addCleanup(lambda: [sys.modules.pop(m) for m in set(sys.modules) - before])
+        spec = importlib.util.spec_from_file_location("_fixture_run", ROOT / "fixtures" / "run.py")
+        fixture_run = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fixture_run)
+        mod = fixture_run.load(pkg)
+        self.assertIs(importlib.import_module(mod.__name__ + ".probe").KEY, mod.item_key)
+
+    def test_check_header_reads_every_package_file(self):
+        pkg = self.tmp / "ledgerboard"
+        pkg.mkdir()
+        run = [sys.executable, str(ROOT / "fixtures" / "run.py"), "--check-header", "--module", str(pkg)]
+
+        def check():
+            return subprocess.run(run, capture_output=True, text=True, check=False)
+        (pkg / "__init__.py").write_bytes(_stamped(b'"""doc"""\n'))
+        (pkg / "board.py").write_bytes(_stamped(b"from . import x\n"))
+        self.assertEqual(check().returncode, 0, check().stdout)
+        (pkg / "board.py").write_bytes(_stamped(b"from . import x\n") + b"# edited\n")
+        r = check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("board.py", r.stdout)
+        (pkg / "board.py").write_bytes(_stamped(b"from . import x\n", "1.1"))
+        r = check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("different releases", r.stdout)
+        (pkg / "board.py").write_bytes(b"from . import x\n")
+        self.assertIn("not a release header", check().stdout)
 
 
 class Fixtures(unittest.TestCase):
