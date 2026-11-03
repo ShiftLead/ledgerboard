@@ -112,7 +112,17 @@ def write(changes: Mapping[str, str]) -> list[str]:
                 f.write(text)
             if os.path.exists(path):
                 os.chmod(tmp, os.stat(path).st_mode & 0o7777)
-        olds = {p: (open(p, "rb").read() if os.path.exists(p) else None) for p in changes}
+            else:  # a new file takes the umask's mode, as open() would give it, not mkstemp's 0600
+                mask = os.umask(0)
+                os.umask(mask)
+                os.chmod(tmp, 0o666 & ~mask)
+        olds: dict[str, bytes | None] = {}
+        for p in changes:
+            if os.path.exists(p):
+                with open(p, "rb") as f:
+                    olds[p] = f.read()
+            else:
+                olds[p] = None
         done: list[str] = []
         try:
             for path, tmp in temps:
@@ -268,11 +278,14 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
 
 def plan_archive(board: str, archive: str, *, tool: str = TOOL, session: str | None = None) -> Plan:
     """Every closed item, with its detail block and any open twin, moved to the archive's end (``archive_closed()``)."""
+    if os.path.abspath(board) == os.path.abspath(archive):
+        raise Refused("the board and its archive are one file")
     old = read(board)
     arch = read(archive, missing_ok=True)
     count = len(closed_items(old))
     new_board, new_arch = archive_closed(old, arch)
-    return Plan("archive", archive_subject(tool, count, session), {board: new_board, archive: new_arch},
+    # the archive is written first: a crash between the renames leaves an item twice, never nowhere
+    return Plan("archive", archive_subject(tool, count, session), {archive: new_arch, board: new_board},
                 {"moved": count})
 
 
@@ -304,6 +317,11 @@ def plan_rank(rank_file: str, action: str, lines: Mapping[str, str | None], *, t
         raise Refused(f"a rank write is one of {', '.join(QUEUE_ACTIONS)}, not {action!r}")
     if not lines:
         raise Refused("a rank write sets or drops at least one id")
+    sets = [t for t, k in lines.items() if k is not None]
+    if action == "prune" and sets:
+        raise Refused(f"a prune removes lines and sets none: {', '.join(sets)}")
+    if action != "prune" and len(sets) != len(lines):
+        raise Refused(f"a {action} sets lines and removes none: {', '.join(t for t in lines if t not in sets)}")
     old = read(rank_file, missing_ok=True)
     new = set_rank(old, lines)
     if new == old:
@@ -324,10 +342,12 @@ def _pairs(sets: Sequence[str], drops: Sequence[str]) -> dict[str, str | None]:
         tid, eq, key = s.partition("=")
         if not eq:
             raise Refused(f"--set is TD-n=KEY, not {s!r}")
+        if tid in out:
+            raise Refused(f"{tid} is set twice")
         out[tid] = key
     for tid in drops:
         if tid in out:
-            raise Refused(f"{tid} is both set and dropped")
+            raise Refused(f"{tid} is set or dropped twice")
         out[tid] = None
     return out
 

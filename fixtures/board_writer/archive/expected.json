@@ -4,8 +4,8 @@
   "action": "archive",
   "moved": 2,
   "paths": [
-   "board.md",
-   "archive.md"
+   "archive.md",
+   "board.md"
   ],
   "subject": "ledgerboard: archive 2 closed items (session w-1)"
  }

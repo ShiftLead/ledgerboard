@@ -122,6 +122,43 @@ class BothOrNeither(unittest.TestCase):
             self.assertEqual(Path(board).read_text(), BOARD)
 
 
+class Review(unittest.TestCase):
+    def test_a_new_file_takes_the_umask_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rank = os.path.join(tmp, "rank.yml")
+            old = os.umask(0o022)
+            try:
+                B.apply(B.plan_rank(rank, "rank", {"TD-1": "5"}))
+            finally:
+                os.umask(old)
+            self.assertEqual(os.stat(rank).st_mode & 0o777, 0o644)
+
+    def test_the_archive_is_written_before_the_board(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board, arch = os.path.join(tmp, "board.md"), os.path.join(tmp, "archive.md")
+            Path(board).write_text(BOARD)
+            self.assertEqual(list(B.plan_archive(board, arch).changes), [arch, board])
+
+    def test_a_board_that_is_its_own_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = os.path.join(tmp, "board.md")
+            Path(board).write_text(BOARD)
+            with self.assertRaisesRegex(B.Refused, "one file"):
+                B.plan_archive(board, os.path.join(tmp, ".", "board.md"))
+
+    def test_rank_actions_match_their_lines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rank = os.path.join(tmp, "rank.yml")
+            with self.assertRaisesRegex(B.Refused, "prune removes"):
+                B.plan_rank(rank, "prune", {"TD-1": "5"})
+            with self.assertRaisesRegex(B.Refused, "join sets"):
+                B.plan_rank(rank, "join", {"TD-1": None})
+            with self.assertRaisesRegex(B.Refused, "set twice"):
+                B._pairs(["TD-1=5", "TD-1=6"], [])
+            with self.assertRaisesRegex(B.Refused, "twice"):
+                B._pairs(["TD-1=5"], ["TD-1"])
+
+
 class Usage(unittest.TestCase):
     def test_an_option_the_action_does_not_take(self):
         code, _, err = run("done", "--board", "b.md", "--line", "1", "--expect", "x", "--to", "2026-01-01")
