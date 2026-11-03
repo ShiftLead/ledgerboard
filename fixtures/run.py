@@ -44,7 +44,11 @@ Fixtures, each an invented input and its expected JSON:
   each is refused; and ``check()``'s Part of flags of a ledger before and after an archive
   (``check/``), ``archive-open-parts`` among them. From v2.4, the Log: ``entry_text(filed=)``, the
   writers' Log lines, and per ``log`` case ``log_lines()``, ``log_problems()``, ``status_notes_to_log()``
-  and ``gate_age()`` of each gate the case names.
+  and ``gate_age()`` of each gate the case names. Also from v2.4, ``archive_plan()`` of each ``archive_plan`` case
+  (``plan/``: a supersede, its chain, each refusal), the Dropped archive, and ``rename_ref`` keeping one copy.
+- ``ledger/supersede.md`` (v2.4): an archived blocker's Status read — Resolved, Superseded (by an open entry, a
+  Resolved one, another repo's, a chain ending in Dropped, a loop, no successor) and Dropped, here and through the
+  resolver's ``status`` and ``successor``.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
   as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
@@ -182,7 +186,9 @@ def ledger_case(L, md: Path, texts: tuple[str, str, str | None] | None = None) -
     table = json.loads(res.read_text(encoding="utf-8")) if res.exists() else {}
 
     def resolve(item):
-        return tuple(table[item]) if item in table else ("unresolved", f"{item} is not in the fixture's resolver")
+        if item not in table:
+            return ("unresolved", f"{item} is not in the fixture's resolver")
+        return table[item] if isinstance(table[item], dict) else tuple(table[item])  # v2.4: a mapping carries the Status
     p = L.pickable(text, archive, resolve, rank_text=rank_text, today=TODAY)
     return {"entries": p["entries"], "pickable": [e["id"] for e in p["pickable"]],
             "blocked": [e["id"] for e in p["blocked"]], "flags": p["flag_recs"],
@@ -288,6 +294,15 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                 "status_notes_to_log": _refused(lambda: L.status_notes_to_log(t)),
                 "gate_age": {g: L.gate_age(t, g) for g in c["gates"]}}
 
+    def plan(c):  # v2.4: what an archive leaves its dependents
+        if not hasattr(L, "archive_plan"):
+            return {"missing": "the module has no archive_plan — older than v2.4"}
+        table = c.get("resolve", {})
+        return _refused(lambda: L.archive_plan(
+            text({"file": c["ledger"]}), text({"file": c["archive"]}), c["tid"], superseded_by=c.get("superseded_by"),
+            dropped=c.get("dropped", False),
+            resolve=lambda x: tuple(table[x]) if x in table else ("unresolved", f"{x} is not in the case's resolver")))
+
     def edits(c):
         def run():
             out = text(c)
@@ -310,7 +325,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                 c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]],
                 **({"filed": c["filed"]} if "filed" in c else {})))
                 for c in spec["entry_text"]},
-            "log": {c["name"]: log(c) for c in spec.get("log", [])}}
+            "log": {c["name"]: log(c) for c in spec.get("log", [])},
+            "archive_plan": {c["name"]: plan(c) for c in spec.get("archive_plan", [])}}
 
 
 def grammar_cases(L, spec: dict) -> dict:

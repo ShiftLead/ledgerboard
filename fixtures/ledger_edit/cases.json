@@ -1157,6 +1157,72 @@
      }
     }
    ]
+  },
+  {
+   "name": "rename_ref_keeps_one_copy",
+   "text": "## TD-402: Blocked by it and by its would-be successor\n\n**Priority:** Medium\n**Blocked by:** TD-400, TD-410, until 2026-03-01\n",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "TD-400",
+      "new": "TD-410"
+     }
+    }
+   ]
+  },
+  {
+   "name": "rename_ref_keeps_one_copy_across_repos",
+   "text": "## TD-402: Blocked by it and by its would-be successor\n\n**Priority:** Medium\n**Blocked by:** TD-400, acme/tools#TD-3, until 2026-03-01\n",
+   "steps": [
+    {
+     "action": "rename_ref",
+     "args": {
+      "old": "TD-400",
+      "new": "Acme/Tools#TD-3"
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_dropped",
+   "text": "## TD-400: The entry to archive\n\n**Priority:** Medium\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "no longer needed",
+      "dropped": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_dropped_refused_with_pr",
+   "text": "## TD-400: The entry to archive\n\n**Priority:** Medium\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "x",
+      "dropped": true,
+      "pr": 4
+     }
+    }
+   ]
+  },
+  {
+   "name": "archive_superseded_by_another_repo",
+   "text": "## TD-400: The entry to archive\n\n**Priority:** Medium\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "archive",
+     "args": {
+      "why": "moved",
+      "superseded_by": "acme/tools#TD-3"
+     }
+    }
+   ]
   }
  ],
  "check": [
@@ -1246,6 +1312,119 @@
    "name": "was_takes_the_resolved_date",
    "text": "## TD-092: x\n\n**Added:** 2026-09-01\n**Status:** Open 2026-11-01: looked again — was: Resolved: built\n\n**Why:** w\n\n**Resolved:** 2026-10-01 (PR #3)\n",
    "gates": []
+  }
+ ],
+ "archive_plan": [
+  {
+   "name": "resolved",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400"
+  },
+  {
+   "name": "dropped_refused_with_dependents",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "dropped": true
+  },
+  {
+   "name": "dropped",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-403",
+   "dropped": true
+  },
+  {
+   "name": "superseded_by_live",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-410"
+  },
+  {
+   "name": "superseded_follows_the_chain",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-420"
+  },
+  {
+   "name": "superseded_by_dropped_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-422"
+  },
+  {
+   "name": "chain_ending_in_dropped_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-423"
+  },
+  {
+   "name": "chain_looping_back_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-424"
+  },
+  {
+   "name": "successor_a_dependent_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-401"
+  },
+  {
+   "name": "successor_unknown_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-499"
+  },
+  {
+   "name": "superseded_by_itself_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "TD-400"
+  },
+  {
+   "name": "superseded_by_another_repo",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "acme/tools#TD-3",
+   "resolve": {
+    "acme/tools#TD-3": [
+     "open",
+     ""
+    ]
+   }
+  },
+  {
+   "name": "another_repo_unresolved_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "superseded_by": "acme/tools#TD-4",
+   "resolve": {}
+  },
+  {
+   "name": "not_open_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-421"
+  },
+  {
+   "name": "dropped_and_superseded_refused",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-400",
+   "dropped": true,
+   "superseded_by": "TD-410"
   }
  ]
 }

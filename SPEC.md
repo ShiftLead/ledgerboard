@@ -221,6 +221,38 @@ the ledger, in pick order by intent.
 
 **The archive** holds resolved entries, bodies whole, in the same shape.
 
+**Superseded and dropped** (v2.4). `pickable()` and `check()` read an archived blocker's Status by its
+first word. `Superseded … by <id>` and `Dropped` apply the rules below. Any other Status (`Resolved`,
+`Done`, `Built`, `Designed`, dated or not, or none) reads as closed and done, which releases the
+dependents, as before. A duplicate is `Superseded D by` the original; there is no separate word.
+- **A blocker that was superseded** has moved its requirement to its successor. The reader follows the
+  chain (A superseded by B, B by C) to its end. The dependent stays blocked while the end is open, or
+  while the chain ends in Dropped, in no entry, in a loop, or in a `Superseded` with no successor. It is
+  released only when the end is Resolved. Either way `check()` flags it (`blocker-superseded`; an error
+  on an entry the edit changed, ℹ on a standing ledger), naming the end it should name instead.
+- **A blocker that was dropped** keeps the block, and `check()` flags it (`blocker-dropped`, likewise):
+  someone decides the dependent, dropping the blocker or blocking it on what replaces it.
+- **Another repo's blocker** reads the same way through the resolver, whose answer for an archived entry
+  may carry its `status` and its `successor` (bare when in that repo). Another repo's archive cannot
+  rewrite this repo's text, so `check()` reports such a dependent as ℹ (`cross-superseded`,
+  `cross-dropped`): the host's gate sweep rewires a superseded one by a tool PR, and puts a dropped one
+  on the board as `decide`. A resolver that gives no `status` reads every archived entry as closed and
+  done, as before.
+- **Archiving rewires.** `archive_plan(ledger, archive, tid, *, superseded_by=None, dropped=False,
+  resolve=None)` says what archiving open entry `tid` leaves its dependents (`dependents(ledger, tid)`:
+  the open entries whose `Blocked by` names it), or refuses:
+  - superseded (`superseded_by` a `TD-m` or `<repo>#TD-m`): the successor is followed through each
+    Superseded entry to the end of its chain, which the plan's `successor` names and the archive writes.
+    The successor exists (in the ledger, the archive or through the resolver) and is open or Resolved:
+    the plan is refused when it names no entry, cannot be resolved, ends in Dropped, loops (back to `tid`
+    among others), or is one of `tid`'s dependents, which would block on itself. Every dependent in
+    `rewire` gets `rename_ref` from `tid` to the successor in the same change, so every dependent always
+    names a live or Resolved entry, and a chain's later supersede rewires them again. A dependent that
+    already names the successor keeps one copy. Their cards change with them, so a rewired dependent
+    may need a rank `join`.
+  - dropped: refused while any open entry is `Blocked by` `tid`, naming every one, so each is decided
+    first.
+
 **`Tracker:`** — an entry mapped from an outside tracker carries its id as `**Tracker:** ABC-123`.
 Every edit keeps it byte for byte; what it links to is the importer's.
 
@@ -412,10 +444,12 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   written. A section the body lacks is added after the first Why, else before the first Done when,
   Related or Log, else at the end. It is refused when two sections have the name, and for the Log,
   which only its writers write.
-- **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`) lifts the Status's
+- **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`, or else `dropped`) lifts the Status's
   notes, then writes the archived entry, above, with the Status `Resolved YYYY-MM-DD` and the Log
-  line `archived: Resolved — <why>` (or `Superseded YYYY-MM-DD by TD-n` and `archived: Superseded —
-  <why>`). `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is refused,
+  line `archived: Resolved — <why>` (or `Superseded YYYY-MM-DD by TD-n` or, v2.4, `by <repo>#TD-n`, and
+  `archived: Superseded — <why>`; or, v2.4, `Dropped YYYY-MM-DD` and `archived: Dropped — <why>`, with no
+  `**Resolved:**` line, since nothing replaces it). A superseded or dropped entry keeps its Why and Fix.
+  The caller asks `archive_plan()` first, and rewires the dependents it names in the same change. `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is refused,
   since a reader would take that for the PR.
   - An earlier `**Resolved:**` section is replaced, never doubled, and a `Resolved` header field is
     removed.
@@ -431,7 +465,7 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
 - **renumber** (`new`) rewrites the heading's id to another number; Log lines are history, and keep
   theirs. **rename_ref** (`old`, `new`) rewrites that id in `Blocked by`, `Part of` and a `filed by`
   line's `while`, never other Log prose. A local id matches by number; another repo's id matches as
-  `<repo>#TD-n`.
+  `<repo>#TD-n`. A `Blocked by` that then names an id twice keeps its first copy (v2.4).
 
 Moving a file into `archive/` or back, and the relative links that move with it, are the caller's.
 
@@ -764,6 +798,13 @@ v2.4 also adds Event sections (*Events*): `parse_check()`, `parse_event_section(
 `event_problems()`, `CHECK_TYPES` and `CHECK_OUTCOMES`, and `check()`'s `event-section`, `event-check` and
 `event-ungated`. Nothing they read was read before: v2.3 reads an Event section as a body section like any
 other.
+v2.4 also reads an archived blocker's Status (*Superseded and dropped*): a blocker archived `Superseded`
+releases its dependents only when its chain ends in a Resolved entry, and one archived `Dropped` keeps
+them blocked, where v2.3 released both; `check()` gains `blocker-superseded`, `blocker-dropped`,
+`cross-superseded` and `cross-dropped`, and a resolver's answer may carry `status` and `successor`.
+`archive_plan()` and `dependents()` are new; `edit_entry`'s `archive` writes `Dropped` and a successor in
+another repo, and `rename_ref` keeps one copy of an id. A v2.3 reader releases what v2.4 keeps blocked, so a
+consumer archives an entry Superseded or Dropped only once every reader of its ledger runs v2.4.
 
 ## Appendix: grammar
 

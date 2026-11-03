@@ -61,11 +61,13 @@ ASK_RE = re.compile(r"^\*\*Ask:\*\*", re.MULTILINE)  # the body section a decisi
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
 EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part", "priority", "ask-missing",
-               "gate-repeated")  # information on a standing ledger, an error in a new edit
+               "gate-repeated", "blocker-superseded", "blocker-dropped")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
-# ``open | archived | unresolved``; ``why`` says why it is unresolved, else "".
+# ``open | archived | unresolved``; ``why`` says why it is unresolved, else "". From v2.4 an archived
+# entry's mapping may carry ``status`` (its Status, read by its first word: Superseded, Dropped, else
+# closed and done) and ``successor`` (a Superseded entry's id after ``by``, bare when in its own repo).
 Resolve = Callable[[str], Any]
 
 
@@ -466,6 +468,60 @@ def _resolved(item: str, resolve: Resolve | None) -> dict:
     return out
 
 
+def _archived_status(archive: str) -> dict[int, dict]:
+    """Each archived entry's Status read (v2.4, SPEC *Superseded and dropped*), by number: ``{id, word,
+    successor}`` — ``word`` ``superseded`` (``successor`` the id after its ``by``, or None), ``dropped``, or
+    ``resolved`` for any other Status (``Resolved``, ``Done``, ``Built``, none at all): closed and done."""
+    out: dict[int, dict] = {}
+    for e in entries(archive):
+        status = e["fields"].get("status") or ""
+        word = first_word(status)
+        by = re.search(rf"\bby[ \t]+({LOG_ID})(?![\w#/.-])", status) if word == "superseded" else None
+        out.setdefault(_num(e["id"]), {"id": e["id"], "word": word if word in ("superseded", "dropped") else "resolved",
+                                       "successor": by.group(1) if by else None})
+    return out
+
+
+def _chain(start: str, live_nums: set[int], gone: Mapping[int, dict], resolve: Resolve | None) -> tuple[list[str], str]:
+    """Where a blocker's requirement lives now (v2.4): ``start`` followed through each Superseded entry to its
+    successor. ``(path, state)``: ``path`` the ids walked, ``start`` first and the end last; ``state`` the end's
+    — ``open``, ``resolved``, ``dropped``, ``unknown`` (no such entry), ``unresolved`` (another repo's the
+    resolver cannot answer, or a Superseded with no successor) or ``cycle``. A successor written bare in
+    another repo's entry is that repo's."""
+    path, seen = [], set()
+    cur = start
+    while True:
+        key = ref_key(cur) if "#" in cur else f"#{_num(cur)}"
+        if key in seen:
+            return path + [cur], "cycle"
+        seen.add(key)
+        path.append(cur)
+        if "#" in cur:
+            x = _resolved(cur, resolve)
+            if x["state"] != "archived":
+                return path, x["state"]
+            word, nxt = first_word(str(x.get("status") or "")), x.get("successor")
+            if word == "dropped":
+                return path, "dropped"
+            if word != "superseded":
+                return path, "resolved"
+            if not isinstance(nxt, str) or not (ID_ITEM_RE.match(nxt) or XREPO_ITEM_RE.match(nxt)):
+                return path, "unresolved"
+            cur = nxt if "#" in nxt else f"{cur.rpartition('#')[0]}#{nxt}"
+            continue
+        n = _num(cur)
+        if n in live_nums:
+            return path, "open"
+        st = gone.get(n)
+        if st is None:
+            return path, "unknown"
+        if st["word"] != "superseded":
+            return path, st["word"]
+        if st["successor"] is None:
+            return path, "unresolved"
+        cur = st["successor"]
+
+
 class _Flags(list):
     """The flags as the sentences every mode prints (a list of str), with a record beside each
     for ``check``: level (error for ⚠, info for ℹ), entry id, field, kind."""
@@ -505,6 +561,7 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
     texts = _entry_texts(ledger)
     live_nums = {_num(e["id"]) for e in live}
     archived = heading_nums(archive)
+    gone = _archived_status(archive)
     parent_of, part_of = _parents(live)
     parts_open: dict[str, list[str]] = {}
     for c, par in parent_of.items():
@@ -612,6 +669,8 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                         flags.add(f"⚠ {e['id']}: cannot resolve {b} — {x['why']}; the block stays",
                                   e["id"], "blocked by", "cross-repo")
                         open_ids.append(b)  # unresolved: keep the block — the safe direction
+                    elif not _ended(e["id"], b, live_nums, gone, resolve, flags, cross=True):
+                        open_ids.append(b)
                     continue
                 bn = _num(b)
                 if bn in live_nums:
@@ -620,6 +679,8 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                     flags.add(f"⚠ {e['id']}: Blocked by {b}, which names no entry in the ledger or the archive",
                               e["id"], "blocked by", "blocked-unknown")
                     open_ids.append(b)  # unknown: keep the block — the safe direction
+                elif not _ended(e["id"], b, live_nums, gone, resolve, flags, cross=False):
+                    open_ids.append(b)
             kept = [f"decision ({r['holder']})" if r["holder"] is not None else repr(r["item"]) for r in g["retired"]] \
                 + [repr(b) for b in bad]  # a retired decision still names who it waits on
             if not open_ids and not gates and not kept:
@@ -669,6 +730,34 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
     everything = sorted(pick + blocked, key=lambda r: order[r["id"]][0])
     return {"pickable": pick, "blocked": blocked, "entries": everything, "flags": list(flags),
             "flag_recs": flags.recs, "declared": {k: list(v) for k, v in vocab.items()}}
+
+
+def _ended(tid: str, b: str, live_nums: set[int], gone: Mapping[int, dict], resolve: Resolve | None,
+           flags: _Flags, *, cross: bool) -> bool:
+    """Whether archived blocker ``b`` of ``tid`` releases it (v2.4, SPEC *Superseded and dropped*), flagging a
+    blocker that was superseded or dropped. A Superseded one releases only when the end of its chain is
+    Resolved; a Dropped one, or a chain that ends in Dropped, in no entry or in a loop, keeps the block."""
+    path, state = _chain(b, live_nums, gone, resolve)
+    if len(path) == 1 and state == "resolved":
+        return True
+    where = "another repo's " if cross else ""
+    if len(path) == 1 and state == "dropped":
+        flags.add(f"ℹ {tid}: Blocked by {b}, {where}entry archived Dropped — decide this entry: drop the "
+                  "blocker if it no longer applies, or block on what replaces it; the block stays",
+                  tid, "blocked by", "cross-dropped" if cross else "blocker-dropped")
+        return False
+    chain = " → ".join(path)
+    if state in ("open", "resolved"):
+        then = "" if state == "open" else "; that entry is Resolved, so the block is lifted"
+        flags.add(f"ℹ {tid}: Blocked by {b}, superseded ({chain}) — "
+                  f"{'the gate sweep rewires it to' if cross else 'name'} {path[-1]} instead{then}",
+                  tid, "blocked by", "cross-superseded" if cross else "blocker-superseded")
+        return state == "resolved"
+    why = {"dropped": "ends in an entry archived Dropped", "unknown": "ends in no entry", "cycle": "loops",
+           "unresolved": "cannot be followed to its end"}[state]
+    flags.add(f"ℹ {tid}: Blocked by {b}, superseded ({chain}), whose chain {why} — decide this entry; the block "
+              "stays", tid, "blocked by", "cross-superseded" if cross else "blocker-superseded")
+    return False
 
 
 def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | None = None,
@@ -2947,7 +3036,7 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
 
 ENTRY_ACTIONS = ("set", "note", "edit", "archive", "reopen", "renumber", "rename_ref")
 _ENTRY_ARGS = {"set": {"fields"}, "note": {"words"}, "edit": {"section", "words"},
-               "archive": {"why", "pr", "pointer", "as_is", "superseded_by"}, "reopen": {"why"},
+               "archive": {"why", "pr", "pointer", "as_is", "superseded_by", "dropped"}, "reopen": {"why"},
                "renumber": {"new"}, "rename_ref": {"old", "new"}}  # each action's keyword arguments
 _DATED_ACTIONS = ("note", "archive", "reopen")  # the actions that write today's date
 PR_IN_TEXT_RE = re.compile(r"#\d+")  # a consumer reads the first `#<digits>` of a Resolved line as its PR
@@ -2989,6 +3078,30 @@ def _keyed(sections: list[tuple[str | None, str]], key: str) -> list[int]:
     return [i for i, (lead, _) in enumerate(sections) if lead is not None and _section_key(lead) == key]
 
 
+def _one_copy(value: str) -> str:
+    """A Blocked by value with each id named once: a later copy of an id (a local one by number, another
+    repo's by ``ref_key``) dropped with its comma; the rest, gates and the old form's text among it, as written."""
+    g = parse_gates(value)
+    keys = [f"#{_num(x)}" if "#" not in x else ref_key(x) for x in g["ids"]]
+    if len(set(keys)) == len(keys):
+        return value
+    out, seen, rest = [], set(), value.strip(" \t")
+    while rest:
+        if GATE_DECISION_RE.match(rest) and parse_gates(rest)["old_form"]:
+            out.append(rest)  # the old form runs to the end of the line
+            break
+        m = GATE_ITEM_SEP_RE.search(rest)
+        item, rest = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
+        if ID_ITEM_RE.match(item) or XREPO_ITEM_RE.match(item):
+            k = f"#{_num(item)}" if "#" not in item else ref_key(item)
+            if k in seen:
+                continue
+            seen.add(k)
+        if item:
+            out.append(item)
+    return ", ".join(out)
+
+
 def _rename(value: str, old: str, new: str) -> str:
     """``value`` with each id item ``old`` written ``new``; a local id matches by number (``TD-7`` is ``TD-007``)."""
     m = ID_ITEM_RE.match(old)
@@ -2998,6 +3111,60 @@ def _rename(value: str, old: str, new: str) -> str:
         repo, tid = XREPO_ITEM_RE.match(old).groups()
         rx = re.compile(rf"(?<![\w/.-]){re.escape(repo)}#TD-0*{_num(tid)}(?!\d)", re.IGNORECASE)
     return rx.sub(new, value)
+
+
+def dependents(ledger: str, tid: str) -> list[str]:
+    """The open entries of ``ledger`` whose Blocked by names ``tid`` (a local id, matched by number), in file order."""
+    return [e["id"] for e in entries(ledger) if _num(e["id"]) != _num(tid)
+            and any("#" not in x and _num(x) == _num(tid) for x in parse_gates(e["blocked_raw"])["ids"])]
+
+
+def archive_plan(ledger: str, archive: str, tid: str, *, superseded_by: str | None = None, dropped: bool = False,
+                 resolve: Resolve | None = None) -> dict:
+    """What archiving open entry ``tid`` leaves its dependents (v2.4, SPEC *Superseded and dropped*):
+    ``{successor, rewire}``. Raises Refused when the archive may not go ahead.
+
+    - Resolved (neither keyword): ``{successor: None, rewire: []}``; its dependents are released as before.
+    - ``dropped``: refused while any open entry is Blocked by ``tid``, naming every one — each is decided
+      first.
+    - ``superseded_by`` (``TD-m`` or ``<repo>#TD-m``): the successor followed through each Superseded entry
+      to the end of its chain, which ``successor`` names and the archive writes. It must be open or
+      Resolved: refused when it names no entry (or one the resolver cannot answer), ends in Dropped, loops,
+      or is ``tid`` itself or one of its dependents (which would block on itself). ``rewire``: the
+      dependents, each to get ``edit_entry(…, "rename_ref", old=tid, new=successor)`` in the same change."""
+    if not _is_id(tid) or not any(_num(e["id"]) == _num(tid) for e in entries(ledger)):
+        raise Refused(f"{tid!r} names no open entry")
+    deps = dependents(ledger, tid)
+    if dropped and superseded_by is not None:
+        raise Refused("an entry is dropped or superseded, not both")
+    if dropped:
+        if deps:
+            raise Refused(f"{tid} cannot be dropped while {', '.join(deps)} {'is' if len(deps) == 1 else 'are'} "
+                          f"Blocked by it — decide each first: drop the blocker, or block it on what replaces {tid}")
+        return {"successor": None, "rewire": []}
+    if superseded_by is None:
+        return {"successor": None, "rewire": []}
+    if not _is_id(superseded_by, other_repo=True):
+        raise Refused(f"superseded by another entry's TD-n or <repo>#TD-n, not {superseded_by!r}")
+    live_nums = {_num(e["id"]) for e in entries(ledger)} - {_num(tid)}
+    gone = dict(_archived_status(archive))
+    gone[_num(tid)] = {"id": tid, "word": "superseded", "successor": superseded_by}  # as the archive will read it
+    path, state = _chain(superseded_by, live_nums, gone, resolve)
+    end = path[-1]
+    if "#" not in end and _num(end) == _num(tid) or state == "cycle":
+        raise Refused(f"superseding {tid} by {superseded_by} loops back ({' → '.join(path)}) — name another successor")
+    if state == "dropped":
+        raise Refused(f"the successor's chain ({' → '.join(path)}) ends in an entry archived Dropped — a successor is "
+                      "open or Resolved")
+    if state in ("unknown", "unresolved"):
+        what = "names no entry in the ledger or the archive" if state == "unknown" else "cannot be resolved"
+        via = "" if len(path) == 1 else f" (its chain: {' → '.join(path)})"
+        raise Refused(f"the successor {end} {what}{via} — a successor exists, open or Resolved")
+    own = [d for d in deps if "#" not in end and _num(d) == _num(end)]
+    if own:
+        raise Refused(f"{own[0]} is Blocked by {tid} and is its successor: it would block on itself — name another "
+                      "successor, or take the blocker off it first")
+    return {"successor": end, "rewire": deps}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -3299,7 +3466,8 @@ def _status_to_log(header: list[tuple[str, str]], sections: list[tuple[str | Non
 def edit_entry(text: str, action: str, *, today: date | str | None = None, fields: Mapping[str, str] | None = None,
                words: str | None = None, section: str | None = None, why: str | None = None,
                pr: int | None = None, pointer: str | None = None, as_is: bool = False,
-               superseded_by: str | None = None, new: str | None = None, old: str | None = None) -> str:
+               superseded_by: str | None = None, new: str | None = None, old: str | None = None,
+               dropped: bool = False) -> str:
     """One entry's text after ``action`` (``ENTRY_ACTIONS``), in canonical form; raises Refused. The
     edits (SPEC *Ledger entries and their edits*; from v2.4 note, archive and reopen write the Log):
 
@@ -3311,7 +3479,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
       kept; a section the body lacks is added after the first Why, else before the first Done when,
       Related or Log, else at the end; the Log itself is refused;
-    - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``): the
+    - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``, ``TD-n`` or
+      ``<repo>#TD-n``; or ``dropped``, v2.4: Status ``Dropped <today>`` and ``archived: Dropped — <why>``,
+      the rest kept; ``archive_plan()`` says first which dependents each leaves, or refuses): the
       Status's notes lifted (one it cannot read copied whole into a ``was:`` line), then the archived
       form — Status ``Resolved <today>`` and Fix replaced by ``**Resolved:** <today> (PR #<pr>) —
       <pointer>`` (after the whole Fix with ``as_is``; before the Log when no section is named exactly
@@ -3322,7 +3492,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       ``reopened — <why>``; a header ``Resolved`` moves to a ``**Resolved:**`` section before the Log;
       refused when the entry has both;
     - ``renumber`` (``new``): the heading's id; ``rename_ref`` (``old``, ``new``): that id rewritten in
-      Blocked by, Part of and a Log ``filed by`` line's ``while``.
+      Blocked by, Part of and a Log ``filed by`` line's ``while``; a Blocked by that then names an id twice
+      keeps its first copy (v2.4).
 
     ``today`` is the caller's date, taken by note, archive and reopen only (none is read here): a date,
     ``YYYY-MM-DD``, or an aware datetime, written as its UTC date; a naive datetime is refused. A writer
@@ -3334,7 +3505,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         raise Refused(f"unknown action {action}")
     given = {k for k, v in (("fields", fields), ("words", words), ("section", section), ("why", why),
                             ("pr", pr), ("pointer", pointer), ("as_is", as_is or None),
-                            ("superseded_by", superseded_by), ("new", new), ("old", old)) if v is not None}
+                            ("superseded_by", superseded_by), ("new", new), ("old", old),
+                            ("dropped", dropped or None)) if v is not None}
     stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _DATED_ACTIONS else [])
     if stray:
         raise Refused(f"{action} takes no {', '.join(stray)}")
@@ -3394,11 +3566,19 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         body_changed = True
     elif action == "archive":
         said = _one_line("the archive's why", why)
-        if superseded_by is not None:
+        if dropped:
+            if pr is not None or pointer is not None or as_is or superseded_by is not None:
+                raise Refused("a dropped entry keeps its Why and Fix, and nothing replaces it: no pr, pointer, "
+                              "as_is or superseded_by")
+            header, sections = _status_to_log(header, sections, day)
+            header = _with(header, "Status", f"Dropped {day}")
+            sections = _log_insert(sections, [(day, f"archived: Dropped — {said}")], by_date=False)
+            body_changed = True
+        elif superseded_by is not None:
             if pr is not None or pointer is not None or as_is:
                 raise Refused("a superseded entry keeps its Why and Fix: no pr, pointer or as_is")
-            if not _is_id(superseded_by) or _num(superseded_by) == _num(tid):
-                raise Refused(f"superseded by another entry's TD-n, not {superseded_by!r}")
+            if not _is_id(superseded_by, other_repo=True) or ("#" not in superseded_by and _num(superseded_by) == _num(tid)):
+                raise Refused(f"superseded by another entry's TD-n or <repo>#TD-n, not {superseded_by!r}")
             header, sections = _status_to_log(header, sections, day)
             header = _with(header, "Status", f"Superseded {day} by {superseded_by}")
             sections = _log_insert(sections, [(day, f"archived: Superseded — {said}")], by_date=False)
@@ -3450,6 +3630,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             v = _value(header, key)
             if v is not None:
                 header = [(n, _rename(x, old, new) if field_key(n) == key else x) for n, x in header]
+        v = _value(header, "blocked by")
+        if v is not None:  # a dependent that already named the new id keeps one copy (v2.4)
+            header = [(n, _one_copy(x) if field_key(n) == "blocked by" else x) for n, x in header]
         at = _log_section(sections)
         if at is not None:  # the one Log token rewritten: a filed line's `while`, never other prose
             first, _, rest = sections[at][1].partition("\n")
