@@ -1,6 +1,6 @@
 # TD-023: notes on a hide that hides nothing or hides the deadline
 
-**Status:** In review rounds since 2026-11-03 (the designer). Class: **wide**, because it adds to a vendored format that both consumers run: a new public function, and a new key in `item_record()`, which is the board's JSON and the fixtures' shape (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The review record is `docs/reviews/TD-023.md`.
+**Status:** Designed 2026-11-03 (the designer); it waits on Paul's go. Class: **wide**, because it adds to a vendored format that both consumers run: a new public function, and a new key in `item_record()`, which is the board's JSON and the fixtures' shape (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The rounds ended after round 2 by the stop rule, because its design review raised nothing build-changing. The design reviews raised 1 and then 0 build-changing findings. The fact-checks raised none, and nor did the closing fact-check. The findings no review has read are round 2's minor fixes, F11–F17, which only the closing fact-check checked. They go into the build's Fix. The review record is `docs/reviews/TD-023.md`.
 
 **Entry:** [TD-023](../ledger/TD-023.md). It is one of the things the target design's §6 *Hide until* asks for and TD-017's build left out.
 
