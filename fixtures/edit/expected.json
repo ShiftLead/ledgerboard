@@ -238,6 +238,93 @@
   },
   {
    "ok": "- [ ] decide 2026-01-15 (person) — Pick a region. Context: TD-41. Due: 2026-01-15. Answers: North (default) — closer — but dearer | South. Decided: North (2026-01-15).\n"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: On disk — the next run reads it back | In memory (default) | Not now.\n  - **Context:** The cache is rebuilt on every run, which takes a minute.\n    - disk: 40 MB\n    - memory: none\n  - **Question:** Where should the cache live?\n  - **Caveats:** Nobody has measured a cold start yet.\n  - **Recommended:** In memory — nothing to clean up. **Otherwise:** On disk, if cold starts hurt; Not now, if neither.\n"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: On disk | In memory — every run starts cold | Not now.\n  - **Context:** The cache is rebuilt on every run.\n  - **Question:** Where should it live?\n  - **Recommended:** only you know how often runs restart.\n"
+  },
+  {
+   "ok": "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at the new export page. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right: <what>.\n  - **Question:** Open the export page and run one export.\n"
+  },
+  {
+   "ok": "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at the new export page. Context: TD-7. Due: 2026-01-20. Answers: Works (default) | Not right: <what>.\n"
+  },
+  {
+   "ok": "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — The nightly job moved to 02:00. Context: TD-7.\n"
+  },
+  {
+   "ok": "- [ ] watch 2026-01-15 (session `w-1` on box-1) — Check the queue drains after the deploy. Context: PR #12. Due: 2026-01-20.\n"
+  },
+  {
+   "ok": "- [ ] 2026-01-15 (session `w-1`) — Rotate the test key. Context: TD-7. Due: 2026-01-20.\n"
+  },
+  {
+   "ok": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it? Context: TD-7. Due: 2026-01-20.\n"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: Files \\| folders (default) | Database.\n  - **Context:** The cache is rebuilt on every run.\n  - **Question:** Where should it live?\n  - **Recommended:** Files | folders — it survives a restart.\n"
+  },
+  {
+   "ok": "- [ ] 2026-01-15 (session `w-1` on box-1) — Wait for the mirror... Context: TD-7. Due: 2026-01-20.\n"
+  },
+  {
+   "refused": "a board line's text may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  {
+   "refused": "the context may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  {
+   "refused": "the detail block's caveats may not carry Context:, Due:, Answers:, Decided: or Closed: — the reader would read it as the field; say it in other words"
+  },
+  {
+   "refused": "a decide offers two or more answers"
+  },
+  {
+   "refused": "a decide needs its detail block's question"
+  },
+  {
+   "refused": "an act carries no answers: a question with answers is a decide"
+  },
+  {
+   "refused": "a look's answers are the writer's (Works | Not right: <what>): give none"
+  },
+  {
+   "refused": "a look's default is 0 (Works), or None"
+  },
+  {
+   "refused": "an fyi carries no Due: date — give due as None"
+  },
+  {
+   "refused": "a watch needs its Due date"
+  },
+  {
+   "refused": "default is the index of one of the 3 answers, not 3"
+  },
+  {
+   "refused": "an answer may not carry ` (default)`: the mark is the writer's — give default"
+  },
+  {
+   "refused": "an answer's consequence may not read as a reply (` — <name>, <date>: `) — say it in other words"
+  },
+  {
+   "refused": "two answers have the same label: each answer needs its own"
+  },
+  {
+   "refused": "a host is written only with its session: give the session too"
+  },
+  {
+   "refused": "a kind is one of decide, act, look, watch, fyi, not 'ask'"
+  },
+  {
+   "refused": "a detail block's parts are context, question, caveats, recommended, otherwise, not notes"
+  },
+  {
+   "refused": "otherwise is written on the Recommended bullet: give recommended too"
+  },
+  {
+   "refused": "today is written as YYYY-MM-DD, not '2026-1-5'"
   }
  ],
  "edits": {

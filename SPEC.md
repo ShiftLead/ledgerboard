@@ -355,9 +355,19 @@ back exactly what was meant:
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, replacing an earlier one;
 - **reply** appends a reply tail.
 
-A new item (`item_line(text, due, today, session, host, context)`) is composed as `- [ ] <today> (session `<name>` on <host>, or n/a) — <text>. Context:
-<about>. Due: <date>.`; an answer given elsewhere (on a ledger entry) as an already decided `decide`
-item with `(person)` as its head.
+**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>. Due: <due>.` then `Answers: …` where its kind takes them. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
+- a `decide` carries two or more distinct answers, at most one marked ` (default)`, and a detail block;
+- a `look` carries exactly `Answers: Works | Not right: <what>.`, which the writer writes itself, `Works` marked ` (default)` only when the caller asks;
+- an `fyi` carries no `Due:`, and every other kind carries one;
+- no kind but `decide` and `look` carries answers.
+
+These are the writer's rules. The reader still reads whatever a line carries. An answer is written `<label>` or `<label> — <consequence>`, with the mark on the label.
+
+The **detail block** is composed from named parts, in the order `Context`, `Question`, `Caveats`, `Recommended`. Each part is one two-space-indented bullet, ``- **<Part>:** <words>``, with any further lines as nested bullets under it. On a `decide` with a default, Recommended opens with that default's label and ` — `. An `Otherwise` text follows the Recommended words on the same bullet as ``**Otherwise:** <words>``. A `decide` needs Context, Question and Recommended. No writer touches the block afterwards.
+
+The writer refuses text, a context, an answer or a detail value that carries a field name, or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
+
+An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line()`, unchanged).
 
 **The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
 <answer>] (session <name>)` for the four edits, and `<tool>: append <head> (session <name>)` for a

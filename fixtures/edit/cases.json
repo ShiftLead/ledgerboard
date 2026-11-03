@@ -208,6 +208,392 @@
       ],
       "default": 0,
       "words": "North"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk — the next run reads it back",
+        "In memory",
+        "Not now"
+      ],
+      "default": 1,
+      "detail": {
+        "context": [
+          "The cache is rebuilt on every run, which takes a minute.",
+          "disk: 40 MB",
+          "memory: none"
+        ],
+        "question": "Where should the cache live?",
+        "caveats": "Nobody has measured a cold start yet",
+        "recommended": "nothing to clean up",
+        "otherwise": "On disk, if cold starts hurt; Not now, if neither"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "only you know how often runs restart"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "look",
+      "detail": {
+        "question": "Open the export page and run one export."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "look",
+      "default": 0
+    },
+    {
+      "fn": "item_line",
+      "text": "The nightly job moved to 02:00",
+      "due": null,
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "fyi"
+    },
+    {
+      "fn": "item_line",
+      "text": "Check the queue drains after the deploy",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "PR #12",
+      "kind": "watch"
+    },
+    {
+      "fn": "item_line",
+      "text": "Rotate the test key",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-7"
+    },
+    {
+      "fn": "item_line",
+      "text": "Ship it?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "Files | folders",
+        "Database"
+      ],
+      "default": 0,
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Wait for the mirror...",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7."
+    },
+    {
+      "fn": "item_line",
+      "text": "Check Due: 2026-02-01 first",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7"
+    },
+    {
+      "fn": "item_line",
+      "text": "Rotate the test key",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-1 Due: 2026-03-01"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart.",
+        "caveats": "Answers: none yet"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ],
+      "detail": {
+        "context": "x",
+        "recommended": "y"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "act",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "look",
+      "answers": [
+        "Works",
+        "Broken"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "look",
+      "default": 1
+    },
+    {
+      "fn": "item_line",
+      "text": "The nightly job moved to 02:00",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "fyi"
+    },
+    {
+      "fn": "item_line",
+      "text": "Check the queue drains",
+      "due": null,
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "watch"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ],
+      "default": 3,
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk (default)",
+        "In memory"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk — w-2, 2026-01-14: maybe",
+        "In memory"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "On disk — again"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": null,
+      "host": "box-1",
+      "context": "TD-7"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "ask"
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "In memory — every run starts cold",
+        "Not now"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "it survives a restart.",
+        "notes": "extra"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "detail": {
+        "context": "x",
+        "otherwise": "y"
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "today": "2026-1-5"
     }
   ],
   "predicates": [
