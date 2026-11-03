@@ -32,7 +32,8 @@ Fixtures, each an invented input and its expected JSON:
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
   (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``edit_action()``, ``item_key()`` of lines
   that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
-  and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line.
+  and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
+  ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
@@ -205,7 +206,7 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
     for c in spec["compose"]:
         if c["fn"] == "item_line":
-            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until") if k in c}  # v2.3's keywords
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts") if k in c}  # v2.3's keywords
             out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
                 c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:

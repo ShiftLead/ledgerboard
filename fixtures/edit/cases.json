@@ -200,6 +200,52 @@
       "action": "reply",
       "reply": "on it",
       "by": "w-2"
+    },
+    {
+      "name": "snooze-keeps-parts-lifts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "snooze",
+      "to": "2026-01-18"
+    },
+    {
+      "name": "due-keeps-parts-lifts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "due",
+      "to": "2026-01-25"
+    },
+    {
+      "name": "decide-keeps-parts-lifts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "decide",
+      "answer": "Option B",
+      "by": "pat"
+    },
+    {
+      "name": "reply-keeps-parts-lifts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "reply",
+      "reply": "looking",
+      "by": "w-2"
+    },
+    {
+      "name": "reply-refused-parts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "reply",
+      "reply": "see Parts: TD-17",
+      "by": "w-2"
+    },
+    {
+      "name": "reply-refused-lifts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+      "action": "reply",
+      "reply": "so Lifts: all",
+      "by": "w-2"
+    },
+    {
+      "name": "due-added-after-parts",
+      "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15.",
+      "action": "due",
+      "to": "2026-01-25"
     }
   ],
   "subjects": [
@@ -825,6 +871,126 @@
       ],
       "default": 0,
       "words": "On disk (by pat)"
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on the parts?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 decision (pat)",
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Option A",
+        "Option B | c",
+        "Not yet"
+      ],
+      "default": 0,
+      "lifts": [
+        "option a",
+        "Option B | c"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on the parts?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 decision (pat)",
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "default": 0,
+      "lifts": [
+        "Go"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on the parts?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 decision (pat)",
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "lifts": [
+        "Later"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on the parts?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 decision (pat)",
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "lifts": [
+        "Go",
+        "go"
+      ]
+    },
+    {
+      "fn": "item_line",
+      "text": "Go on the parts?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 decision (pat)",
+      "kind": "decide",
+      "detail": {
+        "context": "The design is done.",
+        "question": "Go?",
+        "recommended": "it is ready."
+      },
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "lifts": []
+    },
+    {
+      "fn": "item_line",
+      "text": "Rotate the key.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-8",
+      "kind": "act",
+      "lifts": [
+        "Go"
+      ]
     }
   ],
   "predicates": [
@@ -1219,7 +1385,20 @@
     "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Hide until: 2026-01-12. Due: 2026-01-10.",
     "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-1-12",
     "- [ ] fyi 2026-01-05 (n/a) — Moved. Context: none. Hide until: 2026-01-12.",
-    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Hide until: 2026-01-13."
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Hide until: 2026-01-13.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Not yet. Lifts: Option A.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Hide until: 2026-01-18. Answers: Option A | Not yet. Lifts: Option A.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Parts: TD-15. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15 and TD-16. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-15. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Not yet. Lifts: Go.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Not yet. Lifts: Later.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Lifts: Go. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: A | B. Lifts: A | a.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12 decision (pat), TD-13. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go? Context: TD-12, TD-13. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Parts: TD-15. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Check it. Context: TD-12. Due: 2026-01-20. Lifts: Go."
   ],
   "canonical_items": [
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
@@ -1319,6 +1498,8 @@
   "item_keys": [
     "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",
     "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. — Pat, 2026-01-06: later. Answers: now | later.",
-    "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13."
+    "- [x] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. Closed: 2026-01-13.",
+    "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-20. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B.",
+    "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15, TD-16. Due: 2026-01-25. Hide until: 2026-01-22. Answers: Option A | Option B | Not yet. Lifts: Option A | Option B. Decided: Option A (by pat) (2026-01-21)."
   ]
 }
