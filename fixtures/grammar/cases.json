@@ -127,18 +127,26 @@
     },
     "repo": {
       "accept": [
-        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: acme/tools#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: acme/tools#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: a/b/c#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: owner/.github#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
       ],
       "refuse": [
-        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: a/b/c#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: a//b#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: a/../b#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: ./x#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: https://h/o/r#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
       ]
     },
     "repo-part": {
       "accept": [
-        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: my.repo_2#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: my.repo_2#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: ...x#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
       ],
       "refuse": [
-        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: my repo#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: my repo#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: -x#TD-3. Due: 2026-01-20. Answers: Go | Not yet.",
+        "- [ ] decide 2026-01-05 (n/a) — Go on the parts? Context: TD-12. Parts: ..#TD-3. Due: 2026-01-20. Answers: Go | Not yet."
       ]
     },
     "due": {

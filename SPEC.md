@@ -38,12 +38,38 @@ field's value outside its vocabulary is an error; an undeclared field is read bu
 The format's own fields are never redeclared.
 
 **`Blocked by`** — comma-separated items, each `TD-NNN` or `<repo>#TD-NNN` (another repo's
-entry; `<repo>` a name or `owner/name`), then optionally `decision (<who>)` last, whose pointer
+entry; `<repo>` as below), then optionally `decision (<who>)` last, whose pointer
 runs to the end of the line. **Pickable is derived, never written:** an entry is pickable when it
 has no `Blocked by`, or every entry it names is archived and it names no decision — and no open
 entry is `Part of` it (below). An item that cannot be read, an entry in neither the ledger nor the
 archive, or another repo's entry the reader cannot resolve keeps the block. A written
 `**Pickable:**` line is only a field.
+
+**`<repo>`** (v2.4) — the repo in another repo's id, wherever one is written (`Blocked by`, `Part of`,
+`Escaped from`, a Context or `Parts:` ref, a Log line): a name, or `/`-separated components
+(`owner/name`, or deeper for a nested group). Each component is ASCII `[A-Za-z0-9_.-]+`, is not `.`
+or `..`, and does not start with `-`; a leading `.` is allowed (`owner/.github`). So an id holds no
+URL, no host and no path traversal. Before v2.4 a repo was one or two components of `[\w.-]+`,
+non-ASCII and `..` among them. In prose (a Context or `Parts:`), a `<repo>#TD-n` is read only at the
+start, or after whitespace, an ASCII punctuation mark other than `/ . - @ : # _ \ %`, or a dash or
+quote (`— – “ ” ‘ ’ « » …`), and not when its repo's first component is a `TD-n`. After anything else
+(a letter, a digit, a combining mark, a zero-width character) it would be the tail of a longer word,
+path or URL. A bare `TD-n` is read anywhere but after `#`. So an id whose repo is not the grammar is no ref at all, never a shorter one:
+`a/../b#TD-1` and `git@host:o/r#TD-1` name neither `…#TD-1` nor `TD-1`. Refs are written apart:
+`TD-5/o/r#TD-6` reads `TD-5` alone, where `TD-5, o/r#TD-6` reads both.
+- **A repo is compared case-insensitively** where ids are looked up (`rename_ref`, a resolver) and
+  where a Context's refs are de-duplicated (`item_refs()`, `parse_parts()`, a `decide`'s one entry;
+  `ref_key()` is the comparison). The text keeps it as written, and an item's key stays byte-exact,
+  so two lines differing only in a repo's case have different keys.
+- **A repo's origin** (`origin_key(url)`, `origin_path(url)`): a readable origin is an ssh
+  (`git@host:path`, `ssh://user@host:port/path`) or https (`https://user:token@host:port/path`) URL
+  whose path is the `<repo>` grammar. Its key is `<host>/<path>`, lowercased, every component kept,
+  a trailing `/` and `.git` stripped, userinfo and port dropped, so a key never holds a credential:
+  `git@forge.example:Acme/Tools.git` is `forge.example/acme/tools`. `origin_path()` is its path part,
+  `acme/tools`, which is what a writer puts in another repo's id. Anything else (`file://`, a plain
+  local path, another scheme, a path that fails the grammar) gives none: that repo has no origin,
+  and a writer names it by its bare name. A consumer's resolver prefers an exact path match to a
+  suffix match, so `acme/tools#TD-1` finds `acme/tools` before `group/acme/tools`.
 
 **`Part of`** (v2.1) — `**Part of:** TD-n`, on a part, names its **one** parent in the **same
 ledger**; free comment may follow the id (a second id after a comma is a second parent, an error;
@@ -601,6 +627,12 @@ and `entry_text(filed=)`. `note`, `archive` and `reopen` now write the Log and l
 and a date: they no longer append to it, and each first lifts the notes already there. Every ledger
 date is the UTC date, and the entry writers refuse a naive datetime. Pickability and every field read as before:
 v2.3 reads the Log as a body section like any other, and reads the shorter Status as before.
+v2.4 also tightens `<repo>` (*The ledger*): an id or ref whose repo is non-ASCII, holds `.` or `..` as
+a component, starts a component with `-`, or is a URL is no longer read as another repo's id (it is
+an unreadable `Blocked by` item, which keeps the block, and no ref in a Context), while a repo of
+three or more components now is. A `<repo>#TD-n` is read only after the characters *The ledger* lists
+(a bare `TD-n` still is anywhere but after `#`). `origin_key()`, `origin_path()` and `ref_key()` are new, and a repo's case
+no longer makes two refs of one.
 
 ## Appendix: grammar
 
@@ -634,8 +666,8 @@ text           ::= ( [^#x20#x9] words )? [.?!]
 context        ::= " Context: " ( [^.#x20#x9] | "."+ [^.] ) words "."
 parts          ::= " Parts: " entry-id ( ", " entry-id )* "."
 entry-id       ::= ( repo "#" )? "TD-" digit+
-repo           ::= repo-part ( "/" repo-part )?
-repo-part      ::= [A-Za-z0-9_.-]+
+repo           ::= repo-part ( "/" repo-part )*
+repo-part      ::= [A-Za-z0-9_] [A-Za-z0-9_.-]* | "." [A-Za-z0-9_-] [A-Za-z0-9_.-]* | ".." [A-Za-z0-9_.-]+
 due            ::= " Due: " date "."
 hide           ::= " Hide until: " date "."
 reply          ::= " — " reply-name ", " date ": " char*

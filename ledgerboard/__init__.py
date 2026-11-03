@@ -51,7 +51,12 @@ TYPE_RE = re.compile(r"^\*\*Type:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)
 TYPES = ("debt", "feature")  # pick order within a Priority; the first is the default
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)  # the seed template's example entry lives in one
 ID_ITEM_RE = re.compile(r"^TD-(\d+)$")
-XREPO_ITEM_RE = re.compile(r"^([\w.-]+(?:/[\w.-]+)?)#(TD-\d+)$")
+# A repo in an id (v2.4): a name, or `/`-separated components (owner/name, or deeper for a nested
+# group), each ASCII [A-Za-z0-9_.-]+, none `.` or `..`, none starting with `-`: no URL, no host, no traversal.
+REPO_PART = r"(?!\.\.?(?![A-Za-z0-9_.-]))(?!-)[A-Za-z0-9_.-]+"
+REPO = rf"{REPO_PART}(?:/{REPO_PART})*"
+REPO_RE = re.compile(REPO)
+XREPO_ITEM_RE = re.compile(rf"^({REPO})#(TD-\d+)$")
 DECISION_RE = re.compile(r"\bdecision\s*\(([^)]+)\)", re.IGNORECASE)
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
@@ -186,6 +191,43 @@ def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
         else:
             bad.append(item)
     return ids, who, bad
+
+
+def ref_key(ref: str) -> str:
+    """A ref as compared (v2.4): ``<repo>#TD-n`` with its repo lowercased, any other ref as written.
+    Only the comparison folds case; the text, and an item's key, keep the repo as written."""
+    repo, sep, rest = ref.rpartition("#")
+    return f"{repo.lower()}#{rest}" if sep and rest.startswith("TD-") and REPO_RE.fullmatch(repo) else ref
+
+
+ORIGIN_SCP_RE = re.compile(r"^(?:[^@/:\s]+@)?(?P<host>[A-Za-z0-9][A-Za-z0-9.-]*):(?P<path>[^/\s][^\s]*)$")
+ORIGIN_URL_RE = re.compile(r"^(?:ssh|https)://(?:[^@/\s]*@)?(?P<host>[A-Za-z0-9][A-Za-z0-9.-]*)(?::\d+)?"
+                           r"/(?P<path>[^\s]*)$", re.IGNORECASE)
+
+
+def origin_key(url: str) -> str | None:
+    """A repo's pick key from its origin URL (v2.4): ``<host>/<path>``, lowercased, every path
+    component kept, a trailing ``/`` and ``.git`` stripped, userinfo and port dropped (a key never
+    holds a credential). It reads ssh (``git@host:path``, ``ssh://user@host:port/path``) and https
+    (``https://user:token@host:port/path``). None for anything else — ``file://``, a plain local
+    path, another scheme — and for a path that is not the ``<repo>`` grammar: such a repo has no origin."""
+    url = str(url or "").strip()
+    m = ORIGIN_URL_RE.match(url) if "://" in url else ORIGIN_SCP_RE.match(url)
+    if not m:
+        return None
+    path = m.group("path").lower().rstrip("/")
+    path = path[:-4] if path.endswith(".git") else path
+    path = path.rstrip("/")
+    if not path or not re.fullmatch(REPO, path):
+        return None
+    return f"{m.group('host').lower()}/{path}"
+
+
+def origin_path(url: str) -> str | None:
+    """The repo an id names from its origin (v2.4): ``origin_key``'s path part (``owner/name``, or
+    deeper for a nested group), lowercased; None when the origin is not readable."""
+    key = origin_key(url)
+    return key.split("/", 1)[1] if key else None
 
 
 def parse_part_of(raw: str | None) -> tuple[str | None, str | None]:
@@ -879,7 +921,13 @@ PARTS_RE = re.compile(r"\s+Parts:\s*(?P<ids>.*?)(?=\s+(?:Due|Hide until|Answers|
 # starts a sentence and is read only after the item's Due:, or after its Context: when it has none (an fyi).
 HIDE_RE = re.compile(r"(?:^|(?<=[.?!]\s))Hide until:\s*(?P<date>\d{4}-\d{2}-\d{2})\b")
 HIDE_KEY_RE = re.compile(r"\s*\bHide until:\s*\d{4}-\d{2}-\d{2}\b\.?")  # what item_key strips, as it strips Due:
-REF_TD_RE = re.compile(r"(?:[\w.-]+(?:/[\w.-]+)?#)?TD-\d+")
+# A TD ref in prose (v2.4): `<repo>#TD-n` with the repo as XREPO_ITEM_RE has it, read only at the
+# start or after whitespace, ASCII punctuation other than `/ . - @ : # _ \`, or a typographic dash or
+# quote (REF_BEFORE), and not a repo whose first component is a `TD-n`; or a bare `TD-n` with no `#`
+# before it. Anything else before a repo (a letter, a combining mark, a zero-width character, a path
+# or URL) makes it the tail of a longer word, so a bad repo is no ref at all, never a shorter one.
+REF_BEFORE = "\\s!\"$&'()*+,;<=>?\\[\\]^`{|}~—–“”‘’«»…"
+REF_TD_RE = re.compile(rf"(?<![^{REF_BEFORE}])(?!TD-\d+[/#]){REPO}#TD-\d+|(?<!#)TD-\d+")
 REF_PR_RE = re.compile(r"\bPRs?\s*#\d+(?:\s*(?:/|,|&|and)\s*#\d+)*")  # PR #12 · PRs #12/#13 · PR #12, #13
 REF_BRANCH_RE = re.compile(r"^(?P<said>branch\s+)?`?(?P<name>[A-Za-z0-9][\w./-]*)`?$")
 REF_FILE_RE = re.compile(r"\.\w{1,5}$")  # docs/plans/x.md is a path, not a branch
@@ -1056,7 +1104,7 @@ def parse_parts(text: str) -> list[str]:
         m = None
     out: list[str] = []
     for x in REF_TD_RE.finditer(m.group("ids") if m else ""):
-        if x.group(0) not in out:
+        if ref_key(x.group(0)) not in {ref_key(o) for o in out}:
             out.append(x.group(0))
     return out
 
@@ -1238,7 +1286,7 @@ def item_refs(text: str) -> list[str]:
             found.append((p.start(), f"branch {b.group('name')}"))
     refs: list[str] = []
     for _, ref in sorted(found):
-        if ref not in refs:
+        if ref_key(ref) not in {ref_key(r) for r in refs}:
             refs.append(ref)
     return refs
 
@@ -1692,7 +1740,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
         if [x.lower() for x in lifted] == ["go"]:
             lifted = []  # `Go` alone is what no Lifts: means: it is not written
     if kind == "decide" and (lifted or lifts is not None or CONTEXT_ANY_GATE_RE.search(ctx)) \
-            and len({x.group(0) for x in REF_TD_RE.finditer(ctx)}) != 1:
+            and len({ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)}) != 1:
         raise Refused("a decide that lifts a gate names exactly one entry in its context")
     label = offered[default][0] if offered and default is not None else None
     lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
@@ -1931,9 +1979,9 @@ def item_problem(line: str) -> str | None:
         ids = parts_s.split(", ")
         if kind != "decide":
             problems.append(f"parts: {_a_kind(kind)} carries no `Parts:`: only a decide asks about a parent's parts")
-        if not all(REF_TD_RE.fullmatch(x) for x in ids):
+        if not all(ID_ITEM_RE.fullmatch(x) or XREPO_ITEM_RE.fullmatch(x) for x in ids):
             problems.append("parts: `Parts:` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `")
-        elif len(set(ids)) != len(ids):
+        elif len({ref_key(x) for x in ids}) != len(ids):  # a repo in any case is one repo
             problems.append("parts: an id stands twice")
         if not pm.group("period"):
             problems.append("parts: no period after its ids")
@@ -1980,7 +2028,7 @@ def item_problem(line: str) -> str | None:
         if i == 0 or order[i - 1] != "Answers":
             problems.append("lifts: `Lifts:` follows Answers")
     if kind == "decide" and ctx is not None and (parts or lifts_seg or CONTEXT_ANY_GATE_RE.search(ctx)) \
-            and len({x.group(0) for x in REF_TD_RE.finditer(ctx)}) != 1:
+            and len({ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)}) != 1:
         problems.append("context: a decide that lifts a gate names exactly one entry in its Context")
     for name in ("Decided", "Closed"):
         if name in order:
@@ -2782,9 +2830,9 @@ LOG_LINE_RE = re.compile(r"^- (?P<date>\d{4}-\d{2}-\d{2}): (?P<words>\S.*?)$")
 LOG_PREFIXES = ("filed by ", "gate added:", "gate lifted:", "gate reassigned:", "kept waiting:",
                 "gate lift skipped:", "was:", "archived:", "reopened —")
 LOG_TOKEN = r"[A-Za-z0-9_.@/-]+"  # who, a session, a host: no spaces, commas, colons or quotes
-LOG_ID = r"(?:[\w.-]+(?:/[\w.-]+)?#)?TD-\d+"  # the ids Blocked by takes
+LOG_ID = rf"(?:{REPO}#)?TD-\d+"  # the ids Blocked by takes
 LOG_GATE = r"decision \(" + PERSON + r"\)|until \d{4}-\d{2}-\d{2}|event \([a-z0-9-]+\)"
-LOG_LIFT_SUFFIX = r"; board [\w.-]+(?:/[\w.-]+)?|; no board item|; shared board item left open"
+LOG_LIFT_SUFFIX = rf"; board {REPO}|; no board item|; shared board item left open"
 # Each writer-made shape, tried in this order; a quoted label or words run to the line's last `"`.
 LOG_SHAPES = (
     ("filed", re.compile(rf"filed by (?P<who>{LOG_TOKEN}), session (?P<session>{LOG_TOKEN})"

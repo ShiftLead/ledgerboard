@@ -53,6 +53,10 @@ Fixtures, each an invented input and its expected JSON:
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
   ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``is_person()`` of a name.
   ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
+- ``origins/cases.json`` → ``origins/expected.json`` (v2.4): repos and origins — ``origin_key()`` and
+  ``origin_path()`` of ssh, https and unreadable URLs; ``item_key()`` of two lines differing only in a repo's
+  case (it stays byte-exact); ``item_refs()`` folding a repo's case and reading no ref from a bad repo; and
+  ``parse_blocked()`` of ids whose repo is or is not the grammar.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -313,6 +317,18 @@ def grammar_cases(L, spec: dict) -> dict:
             for start, groups in spec.items()}
 
 
+def origin_cases(L, spec: dict) -> dict:
+    """Repos and origins (v2.4): ``origin_key()`` and ``origin_path()`` of each URL, ``item_key()`` of lines
+    differing only in a repo's case, ``item_refs()`` of Contexts naming repos, ``parse_blocked()`` of ids."""
+    if not hasattr(L, "origin_key"):
+        return {"missing": "the module has no origin_key — older than v2.4"}
+    return {"origin_key": {u: {"key": L.origin_key(u), "path": L.origin_path(u)} for u in spec["origin_key"]},
+            "item_key": {x: L.item_key(x) for x in spec["item_key"]},
+            "item_refs": {x: L.item_refs(x) for x in spec["item_refs"]},
+            "blocked": {x: list(L.parse_blocked(x)) for x in spec["blocked"]},
+            "item_problem": {x: L.item_problem(x) for x in spec.get("item_problem", [])}}
+
+
 def tree(d: Path) -> dict[str, str]:
     """Every file under `d`, by its path relative to `d`, read as bytes so line endings are kept."""
     return {str(p.relative_to(d)): p.read_bytes().decode("utf-8")
@@ -375,6 +391,8 @@ def cases(L, root: Path):
     yield root / "ledger_edit" / "expected.json", ledger_edit_cases(L, spec, root)
     spec = json.loads((root / "grammar" / "cases.json").read_text(encoding="utf-8"))
     yield root / "grammar" / "expected.json", grammar_cases(L, spec)
+    spec = json.loads((root / "origins" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "origins" / "expected.json", origin_cases(L, spec)
 
 
 def main(argv: list[str] | None = None) -> int:
