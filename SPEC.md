@@ -529,4 +529,111 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
-**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:`, `(by …)`, `Parts:` and `Lifts:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also notes a rank key longer than 64 characters and gives the rank its fourth write, `respace` (*The rank*), whose subject `queue: respace …` older readers do not read as `queue`. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is the first of v2.3's three changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The second: two fields are added for v2.4's lifts, read, ordered and keyed a release ahead (*The board*): `Parts:`, on a `decide` after its Context, and `Lifts:`, after its Answers. A `Context:` now ends at a ` Parts:` or ` Lifts:` as it does at ` Due:`, so a line that held that prose in its Context before v2.3 reads a shorter Context and fewer refs; and the answers end at a ` Lifts:` that starts a sentence, so a line whose last answer held one reads it apart. v2.2 reads a `Parts:`'s ids as Context refs and a `Lifts:` as part of the last answer, so a consumer writes them only once every reader of its board runs v2.3. The third is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Apart from `Hide until:`, `(by …)`, `Parts:` and `Lifts:` (below), the writers change nothing that is read: v2.2 reads every line they write, and a line without a `Hide until:` keys as before. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer. It also adds `Hide until:` (*The board*): `snooze` writes it and leaves `Due:` alone, the new `due` edit moves `Due:`, `item_line(hide_until=)` writes it on a new item, `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new. v2.3 also notes a rank key longer than 64 characters and gives the rank its fourth write, `respace` (*The rank*), whose subject `queue: respace …` older readers do not read as `queue`. v2.3 also starts SPEC's grammar appendix (*Appendix: grammar*): the open item line, a person's name and the rank file in EBNF, informative, beside fixtures that are the authority; it changes nothing that is read. v2.3 also names the board's people and who answered (*The board*, *The board writer*): the `People:` preamble line and `board_people()`, `board_problems()`'s `People:` checks (`people_problems()`), and `Decided: <label> (by <person>) (D).`, which `decide`, `decided_line(by=)` and the writer's `--by` write. That is the first of v2.3's three changes to what is read: a `Decided:` written before v2.3 whose text happens to end in `(by <name>)`, `<name>` a person's name, now reads that ending as who answered (`Decided: Go (by Friday) (D).` reads the label `Go`, by `Friday`, who is on no `People:` list, so it fails safe), and its key is unchanged. v2.2 reads a v2.3 `(by …)` as part of the answer's text. A consumer's v2.3 vendor PR shows that none of its boards holds such a line. The second: two fields are added for v2.4's lifts, read, ordered and keyed a release ahead (*The board*): `Parts:`, on a `decide` after its Context, and `Lifts:`, after its Answers. A `Context:` now ends at a ` Parts:` or ` Lifts:` as it does at ` Due:`, so a line that held that prose in its Context before v2.3 reads a shorter Context and fewer refs; and the answers end at a ` Lifts:` that starts a sentence, so a line whose last answer held one reads it apart. v2.2 reads a `Parts:`'s ids as Context refs and a `Lifts:` as part of the last answer, so a consumer writes them only once every reader of its board runs v2.3. The third is `Hide until:`: it is read as a field, a `Context:` ends at a ` Hide until:` as it does at ` Due:`, and the item key strips a `Hide until: D` (*The item key*). So a line that already held the prose `Hide until:` in its Context before v2.3 reads a shorter Context, and one that held `Hide until: D` is keyed without it; no other line's Context or key changes for it. v2.2 reads a `Hide until:` as text (on an item with no `Due:`, as part of its Context), so it shows a hidden item and leaves the field in the item key: a consumer writes the field only once every reader of its board runs v2.3.
+
+## Appendix: grammar
+
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; later releases add the rest).
+**The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
+accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
+The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
+what they repeat, `"…"` is literal text, `[…]` a character class (`^` negates it, `#xN` is a code point), and
+`(…)` groups. What a production cannot say is said in prose under its block.
+
+### The open item line (v2.3)
+
+An item line as the writers write it (*The form the writers write*): a line `item_problem()` gives None for.
+Its line ending is not part of it. `item_problem()` also passes a line whose `- [ ] ` is followed by further
+whitespace other than a space (a tab), which no writer writes; the grammar does not.
+
+```ebnf
+item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | other-item | decided-item )
+decide-item    ::= "decide " date " " head " — " text context parts? due hide? reply* choices lifts?
+look-item      ::= "look " date " " head " — " text context due hide? reply* look-answers
+fyi-item       ::= "fyi " date " " head " — " text context hide? fyi-reply*
+other-item     ::= ( ( "act" | "watch" ) " " )? date " " head " — " text context due hide? reply*
+decided-item   ::= ( "decide " date " " any-head " — " text context parts? due hide? reply* ( answers lifts? )?
+                   | ( ( "act" | "look" | "watch" ) " " )? date " " any-head " — " text context due hide? reply* answers?
+                   | "fyi " date " " any-head " — " text context hide? fyi-reply* answers? ) decided
+head           ::= "(session `" head-name "`" ( " on " head-name )? ")" | "(n/a)"
+any-head       ::= head | "(person)"
+head-name      ::= [^#x20#x9`,;()]+
+date           ::= digit digit digit digit "-" digit digit "-" digit digit
+digit          ::= [0-9]
+text           ::= ( [^#x20#x9] words )? [.?!]
+context        ::= " Context: " ( [^.#x20#x9] | "."+ [^.] ) words "."
+parts          ::= " Parts: " entry-id ( ", " entry-id )* "."
+entry-id       ::= ( repo "#" )? "TD-" digit+
+repo           ::= repo-part ( "/" repo-part )?
+repo-part      ::= [A-Za-z0-9_.-]+
+due            ::= " Due: " date "."
+hide           ::= " Hide until: " date "."
+reply          ::= " — " reply-name ", " date ": " char*
+fyi-reply      ::= " — " reply-name ", " date ":" undated
+undated        ::= char* - ( char* dated-due char* )
+dated-due      ::= non-word due-name " "* date
+reply-name     ::= [^#x20#x9,—] [^,—]*
+choices        ::= " Answers: " answer ( answer-sep answer )+ "."
+answers        ::= " Answers: " answer ( answer-sep answer )* "."
+look-answers   ::= " Answers: Works" " (default)"? " | Not right: <what>."
+answer         ::= label ( " (default)" )? ( " — " char* )?
+label          ::= label-start label-chars
+label-start    ::= "\|" | [^|#x20#x9#xA]
+label-chars    ::= label-char* - ( label-char* field-at label-char* )
+label-char     ::= "\|" | [^|#xA]
+answer-sep     ::= " "* "|" " "*
+lifts          ::= " Lifts: " label ( answer-sep label )* "."
+decided        ::= " Decided:" char* "(" date ")" "."?
+words          ::= char* - ( char* field-at char* )
+field-at       ::= non-word field-name
+non-word       ::= [^A-Za-z0-9_#x80-#x10FFFF#xA]
+field-name     ::= "Context:" | "Parts:" | due-name | "Hide until:" | "Answers:" | "Lifts:" | "Decided:" | "Closed:"
+due-name       ::= [Dd] [Uu] [Ee] ":"
+char           ::= [^#xA]
+```
+
+What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
+whitespace. A field name counts only at a word's start, after a character that is no letter, digit or `_`
+(`field-at` names the ASCII ones; the module's word boundary also counts one after any other character that is
+no letter, digit or `_`, such as an em dash or a no-break space, so the grammar accepts such a line, which the
+module refuses). A
+field name that opens the text, the Context or a label is one the grammar accepts and the module refuses: none
+opens with one, and an fyi's Context holds no `Due:` either. A `Due:` in an fyi's reply is one only with its
+date, not run on into a further digit or letter. A `Decided:` text is the person's: the writers write
+` Decided: <text> (<date>).`, and the module reads any spacing around the text, or none. A reply's words are the person's: any other field there is not counted, but they hold
+nothing shaped like a reply and end where a trailing field (`Answers:`, `Lifts:`, `Decided:`) starts a sentence
+and runs to the line's end, which ends them with `.`, `?` or `!`; nor does a Context hold a reply's shape. A `reply-name` is at most 40 characters, and a `label` holds no ` — ` and does not end in
+` (default)`. A `decide`'s answers each have their own label, at most one marked ` (default)`; a decided line's
+too, at most one marked. A `Parts:` names each id once. A `Lifts:` names each label once, each one of the item's
+answers (compared case-insensitively), and never `Go` alone. A `decide` whose Context names a gate, or that
+carries `Parts:` or `Lifts:`, names exactly one entry in its Context.
+
+### A person's name (v2.3)
+
+A person's name (*The board*, `People:`), as `is_person()` reads it: who answered, in a `Decided:` text's final
+`(by <person>)` before its date (which is otherwise part of the text the `decided` production reads), each name
+of a `People:` line, and the person of a `decision (<person>)` gate. Names compare case-insensitively.
+
+```ebnf
+person         ::= person-part ( "." person-part )*
+person-part    ::= [A-Za-z0-9_-]+
+```
+
+### The rank file (v2.3)
+
+A rank file the reader reads without a flag (*The rank*): `rank()` gives no ⚠ and no ℹ for it.
+
+```ebnf
+rank-file      ::= comment-line* ( comment | rank-line* rank-entry? )
+comment-line   ::= comment eol
+comment        ::= "#" line-char*
+rank-line      ::= rank-entry eol
+rank-entry     ::= "TD-" [0-9]+ ":" [#x20#x9]+ key [#x20#x9]*
+key            ::= [0-9A-Za-z] [0-9A-Za-z_|./-]*
+eol            ::= #xD #xA | [#xA-#xD#x1C-#x1E#x85#x2028#x2029]
+line-char      ::= [^#xA-#xD#x1C-#x1E#x85#x2028#x2029]
+```
+
+What the productions leave to prose: the lines are sorted by key (`key_order()`), no id stands twice, and no key
+is longer than 64 characters (`KEY_NOTE_AT`). The last line may end without its `eol`, as `comment` and
+`rank-entry` show.

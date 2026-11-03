@@ -47,6 +47,10 @@ Fixtures, each an invented input and its expected JSON:
   starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
   as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
   exit code and the JSON it printed: the subject and the paths, the plan, or why it refused).
+- ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
+  production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
+  ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``is_person()`` of a name.
+  ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -281,6 +285,21 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                 for c in spec["entry_text"]}}
 
 
+def grammar_cases(L, spec: dict) -> dict:
+    """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
+    ``item_problem()``, a rank file's ``rank()`` flags, a person's name's ``is_person()``."""
+    if not hasattr(L, "is_person"):  # a module older than v2.3: this case fails, the others still run
+        return {"missing": "the module has no is_person — older than v2.3"}
+    judge = {
+        "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
+        "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
+        "person": lambda s: (L.is_person(s), None),
+    }
+    return {start: {prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
+                    for prod, g in groups.items()}
+            for start, groups in spec.items()}
+
+
 def tree(d: Path) -> dict[str, str]:
     """Every file under `d`, by its path relative to `d`, read as bytes so line endings are kept."""
     return {str(p.relative_to(d)): p.read_bytes().decode("utf-8")
@@ -341,6 +360,8 @@ def cases(L, root: Path):
             yield case, writer_case(L, case)
     spec = json.loads((root / "ledger_edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "ledger_edit" / "expected.json", ledger_edit_cases(L, spec, root)
+    spec = json.loads((root / "grammar" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "grammar" / "expected.json", grammar_cases(L, spec)
 
 
 def main(argv: list[str] | None = None) -> int:
