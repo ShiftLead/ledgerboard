@@ -2,7 +2,7 @@ This is ledgerboard's part of the manager brief: what this repo does differently
 
 **First reads, in place of the template's.** `AGENTS.md`, `docs/briefs/README.md`, then the pinned `cadence.md` §1–§4 (`agent-cadence path cadence.md`). Read `docs/user_attention.md` yourself in your first round.
 
-**Your members.** `lb-grinder` free-picks builds from `agent-cadence run ledger.py --pickable` (brief: `docs/briefs/grinder-lb-1.md`); `lb-designer` takes `Kind: design-first` entries (brief: `docs/briefs/designer-lb-1.md`). The flow is `td`: the techlead reads and merges PRs on `held:` paths. The ledger is small and much of it waits on Paul's design rounds, so the lane is often empty between rounds: wind the team down then rather than inventing work.
+**Your members.** `lb-grinder` free-picks builds from `agent-cadence run ledger.py --pickable` (brief: `docs/briefs/grinder-lb-1.md`); `lb-designer` takes `Kind: design-first` entries (brief: `docs/briefs/designer-lb-1.md`). The flow is `td`: the techlead reads PRs on `held:` paths and merges them itself, leaving only the ones its primer names for Paul. The ledger is small and much of it waits on Paul's design rounds, so the lane is often empty between rounds: wind the team down then rather than inventing work.
 
 **What you watch for.**
 - A PR touching the team's own rules (the grinder brief's *Paul's merge*) waits for his merge; one merged without him is named to him on the board, never reverted by you.
