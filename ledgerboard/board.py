@@ -7,11 +7,11 @@
     python3 -m ledgerboard.board add     --board PATH --text T [--due D] [--context C] [--kind K]
                                          [--answer A]... [--default N] [--detail JSON]
                                          [--session S [--host H]] [--said WORDS --by NAME]
-                                         [--decided WORDS] [--under HEADING]
+                                         [--decided WORDS [--by NAME]] [--under HEADING]
     python3 -m ledgerboard.board snooze  --board PATH --line N --expect HEAD --to D   (hide until D)
     python3 -m ledgerboard.board due     --board PATH --line N --expect HEAD --to D   (move Due: to D)
     python3 -m ledgerboard.board done    --board PATH --line N --expect HEAD [--why TEXT]
-    python3 -m ledgerboard.board decide  --board PATH --line N --expect HEAD --answer TEXT
+    python3 -m ledgerboard.board decide  --board PATH --line N --expect HEAD --answer TEXT [--by NAME]
     python3 -m ledgerboard.board reply   --board PATH --line N --expect HEAD --text TEXT --by NAME
     python3 -m ledgerboard.board archive --board PATH --archive PATH
     python3 -m ledgerboard.board fmt     --board PATH
@@ -22,7 +22,7 @@ Every write reads its files, applies the module's edit (``edit_line``, ``item_li
 ``archive_closed``, ``canonical_item``, ``set_rank``), and writes the files back, both or neither. It
 prints the commit subject the module gives and the paths it changed (``--json``: one object);
 ``--plan`` prints the changes as JSON (each path with its new text) and writes nothing. It never runs
-git, the network or anything of a consumer's: the caller passes who replies (``--by``), the date
+git, the network or anything of a consumer's: the caller passes who replies or answers (``--by``), the date
 (``--today``, default the local clock) and the tool and session the subject names, and makes the
 commit itself.
 
@@ -47,15 +47,18 @@ from . import (
     Refused,
     archive_closed,
     archive_subject,
+    board_people,
     board_problems,
     canonical_item,
     closed_items,
     decided_line,
     edit_line,
     is_item,
+    is_person,
     item_line,
     item_record,
     parse_board,
+    people_problems,
     queue_subject,
     set_rank,
     subject,
@@ -183,10 +186,38 @@ def _under(lines: list[str], heading: str | None) -> int:
 
 
 def _gate(path: str, old: str, new: str) -> None:
-    """Refused when the write adds an open line the writers would not write (``board_problems()``)."""
-    bad = board_problems(new, old)
+    """Refused when the write adds an open line the writers would not write (``board_problems()``); its
+    notes (``ℹ``, a board with no ``People:``) are no fault."""
+    bad = [(n, why) for n, why in board_problems(new, old) if not why.startswith("ℹ")]
     if bad:
         raise Refused(f"{path}: " + "; ".join(f"line {n}: {why}" for n, why in bad))
+
+
+def who_answered(board_text: str, by: str | None) -> str:
+    """Who gave an answer on this board (v2.3, target design §6.2): on a board whose ``People:`` lists one
+    name, `by` defaults to it; otherwise `by` is required. A `by` off the ``People:`` list (compared
+    case-insensitively) is refused, and one on it is written as ``People:`` spells it. On a board with no
+    ``People:`` line, `by` is checked against the person grammar only. A ``People:`` line the gate faults
+    (``people_problems()``) refuses every answer: nobody can be checked against it."""
+    by = " ".join((by or "").split()) or None
+    people = board_people(board_text)
+    if people is None:
+        if by is None:
+            raise Refused("this board has no People: line, so an answer needs --by, who gave it")
+        if not is_person(by):
+            raise Refused(f"--by {by!r} is not a person's name (letters, digits, `_`, `-`, dot-separated)")
+        return by
+    bad = [why for _, why in people_problems(board_text) if not why.startswith("ℹ")]
+    if bad:
+        raise Refused("the board's People: line is not one the writers read: " + "; ".join(bad))
+    if by is None:
+        if len(people) == 1:
+            return people[0]
+        raise Refused(f"--by: who gave the answer — the board's People: lists {', '.join(people)}")
+    named = next((x for x in people if x.lower() == by.lower()), None)
+    if named is None:
+        raise Refused(f"--by {by} is not on the board's People: ({', '.join(people)})")
+    return named
 
 
 def plan_add(board: str, text: str, *, due: str | None = None, context: str | None = None,
@@ -198,13 +229,14 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
     """A new item at the top of the section `under` names (``item_line()``); with `said`, a question that
     was already answered, `by` and its words following the text as ` — <by>, <today>: <said>` (the
     subject keeps them out); with `decided`, an item already decided by the person (``decided_line()``:
-    `text` its title, `context` its ref)."""
+    `text` its title, `context` its ref, `by` who answered, as ``who_answered()`` resolves it)."""
     day = _today(today).isoformat()
     bare = None
     if decided is not None:
-        if any(v is not None for v in (due, kind, detail, session, host, said, by, hide_until)):
-            raise Refused("a decided item takes its title, context, answers, default and words alone")
-        new = decided_line(text, context or "", list(answers or []), default, decided, day)
+        if any(v is not None for v in (due, kind, detail, session, host, said, hide_until)):
+            raise Refused("a decided item takes its title, context, answers, default, words and who gave them alone")
+        new = decided_line(text, context or "", list(answers or []), default, decided, day,
+                           by=who_answered(read(board), by))
     else:
         words = text
         if said is not None or by is not None:
@@ -258,7 +290,8 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
               why: str | None = None, answer: str | None = None, text: str | None = None,
               by: str | None = None, today: str | date | None = None, tool: str = TOOL,
               session: str | None = None) -> Plan:
-    """One of the five edits (``edit_line()``) of open item `line`, which must still start with `expect`."""
+    """One of the five edits (``edit_line()``) of open item `line`, which must still start with `expect`; a
+    decide's `by`, who answered, as ``who_answered()`` resolves it."""
     if action not in EDITS:
         raise Refused(f"an edit is one of {', '.join(EDITS)}, not {action!r}")
     day = _today(today)
@@ -272,6 +305,8 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
     old = read(board)
     lines = old.splitlines(keepends=True)
     body, eol = _find(lines, line, expect)
+    if action == "decide":
+        by = who_answered(old, by)
     new = edit_line(body, action, to=when, answer=answer, why=why, reply=text, by=by, today=day)
     lines[line - 1] = new + eol
     msg = subject(tool, action, ITEM_RE.match(body).group("text").strip(),
@@ -390,7 +425,7 @@ TAKES = {
     "snooze": {"board", "line", "expect", "to", "today", "tool", "session"},
     "due": {"board", "line", "expect", "to", "today", "tool", "session"},
     "done": {"board", "line", "expect", "why", "today", "tool", "session"},
-    "decide": {"board", "line", "expect", "answer", "today", "tool", "session"},
+    "decide": {"board", "line", "expect", "answer", "by", "today", "tool", "session"},
     "reply": {"board", "line", "expect", "text", "by", "today", "tool", "session"},
     "archive": {"board", "archive", "tool", "session"},
     "fmt": {"board"},
@@ -422,7 +457,8 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--answer", action="append", default=[],
                     help="decide: the person's answer; add: one of the item's answers (repeat)")
     ap.add_argument("--text", help="add: the item's text; reply: the reply's words")
-    ap.add_argument("--by", help="reply, add --said: who says it")
+    ap.add_argument("--by", help="reply, add --said: who says it; decide, add --decided: who answered (the one name "
+                    "on the board's People: when it lists one)")
     ap.add_argument("--said", help="add: the answer already given, which follows the text on the line")
     ap.add_argument("--due", help="add: the item's Due: date")
     ap.add_argument("--hide-until", dest="hide_until", help="add: hide the new item until this date")

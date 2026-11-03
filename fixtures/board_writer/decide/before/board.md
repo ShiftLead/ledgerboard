@@ -1,6 +1,7 @@
 # Attention board
 
 Format: `- [ ] YYYY-MM-DD (session <name> on <host>, or n/a) — what. Context: x. Due: YYYY-MM-DD.`
+People: pat
 
 ## Needs the user
 

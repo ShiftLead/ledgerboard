@@ -4,7 +4,7 @@
   "--board",
   "board.md",
   "--line",
-  "8",
+  "9",
   "--expect",
   "decide 2026-01-11",
   "--answer",

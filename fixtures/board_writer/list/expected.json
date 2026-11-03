@@ -7,6 +7,7 @@
     "answers": [],
     "consequences": [],
     "decided": null,
+    "decided_by": null,
     "default": null,
     "detail": [],
     "due": "2026-01-20",
@@ -36,6 +37,7 @@
      ""
     ],
     "decided": null,
+    "decided_by": null,
     "default": "Memory",
     "detail": [
      "- **Context:** Two caches fit.",

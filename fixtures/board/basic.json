@@ -16,6 +16,7 @@
     "date": "2026-01-14",
     "text": "beta"
    },
+   "decided_by": null,
    "default": "beta",
    "detail": [],
    "due": "2026-01-12",
@@ -40,6 +41,7 @@
    "answers": [],
    "consequences": [],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [
     "- the second region is still on the old key",
@@ -80,6 +82,7 @@
     ""
    ],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [],
    "due": "2026-02-01",
@@ -101,6 +104,7 @@
    "answers": [],
    "consequences": [],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [],
    "due": "2026-01-01",
@@ -122,6 +126,7 @@
    "answers": [],
    "consequences": [],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [],
    "due": null,
@@ -143,6 +148,7 @@
    "answers": [],
    "consequences": [],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [],
    "due": null,
@@ -164,6 +170,7 @@
    "answers": [],
    "consequences": [],
    "decided": null,
+   "decided_by": null,
    "default": null,
    "detail": [],
    "due": null,
@@ -229,5 +236,6 @@
    "fyi",
    null
   ]
- ]
+ ],
+ "people": null
 }
