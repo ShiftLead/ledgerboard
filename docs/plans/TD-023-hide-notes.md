@@ -23,7 +23,7 @@ The second reason is the deeper one. SPEC *The gate* says a line "is judged once
 
 ## The rules
 
-`item_notes(item: BoardItem, today: date) -> list[str]` returns the item's notes in rule order. Each note opens with its rule's tag, as `item_problem()`'s faults do, and carries no ℹ glyph: the glyph is a printer's. With no `Hide until`, the list is empty. Both rules are read from the parsed fields (`hide_until`, `due`, `decided`, `hidden(today)`), so a `Hide until:` inside a reply, an answer or a `Decided:` text is prose and gets no note, as the reader already rules.
+`item_notes(item: BoardItem, today: date) -> list[str]` returns the item's notes in rule order. Its item is an open one, as `parse_board()` gives them, so a closed item never has notes, and an item's indent changes nothing. Dates in a note are written ISO (`YYYY-MM-DD`), as `isoformat()` gives them. Each note opens with its rule's tag, as `item_problem()`'s faults do, and carries no ℹ glyph: the glyph is a printer's. With no `Hide until`, the list is empty. Both rules are read from the parsed fields (`hide_until`, `due`, `decided`, `hidden(today)`), so a `Hide until:` inside a reply, an answer or a `Decided:` text is prose and gets no note, as the reader already rules.
 
 1. **`hide-spent`: the hide hides nothing.** The item carries a `Hide until: D`, and `hidden(today)` is false. This covers two cases:
    - On an undecided item, D has come (D ≤ today). The note is `hide-spent: Hide until: D has come, so it hides nothing; a snooze replaces it`.
@@ -37,18 +37,27 @@ The two rules exclude each other (one needs `hidden(today)`, the other its negat
 ## Where the notes are read
 
 - **`item_record()` gains `notes`**, `item_notes(item, today)`, after `hidden`. Every board fixture's records gain the key.
-- **The board writer** (`board.py`) reports the notes of the open line a write leaves: the line `add` wrote, and the line `snooze`, `due`, `decide` or `reply` edited. They go into the plan's report as `"notes": [{"line": n, "note": "<note>"}]`, and so appear in `--json` and in `--plan`. The text mode prints each one on stderr as `line n: ℹ <note>`. Neither changes the exit code, and the write is made. `done` leaves no open line. `fmt`, `archive`, `rank` and `list` report none: `list --json` already carries each record's `notes`.
+- **The board writer** (`board.py`) reports the notes of the open line a write leaves. That is the line `add` wrote (its reported `line`, the item's own line, above its detail block) or the line `snooze`, `due`, `decide` or `reply` edited (`--line`).
+  - **How it reads them:** the writer reads the board as the write leaves it, with `parse_board(new, warn=False)`. It takes the item whose `line` is that line and passes it to `item_notes(item, today)` at the write's `--today`. With no such item, which happens when the line is the open twin of a closed one, the notes are `[]`.
+  - **The JSON:** the plan's report carries `"notes": [{"line": n, "note": "<note>"}, …]`, always present for those five actions and `[]` when there are none. It appears both in a write's `--json` and in `--plan`. `done`, `fmt`, `archive`, `rank` and `list` carry no `notes` key. `done` leaves no open line, and `list --json` already carries each record's `notes`.
+  - **The text mode:** without `--json` or `--plan`, each note is printed on stderr as `line n: ℹ <note>`, after the subject and paths, as the `kept:` lines are.
+  - **The exit code:** a note never changes it, and the write is made.
+  - **Notes it did not cause:** the writer reports the line's notes as the write leaves them, including one the write did not cause. A `reply` or `due` on a line whose hide is late reports `hide-late`. A `decide` on a hidden item reports the decided `hide-spent`, since deciding it ends the hide. That is deliberate: the note describes the line the caller just touched.
 - **Nothing else.** `board_problems()`, `item_problem()`, `canonical_item()`, `needs_you()` and every edit's refusals are unchanged. What a consumer shows of a note is the consumer's. No consumer needs to change for the build: a consumer that reads `item_record()` by key ignores the new one, so no entry is filed in agent-cadence or ShiftLead.
 
 ## The `SPEC.md` text
 
 **1. *The board*, a new paragraph right after the `**`Hide until:`** (v2.3)` paragraph:**
 
-> **Notes on a hide** (`item_notes(item, today)`, v2.3) inform and never refuse: no gate reads them. Each opens with its rule's tag. `hide-spent` is a `Hide until:` on an item that is not hidden today. Either its date has come (`hide-spent: Hide until: D has come, so it hides nothing; a snooze replaces it`), or the item is decided (`hide-spent: a decided item is never hidden, so Hide until: D hides nothing`). `hide-late` is a hidden item whose `Hide until: D` is later than its `Due: E` (`hide-late: Hide until: D is after Due: E, so the item stays hidden past its deadline`). An item carries at most one of them. `item_record()` carries them as `notes`.
+> **Notes on a hide** (`item_notes(item, today)`, v2.3) inform and never refuse: no gate reads them. Each opens with its rule's tag, and D and E stand for the ISO dates of the fields.
+> - `hide-spent` is a `Hide until:` on an open item that is not hidden today. Either its date has come (`hide-spent: Hide until: D has come, so it hides nothing; a snooze replaces it`), or the item is decided (`hide-spent: a decided item is never hidden, so Hide until: D hides nothing`).
+> - `hide-late` is a hidden item whose `Hide until: D` is later than its `Due: E` (`hide-late: Hide until: D is after Due: E, so the item stays hidden past its deadline`). An `fyi`, or an item whose `Due:` cannot be read, has no deadline, so it never gets a `hide-late`.
+>
+> An item carries at most one of them. `item_record()` carries them as `notes`.
 
 **2. *The board writer (v2.3)*, a sentence appended to the paragraph that opens "Each write prints the commit subject":**
 
-> A write that leaves an open line, `add` and every edit but `done`, also reports that line's notes (`item_notes()` at `--today`), as `notes`, `[{"line", "note"}]`, in its JSON, and as `line n: ℹ <note>` on stderr. A note never changes the exit code.
+> A write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()` at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the notes are `notes`, `[{"line", "note"}]`, always present and `[]` when there are none. Without either, each is printed on stderr as `line n: ℹ <note>`. A note never changes the exit code.
 
 **3. *Versions*, in the v2.3 paragraph, the clause `` `item_record()` gains `hide_until` and `hidden`, and `needs_you()` and `edit_action()` are new `` becomes:**
 
@@ -67,9 +76,17 @@ The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so 
   - lines 19 and 20 (a `Hide until:` inside an answer and inside a `Decided:` text): `[]`;
   - every other line: `[]`.
 - **`board/basic.json`, `board/answers.json` and `board_writer/list/expected.json`** gain `"notes": []` on every record.
-- **`board_writer/snooze_late/`** (new): a `snooze` to a date after the item's `Due:`. It exits 0, writes the file, and its JSON carries the `hide-late` note for that line.
-- **`board_writer/add_hidden/`**: unchanged, because its hide (2026-01-19) is before its `Due:` (2026-01-22). Its JSON gains `"notes": []`.
-- **`edit/cases.json`**: an `item_notes` group over item lines parsed at the file's `today`. It holds a hide one day before `Due:` (no note), one equal to `Due:` (no note), and a hide on a line whose `Due:` cannot be read (no note). Each is a line the board fixture does not already hold.
+- **`board_writer/snooze/`**: it already snoozes an item due 2026-01-20 to 2026-01-29, so it is the `hide-late` case. Its `expected.json` gains `"notes": [{"line": 7, "note": "hide-late: Hide until: 2026-01-29 is after Due: 2026-01-20, so the item stays hidden past its deadline"}]`, and it still exits 0 and writes the file.
+- **`board_writer/snooze_spent/`** (new): the same board and line, snoozed `--to 2026-01-15` at `--today 2026-01-15`. It exits 0, writes `Hide until: 2026-01-15.`, and its JSON carries `hide-spent: Hide until: 2026-01-15 has come, so it hides nothing; a snooze replaces it` for line 7.
+- **`board_writer/decide_hidden/`** (new): a `decide` of an undecided item that carries a `Hide until:` still ahead. Its JSON carries the decided `hide-spent` for that line.
+- **Every other `expected.json` of `add_*`, `due`, `decide` and `reply`** (`add_act`, `add_answered`, `add_crlf`, `add_decide`, `add_decided`, `add_empty_section`, `add_fyi_no_heading`, `add_hidden`, `due`, `decide`, `reply`) gains `"notes": []`. `add_hidden`'s hide (2026-01-19) is before its `Due:` (2026-01-22), so its list is empty too. The `expected.json` of `done`, `plan_done`, `fmt`, `archive*` and `rank*` does not change.
+- **`edit/cases.json`**: an `item_notes` group, `[{"name", "line"}]`. Each line is read as `parse_board(line, warn=False)[0]` and given to `item_notes()` at the file's `today`, and the expected output is each name's list. The group holds:
+  - a hide one day before `Due:` (no note);
+  - a hide equal to `Due:` (no note);
+  - a later hide on a line whose `Due:` cannot be read (no note);
+  - a later hide on an `fyi` that carries a `Due:` anyway (no note, since an fyi is never due).
+
+  Each is a line the board fixture does not already hold.
 
 ## The build
 
