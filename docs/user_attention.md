@@ -16,6 +16,9 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
+- [ ] act 2026-11-03 (session `lb-grinder`) — Release v2.3: every build is merged (TD-012 to TD-019, the last PR #77), so stamp and tag it. Context: TD-021. Due: 2026-11-03.
+  - **Context:** Every v2.3 build is on main: the board writers and their gate, the package, board.py, Hide until, the board people line and who decided, the parts and lifts fields, respace and the grammar appendix. TD-008 is archived. TD-021 is the release itself; the consumers vendor entries and the v2.4 builds (TD-010, TD-011) wait on it, and no session but yours runs release.sh.
+  - **Recommended:** ./release.sh 2.3 on a branch and merge its PR, then git checkout --detach origin/main and ./release.sh --tag 2.3 (AGENTS.md, Commands); TD-021 says the rest.
 - [x] decide 2026-10-30 (person) — A new decide item and an archive of closed ones have no writer: the board's writers cover every write, as the ledger's now do. Context: TD-008. Due: 2026-10-30. Decided: go ahead (2026-10-30). Closed: 2026-10-31 — TD-008's block lifted on Paul's go; the ledgerboard team builds it.
 - [x] act 2026-10-31 (n/a) — Merge PR #53 (PRs gated on the local precheck); merge PR #54 (release tag from a worktree) once the techlead has read it. Context: TD-003 / PR #53, TD-009 / PR #54. Due: 2026-10-31. Closed: 2026-11-03 — both merged by Paul on 2026-11-01: PR #53 (local precheck) and PR #54 (tag from a worktree).
   - **Context:** Both are built, reviewed and gated, and both touch files only you merge (`AGENTS.md`, and for #53 `.github/` and `docs/cadence.toml`).
