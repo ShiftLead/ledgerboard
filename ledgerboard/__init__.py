@@ -2939,11 +2939,23 @@ def _summary_kept(rest: str) -> list[str]:
     """The ``## Summary`` section's lines but its table, verbatim (v2.4): blank lines kept, the table's
     rows taken out, and of the blank lines on its two sides one kept; leading and trailing blanks dropped."""
     out: list[str] = []
-    lines = rest.split("\n")
+    lines = rest.splitlines()
+    hidden = set()  # the lines inside an HTML comment (a template's own rows are no table)
+    pos, starts = 0, []
+    for ln in lines:
+        starts.append(pos)
+        pos += len(ln) + 1
+    joined = "\n".join(lines)
+    for m in COMMENT_RE.finditer(joined):
+        hidden |= {n for n, at in enumerate(starts) if m.start() <= at < m.end()}
+
+    def row(n: int) -> bool:
+        return n not in hidden and lines[n].lstrip().startswith("|")
+
     i = 0
     while i < len(lines):
-        if lines[i].lstrip().startswith("|"):
-            while i < len(lines) and lines[i].lstrip().startswith("|"):
+        if row(i):
+            while i < len(lines) and row(i):
                 i += 1
             if out and not out[-1].strip() and i < len(lines) and not lines[i].strip():
                 i += 1  # the table stood between two blank lines: one of them stays
@@ -2975,27 +2987,35 @@ def _v2_readme(text: str, kept: list[str]) -> str:
 
 
 SPLIT_TABLE_RE = re.compile(r"\b(?:summary table|table below|the table)\b", re.IGNORECASE)
-SPLIT_LINK_RE = re.compile(r"\]\((?![a-z][a-z0-9+.-]*:|#|/)(?P<target>[^)\s]+)\)", re.IGNORECASE)
+INLINE_CODE_RE = re.compile(r"(`+).*?\1")  # a code span: no link inside one
+SPLIT_LINK_RE = re.compile(r"(?<!\\)\[[^\]]*\]\((?![a-z][a-z0-9+.-]*:|#|/)(?P<target>[^)\s]+)\)"
+                           r"|^ {0,3}\[[^\]]+\]:\s*(?![a-z][a-z0-9+.-]*:|#|/)(?P<ref>\S+)", re.IGNORECASE)
 
 
 def split_notes(readme: str) -> list[tuple[int, str, str]]:
     """The lines of a ``README.md`` that ``split()`` wrote which may still describe the v1 layout (v2.4), for a
     caller to warn about: ``(line number, line, why)`` for a line naming the summary table, which a v2 ledger
     has none of, and for one holding a relative Markdown link, which the move from beside the v1 file into the
-    v2 directory breaks (a link to the v1 archive file among them). Lines inside a fenced code block are
-    skipped; nothing is rewritten."""
-    out, fence = [], None
-    for n, line in enumerate(readme.split("\n"), 1):
+    v2 directory breaks (a link to the v1 archive file among them), or a reference definition doing the same.
+    Best effort, for a warning: a line inside a fenced code block, and a link inside a code span, are skipped;
+    nothing is rewritten."""
+    out, fence = [], ""
+    for n, line in enumerate(readme.splitlines(), 1):
         f = FENCE_RE.match(line)
         if f:
-            fence = None if fence and f.group("fence")[0] == fence else (fence or f.group("fence")[0])
+            mark = f.group("fence")
+            if not fence:
+                fence = mark
+            elif mark[0] == fence[0] and len(mark) >= len(fence) and not f.group("info").strip():
+                fence = ""  # CommonMark: the same character, at least as long, and no info string
             continue
         if fence:
             continue
         if SPLIT_TABLE_RE.search(line):
             out.append((n, line, "names the summary table: a v2 ledger has none"))
-        for m in SPLIT_LINK_RE.finditer(line):
-            out.append((n, line, f"links {m.group('target')} relatively: the README moved into the ledger directory"))
+        for m in SPLIT_LINK_RE.finditer(INLINE_CODE_RE.sub("", line)):
+            target = m.group("target") or m.group("ref")
+            out.append((n, line, f"links {target} relatively: the README moved into the ledger directory"))
     return out
 
 

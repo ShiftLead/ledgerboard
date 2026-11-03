@@ -19,6 +19,8 @@ closed entries move to [the archive](technical_debt_archive.md).
 
 **Priority:** High | Medium | Low
 
+| a row the template keeps |
+
 **Why:** <why>
 -->
 
