@@ -594,6 +594,27 @@
       "host": "box-1",
       "context": "TD-7",
       "today": "2026-1-5"
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "look",
+      "default": false
+    },
+    {
+      "fn": "item_line",
+      "text": "Look at the new export page",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "detail": {
+        "context": 5
+      }
     }
   ],
   "predicates": [

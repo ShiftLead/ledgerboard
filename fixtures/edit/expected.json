@@ -325,6 +325,12 @@
   },
   {
    "refused": "today is written as YYYY-MM-DD, not '2026-1-5'"
+  },
+  {
+   "refused": "a look's default is 0 (Works), or None"
+  },
+  {
+   "refused": "the detail block's context is a string, or a list of strings"
   }
  ],
  "edits": {

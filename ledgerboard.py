@@ -1256,9 +1256,13 @@ def _civil_date(value: object, what: str) -> str:
 def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
     """The detail block's lines from `detail`'s parts: each part a bullet two spaces in, its
     further strings nested bullets four in. `label` opens Recommended (a decide's default)."""
+    if not isinstance(detail, Mapping):
+        raise Refused("detail is a mapping of the block's parts")
     unknown = sorted(str(k) for k in detail if k not in DETAIL_KEYS)
     if unknown:
         raise Refused(f"a detail block's parts are {', '.join(DETAIL_KEYS)}, not {', '.join(unknown)}")
+    if not isinstance(detail.get("otherwise", ""), str):
+        raise Refused("the detail block's otherwise is a string")
     if "otherwise" in detail and "recommended" not in detail:
         raise Refused("otherwise is written on the Recommended bullet: give recommended too")
     out = []
@@ -1266,7 +1270,9 @@ def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
         if part not in detail:
             continue
         value = detail[part]
-        values = [value] if isinstance(value, str) else list(value or ())
+        if not isinstance(value, (str, list, tuple)) or not all(isinstance(v, str) for v in value):
+            raise Refused(f"the detail block's {part} is a string, or a list of strings")
+        values = [value] if isinstance(value, str) else list(value)
         if not values:
             raise Refused(f"the detail block's {part} is empty")
         words = _sentence(_item_words(values[0], f"the detail block's {part}"))
@@ -1284,8 +1290,8 @@ def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
 def _answer_parts(answers: object) -> list[tuple[str, str]]:
     """Each offered answer as (label, consequence), whitespace collapsed; refused where the reader
     would read it otherwise."""
-    if isinstance(answers, str):
-        raise Refused("answers is a list of answers, not one string")
+    if not isinstance(answers, (list, tuple)) or not all(isinstance(a, str) for a in answers):
+        raise Refused("answers is a list of strings, one answer each")
     parts = []
     for a in answers:
         said = _item_words(a, "an answer")
@@ -1341,8 +1347,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     if kind == "decide":
         if len(offered) < 2:
             raise Refused("a decide offers two or more answers")
-        if default is not None and (isinstance(default, bool) or not isinstance(default, int)
-                                    or not 0 <= default < len(offered)):
+        if default is not None and (type(default) is not int or not 0 <= default < len(offered)):
             raise Refused(f"default is the index of one of the {len(offered)} answers, not {default!r}")
         missing = [p for p in DECIDE_NEEDS if p not in (detail or {})]
         if missing:
@@ -1350,7 +1355,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     elif kind == "look":
         if answers is not None:
             raise Refused("a look's answers are the writer's (Works | Not right: <what>): give none")
-        if default not in (None, 0):
+        if default is not None and (type(default) is not int or default != 0):
             raise Refused("a look's default is 0 (Works), or None")
         offered = [(a, "") for a in LIVE_LOOK_ANSWERS]
     else:
