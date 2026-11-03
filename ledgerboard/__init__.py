@@ -667,7 +667,7 @@ def respace(text: str, ledger: str, *, fixed: Iterable[str] = (), repo: str = ""
     nothing relative to a key it does not own. The fixed points are the keys of the ledger's open entries
     that have no line (their implicit keys, ``repo`` their last component), every key in ``fixed`` (another
     repo's, which a caller sorts beside these), the two ends of each band's range of implicit keys for ids past
-    every id read (where an entry filed later sorts), and any line's key equal to one of them. The other lines' keys
+    every id read (where an entry filed later sorts), and any line's key equal to one of them or inside such a range. The other lines' keys
     between two consecutive fixed points are rewritten to short keys inside that same gap, in the same order,
     equal keys staying equal. Every other line is kept byte for byte (``set_rank()``). Refused for a rank file
     the reader flags ⚠."""
@@ -685,12 +685,18 @@ def respace(text: str, ledger: str, *, fixed: Iterable[str] = (), repo: str = ""
     # an entry filed later has an implicit key in its band past every id read: each band's range of those
     # stays a gap no rewritten key enters, so a respace never moves a line across where a new entry will sort
     nxt = max([_num(r["id"]) for r in recs] + [_num(t) for t in lines] + [0]) + 1
+    future = []  # each band's range of implicit keys for ids past every id read, both ends included
     for band in sorted(set(BANDS.values()) | {"4"}):
         for t in range(len(TYPES)):
-            for n in (min(nxt, 999999), 999999):
-                k = f"{band}{KEY_SEP}{t}{KEY_SEP}{n:06d}"
-                points.add(f"{k}{KEY_SEP}{repo}" if repo else k)
-    points |= {k for k in lines.values() if k in points}
+            lo, hi = (f"{band}{KEY_SEP}{t}{KEY_SEP}{n:06d}" for n in (min(nxt, 999999), 999999))
+            future.append(tuple(f"{k}{KEY_SEP}{repo}" if repo else k for k in (lo, hi)))
+    points |= {k for rng in future for k in rng}
+
+    def in_future(k: str) -> bool:
+        return any(key_order(lo) <= key_order(k) <= key_order(hi) for lo, hi in future)
+    # a line's key equal to a fixed point, or inside a future range (where an id the ledger has not read, an
+    # archived one's successor, may sort on either side of it), is itself fixed
+    points |= {k for k in lines.values() if k in points or in_future(k)}
     order = sorted(points, key=key_order)
     gaps: dict[tuple[str | None, str | None], list[str]] = {}
     for k in sorted({k for k in lines.values() if k not in points}, key=key_order):
@@ -710,6 +716,7 @@ def respace(text: str, ledger: str, *, fixed: Iterable[str] = (), repo: str = ""
         return (key_order(a) > key_order(b)) - (key_order(a) < key_order(b))
     after = {k: new_key.get(k, k) for k in before}
     if any(rel(after[a], after[b]) != rel(a, b) for a in before for b in before) \
+            or any(in_future(k) or in_future(v) for k, v in new_key.items()) \
             or any(got[t] != new_key.get(k, k) for t, k in lines.items()):
         raise Refused("the respaced keys would not keep the file's order: nothing written")
     return out, sorted(changed, key=_num)

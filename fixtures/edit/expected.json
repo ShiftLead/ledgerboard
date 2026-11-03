@@ -1060,6 +1060,20 @@
   },
   {
    "refused": "not a key: '|x'"
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-005: 2|0|000030i\n",
+    []
+   ]
+  },
+  {
+   "ok": [
+    "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-006: 1i\nTD-005: 2|0|000030i\n",
+    [
+     "TD-006"
+    ]
+   ]
   }
  ],
  "subject_kinds": {

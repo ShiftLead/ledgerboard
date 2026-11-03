@@ -286,11 +286,15 @@ removes the lines of a card whose members are all archived, and (v2.3) `respace`
 shortens. `subject_kind()` reads every one as `queue`.
 
 **A respace** (`respace(text, ledger, *, fixed, repo)`, v2.3) shortens the file's keys without moving any
-line relative to a key it does not own. Its **fixed points** are the keys of the ledger's open entries that
-have no line (their implicit keys, `repo` their last component), each key in `fixed` (another repo's, which a
-caller sorts beside this file's), the two ends of each band's range of implicit keys for ids past every id
-read (`<band>|<type>|<next id>` and `<band>|<type>|999999`, where an entry filed later sorts), and any line's
-key equal to one of them. The other lines' keys between two consecutive fixed points are rewritten to short
+line relative to a key it does not own. `ledger` is the ledger's text (its open entries: an archived entry
+has no implicit key, and the archive is not read). Its **fixed points** are the keys of the ledger's open
+entries that have no line (their implicit keys, `repo` their last component), each key in `fixed` (another
+repo's, which a caller sorts beside this file's), the two ends of each band's range of implicit keys for ids
+past every id read (`<band>|<type>|<next id>` and `<band>|<type>|999999`, `<next id>` one past the highest id
+in the ledger or the rank file), and any line's key equal to one of them or inside such a range. An entry filed
+later has an id past every id ever filed, the archive's too, so its implicit key lies inside its band's range;
+no rewritten key lies inside one, so a respace never moves a line across where an entry filed later (up to
+TD-999999) sorts. The other lines' keys between two consecutive fixed points are rewritten to short
 keys inside that same gap, in the same order, equal keys staying equal, each by halving the gap with
 `midpoint()`. It returns the file and the ids whose keys changed, and keeps every other line byte for byte; it
 refuses a file the reader flags ⚠, and any result that would not keep every order it read. A second respace

@@ -1627,6 +1627,14 @@
       "fixed": [
         "|x"
       ]
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-005: 2|0|000030i\n",
+      "ledger": "# L\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n## TD-006: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n"
+    },
+    {
+      "text": "# The rank: one `TD-NNN: <key>` line per entry, sorted by key (ledgerboard SPEC, The rank).\n# Written by a tool; read only through ledgerboard's rank().\nTD-006: 2|0|000006zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1\nTD-005: 2|0|000030i\n",
+      "ledger": "# L\n\n## TD-005: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n## TD-006: x\n\n**Priority:** Medium\n\n**Type:** debt\n\n**Why:** x\n\n"
     }
   ]
 }
