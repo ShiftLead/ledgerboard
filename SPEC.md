@@ -391,6 +391,39 @@ read as appends.
 The archive's subject is `<tool>: archive <n> closed items (session <name>)` (`archive_subject()`), `<n>` the closed items moved.
 `subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write, above) `queue`.
 
+## The board writer (v2.3)
+
+`board.py`, beside the module in the `ledgerboard/` package, is the board and rank writer over files: an
+importable library (`plan_add`, `plan_edit`, `plan_archive`, `plan_fmt`, `plan_rank`, each returning a
+`Plan`, and `apply(plan)`) and a command line (`python3 -m ledgerboard.board <action>`, a consumer's wrapper
+being the command people run). It reads the files it is given, applies the module's edit, and writes the files
+back; it never runs git, the network or anything of a consumer's. Its actions:
+- **`list`** — every open item's record (`item_record()`), read-only;
+- **`add`** — a new item (`item_line()`, any kind, its answers and detail block); with `--said` and `--by`, a
+  question already answered, its answer following the text as ` — <by>, <date>: <words>`; with `--decided`, an
+  item the person decided elsewhere (`decided_line()`). It goes above the first item of the section the
+  `--under` heading opens (`## Needs the user` by default), or right under that heading when its section holds
+  none; with no such heading, above the board's first item; with no item, at the end. The write is refused when
+  `board_problems()` faults the line it adds;
+- **`snooze`, `done`, `decide`, `reply`** — the four edits (`edit_line()`) of the open item on `--line`, refused
+  when that line is not an open item or no longer starts with `--expect` (the board moved since it was read);
+  `reply` takes its `--by` from the caller;
+- **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
+- **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
+  lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
+- **`rank`** — `set_rank()` of the rank file (created when missing), `--set TD-n=<key>` and `--drop TD-n`,
+  under `--action rank|join|prune`.
+
+Each write prints the commit subject the module gives (`subject()` with `append` for an add, the edit's,
+`archive_subject()`, `queue_subject()`) and the paths it changed, or one JSON object with `--json`. `fmt` has no
+subject of its own, and a write that changes nothing (a rank line already so) prints none, writing nothing.
+`--plan` prints the changes as JSON (each path and its new text) and writes nothing. A write of several files is
+both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
+and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
+date (`--today`, else the local clock), who replies (`--by`), and the tool and session the subject names
+(`--tool`, `--session`). A file that declares a newer major is refused unread. Exit: 0 written (or nothing to
+change), 1 a write failed (every file restored), 2 usage, 3 refused.
+
 ## Versions
 
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
@@ -422,4 +455,4 @@ v2.2 also gives ledger entries writers (*Ledger entries and their edits*): the c
 `canonical()`, `entry_text()` and `edit_entry()`, with the archived entry's form; and `check()`
 gains `archive-open-parts`. It reads every file v2.1 read, as v2.1 did, and v2.1 reads every
 entry it writes.
-**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key.
+**v2.3 gives the board writers** (*Edits*, *The board*): `item_line()` writes every kind with its answers and detail block, `item_problem()`, `canonical_item()` and `board_problems()` say what the writers write, and `archive_closed()` and `archive_subject()` move closed items. Nothing is read differently: v2.2 reads every line v2.3 writes, and the item key is unchanged. `item_line()` now refuses a call it used to answer with a wrong line (a field name in its text or context, a host with no session, a name holding whitespace or `` ` , ; ) ``, a `today` that is not a date). It writes no `None` host, adds no period after text ending in `?`, `!` or several periods, and drops a context's own final period, so the line it writes for those inputs, and that line's key, differ from v2.2's. A line already on a board keeps its text and its key. v2.3 also ships the board writer, `board.py` (*The board writer*): the package's first file-level writer.

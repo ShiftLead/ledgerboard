@@ -40,6 +40,10 @@ Fixtures, each an invented input and its expected JSON:
   ``entry_text()`` of each new entry, and ``edit_entry()`` of each case's steps run in order, or why
   each is refused; and ``check()``'s Part of flags of a ledger before and after an archive
   (``check/``), ``archive-open-parts`` among them.
+- ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
+  starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
+  as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
+  exit code and the JSON it printed: the subject and the paths, the plan, or why it refused).
 - ``ledger/escaped.md`` (v2.2): ``Escaped from`` is the format's own field — a ledger with a
   ``Fields:`` line flags an undeclared field beside it, never it.
 """
@@ -47,11 +51,16 @@ Fixtures, each an invented input and its expected JSON:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
+import os
 import re
+import shutil
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -261,6 +270,31 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                 for c in spec["entry_text"]}}
 
 
+def tree(d: Path) -> dict[str, str]:
+    """Every file under `d`, by its path relative to `d`, read as bytes so line endings are kept."""
+    return {str(p.relative_to(d)): p.read_bytes().decode("utf-8")
+            for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
+
+
+def writer_case(L, case: Path) -> dict:
+    """``board.py``'s ``main()`` of the case's argv, in a copy of its ``before/``: exit, printed JSON, files after."""
+    board = importlib.import_module(L.__name__ + ".board")
+    argv = json.loads((case / "cmd.json").read_text(encoding="utf-8"))["argv"]
+    here = os.getcwd()
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "w"
+        shutil.copytree(case / "before", work)
+        out = io.StringIO()
+        os.chdir(work)
+        try:
+            with contextlib.redirect_stdout(out):
+                code = board.main(argv)
+        finally:
+            os.chdir(here)
+        printed = out.getvalue().strip()
+        return {"exit": code, "out": json.loads(printed) if printed else None, "after": tree(work)}
+
+
 def v2_case(L, md: Path) -> dict:
     """A v1 case's v2 twin, ``<case>.v2/``: ``split()`` of the v1 texts must write it file for file,
     and ``load()`` of it must give the v1 case's expected JSON, its summary rows aside (none in v2)."""
@@ -291,6 +325,9 @@ def cases(L, root: Path):
         yield md.with_name(md.name.removesuffix(".board.md") + ".json"), archive_case(L, md)
     spec = json.loads((root / "edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "edit" / "expected.json", edit_cases(L, spec, root)
+    if hasattr(L, "__path__"):  # the writers ship in the package; a single module file has none
+        for case in sorted(p for p in (root / "board_writer").glob("*") if p.is_dir()):
+            yield case, writer_case(L, case)
     spec = json.loads((root / "ledger_edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "ledger_edit" / "expected.json", ledger_edit_cases(L, spec, root)
 
@@ -315,6 +352,22 @@ def main(argv: list[str] | None = None) -> int:
         twin = isinstance(path, tuple)  # a v2 case: its v1 twin's expected JSON is its own
         path = path[0] if twin else path
         got = json.loads(json.dumps(got, default=str))
+        if path.is_dir():  # a writer case: expected.json and the after/ directory
+            after = got.pop("after")
+            if a.write:
+                shutil.rmtree(path / "after", ignore_errors=True)
+                for rel, text in after.items():
+                    (path / "after" / rel).parent.mkdir(parents=True, exist_ok=True)
+                    (path / "after" / rel).write_bytes(text.encode("utf-8"))
+                (path / "expected.json").write_text(
+                    json.dumps(got, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+                continue
+            want = (json.loads((path / "expected.json").read_text(encoding="utf-8"))
+                    if (path / "expected.json").exists() else None)
+            if got != want or after != tree(path / "after"):
+                bad += 1
+                print(f"FAIL {path.relative_to(HERE)}: the writer's output or files differ from the expected")
+            continue
         if a.write:
             if not twin:
                 path.write_text(json.dumps(got, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
