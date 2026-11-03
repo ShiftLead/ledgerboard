@@ -4,11 +4,11 @@
 # The flow is `td` (Paul, 2026-10-31): design → build → review. The designer takes only entries
 # marked `**Kind:** design-first` (or blocked on `decision (designer)`); every other pickable entry
 # is the grinder's, so an entry already designed in conversation skips the designer by carrying no
-# Kind. The techlead's review stage reads every PR on a `held:` path, and merges every reviewed,
-# gated PR itself except the team's own rules and what its primer calls extraordinary (Paul,
+# Kind. The techlead's review stage reads every PR on a `held:` path (the boundary, AGENTS.md and the
+# README, included) and merges each one itself, except the team's own rules and what its primer calls extraordinary (Paul,
 # 2026-11-03). A release (stamp and tag) stays Paul's: the consumers vendor tags only.
 # The team's own rules are not held: a PR touching them is left for Paul (the grinder brief).
-held: ["ledgerboard/**", "SPEC.md", "fixtures/**", "release.sh", "tests/**"]
+held: ["ledgerboard/**", "SPEC.md", "fixtures/**", "release.sh", "tests/**", "AGENTS.md", "README.md"]
 
 # The repo's whole check (AGENTS.md *Commands*); stdlib only, so a fresh worktree needs nothing.
 commands:

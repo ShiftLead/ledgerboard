@@ -14,7 +14,7 @@
 
 **Versions.** `Ledgerboard: N` declares a file's major; a minor release reads everything its major wrote. A change to the canonical entry form, or to the board's item key, is a version event (SPEC *Versions*).
 
-**Merging.** You merge every reviewed, gated PR yourself, `held:` or not, `AGENTS.md` and the README included (Paul, 2026-11-03): check the review comment says SHIP and its findings are fixed or deferred with a reason, `agent-cadence run check_cadence.py --pr <n>` passes, and `cadence/precheck` is green on the head; then `gh pr merge <n> --squash`. Leave a PR for Paul, open and named on the board with why, only when:
+**Merging.** You merge every PR you read (those on a `held:` path, `AGENTS.md` and the README among them) yourself (Paul, 2026-11-03): check the review comment says SHIP and its findings are fixed or deferred with a reason, `agent-cadence run check_cadence.py --pr <n>` passes, and `cadence/precheck` is green on the head; then `gh pr merge <n> --squash`. Leave a PR for Paul, open and named on the board with why, only when:
 - it touches the team's own rules (`.shiftlead.yml`, `docs/briefs/**`, `docs/cadence.toml`, `.github/**`);
 - it is extraordinary: it settles a shape the target design or its entry's Fix leaves open, or departs from them; the review found a blocker the PR leaves unresolved, or author and reviewer disagree on one; it might publish a person's or machine's name, a private repo's contents or an internal path; or it does something that cannot be undone from this repo;
 - it is a release (`./release.sh`, a tag): those are Paul's.
