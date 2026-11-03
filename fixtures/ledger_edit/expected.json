@@ -1,4 +1,78 @@
 {
+ "archive_plan": {
+  "another_repo_unresolved_refused": {
+   "refused": "the successor acme/tools#TD-4 cannot be resolved — a successor exists, open or Resolved"
+  },
+  "chain_ending_in_dropped_refused": {
+   "refused": "the successor's chain (TD-423 → TD-422) ends in an entry archived Dropped — a successor is open or Resolved"
+  },
+  "chain_looping_back_refused": {
+   "refused": "superseding TD-400 by TD-424 loops back (TD-424 → TD-400 → TD-424) — name another successor"
+  },
+  "dropped": {
+   "ok": {
+    "rewire": [],
+    "successor": null
+   }
+  },
+  "dropped_and_superseded_refused": {
+   "refused": "an entry is dropped or superseded, not both"
+  },
+  "dropped_refused_with_dependents": {
+   "refused": "TD-400 cannot be dropped while TD-401, TD-402 are Blocked by it — decide each first: drop the blocker, or block it on what replaces TD-400"
+  },
+  "not_open_refused": {
+   "refused": "'TD-421' names no open entry"
+  },
+  "resolved": {
+   "ok": {
+    "rewire": [],
+    "successor": null
+   }
+  },
+  "successor_a_dependent_refused": {
+   "refused": "TD-401 is Blocked by TD-400 and is its successor: it would block on itself — name another successor, or take the blocker off it first"
+  },
+  "successor_unknown_refused": {
+   "refused": "the successor TD-499 names no entry in the ledger or the archive — a successor exists, open or Resolved"
+  },
+  "successor_waiting_on_a_dependent_refused": {
+   "refused": "the successor TD-411 waits on TD-401, which is Blocked by TD-400: rewired, they would block on each other — name another successor, or untangle them first"
+  },
+  "superseded_by_another_repo": {
+   "ok": {
+    "rewire": [
+     "TD-401",
+     "TD-402"
+    ],
+    "successor": "acme/tools#TD-3"
+   }
+  },
+  "superseded_by_dropped_refused": {
+   "refused": "the successor's chain (TD-422) ends in an entry archived Dropped — a successor is open or Resolved"
+  },
+  "superseded_by_itself_refused": {
+   "refused": "superseding TD-400 by TD-400 loops back (TD-400 → TD-400) — name another successor"
+  },
+  "superseded_by_live": {
+   "ok": {
+    "rewire": [
+     "TD-401",
+     "TD-402"
+    ],
+    "successor": "TD-410"
+   }
+  },
+  "superseded_follows_the_chain": {
+   "ok": {
+    "rewire": [
+     "TD-401",
+     "TD-402"
+    ],
+    "successor": "TD-421"
+   }
+  }
+ },
  "canonical": {
   "already": {
    "idempotent": true,
@@ -134,6 +208,12 @@
   "archive_copies_in_progress_whole": {
    "ok": "## TD-087: Statuses that only look like a word and a note\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** Superseded 2026-01-20 by TD-90\n\n**Why:** a reason.\n\n**Log:**\n- 2026-01-02: was: In progress: the first half\n- 2026-01-20: archived: Superseded — replaced\n"
   },
+  "archive_dropped": {
+   "ok": "## TD-400: The entry to archive\n\n**Priority:** Medium\n**Status:** Dropped 2026-01-20\n\n**Why:** w\n\n**Fix:** f\n\n**Log:**\n- 2026-01-20: archived: Dropped — no longer needed\n"
+  },
+  "archive_dropped_refused_with_pr": {
+   "refused": "a dropped entry keeps its Why and Fix, and nothing replaces it: no pr, pointer, as_is or superseded_by"
+  },
   "archive_header_resolved": {
    "ok": "## TD-063: Archived the old way, its Resolved a header field\n\n**Priority:** Low\n**Status:** Resolved 2026-01-20\n\n**Why:** a reason.\n\n**Resolved:** 2026-01-20 (PR #16)\n\n**Log:**\n- 2026-01-06: built\n- 2026-01-20: archived: Resolved — built again\n"
   },
@@ -160,6 +240,9 @@
   },
   "archive_superseded": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Superseded 2026-01-20 by TD-070\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n\n**Log:**\n- 2026-01-12: half built\n- 2026-01-20: archived: Superseded — TD-070 does it all\n"
+  },
+  "archive_superseded_by_another_repo": {
+   "ok": "## TD-400: The entry to archive\n\n**Priority:** Medium\n**Status:** Superseded 2026-01-20 by acme/tools#TD-3\n\n**Why:** w\n\n**Fix:** f\n\n**Log:**\n- 2026-01-20: archived: Superseded — moved\n"
   },
   "crlf_note": {
    "ok": "## TD-067: CRLF\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Log:**\n- 2026-01-20: read through CRLF\n"
@@ -247,6 +330,12 @@
   },
   "rename_ref_by_number": {
    "ok": "## TD-065: Two sections of one name\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** TD-107, other-repo#TD-007, decision (the owner)\n**Part of:** TD-030 (its build)\n\n**Note:** the first.\n\n**Note:** the second.\n"
+  },
+  "rename_ref_keeps_one_copy": {
+   "ok": "## TD-402: Blocked by it and by its would-be successor\n\n**Priority:** Medium\n**Blocked by:** TD-410, until 2026-03-01\n"
+  },
+  "rename_ref_keeps_one_copy_across_repos": {
+   "ok": "## TD-402: Blocked by it and by its would-be successor\n\n**Priority:** Medium\n**Blocked by:** Acme/Tools#TD-3, until 2026-03-01\n"
   },
   "rename_ref_other_repo": {
    "ok": "## TD-065: Two sections of one name\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** TD-7, other-repo#TD-8, decision (the owner)\n**Part of:** TD-030 (its build)\n\n**Note:** the first.\n\n**Note:** the second.\n"
