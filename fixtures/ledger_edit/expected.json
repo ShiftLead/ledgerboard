@@ -71,6 +71,9 @@
     ],
     "successor": "TD-421"
    }
+  },
+  "superseded_unknown_status": {
+   "refused": "the successor's chain (TD-425) ends in an entry archived with a Status word this reader does not know (Xyzzy) — a successor is open or Resolved"
   }
  },
  "canonical": {

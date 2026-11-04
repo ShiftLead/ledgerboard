@@ -46,10 +46,14 @@ Fixtures, each an invented input and its expected JSON:
   (``check/``), ``archive-open-parts`` among them. From v2.4, the Log: ``entry_text(filed=)``, the
   writers' Log lines, and per ``log`` case ``log_lines()``, ``log_problems()``, ``status_notes_to_log()``
   and ``gate_age()`` of each gate the case names. Also from v2.4, ``archive_plan()`` of each ``archive_plan`` case
-  (``plan/``: a supersede, its chain, each refusal), the Dropped archive, and ``rename_ref`` keeping one copy.
+  (``plan/``: a supersede, its chain, each refusal, a chain ending in a Status word this reader does not know
+  among them), the Dropped archive, and ``rename_ref`` keeping one copy.
 - ``ledger/supersede.md`` (v2.4): an archived blocker's Status read — Resolved, Superseded (by an open entry, a
   Resolved one, another repo's, a chain ending in Dropped, a loop, no successor) and Dropped, here and through the
   resolver's ``status`` and ``successor``.
+- ``ledger/unknownstatus.md`` (v2.4, TD-039): an archived blocker whose Status word this reader does not know keeps
+  the block and is flagged — here and through the resolver, at a chain's end, and each edge of the word rule: prose,
+  punctuation kept on the word, a first run that strips to nothing, no first run, a known word in capitals, ``Open``.
 - ``verdict/cases.json`` → ``verdict/expected.json`` (v2.4): the merge gate's verdicts — ``lift_pr_verdict()``,
   ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
   ``cases/<name>/base/``, then its ``cases/<name>/head/`` over that, less its ``delete`` paths.

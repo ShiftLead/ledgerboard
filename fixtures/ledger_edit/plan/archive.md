@@ -19,3 +19,7 @@
 ## TD-424: Superseded by the entry to archive
 
 **Status:** Superseded 2026-01-04 by TD-400
+
+## TD-425: Archived with a Status word this reader does not know
+
+**Status:** Xyzzy 2026-01-06

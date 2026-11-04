@@ -61,13 +61,14 @@ ASK_RE = re.compile(r"^\*\*Ask:\*\*", re.MULTILINE)  # the body section a decisi
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
 EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part", "priority", "ask-missing",
-               "gate-repeated", "blocker-superseded", "blocker-dropped")  # information on a standing ledger, an error in a new edit
+               "gate-repeated", "blocker-superseded", "blocker-dropped",
+               "blocker-unknown-status")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
 # ``open | archived | unresolved``; ``why`` says why it is unresolved, else "". From v2.4 an archived
-# entry's mapping may carry ``status`` (its Status, read by its first word: Superseded, Dropped, else
-# closed and done) and ``successor`` (a Superseded entry's id after ``by``, bare when in its own repo).
+# entry's mapping may carry ``status`` (its Status, read by its first word: Superseded, Dropped, a word
+# this reader does not know (outside STATUS_WORDS: the block stays), else closed and done) and ``successor`` (a Superseded entry's id after ``by``, bare when in its own repo).
 Resolve = Callable[[str], Any]
 
 
@@ -89,6 +90,16 @@ def first_word(value: str | None) -> str:
     """A field's value: its first word, lower-cased; the rest of the line is a free comment."""
     m = WORD_RE.search(value or "")
     return m.group(0).strip("*_`").rstrip(".:").lower() if m else ""  # `**Decided` reads as decided
+
+
+def _status_word(status: str | None) -> str:
+    """An archived Status's word as written, for a flag (v2.4, TD-039): ``first_word()``'s strips without its
+    lower-casing, or the first run itself when they leave nothing (``** Xyzzy`` names ``**``); ``""`` only
+    for a Status with no first run, which reads as closed and done."""
+    m = WORD_RE.search(status or "")
+    if not m:
+        return ""
+    return m.group(0).strip("*_`").rstrip(".:") or m.group(0)
 
 
 def header_block(body: str) -> dict[str, str]:
@@ -473,57 +484,69 @@ def _resolved(item: str, resolve: Resolve | None) -> dict:
 
 def _archived_status(archive: str) -> dict[int, dict]:
     """Each archived entry's Status read (v2.4, SPEC *Superseded and dropped*), by number: ``{id, word,
-    successor}`` — ``word`` ``superseded`` (``successor`` the id after its ``by``, or None), ``dropped``, or
-    ``resolved`` for any other Status (``Resolved``, ``Done``, ``Built``, none at all): closed and done."""
+    successor, status_word}`` — ``word`` ``superseded`` (``successor`` the id after its ``by``, or None),
+    ``dropped``, ``unknown-status`` for a first word outside ``STATUS_WORDS`` (the block stays, TD-039), or
+    ``resolved`` for any other Status (``Resolved``, ``Done``, ``Built``, ``Open``, no first run at all):
+    closed and done. ``status_word`` is ``_status_word()`` of the Status, which a flag names."""
     out: dict[int, dict] = {}
     for e in entries(archive):
         status = e["fields"].get("status") or ""
-        word = first_word(status)
+        word, written = first_word(status), _status_word(status)
         by = re.search(rf"\bby[ \t]+({LOG_ID})(?![\w#/-]|\.\w)", status, re.IGNORECASE) if word == "superseded" else None
-        out.setdefault(_num(e["id"]), {"id": e["id"], "word": word if word in ("superseded", "dropped") else "resolved",
-                                       "successor": by.group(1) if by else None})
+        read = ("resolved" if written == "" or word in STATUS_WORDS and word not in ("superseded", "dropped")
+                else word if word in ("superseded", "dropped") else "unknown-status")
+        out.setdefault(_num(e["id"]), {"id": e["id"], "word": read, "successor": by.group(1) if by else None,
+                                       "status_word": written})
     return out
 
 
-def _chain(start: str, live_nums: set[int], gone: Mapping[int, dict], resolve: Resolve | None) -> tuple[list[str], str]:
+def _chain(start: str, live_nums: set[int], gone: Mapping[int, dict],
+           resolve: Resolve | None) -> tuple[list[str], str, str]:
     """Where a blocker's requirement lives now (v2.4): ``start`` followed through each Superseded entry to its
-    successor. ``(path, state)``: ``path`` the ids walked, ``start`` first and the end last; ``state`` the end's
-    — ``open``, ``resolved``, ``dropped``, ``unknown`` (no such entry), ``unresolved`` (another repo's the
-    resolver cannot answer, or a Superseded with no successor) or ``cycle``. A successor written bare in
-    another repo's entry is that repo's."""
+    successor. ``(path, state, word)``: ``path`` the ids walked, ``start`` first and the end last; ``state``
+    the end's — ``open``, ``resolved``, ``dropped``, ``unknown-status`` (archived with a Status word outside
+    ``STATUS_WORDS``, locally or through the resolver: TD-039), ``unknown`` (no such entry), ``unresolved``
+    (another repo's the resolver cannot answer, or a Superseded with no successor) or ``cycle``; ``word`` the
+    end's Status word as written (``_status_word()``) when it is ``unknown-status``, else ``""``. A successor
+    written bare in another repo's entry is that repo's."""
     path, seen = [], set()
     cur = start
     while True:
         key = ref_key(cur) if "#" in cur else f"#{_num(cur)}"
         if key in seen:
-            return path + [cur], "cycle"
+            return path + [cur], "cycle", ""
         seen.add(key)
         path.append(cur)
         if "#" in cur:
             x = _resolved(cur, resolve)
             if x["state"] != "archived":
-                return path, x["state"]
+                return path, x["state"], ""
             if x.get("status") is not None and not isinstance(x["status"], str):
-                return path, "unresolved"  # a Status the resolver cannot have read: hold
-            word, nxt = first_word(x.get("status") or ""), x.get("successor")
+                return path, "unresolved", ""  # a Status the resolver cannot have read: hold
+            status, nxt = x.get("status") or "", x.get("successor")
+            word, written = first_word(status), _status_word(status)
+            if written == "":
+                return path, "resolved", ""  # no first run (or no status given): closed and done, as before
+            if word not in STATUS_WORDS:
+                return path, "unknown-status", written
             if word == "dropped":
-                return path, "dropped"
+                return path, "dropped", ""
             if word != "superseded":
-                return path, "resolved"
+                return path, "resolved", ""
             if not isinstance(nxt, str) or not (ID_ITEM_RE.match(nxt) or XREPO_ITEM_RE.match(nxt)):
-                return path, "unresolved"
+                return path, "unresolved", ""
             cur = nxt if "#" in nxt else f"{cur.rpartition('#')[0]}#{nxt}"
             continue
         n = _num(cur)
         if n in live_nums:
-            return path, "open"
+            return path, "open", ""
         st = gone.get(n)
         if st is None:
-            return path, "unknown"
+            return path, "unknown", ""
         if st["word"] != "superseded":
-            return path, st["word"]
+            return path, st["word"], st.get("status_word", "") if st["word"] == "unknown-status" else ""
         if st["successor"] is None:
-            return path, "unresolved"
+            return path, "unresolved", ""
         cur = st["successor"]
 
 
@@ -740,12 +763,19 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
 def _ended(tid: str, b: str, live_nums: set[int], gone: Mapping[int, dict], resolve: Resolve | None,
            flags: _Flags, *, cross: bool) -> bool:
     """Whether archived blocker ``b`` of ``tid`` releases it (v2.4, SPEC *Superseded and dropped*), flagging a
-    blocker that was superseded or dropped. A Superseded one releases only when the end of its chain is
-    Resolved; a Dropped one, or a chain that ends in Dropped, in no entry or in a loop, keeps the block."""
-    path, state = _chain(b, live_nums, gone, resolve)
+    blocker that was superseded, dropped or archived with a Status word this reader does not know. A
+    Superseded one releases only when the end of its chain is Resolved; a Dropped one, one whose Status word
+    is unknown (TD-039), or a chain that ends in Dropped, in an unknown word, in no entry or in a loop, keeps
+    the block."""
+    path, state, word = _chain(b, live_nums, gone, resolve)
     if len(path) == 1 and state == "resolved":
         return True
     where = "another repo's " if cross else ""
+    if len(path) == 1 and state == "unknown-status":
+        flags.add(f"ℹ {tid}: Blocked by {b}, {where}entry archived with a Status word this reader does not know "
+                  f"({word}) — decide this entry: drop the blocker if its work is done, or block on what replaces "
+                  "it; the block stays", tid, "blocked by", "cross-unknown-status" if cross else "blocker-unknown-status")
+        return False
     if len(path) == 1 and state == "dropped":
         flags.add(f"ℹ {tid}: Blocked by {b}, {where}entry archived Dropped — decide this entry: drop the "
                   "blocker if it no longer applies, or block on what replaces it; the block stays",
@@ -759,7 +789,8 @@ def _ended(tid: str, b: str, live_nums: set[int], gone: Mapping[int, dict], reso
                   tid, "blocked by", "cross-superseded" if cross else "blocker-superseded")
         return state == "resolved"
     why = {"dropped": "ends in an entry archived Dropped", "unknown": "ends in no entry", "cycle": "loops",
-           "unresolved": "cannot be followed to its end"}[state]
+           "unresolved": "cannot be followed to its end",
+           "unknown-status": "ends in an entry whose Status word this reader does not know"}[state]
     flags.add(f"ℹ {tid}: Blocked by {b}, superseded ({chain}), whose chain {why} — decide this entry; the block "
               "stays", tid, "blocked by", "cross-superseded" if cross else "blocker-superseded")
     return False
@@ -3391,7 +3422,8 @@ def archive_plan(ledger: str, archive: str, tid: str, *, superseded_by: str | No
       first.
     - ``superseded_by`` (``TD-m`` or ``<repo>#TD-m``): the successor followed through each Superseded entry
       to the end of its chain, which ``successor`` names and the archive writes. It must be open or
-      Resolved: refused when it names no entry (or one the resolver cannot answer), ends in Dropped, loops,
+      Resolved: refused when it names no entry (or one the resolver cannot answer), ends in Dropped or in a
+      Status word this reader does not know (TD-039), loops,
       or is ``tid`` itself or one of its dependents (which would block on itself). ``rewire``: the
       dependents, each to get ``edit_entry(…, "rename_ref", old=tid, new=successor)`` in the same change."""
     if not _is_id(tid) or not any(_num(e["id"]) == _num(tid) for e in entries(ledger)):
@@ -3410,14 +3442,18 @@ def archive_plan(ledger: str, archive: str, tid: str, *, superseded_by: str | No
         raise Refused(f"superseded by another entry's TD-n or <repo>#TD-n, not {superseded_by!r}")
     live_nums = {_num(e["id"]) for e in entries(ledger)} - {_num(tid)}
     gone = dict(_archived_status(archive))
-    gone[_num(tid)] = {"id": tid, "word": "superseded", "successor": superseded_by}  # as the archive will read it
-    path, state = _chain(superseded_by, live_nums, gone, resolve)
+    gone[_num(tid)] = {"id": tid, "word": "superseded", "successor": superseded_by,
+                       "status_word": ""}  # as the archive will read it
+    path, state, word = _chain(superseded_by, live_nums, gone, resolve)
     end = path[-1]
     if "#" not in end and _num(end) == _num(tid) or state == "cycle":
         raise Refused(f"superseding {tid} by {superseded_by} loops back ({' → '.join(path)}) — name another successor")
     if state == "dropped":
         raise Refused(f"the successor's chain ({' → '.join(path)}) ends in an entry archived Dropped — a successor is "
                       "open or Resolved")
+    if state == "unknown-status":
+        raise Refused(f"the successor's chain ({' → '.join(path)}) ends in an entry archived with a Status word this "
+                      f"reader does not know ({word}) — a successor is open or Resolved")
     if state in ("unknown", "unresolved"):
         what = "names no entry in the ledger or the archive" if state == "unknown" else "cannot be resolved"
         via = "" if len(path) == 1 else f" (its chain: {' → '.join(path)})"
@@ -3479,8 +3515,11 @@ LOG_SHAPES = (
     ("reopened", re.compile(r"reopened — (?P<why>\S.*)")),
     ("was", re.compile(r"was: (?P<status>\S.*)")),
 )
-# The Status words status_notes_to_log() reads (SPEC *The Log*): the four of the target table and
-# the reserved ones v2.5's migrate maps away.
+# The Status words, in two roles: the head words status_notes_to_log() reads (SPEC *The Log*), the four
+# of the target table and the reserved ones v2.5's migrate maps away; and the words an archived blocker's
+# Status is known by (SPEC *Superseded and dropped*, TD-039). A word added here is one pickable() reads:
+# as closed and done, unless it joins Superseded's or Dropped's rules; a word outside it keeps the block.
+# Whoever adds one decides both roles.
 STATUS_WORDS = ("open", "resolved", "superseded", "dropped", "designed", "built", "partly", "live", "in",
                 "done", "moved", "obe")
 # The head, read whole or not at all: the word is followed by its end, a `:`, its date or `by`; a date

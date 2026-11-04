@@ -1364,6 +1364,13 @@
    "superseded_by": "TD-423"
   },
   {
+   "name": "superseded_unknown_status",
+   "ledger": "plan/ledger.md",
+   "archive": "plan/archive.md",
+   "tid": "TD-403",
+   "superseded_by": "TD-425"
+  },
+  {
    "name": "chain_looping_back_refused",
    "ledger": "plan/ledger.md",
    "archive": "plan/archive.md",
