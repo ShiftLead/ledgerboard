@@ -643,6 +643,17 @@ real deadline, is untouched, so once the date comes it shows its true overdue co
 session's work order and is never hidden (`BoardItem.hidden(today)`). A `Hide until:` elsewhere in the text is
 prose, never the field.
 
+**Notes on a hide** (`item_notes(item, today)`, v2.4, of a parsed open item as `parse_board()` gives it) inform and
+never refuse: no gate reads them. Each opens with its rule's tag, and D and E stand for the ISO dates of the fields.
+- `hide-spent` is a `Hide until:` on an open item that is not hidden today. Either its date has come
+  (`hide-spent: Hide until: D has come, so it hides nothing; a snooze replaces it`), or the item is decided
+  (`hide-spent: a decided item is never hidden, so Hide until: D hides nothing`).
+- `hide-late` is a hidden item whose `Hide until: D` is later than its `Due: E` (`hide-late: Hide until: D is after
+  Due: E, so the item stays hidden past its deadline`). An `fyi`, or an item whose `Due:` cannot be read, has no
+  deadline, so it never gets a `hide-late`.
+
+An item carries at most one of them. `item_record()` carries them as `notes`.
+
 **What needs the person** (`needs_you(board, today)`, v2.3) is every open item not hidden, each with one class
 and a signed `days`, in one order: `decided` (`days` the decision's age; oldest decision first); then the
 person's to-do — `overdue` (days past due; most first), `due` (0 on the due date, negative days until it;
@@ -983,6 +994,13 @@ table: 0 written (or nothing to change), 1 refused, 2 usage (a bad `--today` amo
 that cannot be used as asked,
 4 a write failed (every file restored); it never exits 3, which is the ledger writer's `needs`.
 
+From v2.4, a write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()`
+at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the
+notes are `item_notes`, `[{"line", "note"}]` (each names its line, as a write names one, where `item_record()`'s
+`notes` is the record's own list of strings), always present and `[]` when there are none; a decide lift's `notes`
+(above) is a different key and unchanged. Without either, each is printed on stderr as `line n: ℹ <note>`. A note
+never changes the exit code.
+
 ## The ledger writer (v2.4)
 
 `ledger.py`, beside the module and `board.py` in the `ledgerboard/` package, is the ledger writer over files:
@@ -1170,6 +1188,10 @@ that read v2.3's codes checks them in its v2.4 vendor PR.
 and the `---` pair its table's removal leaves empty becomes one, so a v1 ledger split by v2.4 gets a different
 `README.md` from one split by v2.3; a README already written is not touched, and every v2 file reads as before.
 `split_notes()` is new.
+
+**v2.4 adds notes on a hide** (*The board*, *The board writer*): `item_notes()` is new, `item_record()` gains
+`notes`, and `board.py`'s writes that leave an open line report them. Nothing is read differently: every line reads
+and keys as in v2.3, and a v2.3 reader of `item_record()` by key ignores the new one.
 
 ## Appendix: grammar
 

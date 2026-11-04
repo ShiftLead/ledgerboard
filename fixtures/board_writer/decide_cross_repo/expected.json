@@ -4,6 +4,7 @@
   "action": "decide",
   "board_only": true,
   "entries": [],
+  "item_notes": [],
   "line": 19,
   "paths": [
    "board.md"
