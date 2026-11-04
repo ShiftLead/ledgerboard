@@ -128,7 +128,11 @@ class Ledger:
             files = {}
             for d in (path, _join(path, LEDGER_ARCHIVE)):
                 if os.path.isdir(d):
-                    for n in sorted(os.listdir(d)):
+                    try:
+                        names = sorted(os.listdir(d))
+                    except OSError as e:
+                        raise Unusable(f"{d}: cannot be listed: {e}") from None
+                    for n in names:
                         p = _join(d, n)
                         if os.path.isfile(p):
                             files[p] = _read_raw(p)
@@ -250,6 +254,12 @@ def _flags(led: Ledger, old: str | None, resolve: Resolve | None, today: str) ->
     return check(text, arch, old, resolve, led.rank(), today=today)
 
 
+def _same(r: dict) -> tuple:
+    """A flag as the gate compares it: its kind, entry and words, without its ⚠ or ℹ mark, which ``check()``
+    sets by whether the entry changed — so a fault already on the entry a write edits is the same fault."""
+    return r["kind"], r["id"], r["text"].lstrip("⚠ℹ ")
+
+
 def gate(led: Ledger, changes: Mapping[str, str | None], *, base: Ledger | None = None,
          resolve: Resolve | None = None, today: str | None = None) -> list[str]:
     """The two-level refusal: Refused naming each ``check()`` error the ledger after ``changes`` has that the
@@ -258,9 +268,9 @@ def gate(led: Ledger, changes: Mapping[str, str | None], *, base: Ledger | None 
     are returned."""
     day = _today(today)
     old = (base or led).texts()[0]
-    before = {(r["kind"], r["text"]) for r in _flags(led, old, resolve, day)}
+    before = {_same(r) for r in _flags(led, old, resolve, day)}
     after = _flags(led.overlay(changes), old, resolve, day)
-    new = [r for r in after if (r["kind"], r["text"]) not in before and not r.get("standing")]
+    new = [r for r in after if _same(r) not in before and not r.get("standing")]
     refuse = [r for r in new if r["level"] == "error" and r["kind"] != "cross-repo"]
     if refuse:
         raise Refused("; ".join(r["text"] for r in refuse))
@@ -296,12 +306,12 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
         out.append(("Status", "Open"))
     if take is not None:
         if "id take" in given:
-            raise Refused("the take's nonce is given twice: --take and --field 'Id take=…'")
+            raise Unusable("the take's nonce is given twice: --take and --field 'Id take=…'")
         out.append(("Id take", take))
     keys = [field_key(n) for n, _ in out]
     dup = sorted({k for k in keys if keys.count(k) > 1})
     if dup:
-        raise Refused(f"a field is given twice: {', '.join(dup)}")
+        raise Unusable(f"a field is given twice: {', '.join(dup)}")
     if not sections or sections[0][0] != "Why" or not str(sections[0][1]).strip():
         raise Refused("an entry needs its Why: the Why is the point of an entry")
     entry = entry_text(tid, title, out, sections, filed=dict(filed, today=day) if filed is not None else None)
