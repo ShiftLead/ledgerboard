@@ -16,7 +16,17 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] decide 2026-11-03 (session `lb-designer`) — **Say Go to file TD-023's one build (the Hide until notes), or buy one more review round.**. Context: TD-023 / PR #74. Due: 2026-11-06. Answers: Go (default) — the build is filed Part of TD-023 for v2.4, and the grinder picks it | One more round — one more design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-023's Ask.
+- [ ] decide 2026-11-04 (session `lb-designer`) — **Say One more round to review TD-023's post-rounds fix (board.py's key is item_notes), or Go to file its one build now.**. Context: TD-023 / PR #74. Due: 2026-11-07. Answers: One more round (default) — one more design review and fact-check, then this item again | Go — the build is filed Part of TD-023 for the next release, and the grinder picks it | Hold: <note> — the build waits, and your note goes in TD-023's Ask.
+  - **Context:** TD-023's design, `docs/plans/TD-023-hide-notes.md` (PR #74), gives Hide until the two ℹ notes target design §6 asked for and TD-017 left out.
+    - hide-spent: a hide that hides nothing today, because its date has come or the item is decided.
+    - hide-late: a hidden item whose hide is after its deadline, so the deadline itself is hidden.
+    - They come from a new `item_notes(item, today)`, carried in `item_record()` as `notes`, and reported by `board.py` as `item_notes` for the line a write leaves. No gate reads them, so a note never refuses a write. The shape is your answer to the steer.
+  - **Question:** Run one more design review over the post-rounds fix, or let the one build go ahead now?
+  - **Caveats:** How the rounds ended: after round 2 of a cap of 6, by the stop rule (design reviews 1, then 0 build-changing; the fact-checks 0 build-changing; the closing one none on the design).
+    - After the rounds, PR #74's doc fact-check (F20, build-changing) found board.py already reports a `notes` key on a decide lift, so the writer's key is now `item_notes`, and the fixture list is by rule (about thirty writer cases). F21-F24 are corrections of the record and the SPEC paragraph's placement. No design review has read F20, or round 2's minor fixes F11-F17.
+    - The release is the next after the build lands, as you said; TD-036 does not wait on it.
+  - **Recommended:** One more round — F20 changes what gets built after the last design review, and the cadence says such a change buys one more round. **Otherwise:** Go if the key rename is plainly mechanical to you; the builder then checks F11-F24. Hold if the notes should take another shape.
+- [x] decide 2026-11-03 (session `lb-designer`) — **Say Go to file TD-023's one build (the Hide until notes), or buy one more review round.**. Context: TD-023 / PR #74. Due: 2026-11-06. Answers: Go (default) — the build is filed Part of TD-023 for v2.4, and the grinder picks it | One more round — one more design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-023's Ask. Closed: 2026-11-04 — replaced: PR #74's fact-check found a build-changing fix (the writer's key), so the new item recommends one more round.
   - **Context:** TD-023's design, `docs/plans/TD-023-hide-notes.md` (PR #74), gives Hide until the two ℹ notes target design §6 asked for and TD-017 left out.
     - hide-spent: a hide that hides nothing today, because its date has come or the item is decided.
     - hide-late: a hidden item whose hide is after its deadline, so the deadline itself is hidden.
