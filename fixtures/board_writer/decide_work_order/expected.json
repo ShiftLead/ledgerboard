@@ -1,0 +1,16 @@
+{
+ "exit": 0,
+ "out": {
+  "action": "decide",
+  "entries": [
+   "TD-001"
+  ],
+  "line": 11,
+  "notes": [],
+  "paths": [
+   "board.md",
+   "ledger/TD-001.md"
+  ],
+  "subject": "ledgerboard: decide Which format first?: Ask again in March (session n/a)"
+ }
+}

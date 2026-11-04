@@ -1,0 +1,16 @@
+{
+ "exit": 0,
+ "out": {
+  "action": "decide",
+  "entries": [
+   "TD-001"
+  ],
+  "line": 7,
+  "notes": [],
+  "paths": [
+   "board.md",
+   "docs/ledger/TD-001.md"
+  ],
+  "subject": "ledgerboard: decide Go on the export format?: Go (session n/a)"
+ }
+}

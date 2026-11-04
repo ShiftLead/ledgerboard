@@ -122,6 +122,55 @@ class BothOrNeither(unittest.TestCase):
             self.assertEqual(Path(board).read_text(), BOARD)
 
 
+DECIDE_BOARD = ("# Board\n\nPeople: robin\n\n## Needs the user\n\n- [ ] decide 2026-01-12 (n/a) — Go on the export? "
+                "Context: TD-1 decision (robin). Due: 2026-01-20. Answers: Go (default) | Not yet.\n"
+                "  - **Context:** It waits.\n  - **Question:** Go?\n  - **Recommended:** Go — ready.\n")
+DECIDE_ENTRY = ("## TD-001: The export\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n"
+                "**Blocked by:** decision (robin)\n\n**Why:** it is wanted.\n\n**Ask:** say go.\n")
+
+
+class DecideLift(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.board = os.path.join(self.tmp.name, "board.md")
+        self.led = os.path.join(self.tmp.name, "ledger")
+        os.makedirs(self.led)
+        Path(self.board).write_text(DECIDE_BOARD)
+        Path(self.led, "README.md").write_text("# Ledger\n\nLedgerboard: 2\n")
+        Path(self.led, "TD-001.md").write_text(DECIDE_ENTRY)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def decide(self, *more):
+        return run("decide", "--board", self.board, "--line", "7", "--expect", "decide", "--answer", "Go",
+                   "--ledger", self.led, "--today", "2026-01-15", *more)
+
+    def test_a_failed_write_keeps_the_board_and_the_ledger(self):
+        real = os.replace
+
+        def flaky(src, dst):
+            if dst.endswith("TD-001.md"):
+                raise OSError("read-only")
+            real(src, dst)
+        with mock.patch.object(B.os, "replace", flaky):
+            code, _, err = self.decide()
+        self.assertEqual(code, 1, err)
+        self.assertEqual(Path(self.board).read_text(), DECIDE_BOARD)
+        self.assertEqual(Path(self.led, "TD-001.md").read_text(), DECIDE_ENTRY)
+
+    def test_both_files_are_written(self):
+        code, out, err = self.decide()
+        self.assertEqual(code, 0, err)
+        self.assertIn("Closed: 2026-01-15 — lifted.", Path(self.board).read_text())
+        self.assertIn('gate lifted: decision (robin) — by robin; answer "Go"', Path(self.led, "TD-001.md").read_text())
+
+    def test_ledger_and_board_only_are_a_decides(self):
+        code, _, err = run("done", "--board", self.board, "--line", "7", "--expect", "decide", "--board-only")
+        self.assertEqual(code, 2)
+        self.assertIn("done does not take --board-only", err)
+
+
 class Review(unittest.TestCase):
     def test_a_new_file_takes_the_umask_mode(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -12,6 +12,7 @@
     python3 -m ledgerboard.board due     --board PATH --line N --expect HEAD --to D   (move Due: to D)
     python3 -m ledgerboard.board done    --board PATH --line N --expect HEAD [--why TEXT]
     python3 -m ledgerboard.board decide  --board PATH --line N --expect HEAD --answer TEXT [--by NAME]
+                                         [--ledger DIR | --board-only]
     python3 -m ledgerboard.board reply   --board PATH --line N --expect HEAD --text TEXT --by NAME
     python3 -m ledgerboard.board archive --board PATH --archive PATH
     python3 -m ledgerboard.board fmt     --board PATH
@@ -46,20 +47,26 @@ from . import (
     ITEM_RE,
     QUEUE_ACTIONS,
     Refused,
+    _item_gate,
+    answered_by,
     archive_closed,
     archive_subject,
     board_people,
     board_problems,
     canonical_item,
     closed_items,
+    closes,
+    decide_lift,
     decided_line,
     edit_line,
+    entries,
     is_item,
     is_person,
     item_line,
     item_record,
     load,
     parse_board,
+    parse_parts,
     people_problems,
     queue_subject,
     respace,
@@ -321,9 +328,12 @@ def _find(lines: list[str], line: int, expect: str) -> tuple[str, str]:
 def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None = None,
               why: str | None = None, answer: str | None = None, text: str | None = None,
               by: str | None = None, today: str | date | None = None, tool: str = TOOL,
-              session: str | None = None) -> Plan:
+              session: str | None = None, ledger: str | None = None, board_only: bool = False) -> Plan:
     """One of the five edits (``edit_line()``) of open item `line`, which must still start with `expect`; a
-    decide's `by`, who answered, as ``who_answered()`` resolves it."""
+    decide's `by`, who answered, as ``who_answered()`` resolves it. A decide on an item naming one entry and
+    one gate is the two-file decide lift (``_decide_ledger()``): the board line, closed per ``closes()``, and
+    the entries ``decide_lift()`` changes in ``ledger``, both or neither; ``board_only`` writes the board half
+    alone."""
     if action not in EDITS:
         raise Refused(f"an edit is one of {', '.join(EDITS)}, not {action!r}")
     day = _today(today)
@@ -337,13 +347,67 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
     old = read(board)
     lines = old.splitlines(keepends=True)
     body, eol = _find(lines, line, expect)
+    if (ledger is not None or board_only) and action != "decide":
+        raise Refused("--ledger and --board-only are a decide's")
+    changes: dict[str, str | None] = {}
+    info: dict = {"line": line}
+    close = False
     if action == "decide":
         by = who_answered(old, by)
-    new = edit_line(body, action, to=when, answer=answer, why=why, reply=text, by=by, today=day)
+        close, changes, info = _decide_ledger(old, body, answer, by, day, ledger, board_only, today)
+        info = {"line": line, **info}
+    new = edit_line(body, action, to=when, answer=answer, why=why, reply=text, by=by, today=day, close=close)
     lines[line - 1] = new + eol
     msg = subject(tool, action, ITEM_RE.match(body).group("text").strip(),
                   to=when, answer=answer, session=session)
-    return Plan(action, msg, {board: "".join(lines)}, {"line": line})
+    return Plan(action, msg, {board: "".join(lines), **changes}, info)
+
+
+def _decide_ledger(board_text: str, body: str, label: str | None, by: str, day: date, ledger: str | None,
+                   board_only: bool, today: str | date | None) -> tuple[bool, dict[str, str | None], dict]:
+    """A decide's ledger half (v2.4, SPEC *The board writer*): (whether the answer closes the item, the ledger
+    files it changes, what it reports). An item whose Context names one bare ``TD-n`` and one gate is the
+    decide lift: ``decide_lift()`` on the ledger's base texts of that entry and its `Parts:`, judged as the
+    ledger writer judges a write, then ``closes()`` on the texts after. With ``board_only`` (the ``set by=``
+    route, which has written the ledger already) nothing is written there, and ``closes()`` reads the ledger as
+    it stands. An item naming another repo's entry is answered on the board alone and stays open."""
+    ref, gate_ = _item_gate(ITEM_RE.match(body).group("text").strip())
+    if ref is None or gate_ is None:
+        if ledger is not None or board_only:
+            raise Refused("--ledger and --board-only are for a decide item whose Context names one entry and one gate")
+        return False, {}, {}
+    if "#" in ref:
+        if ledger is not None:
+            raise Refused(f"{ref} is another repo's entry: its lift is a tool PR there, so no --ledger here")
+        return closes(body, label or "", {}), {}, {"entries": [], "board_only": True}
+    from . import ledger as L  # the ledger writer imports this module, so it is loaded here, when needed
+    path = ledger or (L.LEDGER_DIR if os.path.isdir(L.LEDGER_DIR) else None)
+    if path is None:
+        raise Refused(f"the item lifts {gate_} on {ref}: pass --ledger (the v2 directory), or --board-only when "
+                      "the ledger is written already")
+    try:
+        led = L.Ledger.open(path)
+        L._writable(led)
+        ids = [ref, *[x for x in parse_parts(ITEM_RE.match(body).group("text")) if "#" not in x]]
+        found = {}
+        for x in ids:
+            try:
+                p, archived = led.entry_file(L.tid_of(x))
+            except Refused:
+                continue
+            if not archived:
+                found[entries(led.files[p])[0]["id"]] = p
+        base = {tid: led.files[p] for tid, p in found.items()}
+        if board_only:
+            return closes(body, label or "", base), {}, {"entries": [], "board_only": True}
+        ledger_day = L._today(today)
+        got = decide_lift(body, base, label or "", by, ledger_day, board_people(board_text), answered_by(board_text))
+        changes: dict[str, str | None] = {found[tid]: text for tid, text in got.items()}
+        notes = L.gate(led, changes, today=ledger_day) if changes else []
+    except Refused as e:
+        raise Refused(f"the ledger half: {e}") from None
+    after = {**base, **got}
+    return closes(body, label or "", after), changes, {"entries": sorted(got), "notes": notes}
 
 
 def plan_archive(board: str, archive: str, *, tool: str = TOOL, session: str | None = None) -> Plan:
@@ -465,7 +529,8 @@ def build(a: argparse.Namespace) -> Plan:
             raise Refused("decide takes one --answer, the person's")
         answer = a.answer[0] if a.action == "decide" else None
         return plan_edit(a.board, a.action, a.line, a.expect, to=a.to, why=a.why, answer=answer,
-                         text=a.text, by=a.by, today=a.today, tool=a.tool, session=a.session)
+                         text=a.text, by=a.by, today=a.today, tool=a.tool, session=a.session,
+                         ledger=a.ledger, board_only=a.board_only or False)
     if a.action == "archive":
         return plan_archive(a.board, a.archive, tool=a.tool, session=a.session)
     if a.action == "fmt":
@@ -489,7 +554,7 @@ TAKES = {
     "snooze": {"board", "line", "expect", "to", "today", "tool", "session"},
     "due": {"board", "line", "expect", "to", "today", "tool", "session"},
     "done": {"board", "line", "expect", "why", "today", "tool", "session"},
-    "decide": {"board", "line", "expect", "answer", "by", "today", "tool", "session"},
+    "decide": {"board", "line", "expect", "answer", "by", "today", "tool", "session", "ledger", "board_only"},
     "reply": {"board", "line", "expect", "text", "by", "today", "tool", "session"},
     "archive": {"board", "archive", "tool", "session"},
     "fmt": {"board"},
@@ -502,7 +567,8 @@ NEEDS_OPT = {
     "reply": ("board", "line", "expect", "text", "by"), "archive": ("board", "archive"),
     "fmt": ("board",), "rank": ("rank", "queue"),
 }
-DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "lift": [], "set": [], "drop": [], "fixed": []}
+DEFAULTS = {"under": NEEDS, "tool": TOOL, "answer": [], "lift": [], "set": [], "drop": [], "fixed": [],
+            "board_only": False}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -514,7 +580,10 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--action", dest="queue", help="rank: rank, join, prune or respace")
     ap.add_argument("--set", action="append", default=[], help="rank: TD-n=KEY, a line to set")
     ap.add_argument("--drop", action="append", default=[], help="rank: TD-n, a line to remove")
-    ap.add_argument("--ledger", help="rank --action respace: the ledger (a file or a v2 directory)")
+    ap.add_argument("--ledger", help="rank --action respace: the ledger (a file or a v2 directory); decide: the v2 "
+                                     "ledger the lift writes (default: docs/ledger when it is a directory)")
+    ap.add_argument("--board-only", action="store_true",
+                    help="decide: write the board half alone (the set by= route, whose ledger is written already)")
     ap.add_argument("--fixed", action="append", default=[],
                     help="rank --action respace: another repo's key sorted beside this file's (repeat)")
     ap.add_argument("--repo", help="rank --action respace: the last component of this repo's implicit keys")
@@ -554,7 +623,7 @@ def main(argv: list[str] | None = None) -> int:
              if k not in ("action", "plan", "json") and v is not None and v != DEFAULTS.get(k)}
     extra = sorted(given - TAKES[a.action])
     if extra:
-        ap.error(f"{a.action} does not take {', '.join('--' + e for e in extra)}")
+        ap.error(f"{a.action} does not take {', '.join('--' + e.replace('_', '-') for e in extra)}")
     missing = [o for o in NEEDS_OPT[a.action] if getattr(a, o) in (None, [])]
     if missing:
         ap.error(f"{a.action} needs {', '.join('--' + ('action' if o == 'queue' else o) for o in missing)}")
