@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] act 2026-11-03 (session `lb-grinder`) — Merge PR #84 (TD-020), which the techlead passed with a recommendation to merge, or answer the open steer on split_notes()'s shape first. Context: TD-020 / PR #84. Due: 2026-11-04.
+- [x] act 2026-11-03 (session `lb-grinder`) — Merge PR #84 (TD-020), which the techlead passed with a recommendation to merge, or answer the open steer on split_notes()'s shape first. Context: TD-020 / PR #84. Due: 2026-11-04. Closed: 2026-11-04 — merged 2026-11-04 (squash) on Paul's say-so; TD-020 waits on the v2.4 release.
   - **Context:** #84 makes `split()` keep a v1 README's Summary section as written, and adds `split_notes(readme)`. That function lists the README lines that may still describe the v1 layout, so the caller can warn about them. It is your merge, not the techlead's, because the Fix says to report those lines "in the result", and #84 reports them through a separate function. The steer that asked you about that shape (m-5d77cc3dec15) has no answer yet. The gate is green on b2b0f50, and the Sonnet review and the techlead's read have both passed. Once it merges, v2.4 (also yours to release) carries it.
   - **Recommended:** merge #84 as built. A separate `split_notes()` leaves `split()`'s return value unchanged for both consumers. **Otherwise:** answer the steer to fold the notes into `split()`'s result, and the grinder reworks #84.
 - [x] act 2026-11-03 (session `lb-grinder`) — Release v2.3: every build is merged (TD-012 to TD-019, the last PR #77), so stamp and tag it. Context: TD-021. Due: 2026-11-03. Closed: 2026-11-03 — tagged v2.3 on 54d2df9 (PR #82); TD-021 archived.
