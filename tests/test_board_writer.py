@@ -102,13 +102,13 @@ class BothOrNeither(unittest.TestCase):
             self.assertEqual(Path(board).read_text(), BOARD)
             self.assertEqual(os.listdir(tmp), ["board.md"])
 
-    def test_the_command_says_so_and_exits_1(self):
+    def test_the_command_says_so_and_exits_4(self):
         with tempfile.TemporaryDirectory() as tmp:
             board = os.path.join(tmp, "board.md")
             Path(board).write_text(BOARD)
             with mock.patch.object(B.os, "replace", side_effect=OSError("no")):
                 code, _, err = run("done", "--board", board, "--line", "5", "--expect", "act", "--today", "2026-01-15")
-            self.assertEqual(code, 1)
+            self.assertEqual(code, 4)
             self.assertIn("every file restored", err)
             self.assertEqual(Path(board).read_text(), BOARD)
 
@@ -155,7 +155,7 @@ class DecideLift(unittest.TestCase):
             real(src, dst)
         with mock.patch.object(B.os, "replace", flaky):
             code, _, err = self.decide()
-        self.assertEqual(code, 1, err)
+        self.assertEqual(code, 4, err)
         self.assertEqual(Path(self.board).read_text(), DECIDE_BOARD)
         self.assertEqual(Path(self.led, "TD-001.md").read_text(), DECIDE_ENTRY)
 
@@ -164,6 +164,19 @@ class DecideLift(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("Closed: 2026-01-15 — lifted.", Path(self.board).read_text())
         self.assertIn('gate lifted: decision (robin) — by robin; answer "Go"', Path(self.led, "TD-001.md").read_text())
+
+    def test_a_ledger_it_cannot_use_exits_2_as_the_ledger_writer_does(self):
+        v1 = os.path.join(self.tmp.name, "technical_debt.md")
+        Path(v1).write_text("# Ledger\n\n" + DECIDE_ENTRY)
+        code, _, err = run("decide", "--board", self.board, "--line", "7", "--expect", "decide", "--answer", "Go",
+                           "--ledger", v1, "--today", "2026-01-15")
+        self.assertEqual(code, 2, err)
+        self.assertIn("v1 ledger", err)
+        self.assertEqual(Path(self.board).read_text(), DECIDE_BOARD)
+
+    def test_a_refusal_exits_1_never_3(self):
+        code, _, err = self.decide("--by", "someone-else")
+        self.assertEqual(code, 1, err)
 
     def test_ledger_and_board_only_are_a_decides(self):
         code, _, err = run("done", "--board", self.board, "--line", "7", "--expect", "decide", "--board-only")
@@ -225,7 +238,7 @@ class Usage(unittest.TestCase):
             Path(board).write_text(BOARD)
             code, _, err = run("decide", "--board", board, "--line", "5", "--expect", "act",
                                "--answer", "a", "--answer", "b")
-            self.assertEqual(code, 3)
+            self.assertEqual(code, 1)
             self.assertIn("one --answer", err)
 
     def test_a_bad_today(self):
@@ -233,7 +246,7 @@ class Usage(unittest.TestCase):
             board = os.path.join(tmp, "board.md")
             Path(board).write_text(BOARD)
             code, _, err = run("done", "--board", board, "--line", "5", "--expect", "act", "--today", "2026-1-5")
-            self.assertEqual(code, 3)
+            self.assertEqual(code, 2)
             self.assertIn("--today", err)
 
     def test_plain_output_is_the_subject_then_the_paths(self):

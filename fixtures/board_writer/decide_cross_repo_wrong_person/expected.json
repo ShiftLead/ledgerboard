@@ -1,5 +1,5 @@
 {
- "exit": 3,
+ "exit": 1,
  "out": {
   "action": "decide",
   "refused": "only robin answers for decision (robin) on a board whose Answered by is owner, not sam"

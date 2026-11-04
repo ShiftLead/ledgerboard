@@ -28,7 +28,9 @@ git, the network or anything of a consumer's: the caller passes who replies or a
 (``--today``, default the local clock) and the tool and session the subject names, and makes the
 commit itself.
 
-Exit: 0 written (or nothing to change); 1 a write failed (every file restored); 2 usage; 3 refused.
+Exit, the package's one table (``ledger.py`` shares it): 0 written (or nothing to change); 1 refused; 2 usage
+(a bad ``--today`` among it), or (``decide``) the ledger cannot be used as asked; 4 a write failed (every file restored). 3 is ``ledger.py``'s
+``needs`` and never the board writer's.
 """
 
 from __future__ import annotations
@@ -188,17 +190,21 @@ def write(changes: Mapping[str, str | None]) -> list[str]:
 
 # -- the actions, each a Plan ---------------------------------------------------------------------------
 
+class BadToday(Refused):
+    """A ``--today`` that is not a YYYY-MM-DD date: exit 2, as the ledger writer gives it."""
+
+
 def _today(today: str | date | None) -> date:
     if today is None:
         return date.today()  # noqa: DTZ011  # the board's dates are the local clock's (target design §1.1)
     if isinstance(today, date):
         return today
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", today):
-        raise Refused(f"--today is YYYY-MM-DD, not {today!r}")
+        raise BadToday(f"--today is YYYY-MM-DD, not {today!r}")
     try:
         return date.fromisoformat(today)
     except ValueError:
-        raise Refused(f"--today {today} is not a date") from None
+        raise BadToday(f"--today {today} is not a date") from None
 
 
 def items(board: str, today: str | date | None = None) -> list[dict]:
@@ -422,6 +428,8 @@ def _decide_ledger(board_path: str, board_text: str, body: str, label: str | Non
         got = decide_lift(body, base, label or "", by, ledger_day, board_people(board_text), answered_by(board_text))
         changes: dict[str, str | None] = {found[tid]: text for tid, text in got.items()}
         notes = L.gate(led, changes, today=ledger_day) if changes else []
+    except L.Unusable as e:
+        raise L.Unusable(f"the ledger half: {e}") from None
     except Refused as e:
         raise Refused(f"the ledger half: {e}") from None
     after = {**base, **got}
@@ -656,11 +664,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         plan = build(a)
     except Refused as e:
+        from . import ledger as L  # loaded here, as in decide: the ledger writer imports this module
+        code = 2 if isinstance(e, (BadToday, L.Unusable)) else 1  # 2 as ledger.py gives them
         if a.json or a.plan:
             print(json.dumps({"action": a.action, "refused": str(e)}, ensure_ascii=False))
         else:
             print(f"ledgerboard.board: refused: {e}", file=sys.stderr)
-        return 3
+        return code
     if a.plan:
         print(json.dumps(plan.as_json(), ensure_ascii=False))
         return 0
@@ -668,7 +678,7 @@ def main(argv: list[str] | None = None) -> int:
         paths = apply(plan)
     except OSError as e:
         print(f"ledgerboard.board: the write failed, every file restored: {e}", file=sys.stderr)
-        return 1
+        return 4
     if a.json:
         print(json.dumps({"action": plan.action, "subject": plan.subject, "paths": paths, **plan.info},
                          ensure_ascii=False))
