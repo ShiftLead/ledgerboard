@@ -12,7 +12,8 @@ A **ledger** (`docs/technical_debt.md`) holds a repo's deferred work as `TD-NNN`
   files they are given and nothing else — never git, the network, the roster, forges, trackers, delivery,
   sweeps, sessions, or logic that knows either consumer.
 - `fixtures/` — language-neutral conformance cases (a Markdown input and its expected JSON), so a reader in
-  any language can prove it reads the formats the same way.
+  any language can prove it reads the formats the same way. Each release stamps the set with its release in
+  `fixtures/MANIFEST` (v2.4), so a copy of the set, like a copy of the package, proves which release it is.
 
 It is consumed by [agent-cadence](https://github.com/ShiftLead/agent-cadence) (how a repo works, for any agent
 or a person) and [ShiftLead](https://github.com/ShiftLead/shiftlead) (how many sessions are run). Neither

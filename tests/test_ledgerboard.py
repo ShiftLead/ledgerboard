@@ -196,19 +196,28 @@ class Rank(unittest.TestCase):
         self.assertEqual(L.pickable(led, "", rank_text="TD-0007: 0h\n", today=TODAY)["entries"][0]["key"], "0h")
 
 
+def _stamped_runner(tmp: Path) -> Path:
+    """A copy of fixtures/run.py alone in ``<tmp>/fixtures/``, its set stamped v1.0 (TD-040): the made-up
+    modules below are v1.0, and --check-header checks the set's MANIFEST beside their headers."""
+    run = tmp / "fixtures" / "run.py"
+    run.parent.mkdir(parents=True)
+    shutil.copy2(ROOT / "fixtures" / "run.py", run)
+    subprocess.run([sys.executable, str(run), "--stamp", "1.0"], capture_output=True, check=True)
+    return run
+
+
 class Header(unittest.TestCase):
     def test_check_header(self):
-        run = [sys.executable, str(ROOT / "fixtures" / "run.py"), "--check-header", "--module"]
+        tmpdir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmpdir)
+        run = [sys.executable, str(_stamped_runner(tmpdir)), "--check-header", "--module"]
         body = b"# SYNCED FILE\n\"\"\"doc\"\"\"\n"
         ok = f"# ledgerboard v1.0 sha256:{hashlib.sha256(body).hexdigest()}\n".encode() + body
-        tmp = ROOT / "tests" / "_header_tmp.py"
-        try:
-            tmp.write_bytes(ok)
-            self.assertEqual(subprocess.run([*run, str(tmp)], capture_output=True, check=False).returncode, 0)
-            tmp.write_bytes(ok + b"# edited\n")
-            self.assertEqual(subprocess.run([*run, str(tmp)], capture_output=True, check=False).returncode, 1)
-        finally:
-            tmp.unlink(missing_ok=True)
+        tmp = tmpdir / "_header_tmp.py"
+        tmp.write_bytes(ok)
+        self.assertEqual(subprocess.run([*run, str(tmp)], capture_output=True, check=False).returncode, 0)
+        tmp.write_bytes(ok + b"# edited\n")
+        self.assertEqual(subprocess.run([*run, str(tmp)], capture_output=True, check=False).returncode, 1)
 
 
 def _stamped(body: bytes, version: str = "1.0") -> bytes:
@@ -271,13 +280,15 @@ class Package(unittest.TestCase):
     def test_check_header_reads_every_package_file(self):
         pkg = self.tmp / "ledgerboard"
         pkg.mkdir()
-        run = [sys.executable, str(ROOT / "fixtures" / "run.py"), "--check-header", "--module", str(pkg)]
+        run = [sys.executable, str(_stamped_runner(self.tmp)), "--check-header", "--module", str(pkg)]
 
         def check():
             return subprocess.run(run, capture_output=True, text=True, check=False)
         (pkg / "__init__.py").write_bytes(_stamped(b'"""doc"""\n'))
         (pkg / "board.py").write_bytes(_stamped(b"from . import x\n"))
-        self.assertEqual(check().returncode, 0, check().stdout)
+        r = check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("fixtures: ok (v1.0, 1 files)", r.stdout)
         (pkg / "board.py").write_bytes(_stamped(b"from . import x\n") + b"# edited\n")
         r = check()
         self.assertEqual(r.returncode, 1)
