@@ -49,6 +49,9 @@ Fixtures, each an invented input and its expected JSON:
 - ``ledger/supersede.md`` (v2.4): an archived blocker's Status read — Resolved, Superseded (by an open entry, a
   Resolved one, another repo's, a chain ending in Dropped, a loop, no successor) and Dropped, here and through the
   resolver's ``status`` and ``successor``.
+- ``verdict/cases.json`` → ``verdict/expected.json`` (v2.4): the merge gate's verdicts — ``lift_pr_verdict()``,
+  ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
+  ``cases/<name>/base/``, then its ``cases/<name>/head/`` over that, less its ``delete`` paths.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
   as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
@@ -450,6 +453,45 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
     }
 
 
+def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
+    """The merge gate's verdicts (v2.4): ``lift_pr_verdict()``, ``tripwire()`` and ``uncovered_decisions()`` of
+    each case's base and head trees. ``verdict/base/`` is every case's base tree; a case's ``cases/<name>/base/``
+    and ``cases/<name>/head/`` lay files over it (the head over the base after its own overlay), and its
+    ``delete`` names paths the head drops. Boards another repo holds are files of ``verdict/boards/``."""
+    if not hasattr(L, "lift_pr_verdict"):
+        return {"missing": "the module has no lift_pr_verdict — older than v2.4"}
+    d = root / "verdict"
+    shared = tree(d / "base")
+
+    def trees(c):
+        base = {**shared, **tree(d / "cases" / c["name"] / "base")}
+        head = {**base, **tree(d / "cases" / c["name"] / "head")}
+        for p in c.get("delete", []):
+            head.pop(p, None)
+        return base, head
+
+    def verdict(c):
+        base, head = trees(c)
+        got = L.lift_pr_verdict(base, head, c["files"], c["subject"], c["commits"], c["created_at"],
+                                c["merged_at"], spec["repo"])
+        return {"carve_out": got["carve_out"], "flags": [list(x) for x in got["flags"]],
+                "review": [list(x) for x in got["review"]]}
+
+    def uncovered(c):
+        base, head = trees(c)
+        boards = [(b["url"], b["basename"], (d / "boards" / b["board"]).read_text(encoding="utf-8"),
+                   (d / "boards" / b["archive"]).read_text(encoding="utf-8") if b["archive"] else "")
+                  for b in c["boards"]]
+        refusals, flags = L.uncovered_decisions(base, head, boards, spec["repo"])
+        return {"refusals": [list(x) for x in refusals], "flags": [list(x) for x in flags]}
+    return {
+        "verdict": {c["name"]: verdict(c) for c in spec["verdict"]},
+        "tripwire": {c["name"]: [list(x) for x in L.tripwire(*trees(c), c["subject"], spec["repo"])]
+                     for c in spec["tripwire"]},
+        "uncovered": {c["name"]: uncovered(c) for c in spec["uncovered"]},
+    }
+
+
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
     ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
@@ -565,6 +607,8 @@ def cases(L, root: Path):
     yield root / "ids" / "expected.json", ids_cases(L, spec)
     spec = json.loads((root / "sweep" / "cases.json").read_text(encoding="utf-8"))
     yield root / "sweep" / "expected.json", sweep_cases(L, spec, root)
+    spec = json.loads((root / "verdict" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "verdict" / "expected.json", verdict_cases(L, spec, root)
 
 
 def main(argv: list[str] | None = None) -> int:
