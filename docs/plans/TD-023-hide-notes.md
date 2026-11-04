@@ -36,10 +36,11 @@ The two rules exclude each other (one needs `hidden(today)`, the other its negat
 
 ## Where the notes are read
 
-- **`item_record()` gains `notes`**, `item_notes(item, today)`, after `hidden`. Every board fixture's records gain the key.
+- **`item_record()` gains `notes`**, `item_notes(item, today)`, placed immediately after `hidden` (before `lifts` and `parts`). Every board fixture's records gain the key.
 - **The board writer** (`board.py`) reports the notes of the open line a write leaves. That is the line `add` wrote (its reported `line`, the item's own line, above its detail block) or the line `snooze`, `due`, `decide` or `reply` edited (`--line`).
-  - **How it reads them:** the writer reads the board as the write leaves it, with `parse_board(new, warn=False)`. It takes the item whose `line` is that line and passes it to `item_notes(item, today)` at the write's `--today`. With no such item, which happens when the line is the open twin of a closed one, the notes are `[]`.
+  - **How it reads them:** the writer reads the board as the write leaves it, with `parse_board(new, warn=False)`. It takes the item whose `line` is that line and passes it to `item_notes(item, today)` at the write's `--today`. With no such item, the notes are `[]`: a `decide` that closes its item (a gate item) leaves no open line, and the line may be the open twin of a closed one.
   - **The JSON:** the plan's report carries `"item_notes": [{"line": n, "note": "<note>"}, …]`, always present for those five actions and `[]` when there are none. It appears both in a write's `--json` and in `--plan`. The key is `item_notes`, not `notes`: a decide lift already reports `notes` (SPEC *The board writer*: "A decide lift also reports `entries` … and `notes`", the ledger gate's notes, `board.py`'s `_decide_ledger()`), and that key is unchanged, so a lifting `decide` carries both. `done`, `fmt`, `archive`, `rank` and `list` carry no `item_notes` key. `done` leaves no open line, and `list --json` already carries each record's `notes`.
+  - **Where it is computed:** in `plan_add()` and `plan_edit()` (which also runs `decide`), as a key of `Plan.info`, so a library caller of the plan functions and `--plan` (which spreads `info`) get it with no work in `main()`.
   - **The text mode:** without `--json` or `--plan`, each note is printed on stderr as `line n: ℹ <note>`, after the subject and paths, as the `kept:` lines are.
   - **The exit code:** a note never changes it, and the write is made.
   - **Notes it did not cause:** the writer reports the line's notes as the write leaves them, including one the write did not cause. A `reply` or `due` on a line whose hide is late reports `hide-late`. A `decide` on a hidden item reports the decided `hide-spent`, since deciding it ends the hide. That is deliberate: the note describes the line the caller just touched.
@@ -55,7 +56,7 @@ The two rules exclude each other (one needs `hidden(today)`, the other its negat
 >
 > An item carries at most one of them. `item_record()` carries them as `notes`.
 
-**2. *The board writer (v2.3)*, a sentence appended to the paragraph that opens "Each write prints the commit subject":**
+**2. *The board writer (v2.3)*, a paragraph of its own, right after the paragraph that opens "Each write prints the commit subject" (which ends with the exit table, "… which is the ledger writer's `needs`."):**
 
 > From v2.4, a write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()` at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the notes are `item_notes`, `[{"line", "note"}]` (each names its line, as a write names one, where `item_record()`'s `notes` is the record's own list of strings), always present and `[]` when there are none; a decide lift's `notes` (above) is a different key and unchanged. Without either, each is printed on stderr as `line n: ℹ <note>`. A note never changes the exit code.
 
@@ -75,7 +76,7 @@ The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so 
   - line 17 (an fyi hidden until 2026-02-01, with no `Due:`): `[]`;
   - lines 19 and 20 (a `Hide until:` inside an answer and inside a `Decided:` text): `[]`;
   - every other line: `[]`.
-- **`board/basic.json`, `board/answers.json` and `board_writer/list/expected.json`** gain `"notes": []` on every record.
+- **Every `fixtures/board/*.json`** (`answers`, `basic`, `hidden`, `lifts_parts`, `people`) **and `board_writer/list/expected.json`** gain `notes` on every record: `[]` but where `board/hidden.json`'s lines above carry one.
 - **`board_writer/snooze/`**: it already snoozes an item due 2026-01-20 to 2026-01-29, so it is the `hide-late` case. Its `expected.json` gains `"item_notes": [{"line": 7, "note": "hide-late: Hide until: 2026-01-29 is after Due: 2026-01-20, so the item stays hidden past its deadline"}]`, and it still exits 0 and writes the file.
 - **`board_writer/snooze_spent/`** (new): the same board and line, snoozed `--to 2026-01-15` at `--today 2026-01-15`. It exits 0, writes `Hide until: 2026-01-15.`, and its JSON carries `hide-spent: Hide until: 2026-01-15 has come, so it hides nothing; a snooze replaces it` for line 7.
 - **`board_writer/decide_hidden/`** (new): `decide`'s board with ` Hide until: 2026-01-17.` after line 9's `Due: 2026-01-18.`, and `decide`'s command (`--line 9 --answer Disk --today 2026-01-15`). It exits 0, writes the `Decided:`, and its JSON carries `[{"line": 9, "note": "hide-spent: a decided item is never hidden, so Hide until: 2026-01-17 hides nothing"}]`.
@@ -83,7 +84,7 @@ The `fixtures/run.py` docstring's `board/` line reads `item_record()` whole, so 
 - **`edit/cases.json`**: an `item_notes` group, `[{"name", "line"}]`. Each line is read as `parse_board(line, warn=False)[0]` and given to `item_notes()` at the file's `today`, and the expected output is each name's list. The group holds:
   - a hide one day before `Due:` (no note);
   - a hide equal to `Due:` (no note);
-  - a later hide on a line whose `Due:` cannot be read (no note);
+  - a later hide on a line whose `Due:` is an impossible date (`… Due: 2026-02-30. Hide until: 2026-03-20.`), which `parse_board()` reads with `bad_due` set, `due` `None` and the hide read (no note: rule 2 needs a readable `Due:`). A malformed `Due:` token (`Due: 2026-1-20`) makes the line read no `Hide until:` at all, so it needs no case;
   - a later hide on an `fyi` that carries a `Due:` anyway (no note, since an fyi is never due).
 
   Each is a line the board fixture does not already hold.
