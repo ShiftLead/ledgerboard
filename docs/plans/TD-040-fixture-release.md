@@ -51,11 +51,11 @@ The four questions in TD-040's Fix, answered:
    - When `headers_problem(module)` is `None` and the manifest has no problem above: `MANIFEST names v<a>, the package v<b>` if they differ, `<b>` read as `--check-header` reads it today (the first package file's header).
 
    It exits 1 when the header or the manifest has any problem, else 0. A manifest is checked only by `--check-header` (run by `release.sh` before both its commit and its tag, and by a consumer's vendor check); a plain run (`python3 fixtures/run.py`) reads no manifest, so the repo's precheck, which runs between releases, is unchanged.
-4. **One definition.** The manifest is three functions of `run.py`, which `--stamp`, `--check-header` and the tests share: `manifest_text(root: Path, release: str) -> str`, which raises `ValueError` carrying the on-disk problems when the set has any; `manifest_problems(root: Path) -> list[str]` (every problem above but the mismatch, without the `fixtures: ` prefix); and `manifest_release(root: Path) -> str | None`, the `<x.y>` of an intact manifest's first line, else `None`, which `--check-header` compares with the package's. `release.sh` writes no manifest of its own. Nothing goes into the package: `ledgerboard/` neither reads nor writes `fixtures/`.
+4. **One definition.** The manifest is three functions of `run.py`, which `--stamp`, `--check-tracked`, `--check-header` and the tests share: `manifest_text(root: Path, release: str) -> str`, which raises `ValueError` carrying the on-disk problems when the set has any; `manifest_problems(root: Path) -> list[str]` (every problem above but the mismatch, without the `fixtures: ` prefix); and `manifest_release(root: Path) -> str | None`, the `<x.y>` of an intact manifest's first line, else `None`, which `--check-header` compares with the package's. `release.sh` writes no manifest of its own. Nothing goes into the package: `ledgerboard/` neither reads nor writes `fixtures/`.
 
 ## What changes where
 
-- **`fixtures/run.py`:** `manifest_text()`, `manifest_problems()` and `--stamp`; `--check-header` gains the manifest check (rule 3), and its help text says it checks both; the docstring's usage block and its `--check-header` paragraph say so (text below).
+- **`fixtures/run.py`:** `manifest_text()`, `manifest_problems()`, `manifest_release()`, `--stamp` and `--check-tracked`; `--check-header` gains the manifest check (rule 3), and its help text says it checks both; the docstring's usage block and its `--check-header` paragraph say so (text below).
 - **`release.sh`:** the stamp, the tracked-files check and the wider commit (rule 2); its header comment gains the manifest (text below). `--tag` needs no change: it already runs `--check-header`, which now refuses a manifest edited after the stamp.
 - **`fixtures/MANIFEST`:** written once, by v2.4's `release.sh` run, never by the build's PR. The build commits no manifest, so main between the build and the release has none, and `--check-header` on main says so (`no MANIFEST …`); only `release.sh` and a consumer's check run it, and `release.sh` stamps before it checks.
 - **`README.md`:** the `fixtures/` bullet gains one sentence (text below).
@@ -81,9 +81,10 @@ The four questions in TD-040's Fix, answered:
     python3 fixtures/run.py [--module PATH] [--write]
     python3 fixtures/run.py --check-header [--module PATH]
     python3 fixtures/run.py --stamp <x.y>
+    (cd fixtures && git ls-files -z) | python3 fixtures/run.py --check-tracked
 ```
 
-and the sentence beginning "``--check-header`` checks only the first line of every ``*.py`` file in the package" gains, after its parenthesis: "It then checks this set's ``MANIFEST`` (v2.4): the release it names and the sha256 of every other file here, which must match, with no file missing or added, and the same release as the package (exit 1 on any difference). ``--stamp <x.y>`` writes that ``MANIFEST`` for this set; ``release.sh`` runs it."
+and the sentence beginning "``--check-header`` checks only the first line of every ``*.py`` file in the package" gains, after its parenthesis: "It then checks this set's ``MANIFEST`` (v2.4): the release it names and the sha256 of every other file here, which must match, with no file missing or added, and the same release as the package (exit 1 on any difference). ``--stamp <x.y>`` writes that ``MANIFEST`` for this set, and ``--check-tracked`` compares its paths with the NUL-separated paths on stdin (what git tracks, which ``release.sh`` pipes in; this file runs no git); ``release.sh`` runs both."
 
 **`release.sh`'s header comment**, after "stamp the first line of every file in the package (ledgerboard/*.py) with the release and that file's hash,": "write fixtures/MANIFEST (the release and every fixture file's sha256, fixtures/run.py --stamp),", and the closing paragraph gains: "The fixtures carry the same release in fixtures/MANIFEST, checked by the same --check-header."
 
