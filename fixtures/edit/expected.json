@@ -1110,6 +1110,11 @@
     6,
     "See [the old file](https://example.com/technical_debt.md) and [the archive](technical_debt_archive.md).",
     "links technical_debt_archive.md relatively: the README moved into the ledger directory"
+   ],
+   [
+    8,
+    "Write `[the archive](technical_debt_archive.md)` no more.",
+    "names technical_debt_archive.md, a v1 file: the ledger is now this directory"
    ]
   ]
  ],

@@ -3019,7 +3019,8 @@ def split_notes(readme: str) -> list[tuple[int, str, str]]:
         for m in SPLIT_LINK_RE.finditer(INLINE_CODE_RE.sub("", line)):
             target = m.group("target") or m.group("ref")
             out.append((n, line, f"links {target} relatively: the README moved into the ledger directory"))
-        named = V1_NAME_RE.search(ANY_LINK_RE.sub("", line))  # backticked names count; a link's are its own
+        spans = " ".join(m.group(0) for m in INLINE_CODE_RE.finditer(line))  # a code span shows text, never a link
+        named = V1_NAME_RE.search(spans) or V1_NAME_RE.search(ANY_LINK_RE.sub("", INLINE_CODE_RE.sub(" ", line)))
         if named:
             out.append((n, line, f"names {named.group(0)}, a v1 file: the ledger is now this directory"))
     return out
