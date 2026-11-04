@@ -746,6 +746,58 @@ when the Context names this repo's entry (a bare `TD-n`) and nothing listed stil
 work order, and the item stays open until whoever acts on it closes it; a lifting answer on another repo's entry
 stays open until that repo's lift merges.
 
+**The gate sweep** (v2.4) is what a host's periodic sweep of one repo's ledger does, decided here and nowhere else;
+the host gathers the inputs (the boards it reads, its event checks' outcomes) and writes the outputs. It keeps no
+state: the boards, their archives and the ledger's Log are its state, so running it again over its own writes files
+and closes nothing. A board is `(origin_url, basename, text, archive_text)`, named by its origin's `origin_key`,
+else by its basename; **this repo's own board** is the one whose `origin_path` is `repo` (else whose basename is).
+On it a bare `TD-n` names this repo's entry; on any board, `<repo>#TD-n` with `repo` (compared case-insensitively).
+
+`covers(entry_text, gate, boards, repo)` returns `[(board, item, state)]`: each `decide` item whose Context names
+the entry and the gate, or the entry's parent (its `Part of`) with the gate and the entry among its `Parts:`, on a
+board whose `People:` lists the gate's person (any board, for an event). Its state is `open`, `decided` (open, with
+`Decided:`), `closed` or `closed-decided` (closed on the board or in its archive). Only `open` and `decided` cover.
+
+`sweep(entries, boards, results, today_utc, today_local, reask_days=30, event_age_days=30, repo)` returns `{to_file:
+{board: [item]}, to_close: {board: [item key]}, lifts: [{id, gate, kind, evidence}]}`. `entries` are the ledger's
+and the archive's texts; an entry is open unless its Status is an archived one, and only open entries file or lift.
+`results` maps `(TD-n, event name)` to a check's outcome (`passed`, `not yet`, `impossible`, `error`), or to
+`(outcome, evidence)`. Log ages and `until` dates are read against `today_utc`, `Decided:` dates against
+`today_local`. Each item filed is `item_line()`'s arguments (`text`, `context`, `kind`, `answers`, `default`,
+`detail`, `lifts`); the host adds today, its `Due:`, session and host. It refuses boards holding no board of `repo`,
+a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per gate of an open entry:
+- **`decision (<p>)`**, not covered and with no `kept waiting` Log line for it newer than `reask_days`, and no item
+  `covers()` finds answered without a lift within `reask_days`: a `decide` whose text is the entry's Ask (else its
+  title), `Answers: Go | Not yet.`, on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
+  listing board with the lowest pick key (`origin_key`, bytewise; boards with no readable origin after, by lowercased
+  basename). Its Context is `TD-n decision (<p>)`, written `<repo>#TD-n …` on another repo's board. When no board
+  lists `<p>`: an `act`, `decision (<p>) on TD-n has no board: …`, on this repo's own board;
+- **`until D`**, D reached: a lift, `kind: until`, evidence `date reached`. Nothing is filed;
+- **`event (<name>)`**, by its outcome, on this repo's own board: `passed`, a lift (`kind: event`, the result's
+  evidence); `error`, an `act` `Event check broken on TD-n: …`; `impossible`, a `decide` `… can no longer happen.`
+  with `Answers: Drop the gate | Rewrite the check | Drop the entry. Lifts: Drop the gate.`; `not yet` with the gate's
+  age (`gate_age`) over `event_age_days`, a `decide` `Still waiting on <gate> for TD-n?` with `Answers: Keep waiting
+  (default) | Drop the gate | Rewrite the check. Lifts: Drop the gate.`; no outcome, nothing. At most one per gate;
+- **a `gate lifted: … ; board <repo>` Log line** whose named board, open, closed or archived, holds no item with a
+  `Decided:` whose Context names `<this repo>#TD-n` (a board not read holds none): an `act` on this repo's own board,
+  `… holds no decided item …`, its Context `TD-n <gate> board <repo>`.
+
+**One filing rule** holds for every item but the decision's own (whose rule is *covered*, above): an item's identity
+is its Context's entry, gate and what follows the gate, its kind, and its fixed words (`has no board`, `Event check
+broken`, `can no longer happen`, `Still waiting on`, `holds no decided item`). It is filed only when no item of that
+identity is open on any board read, none was answered within `reask_days` with a label that does not lift (dated by
+its `Decided:`, not its `Closed:`), and the entry's Log has no `kept waiting` line for the gate within it. An item
+closed `— lifted.`, or closed with no answer, opens no window.
+
+**The close rule.** Of the open items about this repo's entries on any board read, the sweep closes (by item key):
+- never one decided with a work order (an answer that neither lifts nor only waits); nor one whose Context entry is
+  in neither the ledger nor the archive, which is left for a person;
+- the gate is **gone** when neither the Context entry (open) nor any `Parts:` id carries it. Any `decide` keyed to
+  the entry and gate, and the `lift was closed` item (Context `TD-n <gate> lift`), close once it is gone;
+- `has no board` once it is gone or covered; `Event check broken` once it is gone or the check's outcome is not
+  `error` (no outcome changes nothing); `Still waiting on` once it is gone or the check says `impossible`;
+- the `; board <repo>` audit's `act` once that board holds the answer, or the Log line is gone.
+
 **Preamble lines** — `Name: value` lines before the items (`Kinds:`, `Format:`, a dated stamp
 `Name: YYYY-MM-DD (…)`) are kept byte for byte by every edit. Which stamps a consumer writes and
 what they mean are the consumer's.
@@ -922,6 +974,8 @@ v2.4 also lifts gates (*Lifting a gate*, *The board*): `lift_gate()`, `reassign_
 `gate-reassigned-often`. One verdict changes: `item_problem()` faults a `Lifts:` naming a waiting-only answer,
 which v2.3 passed, and `item_line()` refuses one. A v2.3 reader reads an `Answered by:` line as a preamble line it
 keeps, and a closed item as before.
+v2.4 also decides the gate sweep (*The board*, *The gate sweep*): `covers()` and `sweep()` are new; nothing a reader
+reads changes.
 
 ## Appendix: grammar
 
