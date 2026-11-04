@@ -8,7 +8,7 @@ A **ledger** (`docs/technical_debt.md`) holds a repo's deferred work as `TD-NNN`
 - `SPEC.md` — the formats, in prose.
 - `ledgerboard/` — one stdlib-only Python package, vendored whole. `__init__.py` is the module that parses,
   checks and edits them: pure functions over text, no git, no network, no knowledge of any repo or machine.
-  Beside it, the file-level writers: `board.py` (v2.3, the board and rank writer) and, to come, `ledger.py`; they read and write the
+  Beside it, the file-level writers: `board.py` (v2.3, the board and rank writer) and `ledger.py` (v2.4, the ledger writer); they read and write the
   files they are given and nothing else — never git, the network, the roster, forges, trackers, delivery,
   sweeps, sessions, or logic that knows either consumer.
 - `fixtures/` — language-neutral conformance cases (a Markdown input and its expected JSON), so a reader in

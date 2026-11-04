@@ -957,6 +957,54 @@ date (`--today`, else the local clock), who replies or answered (`--by`), and th
 (`--tool`, `--session`). A file that declares a newer major is refused unread. Exit: 0 written (or nothing to
 change), 1 a write failed (every file restored), 2 usage, 3 refused.
 
+## The ledger writer (v2.4)
+
+`ledger.py`, beside the module and `board.py` in the `ledgerboard/` package, is the ledger writer over files:
+an importable library (`Ledger.open(path)`, then `plan_new`, `plan_edit`, `plan_fmt`, each returning a `Plan`,
+and `apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
+command people run). It reads the files it is given, applies the module's edit, and writes the files back; it
+never runs git, the network or anything of a consumer's. A report reads a v1 file or a v2 directory (*The
+ledger as a directory*); a write takes a v2 directory, and a v1 file is refused (*split first*).
+- **the reports**, read-only: `--pickable` (the pick order, the blocked entries and the flags), `--list` (every
+  entry the filters keep: `--where FIELD=VALUE`, its aliases `--type`, `--owner`, `--kind`, and `--pickable
+  yes|no`), `--counts FIELD[,FIELD]`, `--fields`, `--summary` (the table a v2 ledger does not store) and
+  `--check`. `--check` prints `check()`'s flags, and exits 1 when an error stands; with `--base <ledger>` (the
+  ledger where the change started) it counts only what changed since, as `check()`'s `old` does, and adds an
+  error for an archived entry the base holds and the ledger has lost (`archive-loss`; one back in the ledger is
+  `archive-reopened`, ℹ) and for each entry file that differs from the base's and is not in canonical form
+  (`not-canonical`);
+- **`new`** — one entry (`entry_text()`) at `<ledger>/TD-NNN.md`, its id `--id`'s, taken by the caller and written
+  at three digits or more (`TD-3` as `TD-003`), refused when the ledger or its archive holds it. A flag per field
+  (`--priority`, required, `--type`, `--added` (default today), `--owner`, `--kind`, `--status` (default `Open`),
+  `--blocked-by`, `--part-of`, `--location`, `--field NAME=VALUE` for a repo's own), `--take` (the counter take's
+  nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
+  stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
+  Log's `filed by` line and a `gate added` line per gate it is filed with;
+- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
+  empty value removes the field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
+  --from FILE|-` replaces one section. An archived entry is edited only once reopened;
+- **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
+  an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
+
+**A write is refused** when the ledger after it has a `check()` error the ledger before it does not, both checked
+against one `old`: the ledger text of `--base`, else of the ledger as it stands. So a fault already there never
+blocks an unrelated write. Every ℹ the write brings, and `cross-repo`, is a note it prints, never a refusal. What
+the consumer judges beside it (the id against its counter, a wait written in prose, a blocker in a repo it read)
+it judges on the `--plan`.
+
+A ledger write prints the paths it changed, or one JSON object with `--json` (`subject` is null: a ledger edit has
+no commit subject of its own, so the caller names its commit). `--plan` prints the changes as JSON (each path and
+its new text) and writes nothing. A write of several files is both or neither, as the board writer's is. The caller
+passes what lies outside the files: the id, who filed the entry, the date (`--today`, else the UTC clock: every
+ledger date is the UTC date) and the state of other repos' entries — in-process the `resolve` callback, on the
+command line `--resolved <file>`, a JSON object from `<repo>#TD-n` to `{"state": "open" | "archived" |
+"unresolved", "status", "successor", "why"}`. An id the run needs that the file does not hold stops it, whatever
+else it would say: exit 3 with `needs: <ids>` (`--json`: `needs`), nothing written; the caller resolves them and
+runs it again. A file that declares a newer major is refused unread. Exit: 0 written (or nothing to change;
+`--check`: no error stands), 1 refused (`--check`: an error stands; `fmt`: an entry refused, or under `--check`
+one would change), 2 usage, or the ledger or an id cannot be used as asked, 3 `needs`, 4 a write failed (every
+file restored).
+
 ## Versions
 
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
@@ -1041,6 +1089,8 @@ reads changes.
 v2.4 also gives the merge gate its verdicts (*The merge gate's verdicts*): `tripwire()`, `lift_pr_verdict()`,
 `uncovered_decisions()` and `migrate_subject()` are new, with the tree paths they read. `subject_kind()` names the
 migrate commit's subject `migrate`, where v2.3 named it nothing; nothing else a reader reads changes.
+v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit` and
+`fmt`; nothing a reader reads changes.
 
 ## Appendix: grammar
 
