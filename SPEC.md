@@ -261,16 +261,15 @@ is no separate word.
 - **Archiving rewires.** `archive_plan(ledger, archive, tid, *, superseded_by=None, dropped=False,
   resolve=None)` says what archiving open entry `tid` leaves its dependents (`dependents(ledger, tid)`:
   the open entries whose `Blocked by` names it), or refuses:
-  - superseded (`superseded_by` a `TD-m` or `<repo>#TD-m`): the successor is followed through each
-    Superseded entry to the end of its chain, which the plan's `successor` names and the archive writes.
-    The successor exists (in the ledger, the archive or through the resolver) and is open or Resolved:
-    the plan is refused when it names no entry, cannot be resolved, ends in Dropped or in a Status word this
-    reader does not know, loops (back to `tid`
-    among others), or is one of `tid`'s dependents, which would block on itself. Every dependent in
-    `rewire` gets `rename_ref` from `tid` to the successor in the same change, so every dependent always
-    names a live or Resolved entry, and a chain's later supersede rewires them again. A dependent that
-    already names the successor keeps one copy. Their cards change with them, so a rewired dependent
-    may need a rank `join`.
+  - superseded (`superseded_by` a `TD-m` or `<repo>#TD-m`): the successor is followed through each Superseded
+    entry to the end of its chain, which the plan's `successor` names and the archive writes. The successor
+    exists (in the ledger, the archive or through the resolver) and is open or Resolved: the plan is refused
+    when it names no entry, cannot be resolved, ends in Dropped or in a Status word this reader does not know,
+    loops (back to `tid` among others), or is one of `tid`'s dependents, which would block on itself. Every
+    dependent in `rewire` gets `rename_ref` from `tid` to the successor in the same change, so every dependent
+    always names a live or Resolved entry, and a chain's later supersede rewires them again. A dependent that
+    already names the successor keeps one copy. Their cards change with them, so a rewired dependent may need
+    a rank `join`.
   - dropped: refused while any open entry is `Blocked by` `tid`, naming every one, so each is decided
     first.
 

@@ -68,7 +68,8 @@ EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part",
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
 # ``open | archived | unresolved``; ``why`` says why it is unresolved, else "". From v2.4 an archived
 # entry's mapping may carry ``status`` (its Status, read by its first word: Superseded, Dropped, a word
-# this reader does not know (outside STATUS_WORDS: the block stays), else closed and done) and ``successor`` (a Superseded entry's id after ``by``, bare when in its own repo).
+# this reader does not know (outside STATUS_WORDS: the block stays), else closed and done) and
+# ``successor`` (a Superseded entry's id after ``by``, bare when in its own repo).
 Resolve = Callable[[str], Any]
 
 
