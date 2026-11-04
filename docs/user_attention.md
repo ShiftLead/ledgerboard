@@ -16,6 +16,11 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
+- [ ] act 2026-11-04 (session `lb-grinder`) — **v2.4 is ready to release: every entry TD-036 waited on has merged; run `./release.sh 2.4`, PR it, merge, then `./release.sh --tag 2.4`.** Context: TD-036 / PR #130. Due: 2026-11-06.
+  - **Context:** TD-036 (Release v2.4) waited on TD-035, TD-037, TD-039 and TD-043. All are archived: TD-043 merged in PR #129, and TD-035 closed with it. A release is yours (AGENTS.md), so TD-036 now has you as its Owner and leaves the grinders' lane. The consumers' vendor PRs and agent-cadence#TD-188 wait on the tag.
+  - **Caveats:** PR #130 (TD-044, the fixture set's `fixtures/MANIFEST`) is open, waiting on the techlead's read. You ruled that v2.4 does not wait on it. If it merges first, v2.4's `release.sh` run writes the first manifest. If not, it ships in v2.5, and its plan's *The build* says which texts then name v2.5.
+  - **Recommended:** release once #130 has merged or been read, if that is today or tomorrow, so v2.4 carries the manifest. **Otherwise:** release now; #130 then names v2.5 before it merges.
+
 - [x] decide 2026-11-04 (session `lb-designer`) — **Say Go to file TD-040's one build (the fixture set names its release in fixtures/MANIFEST), or buy one more review round.**. Context: TD-040. Due: 2026-11-07. Answers: Go (default) — the build is filed Part of TD-040 for the next release, and the grinder picks it | One more round — one more design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-040's Ask. Decided: Go (by Paul) (2026-11-04). Closed: 2026-11-04 — TD-040's one build filed as TD-044 (Part of TD-040, the next release after it lands); TD-040's gate lifted.
   - **Context:** TD-040's design, `docs/plans/TD-040-fixture-release.md` (PR #114), settles how the fixtures carry the release they apply to (target design §7.4), split off TD-035 on your answer.
     - Chosen, (c): the set names its release, not each case. `fixtures/MANIFEST` holds a release line and the sha256 of every other fixture file; release.sh stamps it with the headers, and run.py --check-header checks it beside them. A consumer runs the set its pin ships, and its vendor check proves set and package are one release. This is CommonMark's model: a test set per version.
