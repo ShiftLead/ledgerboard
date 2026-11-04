@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] decide 2026-11-04 (session `lb-designer`) — **TD-023's extra review round is done: say Go to file its one build (the Hide until notes).**. Context: TD-023. Due: 2026-11-08. Answers: Go (default) — the build is filed Part of TD-023 for the next release, and the grinder picks it | One more round — another design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-023's Ask.
+- [ ] decide 2026-11-04 (session `lb-designer`) — **TD-023's extra review round is done: say Go to file its one build (the Hide until notes).**. Context: TD-023. Due: 2026-11-08. Answers: Go (default) — the build is filed Part of TD-023 for the next release, and the grinder picks it | One more round — another design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-023's Ask. Decided: Go (by Paul) (2026-11-04).
   - **Context:** TD-023's design, `docs/plans/TD-023-hide-notes.md`, gives Hide until two ℹ notes: hide-spent (a hide that hides nothing today) and hide-late (a hidden item whose hide is after its deadline).
     - They come from `item_notes(item, today)`, outside the gate, carried in `item_record()` as `notes` and reported by `board.py` as `item_notes` beside a decide lift's own `notes`. A note never refuses a write.
   - **Question:** Does the design's one build go ahead now that the round you bought is done?
