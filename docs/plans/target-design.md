@@ -1348,7 +1348,7 @@ Each release changes the canonical form, so **each consumer's vendor PR carries 
 - **Parent go:** a snapshot lifts only its listed parts; a mismatched snapshot is refused; the sweep counts a part's gate as covered.
 - **Reassign:** b = a refused; more than two reassigns noted.
 - **Log shapes:** each fixed shape parsed; a `note` beginning with a reserved prefix refused; renumber rewrites a `while` token.
-- **Fixtures carry the release they apply to,** so a consumer can run the set for its own pin (CommonMark publishes its tests per spec version).
+- **Fixtures carry the release they apply to,** so a consumer can run the set for its own pin (CommonMark publishes its tests per spec version). *Designed 2026-11-04 (TD-040, `docs/plans/TD-040-fixture-release.md`):* the set, not each case, carries its release: `fixtures/MANIFEST`, stamped by `release.sh` and checked by `run.py --check-header`.
 
 ---
 
