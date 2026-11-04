@@ -5,15 +5,18 @@ import ast
 import contextlib
 import importlib.util
 import io
+import json
 import os
 import sys
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+import ledgerboard as L  # noqa: E402
 from ledgerboard import board as B  # noqa: E402
 
 BOARD = ("# Board\n\n## Needs the user\n\n"
@@ -256,6 +259,76 @@ class Usage(unittest.TestCase):
             code, out, _ = run("done", "--board", board, "--line", "5", "--expect", "act", "--today", "2026-01-15")
             self.assertEqual(code, 0)
             self.assertEqual(out.splitlines(), ["ledgerboard: done Merge it. (session n/a)", board])
+
+
+class HideNotes(unittest.TestCase):
+    """``item_notes()`` (v2.4, SPEC *Notes on a hide*) and how the writer reports them."""
+
+    LATE = "hide-late: Hide until: 2026-01-29 is after Due: 2026-01-20, so the item stays hidden past its deadline"
+
+    def notes(self, line: str, today: str = "2026-01-15") -> list[str]:
+        return L.item_notes(L.parse_board(line, warn=False)[0], date.fromisoformat(today))
+
+    def test_the_rules(self):
+        act = "- [ ] act 2026-01-10 (n/a) — Merge it. Context: PR #12. Due: 2026-01-20."
+        self.assertEqual(self.notes(act), [])
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-18."), [])
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-20."), [])  # shows on its due date
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-29."), [self.LATE])
+        # the day before D it is still hidden; on D the hide is spent
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-16.", "2026-01-15"), [])
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-16.", "2026-01-16"),
+                         ["hide-spent: Hide until: 2026-01-16 has come, so it hides nothing; a snooze replaces it"])
+        # spent, the late hide says only that it is spent: the rules exclude each other
+        self.assertEqual(self.notes(act + " Hide until: 2026-01-29.", "2026-01-30"),
+                         ["hide-spent: Hide until: 2026-01-29 has come, so it hides nothing; a snooze replaces it"])
+        decided = ("- [ ] decide 2026-01-10 (n/a) — Pick one. Context: TD-7. Due: 2026-01-20. Hide until: 2026-01-29. "
+                   "Answers: a | b. Decided: a (2026-01-12).")
+        self.assertEqual(self.notes(decided),
+                         ["hide-spent: a decided item is never hidden, so Hide until: 2026-01-29 hides nothing"])
+
+    def test_a_note_is_no_fault(self):
+        line = "- [ ] act 2026-01-10 (n/a) — Merge it. Context: PR #12. Due: 2026-01-20. Hide until: 2026-01-29."
+        self.assertIsNone(L.item_problem(line))
+        faults = [w for _, w in L.board_problems(BOARD.replace(BOARD.splitlines()[4], line), BOARD)
+                  if not w.startswith("ℹ")]  # the gate's own ℹ notes (no People:) are no fault either
+        self.assertEqual(faults, [])
+
+    def test_text_mode_prints_each_note_on_stderr_and_exits_0(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = os.path.join(tmp, "board.md")
+            Path(board).write_text(BOARD)
+            code, out, err = run("snooze", "--board", board, "--line", "5", "--expect", "act", "--to", "2026-01-29",
+                                 "--today", "2026-01-15")
+            self.assertEqual(code, 0)
+            self.assertIn("Hide until: 2026-01-29.", Path(board).read_text())
+            self.assertEqual(out.splitlines()[-1], board)
+            self.assertEqual(err.splitlines(), ["line 5: ℹ " + self.LATE])
+
+    def test_a_plan_carries_them_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = os.path.join(tmp, "board.md")
+            Path(board).write_text(BOARD)
+            code, out, _ = run("snooze", "--board", board, "--line", "5", "--expect", "act", "--to", "2026-01-29",
+                               "--today", "2026-01-15", "--plan")
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(out)["item_notes"], [{"line": 5, "note": self.LATE}])
+            self.assertEqual(Path(board).read_text(), BOARD)
+
+    def test_which_writes_carry_the_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = os.path.join(tmp, "board.md")
+            Path(board).write_text(BOARD)
+            _, out, _ = run("reply", "--board", board, "--line", "5", "--expect", "act", "--text", "ok", "--by", "pat",
+                            "--today", "2026-01-15", "--plan")
+            self.assertEqual(json.loads(out)["item_notes"], [])
+            _, out, _ = run("done", "--board", board, "--line", "5", "--expect", "act", "--today", "2026-01-15", "--plan")
+            self.assertNotIn("item_notes", json.loads(out))
+            _, out, _ = run("add", "--board", board, "--text", "Look at it", "--due", "2026-01-20",
+                            "--today", "2026-01-15", "--json")
+            got = json.loads(out)
+            self.assertEqual(got["item_notes"], [])
+            self.assertEqual(got["line"], 5)
 
 
 class Module(unittest.TestCase):

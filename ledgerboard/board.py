@@ -26,7 +26,9 @@ prints the commit subject the module gives and the paths it changed (``--json``:
 ``--plan`` prints the changes as JSON (each path with its new text) and writes nothing. It never runs
 git, the network or anything of a consumer's: the caller passes who replies or answers (``--by``), the date
 (``--today``, default the local clock) and the tool and session the subject names, and makes the
-commit itself.
+commit itself. A write that leaves an open line (``add``, ``snooze``, ``due``, ``decide``, ``reply``) also reports
+that line's notes (``item_notes()`` at ``--today``): ``item_notes`` in ``--json`` and ``--plan``, and on stderr as
+``line n: ℹ <note>`` otherwise; a note never changes the exit code.
 
 Exit, the package's one table (``ledger.py`` shares it): 0 written (or nothing to change); 1 refused; 2 usage
 (a bad ``--today`` among it), or (``decide``) the ledger cannot be used as asked; 4 a write failed (every file restored). 3 is ``ledger.py``'s
@@ -65,6 +67,7 @@ from . import (
     is_item,
     is_person,
     item_line,
+    item_notes,
     item_record,
     load,
     parse_board,
@@ -310,7 +313,14 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
     _gate(board, old, out)
     first = (bare or new).split("\n", 1)[0].rstrip("\r")  # a person's words stay on the board, never in the subject
     msg = subject(tool, "append", ITEM_RE.match(first).group("text"))
-    return Plan("add", msg, {board: out}, {"line": at + 1})
+    return Plan("add", msg, {board: out}, {"line": at + 1, "item_notes": _line_notes(out, at + 1, _today(today))})
+
+
+def _line_notes(board: str, line: int, today: date) -> list[dict]:
+    """The notes (``item_notes()`` at `today`) of open item `line` as the write leaves the board, each naming its
+    line; ``[]`` when that line is no open item (a decide that closed it)."""
+    got = next((it for it in parse_board(board, warn=False) if it.line == line), None)
+    return [{"line": line, "note": n} for n in item_notes(got, today)] if got else []
 
 
 def _find(lines: list[str], line: int, expect: str) -> tuple[str, str]:
@@ -364,9 +374,12 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
         info = {"line": line, **info}
     new = edit_line(body, action, to=when, answer=answer, why=why, reply=text, by=by, today=day, close=close)
     lines[line - 1] = new + eol
+    out = "".join(lines)
+    if action != "done":  # a done leaves no open line
+        info["item_notes"] = _line_notes(out, line, day)
     msg = subject(tool, action, ITEM_RE.match(body).group("text").strip(),
                   to=when, answer=answer, session=session)
-    return Plan(action, msg, {board: "".join(lines), **changes}, info)
+    return Plan(action, msg, {board: out, **changes}, info)
 
 
 def _may_answer(board_text: str, gate_: str, by: str) -> None:
@@ -689,6 +702,8 @@ def main(argv: list[str] | None = None) -> int:
             print(p)
         for r in plan.info.get("refused", []):
             print(f"line {r['line']}: kept: {r['why']}", file=sys.stderr)
+        for r in plan.info.get("item_notes", []):
+            print(f"line {r['line']}: ℹ {r['note']}", file=sys.stderr)
     return 0
 
 

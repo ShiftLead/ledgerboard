@@ -1672,9 +1672,26 @@ def due_tag(item: BoardItem, today: date) -> str:
     return "no due date"
 
 
+def item_notes(item: BoardItem, today: date) -> list[str]:
+    """The item's notes on its `Hide until:` against ``today`` (v2.4), in rule order: they inform and never
+    refuse, so no gate reads them. ``hide-spent``: a hide on an item not hidden today (its date has come, or the
+    item is decided). ``hide-late``: a hidden item whose hide is after its readable `Due:`. At most one applies."""
+    hide = item.hide_until
+    if hide is None:
+        return []
+    if not item.hidden(today):
+        if item.decided is not None:
+            return [f"hide-spent: a decided item is never hidden, so Hide until: {hide.isoformat()} hides nothing"]
+        return [f"hide-spent: Hide until: {hide.isoformat()} has come, so it hides nothing; a snooze replaces it"]
+    if item.due is not None and hide > item.due:
+        return [f"hide-late: Hide until: {hide.isoformat()} is after Due: {item.due.isoformat()}, "
+                "so the item stays hidden past its deadline"]
+    return []
+
+
 def item_record(item: BoardItem, today: date) -> dict:
     """The item as one JSON-ready record — the board's API, and the fixtures' shape. The
-    today-relative fields (``overdue_days``, ``due_tag``) are computed against ``today``."""
+    today-relative fields (``overdue_days``, ``due_tag``, ``hidden``, ``notes``) are computed against ``today``."""
     return {
         "line": item.line,
         "text": item.text,
@@ -1696,6 +1713,7 @@ def item_record(item: BoardItem, today: date) -> dict:
         "detail": item.detail,
         "hide_until": item.hide_until.isoformat() if item.hide_until else None,
         "hidden": item.hidden(today),
+        "notes": item_notes(item, today),  # v2.4
         "lifts": item.lifts,  # v2.3
         "parts": item.parts,  # v2.3
     }
