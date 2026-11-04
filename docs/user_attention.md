@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] act 2026-11-04 (session `lb-grinder`) — **v2.4 is ready to release: every entry TD-036 waited on has merged; run `./release.sh 2.4`, PR it, merge, then `./release.sh --tag 2.4`.** Context: TD-036 / PR #130. Due: 2026-11-06.
+- [x] act 2026-11-04 (session `lb-grinder`) — **v2.4 is ready to release: every entry TD-036 waited on has merged; run `./release.sh 2.4`, PR it, merge, then `./release.sh --tag 2.4`.** Context: TD-036 / PR #130. Due: 2026-11-06. Closed: 2026-11-04 — released: PR #132 merged, tag v2.4 at 075f70e; TD-036, TD-020 and TD-010 archived.
   - **Context:** TD-036 (Release v2.4) waited on TD-035, TD-037, TD-039 and TD-043. All are archived: TD-043 merged in PR #129, and TD-035 closed with it. A release is yours (AGENTS.md), so TD-036 now has you as its Owner and leaves the grinders' lane. The consumers' vendor PRs and agent-cadence#TD-188 wait on the tag.
   - **Caveats:** PR #130 (TD-044, the fixture set's `fixtures/MANIFEST`) is open, waiting on the techlead's read. You ruled that v2.4 does not wait on it. If it merges first, v2.4's `release.sh` run writes the first manifest. If not, it ships in v2.5, and its plan's *The build* says which texts then name v2.5.
   - **Recommended:** release once #130 has merged or been read, if that is today or tomorrow, so v2.4 carries the manifest. **Otherwise:** release now; #130 then names v2.5 before it merges.
