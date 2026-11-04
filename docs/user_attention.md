@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] decide 2026-11-04 (person) — item_problem() cannot note a stale or over-late Hide until it has no today and no note channel. Context: TD-023. Due: 2026-11-04. Decided: one more round (by Paul) (2026-11-04).
+- [x] decide 2026-11-04 (person) — item_problem() cannot note a stale or over-late Hide until it has no today and no note channel. Context: TD-023. Due: 2026-11-04. Decided: one more round (by Paul) (2026-11-04). Closed: 2026-11-04 — one more round recorded on TD-023 for the designer, whose open TD-023 item comes back after the round.
 - [ ] decide 2026-11-04 (session `lb-designer`) — **Say One more round to review TD-023's post-rounds fix (board.py's key is item_notes), or Go to file its one build now.**. Context: TD-023 / PR #74. Due: 2026-11-07. Answers: One more round (default) — one more design review and fact-check, then this item again | Go — the build is filed Part of TD-023 for the next release, and the grinder picks it | Hold: <note> — the build waits, and your note goes in TD-023's Ask.
   - **Context:** TD-023's design, `docs/plans/TD-023-hide-notes.md` (PR #74), gives Hide until the two ℹ notes target design §6 asked for and TD-017 left out.
     - hide-spent: a hide that hides nothing today, because its date has come or the item is decided.
