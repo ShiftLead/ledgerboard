@@ -16,6 +16,18 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
+- [ ] decide 2026-11-03 (session `lb-designer`) — **Say Go to file TD-039's one build (an unknown archived Status word keeps the block), or buy one more review round.**. Context: TD-039 / PR #108. Due: 2026-11-06. Answers: Go (default) — the build is filed Part of TD-039 for v2.4, TD-036 waits on it, and the grinder picks it | One more round — one more design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-039's Ask.
+  - **Context:** TD-039's design, `docs/plans/TD-039-unknown-status.md` (PR #108), settles what a reader does with an archived blocker whose Status word it does not know, such as a later minor's word for closed but not done.
+    - Chosen, (b): the block stays and the check flags it, so target design §7.4's promise holds and a later minor can add any Status word.
+    - Not chosen, (a): read it as done and make every closed-but-not-done word a major. Its failure is silent: work picked too early.
+    - The cost of (b): an archived Status that opens with prose (Steps 1 and 2 shipped) holds its dependents where v2.3 released them, and each is flagged. Known words, and a Status with no first word at all, read as before.
+  - **Question:** Does the design's one build go ahead, in v2.4, with TD-036's tag waiting on it?
+  - **Caveats:** How the rounds ended: after round 4 of a cap of 6, by the stop rule. Design reviews raised 1, 2, 2, then 0 build-changing findings; the fact-checks 1, 0, 0, 0, and the closing one none. Of the 32 findings, 31 are applied and F27 is rejected (`docs/reviews/TD-039.md`).
+    - A recurring topic, the word rule's edges (an empty or punctuation-only Status: F7, F15, F23, F24). Is this the wrong design? My position: no. They were edges of one parse rule, which round 3 replaced with a single test (no first word means none), and round 4 found it closed. The choice of (b) itself was never challenged.
+    - A carve-out you may want changed: an archived Open, Moved or OBE still reads as done, as in v2.3, until v2.5's remodel settles each.
+    - Not read by any review: round 4's minor fixes F28-F32. Only the closing fact-check checked them; they go into the build's Fix.
+    - The steer is answered: Paul chose (b), in v2.4, with TD-036 waiting on its build (relayed 2026-11-04).
+  - **Recommended:** Go — the last design review found the rule closed and raised nothing that changes what gets built. **Otherwise:** One more round if the recurring word-rule topic worries you. Hold with (a) if you would rather keep any other word done and make new closed words a major.
 - [x] decide 2026-11-04 (session `lb-designer`) — **TD-023's extra review round is done: say Go to file its one build (the Hide until notes).**. Context: TD-023. Due: 2026-11-08. Answers: Go (default) — the build is filed Part of TD-023 for the next release, and the grinder picks it | One more round — another design review and fact-check, then this item again | Hold: <note> — the build waits, and your note goes in TD-023's Ask. Decided: Go (by Paul) (2026-11-04). Closed: 2026-11-04 — Go: the build is filed as TD-041, Part of TD-023, and TD-023's gate is lifted.
   - **Context:** TD-023's design, `docs/plans/TD-023-hide-notes.md`, gives Hide until two ℹ notes: hide-spent (a hide that hides nothing today) and hide-late (a hidden item whose hide is after its deadline).
     - They come from `item_notes(item, today)`, outside the gate, carried in `item_record()` as `notes` and reported by `board.py` as `item_notes` beside a decide lift's own `notes`. A note never refuses a write.
