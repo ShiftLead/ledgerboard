@@ -182,6 +182,50 @@
        "Drop the gate"
       ],
       "text": "event (eta-ready) on TD-217 can no longer happen."
+     },
+     {
+      "answers": [
+       "Drop the gate",
+       "Rewrite the check",
+       "Drop the entry"
+      ],
+      "context": "TD-218 event (theta-ready)",
+      "default": null,
+      "detail": {
+       "context": "The check for event (theta-ready) on TD-218 says it can no longer happen",
+       "question": "Drop the gate, rewrite its check, or drop the entry?",
+       "recommended": "Only the person who knows why it waits can say"
+      },
+      "kind": "decide",
+      "lifts": [
+       "Drop the gate"
+      ],
+      "text": "event (theta-ready) on TD-218 can no longer happen."
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-219 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-219 (A decision written twice, and a gate lifted twice from a board this sweep does not read) waits on decision (pat), and no board item asked for it",
+       "question": "Should the archive be compressed?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the archive be compressed?"
+     },
+     {
+      "answers": null,
+      "context": "TD-219 decision (kim) board acme/other",
+      "default": null,
+      "detail": null,
+      "kind": "act",
+      "lifts": null,
+      "text": "TD-219's decision (kim) was lifted by an answer on acme/other's board, which holds no decided item for TD-219."
      }
     ],
     "github.com/acme/beta": [
@@ -345,6 +389,50 @@
        "Drop the gate"
       ],
       "text": "event (eta-ready) on TD-217 can no longer happen."
+     },
+     {
+      "answers": [
+       "Drop the gate",
+       "Rewrite the check",
+       "Drop the entry"
+      ],
+      "context": "TD-218 event (theta-ready)",
+      "default": null,
+      "detail": {
+       "context": "The check for event (theta-ready) on TD-218 says it can no longer happen",
+       "question": "Drop the gate, rewrite its check, or drop the entry?",
+       "recommended": "Only the person who knows why it waits can say"
+      },
+      "kind": "decide",
+      "lifts": [
+       "Drop the gate"
+      ],
+      "text": "event (theta-ready) on TD-218 can no longer happen."
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-219 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-219 (A decision written twice, and a gate lifted twice from a board this sweep does not read) waits on decision (pat), and no board item asked for it",
+       "question": "Should the archive be compressed?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the archive be compressed?"
+     },
+     {
+      "answers": null,
+      "context": "TD-219 decision (kim) board acme/other",
+      "default": null,
+      "detail": null,
+      "kind": "act",
+      "lifts": null,
+      "text": "TD-219's decision (kim) was lifted by an answer on acme/other's board, which holds no decided item for TD-219."
      }
     ],
     "github.com/acme/beta": [

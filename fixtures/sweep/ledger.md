@@ -144,3 +144,24 @@ Ledgerboard: 2
 **Added:** 2026-08-01
 **Status:** Open
 **Blocked by:** event (eta-ready)
+
+## TD-218: An event written twice, which can no longer happen
+
+**Priority:** Low
+**Added:** 2026-10-01
+**Status:** Open
+**Blocked by:** event (theta-ready), event (theta-ready)
+
+## TD-219: A decision written twice, and a gate lifted twice from a board this sweep does not read
+
+**Priority:** Low
+**Added:** 2026-10-01
+**Status:** Open
+**Blocked by:** decision (pat), decision (PAT)
+
+**Ask:** Should the archive be compressed?
+
+**Log:**
+- 2026-10-10: gate lifted: decision (kim) — by kim; answer "Go"; board acme/other
+- 2026-10-12: gate added: decision (kim)
+- 2026-10-20: gate lifted: decision (kim) — by kim; answer "Go"; board acme/other

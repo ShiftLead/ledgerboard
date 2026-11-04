@@ -863,3 +863,27 @@ class NextId(unittest.TestCase):
     def test_a_take_read_back_from_the_writers_shape(self):
         got = L.parse_take("TD-007..TD-009 [skip ci]", "by: kim\nbranch: td7\ntake: " + "ab" * 16 + "\n")
         self.assertEqual(got, {"ids": [7, 8, 9], "by": "kim", "branch": "td7", "take": "ab" * 16})
+
+
+class GateSweep(unittest.TestCase):  # v2.4: odd inputs the fixtures do not carry (ledgerboard TD-031)
+    LEDGER = ("# Ledger\n\nLedgerboard: 2\n\n## TD-301: An event\n\n**Priority:** Low\n**Added:** 2026-08-01\n"
+              "**Status:** Open\n**Blocked by:** event (x-ready), decision (pat)\n\n**Ask:** Go ahead?\n")
+    BOARDS = [("git@example.com:Acme/Own.git", "own", "People: kim\n\n", ""),
+              ("git@example.com:acme/other.git", "other", "People: pat\n\n", "")]
+
+    def run_sweep(self, results, today_local="2026-11-03"):
+        return L.sweep([self.LEDGER], self.BOARDS, results, "2026-11-03", today_local, repo="acme/own")
+
+    def test_an_empty_result_is_no_outcome(self):
+        got = self.run_sweep({("TD-301", "x-ready"): ()})
+        self.assertNotIn("example.com/acme/own", got["to_file"])
+        self.assertEqual(got["lifts"], [])
+
+    def test_today_local_may_be_a_datetime(self):
+        a = self.run_sweep({}, datetime(2026, 11, 3, 23, 30, tzinfo=timezone(timedelta(hours=-7))))
+        self.assertEqual(a, self.run_sweep({}))
+
+    def test_a_ref_on_another_board_writes_the_repo_lowercased(self):
+        got = L.sweep([self.LEDGER], self.BOARDS, {}, "2026-11-03", "2026-11-03", repo="Acme/Own")
+        self.assertEqual([i["context"] for i in got["to_file"]["example.com/acme/other"]],
+                         ["acme/own#TD-301 decision (pat)"])

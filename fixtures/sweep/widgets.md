@@ -12,5 +12,6 @@ People: pat
 - [ ] decide 2026-10-02 (n/a) — Should the old form go? Context: TD-220 decision (pat). Due: 2026-11-10. Answers: Go | Not yet.
 - [ ] decide 2026-10-02 (n/a) — Should the unknown one go? Context: TD-299 decision (pat). Due: 2026-11-10. Answers: Go | Not yet.
 - [ ] act 2026-10-29 (n/a) — TD-215's decision (kim) was lifted by an answer on acme/beta's board, which holds no decided item for TD-215. Context: TD-215 decision (kim) board acme/beta. Due: 2026-11-10.
+- [ ] act 2026-10-29 (n/a) — TD-298's decision (pat) was lifted by an answer on acme/other's board, which holds no decided item for TD-298. Context: TD-298 decision (pat) board acme/other. Due: 2026-11-10.
 - [x] decide 2026-10-02 (n/a) — Still waiting on event (gamma-ready) for TD-207? Context: TD-207 event (gamma-ready). Due: 2026-10-06. Answers: Keep waiting (default) | Drop the gate | Rewrite the check. Lifts: Drop the gate. Decided: Keep waiting (by pat) (2026-10-05). Closed: 2026-10-05 — kept waiting.
 - [x] decide 2026-10-02 (n/a) — Should the cache be cleared nightly? Context: TD-211 decision (pat). Due: 2026-10-20. Answers: Go | Not yet. Decided: Go (by pat) (2026-10-20). Closed: 2026-10-20 — lifted.

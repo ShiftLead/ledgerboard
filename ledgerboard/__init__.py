@@ -4734,6 +4734,15 @@ def _gone(reads_num: int, gate: str, parts: list[str], own: bool, repo: str,
     return not any(_carried(open_texts.get(n), gate) for n in nums)
 
 
+def _outcome(results: Mapping, tid: str, name: str) -> tuple[str | None, str | None]:
+    """A check's (outcome, evidence) from ``results``: a bare outcome, or an ``(outcome, evidence)`` pair; an
+    empty pair, or none at all, is no outcome."""
+    got = results.get((tid, name))
+    if isinstance(got, (tuple, list)):
+        return (got[0] if got else None, got[1] if len(got) > 1 else None)
+    return (got, None)
+
+
 def _sweep_text(cond: str, tid: str, gate: str, extra: str = "") -> str:
     name = gate[gate.index("(") + 1: -1] if "(" in gate else gate
     return {"no-board": f"{gate} on {tid} has no board: no board read lists {name} in its People.",
@@ -4787,6 +4796,8 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     ``Decided:`` dates; ``repo`` is this repo's ``origin_path`` (else its basename). Each item filed is
     ``item_line()``'s arguments, the host adding today, its Due:, session and host."""
     today_u = date.fromisoformat(utc_day(today_utc, "today_utc"))
+    if isinstance(today_local, datetime):
+        today_local = today_local.date()  # the caller's own civil date: its zone is the caller's
     today_l = date.fromisoformat(_civil_date(today_local.isoformat() if isinstance(today_local, date)
                                              else today_local, "today_local is written"))
     for what, n in (("reask_days", reask_days), ("event_age_days", event_age_days)):
@@ -4814,12 +4825,14 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     to_file: dict[str, list[dict]] = {}
     to_close: dict[str, list[str]] = {}
     lifts: list[dict] = []
+    filed: set[tuple] = set()
 
-    def outcome(tid: str, name: str) -> tuple[str | None, str | None]:
-        got = results.get((tid, name))
-        if isinstance(got, (tuple, list)):
-            return (got[0], got[1] if len(got) > 1 else None)
-        return (got, None)
+    def add(board: str, num: int, gate: str, cond: str, item: dict, qual: str = "") -> None:
+        """File ``item`` unless this run already filed its identity (a gate written twice, a lift logged twice)."""
+        key = (board, num, _gate_key(gate), cond, qual)
+        if key not in filed:
+            filed.add(key)
+            to_file.setdefault(board, []).append(item)
 
     def same(r: dict, num: int, gate: str, cond: str, qual: str = "") -> bool:
         return (r["ctx"] == (num, _gate_key(gate), qual) and r["head"] == cond
@@ -4844,7 +4857,9 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
         for gate in gate_items(parse_gates(e["blocked_raw"])):
             if gate.startswith("until "):
                 if date.fromisoformat(gate[len("until "):]) <= today_u:
-                    lifts.append({"id": tid, "gate": gate, "kind": "until", "evidence": "date reached"})
+                    lift = {"id": tid, "gate": gate, "kind": "until", "evidence": "date reached"}
+                    if lift not in lifts:
+                        lifts.append(lift)
                 continue
             if gate.startswith("decision "):
                 found = _covers(reads, num, gate, pnum, repo)
@@ -4859,17 +4874,19 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                 pick = own if own in fit else (min(fit, key=_board_pick_key) if fit else None)
                 if pick is None:
                     if may_file(num, gate, "no-board", text):
-                        to_file.setdefault(own_name, []).append(_sweep_item("no-board", tid, tid, gate))
+                        add(own_name, num, gate, "no-board", _sweep_item("no-board", tid, tid, gate))
                     continue
-                ref = tid if pick is own else f"{repo}#{tid}"
-                to_file.setdefault(_board_name(pick), []).append(_sweep_item(
+                ref = tid if pick is own else f"{repo.lower()}#{tid}"
+                add(_board_name(pick), num, gate, "uncovered", _sweep_item(
                     "uncovered", tid, ref, gate, ask=_entry_ask(text, e["title"]), title=e["title"],
                     reask_days=reask_days))
                 continue
             name = gate[len("event ("): -1]
-            got, evidence = outcome(tid, name)
+            got, evidence = _outcome(results, tid, name)
             if got == "passed":
-                lifts.append({"id": tid, "gate": gate, "kind": "event", "evidence": evidence})
+                lift = {"id": tid, "gate": gate, "kind": "event", "evidence": evidence}
+                if lift not in lifts:  # an event written twice lifts once
+                    lifts.append(lift)
                 continue
             cond = {"error": "broken", "impossible": "impossible"}.get(got or "")
             if cond is None and got == "not yet":
@@ -4879,7 +4896,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                     age = None
                 cond = "still" if age is not None and (today_u - age).days > event_age_days else None
             if cond and may_file(num, gate, cond, text):
-                to_file.setdefault(own_name, []).append(_sweep_item(cond, tid, tid, gate, reask_days=reask_days))
+                add(own_name, num, gate, cond, _sweep_item(cond, tid, tid, gate, reask_days=reask_days))
         for rec in _log(text):  # the `; board <repo>` audit: a cross-repo lift whose board shows no answer
             if rec["kind"] != "gate-lifted" or not rec.get("suffix", "").startswith("; board "):
                 continue
@@ -4888,7 +4905,8 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                 continue
             gate = rec["gate"]
             if may_file(num, gate, "audit", "", f"board {there.lower()}"):
-                to_file.setdefault(own_name, []).append(_sweep_item("audit", tid, tid, gate, extra=there))
+                add(own_name, num, gate, "audit", _sweep_item("audit", tid, tid, gate, extra=there),
+                    f"board {there.lower()}")
 
     for r in reads:
         if r["state"] not in ("open", "decided") or r["ctx"] is None:
@@ -4926,6 +4944,8 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
     if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts):
         return False  # a work order waits for whoever acts on it
     if qual.startswith("board "):
+        if num not in known:
+            return False  # an entry in neither the ledger nor the archive: its item is left for a person
         if r["head"] != "audit" or it.kind != "act" or not r["own"]:
             return False
         there = qual[len("board "):]
@@ -4948,13 +4968,10 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
             reads, num, gate, _num(parent) if parent else None, repo))
         return gone or covered
     tid = _entries(texts[num])[0]["id"]
+    got = _outcome(results, tid, gate[len("event ("): -1])[0] if gate.startswith("event (") else None
     if head == "broken" and it.kind == "act":
-        got = results.get((tid, gate[len("event ("): -1])) if gate.startswith("event (") else None
-        got = got[0] if isinstance(got, (tuple, list)) else got
         return gone or (got is not None and got != "error")
     if head == "still" and it.kind == "decide":
-        got = results.get((tid, gate[len("event ("): -1])) if gate.startswith("event (") else None
-        got = got[0] if isinstance(got, (tuple, list)) else got
         return gone or got == "impossible"
     if it.kind == "decide":
         return gone
