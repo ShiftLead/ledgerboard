@@ -802,6 +802,68 @@ closed `— lifted.`, or closed with no answer, opens no window.
 `Name: YYYY-MM-DD (…)`) are kept byte for byte by every edit. Which stamps a consumer writes and
 what they mean are the consumer's.
 
+**The merge gate's verdicts** (v2.4) are three pure functions over a PR's **trees**, each a map from path to
+text read at the PR's base or head: the ledger at `docs/ledger/` (v2; a tree with no file under it holds a v1
+ledger at `docs/technical_debt.md`), this repo's board at `docs/user_attention.md` and its archive at
+`docs/user_attention_archive.md` (`BOARD_PATH`, `BOARD_ARCHIVE_PATH`, `LEDGER_DIR`, `LEDGER_V1_PATH`). Each
+names what it finds as `(kind, text)` pairs; `repo` is as for the sweep. The consumer fetches the trees, the
+file list, the commits and the dates from the forge, and acts on the verdict.
+
+`tripwire(base_tree, head_tree, subject, repo)` runs on every PR, the `set by=` route included, and returns its
+flags: each `decision (<p>)` that an entry open at the base and at the head loses, unless the diff accounts for
+it. It reads this repo's own board alone, at the base and at the head, never another repo's, so its verdict is
+the same on every machine. The diff accounts for a removal by a new `gate reassigned` or `override:` Log line for
+the gate, or by a new `gate lifted … answer` line whose suffix fits the board (`covers()`, states `open` and
+`decided`, being what covers):
+- **no suffix:** an item covering the gate at the base carries a new or changed `Decided:` at the head (open and
+  decided, or closed), or, decided already, is newly closed `— lifted.` (the last part of a shared item);
+- **`; no board item`:** nothing covers the gate at the base, nor at the head, so closing a covering item with
+  no answer and logging `no board item` is flagged (`tripwire-no-board-item`). A board with no `People:` covers
+  nothing, so every lift there is written so;
+- **`; shared board item left open`:** an item covering it at the base still covers it at the head, and another
+  entry it lists (its Context entry or a `Parts:` id) still carries the gate;
+- **`; board <repo>`:** `<repo>` names a repo other than this one; the sweep's audit is the backstop.
+
+A lift line whose `by` is not the gate's person is flagged (`tripwire-by`) unless it has no suffix, the base board
+says `Answered by: any` and lists `by`, and the covering item's head `Decided:` names `by`. The other flags are
+`tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`, `tripwire-shared` and `tripwire-board`.
+Exempt are an entry the diff archives and the one-time migrate commit, known by its subject alone, `ledger:
+migrate v<release> (<n> entries)` (`migrate_subject()`; `subject_kind()` names it `migrate`). The tripwire is
+forgeable, and says so: a well-formed hand edit passes it, and review is the backstop.
+
+`lift_pr_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` returns `{carve_out,
+flags, review}` for a PR whose one changed board item gains a `Decided:` and whose Context names a gate:
+`carve_out` says the person's answer is its review; otherwise `review` names the first condition that sends it to
+ordinary review; `flags` are `tripwire()`'s over the same trees. `files` are the PR's changed paths, `commits` its
+commit count; `created_at` and `merged_at` (None while it is open) are the forge's dates, each a date or an aware
+datetime, taken as its UTC date. The carve-out needs every one of:
+- **(a0)** the base board declares `People:`;
+- **(a)** the commit's subject is a board `decide` (`edit_action()`), and the PR is one commit (squash-merged);
+- **(b)** the board diff is one item line changed in place, an open `decide` naming one entry and one gate, never
+  answered at the base, that gains `Decided: <label> (by <p>) (D)`; its head line is `edit_line(base line,
+  "decide", label, by, D, close=closes(item, label, entries after))` byte for byte, so a work order is never
+  closed and a finished lift never left open; D lies from `created_at − 1` to the merge date (else
+  `created_at`) `+ 1`, the board's local day running up to a day from UTC;
+- **(c)** for this repo's entry, the ledger is v2 (a v1 ledger's lift takes review) and `decide_lift()` of the
+  base line and the base texts of its Context and `Parts:` entries, with the base board's `People:` and `Answered
+  by:`, accepts the answer; the PR changes exactly the board and the open file of each entry it changes, each
+  byte-equal to its result; every new Log line carries one date T, which is `decide_lift()`'s today, within a day
+  of `created_at` and not after the merge (else `created_at + 1`). An answer that changes no entry is windowed by D
+  alone. A suffix, a host's lift, an override or a reassign cannot equal `decide_lift()`'s output, so takes
+  review. **For another repo's entry** (`<repo>#TD-n`, never this repo's), the PR changes the board alone, the
+  gate's person and the answerer are on `People:`, and under `owner` the answerer is the gate's person.
+
+(d), a PR only, is the consumer's: a direct commit that answers a gate's item is refused by its own audit.
+
+`uncovered_decisions(base_tree, head_tree, boards, repo)` returns `(refusals, flags)`. `boards` are other repos'
+boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
+names it. A `decision (<p>)` an open entry gains in the diff is refused (`decision-uncovered`) when this repo's
+board lists `<p>` on `People:` and no item on it covers the gate, and flagged (`decision-elsewhere`) when the board
+does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A new
+`decide` item on this repo's board (its key on no line of the base board) whose Context names a decision and none
+of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on this repo's
+own board alone, so they are the same on every machine.
+
 ## Edits
 
 Every edit rewrites one open item line and nothing else, and is refused unless the reader reads
@@ -976,6 +1038,9 @@ which v2.3 passed, and `item_line()` refuses one. A v2.3 reader reads an `Answer
 keeps, and a closed item as before.
 v2.4 also decides the gate sweep (*The board*, *The gate sweep*): `covers()` and `sweep()` are new; nothing a reader
 reads changes.
+v2.4 also gives the merge gate its verdicts (*The merge gate's verdicts*): `tripwire()`, `lift_pr_verdict()`,
+`uncovered_decisions()` and `migrate_subject()` are new, with the tree paths they read. `subject_kind()` names the
+migrate commit's subject `migrate`, where v2.3 named it nothing; nothing else a reader reads changes.
 
 ## Appendix: grammar
 

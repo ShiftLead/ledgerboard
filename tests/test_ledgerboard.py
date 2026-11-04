@@ -887,3 +887,52 @@ class GateSweep(unittest.TestCase):  # v2.4: odd inputs the fixtures do not carr
         got = L.sweep([self.LEDGER], self.BOARDS, {}, "2026-11-03", "2026-11-03", repo="Acme/Own")
         self.assertEqual([i["context"] for i in got["to_file"]["example.com/acme/other"]],
                          ["acme/own#TD-301 decision (pat)"])
+
+
+class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not carry (ledgerboard TD-032)
+    D = Path(__file__).resolve().parent.parent / "fixtures" / "verdict"
+
+    def trees(self, name):
+        read = lambda d: {str(p.relative_to(d)): p.read_text(encoding="utf-8")  # noqa: E731
+                          for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
+        base = {**read(self.D / "base"), **read(self.D / "cases" / name / "base")}
+        return base, {**base, **read(self.D / "cases" / name / "head")}
+
+    def test_the_tripwire_reads_the_base_as_well_as_the_head(self):
+        base, head = self.trees("no board item, but the base had one (read the head alone and it passes)")
+        self.assertEqual([k for k, _ in L.tripwire(base, head, "ledger: set TD-150 (session w-1)", "acme/widgets")],
+                         ["tripwire-no-board-item"])
+        # the same diff with the base's board read as the head's: nothing covers at either, so it passes
+        alone = {**base, L.BOARD_PATH: head[L.BOARD_PATH]}
+        self.assertEqual(L.tripwire(alone, head, "ledger: set TD-150 (session w-1)", "acme/widgets"), [])
+
+    def test_aware_datetimes_are_their_utc_dates(self):
+        base, head = self.trees("a lift, closed in the same write")
+        files = sorted(set(head) - set(base) | {p for p in head if base.get(p) != head[p]})
+        subject = L.subject("board", "decide", "decide 2026-01-06 (session `w-1`) — Warm the cache nightly?",
+                            answer="Go", session="w-1")
+        late = datetime(2026, 1, 15, 23, 30, tzinfo=timezone(timedelta(hours=-7)))  # 2026-01-16 in UTC
+        got = L.lift_pr_verdict(base, head, files, subject, 1, late, late, "acme/widgets")
+        self.assertTrue(got["carve_out"], got)
+        with self.assertRaises(L.Refused):
+            L.lift_pr_verdict(base, head, files, subject, 1, datetime(2026, 1, 15, 12), None, "acme/widgets")  # noqa: DTZ001
+        with self.assertRaises(L.Refused):
+            L.lift_pr_verdict(base, head, files, subject, 1, "2026-01-15", "2026-01-14", "acme/widgets")
+        with self.assertRaises(L.Refused):
+            L.lift_pr_verdict(base, head, files, subject, True, "2026-01-15", None, "acme/widgets")
+
+    def test_a_repo_outside_the_grammar_is_refused(self):
+        base, head = self.trees("a decide lift")
+        for call in (lambda: L.tripwire(base, head, "", "acme widgets"),
+                     lambda: L.uncovered_decisions(base, head, [], "acme widgets")):
+            with self.assertRaises(L.Refused):
+                call()
+
+    def test_the_migrate_subject(self):
+        s = L.migrate_subject("2.4", 12)
+        self.assertEqual(s, "ledger: migrate v2.4 (12 entries)")
+        self.assertEqual(L.subject_kind(s), "migrate")
+        self.assertIsNone(L.edit_action(s))
+        for bad in (("2.x", 3), ("2.4", -1), ("2.4", True)):
+            with self.assertRaises(L.Refused):
+                L.migrate_subject(*bad)
