@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -227,6 +228,7 @@ class Manifest(unittest.TestCase):
         (self.root / "MANIFEST").mkdir()
         (self.root / "MANIFEST" / "inside.md").write_bytes(b"x\n")
         self.assertEqual(self.problems(), [self.m.NOT_A_FILE])
+        self.assertEqual(self.m._walk(self.root), ({"a.md": self.root / "a.md", "run.py": self.run_py}, {}))
         r = _run(self.run_py, "--stamp", "2.4")
         self.assertEqual((r.returncode, r.stderr.decode()), (1, "fixtures: MANIFEST is not a file\n"))
 
@@ -268,6 +270,16 @@ class Manifest(unittest.TestCase):
         self.write("\u00e9.md", b"changed\n")
         self.assertEqual(self.problems(), ["\u00e9.md: its sha256 does not match MANIFEST — edited after its release"])
 
+    def test_an_unreadable_directory_is_not_left_out(self):
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("root reads every directory")
+        self.write("d/x.md")
+        os.chmod(self.root / "d", 0)
+        self.addCleanup(os.chmod, self.root / "d", 0o755)
+        r = _run(self.run_py, "--stamp", "2.4")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse((self.root / "MANIFEST").exists())
+
     def test_a_fifo(self):
         if not hasattr(os, "mkfifo"):
             self.skipTest("no os.mkfifo")
@@ -286,7 +298,7 @@ class Manifest(unittest.TestCase):
                     with open(os.path.join(os.fsencode(self.root), name), "wb") as f:
                         f.write(b"x\n")
                 except OSError:
-                    continue
+                    self.skipTest("the file system refuses the name")
                 got = self.problems()
                 self.assertEqual(got, [want])
                 os.unlink(os.path.join(os.fsencode(self.root), name))
@@ -331,6 +343,8 @@ class Manifest(unittest.TestCase):
 
     def test_a_stamp_leaves_no_temporary_file(self):
         self.stamp()
+        mode = stat.S_IMODE(os.stat(self.root / "MANIFEST").st_mode)
+        self.assertTrue(mode & 0o044 or os.umask(os.umask(0)) & 0o044, oct(mode))  # readable by others, umask allowing
         names = sorted(p.name for p in self.root.iterdir() if p.name != "__pycache__")  # the import's, not the stamp's
         self.assertEqual(names, ["MANIFEST", "a.md", "run.py"])
 

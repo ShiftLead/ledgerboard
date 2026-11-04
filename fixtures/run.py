@@ -197,7 +197,9 @@ def _walk(root: Path) -> tuple[dict[str, Path], dict[str, str]]:
     files: dict[str, Path] = {}
     refused: dict[str, str] = {}
     top = str(root)
-    for d, dirnames, filenames in os.walk(top, followlinks=False):
+    def unreadable(err: OSError) -> None:  # a directory the walk cannot read is never silently left out
+        raise err
+    for d, dirnames, filenames in os.walk(top, onerror=unreadable, followlinks=False):
         rel_dir = os.path.relpath(d, top)
         parts = [] if rel_dir == "." else rel_dir.split(os.sep)
         if not parts:
@@ -331,6 +333,9 @@ def _stamp(release: str) -> int:
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(text.encode("utf-8"))
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(tmp, 0o666 & ~umask)  # mkstemp's 0600 would make a copy unreadable to others
         os.replace(tmp, m)
     except BaseException:
         with contextlib.suppress(OSError):
