@@ -310,9 +310,9 @@ def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None
                 return wrap(rel(targets[int(a.group(1))], False))
             if not hash_:
                 return wrap(rel(gone[old], True))
-            if path and warns is not None:
+            if warns is not None:
                 warns.append(f"{target}: an anchor into {os.path.basename(old)}, which the split removes — point it "
-                             "at the entry's file by hand")
+                             "at the entry's file by hand" + ("" if path else f" (in a text from {os.path.basename(old)})"))
             return m.group(0)
         if not path:
             return m.group(0)
@@ -459,7 +459,13 @@ def _gate_route(text: str, fields: Mapping[str, str], day: str, *, by: str | Non
         if given:
             raise Unusable(f"{', '.join(sorted(given))}: set takes them only with --blocked-by that drops a decision")
         return text
-    was = _decisions(entries(text)[0]["blocked_raw"])
+    raw = entries(text)[0]["blocked_raw"]
+    held = parse_gates(raw)["old_form"]
+    if held and " ".join(f"decision ({held[0]})".split()).lower() not in {
+            " ".join(g.split()).lower() for g in _decisions(value)}:
+        raise Refused(f"the Blocked by holds decision ({held[0]}) in the old form, which set cannot lift or drop — "
+                      f"migrate it first (decision ({held[0]}) with its text in **Ask:**), then lift it")
+    was = _decisions(raw)
     now = {" ".join(g.split()).lower() for g in _decisions(value)}
     gone = [g for g in was if " ".join(g.split()).lower() not in now]
     added = [g for g in _decisions(value) if " ".join(g.split()).lower() not in {" ".join(x.split()).lower() for x in was}]
@@ -704,6 +710,11 @@ def plan_split(led: Ledger, to: str | None = None, *, also: Mapping[str, str] | 
     out = to or _join(os.path.dirname(led.path), "ledger")
     if os.path.lexists(out):
         raise Unusable(f"{out} exists: split writes a new directory")
+    up = os.path.dirname(os.path.abspath(out))
+    while not os.path.lexists(up):
+        up = os.path.dirname(up)
+    if not os.path.isdir(up):
+        raise Unusable(f"{out}: {os.path.relpath(up)} is a file, so the directory cannot be made")
     also = _also(also, led)
     text, arch = led.texts()
     files = split(text, arch)

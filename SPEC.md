@@ -989,13 +989,13 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   `--board <repo>`, `--no-board-item`, `--shared-item`; or anyone, with `--override "<why>"`. One that swaps one
   decision for another reassigns it (`reassign_gate()`), with `--by` and `--why`. Who may run either (a session a
   person started) is the caller's to check; the writer records `by`. These flags on a `set` that drops no
-  decision are a usage error;
+  decision are a usage error, and a decision still in the old form is not dropped by `set` (*migrate it first*);
 - **`lift TD-n --gate "<gate>" --by <who>`** — one gate lifted (`lift_gate()`, *Lifting a gate*), its inputs one
   shape exactly: a decision with `--answer` and at most one board flag (with `--people P,…` and `--answered-by
   any`, anyone listed may answer); an event with `--answer` and `--people`, or with a host's `--evidence`; `until`
   with neither. The override and the reassign are `set`'s;
 - **`split`** — a v1 ledger file (`--ledger`, default `docs/technical_debt.md`, `--archive` beside it) split into its
-  v2 directory (`split()`), `--to DIR` (default `ledger/` beside the file, which must not exist): every file
+  v2 directory (`split()`), `--to DIR` (default `ledger/` beside the file, which must not exist, under no file): every file
   written, the v1 file and its archive removed and the rank file moved to `rank.yml`, as one write. Each file's
   relative links are rewritten for where it now lives, and a link into the v1 files, in the new files and in
   `--also`'s, points at the entry's file (an entry heading's anchor, `#td-21-…`) or the directory (no anchor);
