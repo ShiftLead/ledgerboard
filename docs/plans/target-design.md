@@ -115,7 +115,7 @@ Five researchers surveyed git-native trackers, agent work queues, wait/approval 
 | 6 | Check arguments steer a host's credentials | (inferred) | `check()` refuses an absolute path or `..`. Text is literal. Host rules: roster repos only, read-only tokens (§4.1, §4.4). |
 | 7 | Two hosts could lift one gate twice | (inferred) | The lift is a no-op once the gate is gone, and its branch is keyed by entry and event (§4.4). |
 | 8 | Gate staleness needed stored state | Airflow `timeout`; Step Functions `HeartbeatSeconds` | Gate age comes from the Log's `gate added` date. A `by DATE` deadline waits until the fixed 30 days proves too blunt (§3.2). |
-| 9 | Mixed-version and migration behaviour unstated | Rust editions must interoperate; `cargo fix` admits corner cases | Fixtures: an older reader reads a newer closed Status as closed; `migrate` is idempotent and stops on any unmapped word (§7.4). |
+| 9 | Mixed-version and migration behaviour unstated | Rust editions must interoperate; `cargo fix` admits corner cases | Fixtures: an older reader holds the block on a newer Status word and flags it (*Amended 2026-11-04, TD-039: `docs/plans/TD-039-unknown-status.md`.*); `migrate` is idempotent and stops on any unmapped word (§7.4). |
 | 10 | Supersede edge cases undefined | Bugzilla DUPLICATE and MOVED; no precedent rewires dependents | A duplicate becomes Superseded by the original. Chains, dedupe and cycles are defined, and the successor must not be Dropped (§5). |
 | 11 | Do a part's gates come from its parent? | Org-mode users were surprised that blocking didn't propagate | Restated from SPEC: a part never inherits its parent's ids or gates (§3). |
 | — | `until` used each machine's local date, so machines in different zones disagree for part of a day | principle 2 | **Every ledger date is UTC**: `today`, and every date a writer writes (§3). |
@@ -1100,7 +1100,7 @@ The watch list is the ledger itself: every open `event (…)` gate. There is not
 
 ## 5. TD-011: supersede and drop rewire their dependents **[proposed]**
 
-- `pickable()` and `check()` now read an archived entry's Status word. **Under v2.4**, before the closed set lands in v2.5, an archived Status that starts with `Superseded` or `Dropped` triggers the rules below, and every other archived Status (`Resolved`, `Done`, `Built`, `Designed`, undated or not) reads as closed and done. v2.5's `migrate` then makes the words match.
+- `pickable()` and `check()` now read an archived entry's Status word. **Under v2.4**, before the closed set lands in v2.5, an archived Status that starts with `Superseded` or `Dropped` triggers the rules below, and every other archived Status that is a known word (`Resolved`, `Done`, `Built`, `Designed`, undated or not), or none, reads as closed and done, and a word v2.4 does not know keeps the block (TD-039) (*Amended 2026-11-04, TD-039: `docs/plans/TD-039-unknown-status.md`.*). v2.5's `migrate` then makes the words match.
 - An open entry blocked by a superseded or dropped entry is an error on edits and ℹ on a standing ledger.
 - `archive --superseded-by TD-m` renames the old id to TD-m in every open dependent's `Blocked by`, in the same change.
 - `archive --dropped` refuses while any open entry depends on the dropped one, and lists every dependent in the refusal. You decide each dependent first.
@@ -1320,7 +1320,7 @@ Each release changes the canonical form, so **each consumer's vendor PR carries 
 
 - **Unknown text survives:** an entry with an unknown header field, an unknown gate, an unknown body section and an unknown Log prefix goes through `edit`, `fmt` and `migrate` and comes out with that **content** unchanged (each unknown field's name and value, the section's text, the Log line), placed per canonical form. A header line that is not a field is refused, not dropped.
 - **Retired words:** each reserved word reported as *retired* with its replacement, not *unknown*.
-- **Cross-version:** a v2.4 reader (whose fixtures stay in the suite) resolves an `other#TD-n` whose archived Status is a v2.5 word, such as `Dropped D`, and reads it as closed. More generally, a minor reader reading text from a newer minor of its major never reads a block as lifted or a closed entry as open.
+- **Cross-version:** a v2.4 reader (whose fixtures stay in the suite) resolves an `other#TD-n` whose archived Status is a word it does not know (a later minor's, such as `Withdrawn D`), keeps the block, and flags it (`cross-unknown-status`). More generally, a minor reader never reads a block as lifted on a Status word it does not know, nor a closed entry as open. Two releases remain, by design: a known word on the wrong side of the archive (`Open`, `Moved`, `OBE` …) releases until v2.5's remodel, and so does a resolver that gives no `status`, by the host's choice (*Amended 2026-11-04, TD-039: `docs/plans/TD-039-unknown-status.md`.*).
 - **`migrate`:** running it twice gives no diff; an unmapped Status word stops it with a list and writes nothing.
 - **Repos and origins:**
   - `origin_key` on scp-style ssh, `ssh://` with a port, https with userinfo, a trailing `/` and `.git`, and mixed case;

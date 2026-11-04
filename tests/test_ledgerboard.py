@@ -948,3 +948,44 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
                     "Due: 2026-01-20. Answers: Files | Db.\n"
                 got = L.uncovered_decisions(bt, {**ht, L.BOARD_PATH: new}, [], "acme/widgets")[0]
                 self.assertEqual([k for k, _ in got], ["decision-no-lift"])
+
+
+class UnknownStatus(unittest.TestCase):
+    """v2.4, TD-039: an archived blocker's Status word this reader does not know keeps the block."""
+    LEDGER = "# Ledger\n\nLedgerboard: 2\n\n## TD-001: Waits\n\n**Priority:** Medium\n**Blocked by:** {b}\n"
+
+    def _picked(self, status, *, cross=False):
+        if cross:
+            got = L.pickable(self.LEDGER.format(b="acme/tools#TD-9"), "",
+                             lambda item: {"state": "archived", "why": "", "status": status}, today=TODAY)
+        else:
+            arc = f"# Archive\n\n## TD-002: Archived\n\n**Status:** {status}\n"
+            got = L.pickable(self.LEDGER.format(b="TD-002"), arc, today=TODAY)
+        return [e["id"] for e in got["pickable"]] == ["TD-001"]
+
+    def test_status_words_are_the_reader_s_known_words(self):
+        # A word added to STATUS_WORDS is a word pickable() reads: as closed and done unless it joins
+        # Superseded's or Dropped's rules. One outside it holds the block.
+        for word in L.STATUS_WORDS:
+            for cross in (False, True):
+                with self.subTest(word=word, cross=cross):
+                    self.assertEqual(self._picked(f"{word.capitalize()} 2026-01-05", cross=cross),
+                                     word not in ("superseded", "dropped"))
+        for cross in (False, True):
+            with self.subTest(word="xyzzy", cross=cross):
+                self.assertFalse(self._picked("Xyzzy 2026-01-05", cross=cross))
+
+    def test_status_word_as_written(self):
+        for status, want in (("**Withdrawn** 2026-01-05", "Withdrawn"), ("** Xyzzy", "**"), ("**Resolved**.", "Resolved**"),
+                             ("Resolved) see", "Resolved)"), ("Done.", "Done"), (", ;", ""), ("", ""), (None, "")):
+            with self.subTest(status=status):
+                self.assertEqual(L._status_word(status), want)
+
+    def test_unknown_word_is_an_error_on_an_edited_entry(self):
+        arc = "# Archive\n\n## TD-002: Archived\n\n**Status:** Xyzzy 2026-01-05\n"
+        led = self.LEDGER.format(b="TD-002")
+        for old, level in (("", "error"), (led, "info")):  # a new entry; a standing one
+            with self.subTest(level=level):
+                recs = [r for r in L.check(led, arc, old, today=TODAY) if r["kind"] == "blocker-unknown-status"]
+                self.assertEqual([(r["id"], r["level"]) for r in recs], [("TD-001", level)])
+                self.assertIn("(Xyzzy)", recs[0]["text"])

@@ -2,7 +2,7 @@
 
 **Status:** Designed 2026-11-03 (the designer); it waits on Paul's go. Class: **wide**, because it changes what a vendored format's reader reads: which archived blockers release their dependents (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The rounds ended after round 4 by the stop rule, because its design review raised nothing build-changing. The build-changing findings per round from the design reviews were 1, 2, 2 and 0. The fact-checks raised 1, 0, 0 and 0, and the closing fact-check raised none. **A recurring topic:** the word rule's edges (F7, F15, F23, F24), an empty or punctuation-only Status. Round 3 replaced the rule with a single test, no first run, and round 4 found it closed. The choice of (b) was not challenged in any round. The findings no review has read are round 4's minor fixes, F28–F32, which only the closing fact-check checked. They go into the build's Fix. The review record is `docs/reviews/TD-039.md`.
 
-**Entry:** [TD-039](../ledger/TD-039.md). TD-035's build found it while writing the cross-version fixtures.
+**Entry:** [TD-039](../ledger/archive/TD-039.md). TD-035's build found it while writing the cross-version fixtures.
 
 ## The problem
 

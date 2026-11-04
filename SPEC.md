@@ -224,35 +224,52 @@ the ledger, in pick order by intent.
 
 **The archive** holds resolved entries, bodies whole, in the same shape.
 
-**Superseded and dropped** (v2.4). `pickable()` and `check()` read an archived blocker's Status by its
-first word. `Superseded … by <id>` and `Dropped` apply the rules below. Any other Status (`Resolved`,
-`Done`, `Built`, `Designed`, dated or not, or none) reads as closed and done, which releases the
-dependents, as before. A duplicate is `Superseded D by` the original; there is no separate word.
-- **A blocker that was superseded** has moved its requirement to its successor. The reader follows the
-  chain (A superseded by B, B by C) to its end. The dependent stays blocked while the end is open, or
-  while the chain ends in Dropped, in no entry, in a loop, or in a `Superseded` with no successor. It is
-  released only when the end is Resolved. Either way `check()` flags it (`blocker-superseded`; an error
-  on an entry the edit changed, ℹ on a standing ledger), naming the end it should name instead.
+**Superseded and dropped** (v2.4). `pickable()` and `check()` read an archived blocker's Status by its first
+word. That is its first run up to whitespace, `,` or `;`, less any run of `*`, `_` and backtick at either end
+and then any run of `.` and `:` at its end, compared without case. A Status with no first run (absent, or only
+whitespace, `,` and `;`) reads as one with no Status. A first run that strips to nothing is a word this reader
+does not know. Known here means a first word in the reader's Status words, a looser test than the head *The
+Log* lifts notes from, so a bold-led `**Live check held**` is a known word here though *The Log* leaves it
+alone. `Superseded … by <id>` and `Dropped` apply the rules below, and so does a word this reader does not
+know. Every other Status reads as closed and done, which releases the dependents, as before. That covers the
+reader's other Status words, dated or not: `Resolved`, and on an archived entry also `Open` and *Retired
+words*' list (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), which v2.5's `migrate`
+maps or stops on. It also covers a Status with no word. A duplicate is `Superseded D by` the original; there
+is no separate word.
+- **A blocker that was superseded** has moved its requirement to its successor. The reader follows the chain
+  (A superseded by B, B by C) to its end. The dependent stays blocked while the end is open, or while the
+  chain ends in Dropped, in no entry, in a loop, in a `Superseded` with no successor, or in a Status word this
+  reader does not know. It is released only when the end is Resolved. Either way `check()` flags it
+  (`blocker-superseded`; an error on an entry the edit changed, ℹ on a standing ledger), naming the end it
+  should name instead.
 - **A blocker that was dropped** keeps the block, and `check()` flags it (`blocker-dropped`, likewise):
   someone decides the dependent, dropping the blocker or blocking it on what replaces it.
-- **Another repo's blocker** reads the same way through the resolver, whose answer for an archived entry
-  may carry its `status` and its `successor` (bare when in that repo). Another repo's archive cannot
-  rewrite this repo's text, so `check()` reports such a dependent as ℹ (`cross-superseded`,
-  `cross-dropped`): the host's gate sweep rewires a superseded one by a tool PR, and puts a dropped one
-  on the board as `decide`. A resolver that gives no `status` reads every archived entry as closed and
-  done, as before.
+- **A blocker whose Status word this reader does not know** keeps the block. Its first word is not one of the
+  Status words this release reads: `Open`, `Resolved`, `Superseded`, `Dropped`, and the retired `Designed`,
+  `Built`, `Partly`, `Live`, `In`, `Done`, `Moved` and `OBE`. It may be a later minor's word for an entry that
+  is closed but not done, so the reader never reads it as lifted. An archived Status that opens with prose
+  ("Steps 1 and 2 shipped") reads the same way. `check()` flags it (`blocker-unknown-status`, likewise;
+  `cross-unknown-status`, ℹ, through the resolver), naming the word, and someone decides the dependent. A
+  Superseded chain that ends in such an entry keeps the block too (`blocker-superseded`), and `archive_plan()`
+  refuses it as a successor.
+- **Another repo's blocker** reads the same way through the resolver, whose answer for an archived entry may
+  carry its `status` and its `successor` (bare when in that repo). Another repo's archive cannot rewrite this
+  repo's text, so `check()` reports such a dependent as ℹ (`cross-superseded`, `cross-dropped`,
+  `cross-unknown-status`): the host's gate sweep rewires a superseded one by a tool PR, and puts a dropped one
+  on the board as `decide`. A resolver that gives no `status` reads every archived entry as closed and done,
+  as before.
 - **Archiving rewires.** `archive_plan(ledger, archive, tid, *, superseded_by=None, dropped=False,
   resolve=None)` says what archiving open entry `tid` leaves its dependents (`dependents(ledger, tid)`:
   the open entries whose `Blocked by` names it), or refuses:
-  - superseded (`superseded_by` a `TD-m` or `<repo>#TD-m`): the successor is followed through each
-    Superseded entry to the end of its chain, which the plan's `successor` names and the archive writes.
-    The successor exists (in the ledger, the archive or through the resolver) and is open or Resolved:
-    the plan is refused when it names no entry, cannot be resolved, ends in Dropped, loops (back to `tid`
-    among others), or is one of `tid`'s dependents, which would block on itself. Every dependent in
-    `rewire` gets `rename_ref` from `tid` to the successor in the same change, so every dependent always
-    names a live or Resolved entry, and a chain's later supersede rewires them again. A dependent that
-    already names the successor keeps one copy. Their cards change with them, so a rewired dependent
-    may need a rank `join`.
+  - superseded (`superseded_by` a `TD-m` or `<repo>#TD-m`): the successor is followed through each Superseded
+    entry to the end of its chain, which the plan's `successor` names and the archive writes. The successor
+    exists (in the ledger, the archive or through the resolver) and is open or Resolved: the plan is refused
+    when it names no entry, cannot be resolved, ends in Dropped or in a Status word this reader does not know,
+    loops (back to `tid` among others), or is one of `tid`'s dependents, which would block on itself. Every
+    dependent in `rewire` gets `rename_ref` from `tid` to the successor in the same change, so every dependent
+    always names a live or Resolved entry, and a chain's later supersede rewires them again. A dependent that
+    already names the successor keeps one copy. Their cards change with them, so a rewired dependent may need
+    a rank `join`.
   - dropped: refused while any open entry is `Blocked by` `tid`, naming every one, so each is decided
     first.
 
@@ -1155,12 +1172,18 @@ v2.4 also adds Event sections (*Events*): `parse_check()`, `parse_event_section(
 `event-ungated`. Nothing they read was read before: v2.3 reads an Event section as a body section like any
 other.
 v2.4 also reads an archived blocker's Status (*Superseded and dropped*): a blocker archived `Superseded`
-releases its dependents only when its chain ends in a Resolved entry, and one archived `Dropped` keeps
-them blocked, where v2.3 released both; `check()` gains `blocker-superseded`, `blocker-dropped`,
-`cross-superseded` and `cross-dropped`, and a resolver's answer may carry `status` and `successor`.
-`archive_plan()` and `dependents()` are new; `edit_entry`'s `archive` writes `Dropped` and a successor in
-another repo, and `rename_ref` keeps one copy of an id. A v2.3 reader releases what v2.4 keeps blocked, so a
-consumer archives an entry Superseded or Dropped only once every reader of its ledger runs v2.4.
+releases its dependents only when its chain ends in a Resolved entry, and one archived `Dropped` or with a
+Status word v2.4 does not know keeps them blocked, where v2.3 released every one; `check()` gains
+`blocker-superseded`, `blocker-dropped`, `blocker-unknown-status`, `cross-superseded`, `cross-dropped` and
+`cross-unknown-status`, and a resolver's answer may carry `status` and `successor`. `archive_plan()` and
+`dependents()` are new; `edit_entry`'s `archive` writes `Dropped` and a successor in another repo, and
+`rename_ref` keeps one copy of an id. A v2.3 reader releases what v2.4 keeps blocked, so a consumer archives
+an entry Superseded or Dropped only once every reader of its ledger runs v2.4. A later minor may add a Status
+word, done or not, and v2.4 holds the dependents of an entry archived with it until it is read by a release
+that knows the word. A consumer writes such a word only once every reader of its ledger runs v2.4 or later,
+since v2.3 releases on any word. An archived Status that opens with prose holds its dependents under v2.4
+where v2.3 released them, and `check()` names each. On an entry an edit changes, `blocker-unknown-status` is
+an error.
 v2.4 also defines the counter (*The next id*): `ids_held()`, `next_id()`, `parse_take()` and `judge_takes()` are
 new; nothing a reader reads changes.
 v2.4 also lifts gates (*Lifting a gate*, *The board*): `lift_gate()`, `reassign_gate()`, `reassigns()`,
