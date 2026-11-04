@@ -133,4 +133,4 @@ The manifest is the runner's, not the module's, so its cases are unit tests in `
 
 ## The build
 
-One build, **part of TD-040**, in **v2.4** (TD-036's `Blocked by` gains it when it is filed). Its Fix is this plan's *The rules*, *What changes where* and *The other text*; its Done when: every case above passes; the precheck is green; and the two SPEC passages quoted above land in `SPEC.md` with the code, in the same PR.
+One build, **part of TD-040**, in **the next release after it lands** (Paul, 2026-11-04: TD-040 holds no release, so TD-036 does not wait on it). If it lands before v2.4's tag, it ships in v2.4, as this plan's text is written; if v2.4 is tagged first, the builder writes v2.5 wherever the plan names v2.4 as the manifest's first release (the SPEC passages, the `no MANIFEST` text, the README and docstring sentences), and the *Versions* paragraph is v2.5's. Its Fix is this plan's *The rules*, *What changes where* and *The other text*; its Done when: every case above passes; the precheck is green; and the two SPEC passages quoted above land in `SPEC.md` with the code, in the same PR.
