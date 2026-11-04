@@ -246,7 +246,7 @@ class Usage(unittest.TestCase):
             board = os.path.join(tmp, "board.md")
             Path(board).write_text(BOARD)
             code, _, err = run("done", "--board", board, "--line", "5", "--expect", "act", "--today", "2026-1-5")
-            self.assertEqual(code, 1)
+            self.assertEqual(code, 2)
             self.assertIn("--today", err)
 
     def test_plain_output_is_the_subject_then_the_paths(self):

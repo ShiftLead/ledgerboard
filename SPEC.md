@@ -970,7 +970,8 @@ both or neither: each is written to a temporary file beside it and renamed into 
 and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
 date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
 (`--tool`, `--session`). A file that declares a newer major is refused unread. Exit (v2.4), the ledger writer's
-table: 0 written (or nothing to change), 1 refused, 2 usage, or (`decide`) the ledger cannot be used as asked,
+table: 0 written (or nothing to change), 1 refused, 2 usage (a `--today` that is not a date among it), or
+(`decide`) the ledger cannot be used as asked,
 4 a write failed (every file restored); it never exits 3, which is the ledger writer's `needs`.
 
 ## The ledger writer (v2.4)
@@ -1153,7 +1154,7 @@ writes the ledger too and closes the item per `closes()`, where v2.3's wrote the
 reads changes. The board writer's write of several files
 also removes files, both or neither, for the ledger writer's moves; no board action removes one.
 v2.4's board writer exits by the ledger writer's table (*The board writer*): a refusal is 1 where v2.3 gave 3, a
-failed write 4 where v2.3 gave 1, and a ledger `decide` cannot use 2; it no longer exits 3. A consumer's wrapper
+failed write 4 where v2.3 gave 1, and a bad `--today` or a ledger `decide` cannot use 2; it no longer exits 3. A consumer's wrapper
 that read v2.3's codes checks them in its v2.4 vendor PR.
 
 ## Appendix: grammar
