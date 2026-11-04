@@ -13,6 +13,13 @@
                                        [--field NAME=VALUE]... [--take NONCE]
                                        [--by WHO --session S --words W [--while ID]]
     python3 -m ledgerboard.ledger set  TD-n --FIELD VALUE ... [--field NAME=VALUE]...
+                                       [--by WHO [--answer L] [--board R | --no-board-item | --shared-item]
+                                        | --by WHO --override WHY | --by WHO --why W]
+    python3 -m ledgerboard.ledger split [--archive FILE] [--to DIR] [--also FILE...]
+    python3 -m ledgerboard.ledger relink FILE... [--was FILE]
+    python3 -m ledgerboard.ledger lift TD-n --gate G --by WHO [--answer L] [--evidence E]
+                                       [--board R | --no-board-item | --shared-item] [--people P,...]
+                                       [--answered-by owner|any]
     python3 -m ledgerboard.ledger note TD-n "words"
     python3 -m ledgerboard.ledger edit TD-n --section NAME --from FILE|-
     python3 -m ledgerboard.ledger archive TD-n --why W [--pr N] [--pointer P] [--as-is]
@@ -66,6 +73,7 @@ from . import (
     Refused,
     Resolve,
     _left_with_open_parts,
+    archive_path,
     archive_plan,
     canonical,
     check,
@@ -76,11 +84,15 @@ from . import (
     field_key,
     first_word,
     heading_nums,
+    lift_gate,
     load,
+    parse_gates,
     pickable,
     rank,
     rank_path,
+    reassign_gate,
     set_rank,
+    split,
     utc_day,
     v2_problems,
     version_problem,
@@ -89,7 +101,7 @@ from .board import Plan, write
 
 LEDGER_DIR, LEDGER_FILE = "docs/ledger", "docs/technical_debt.md"  # the defaults, relative to the working directory
 ALIASES = ("type", "owner", "kind")  # --type X is --where type=X, and so on
-WRITES = ("fmt", "new", "set", "note", "edit", "archive", "reopen", "renumber")
+WRITES = ("fmt", "new", "set", "note", "edit", "archive", "reopen", "renumber", "lift", "split", "relink")
 # `new`'s and `set`'s header flags, in the canonical order: (option dest, field name)
 FIELDS = (("priority", "Priority"), ("type", "Type"), ("added", "Added"), ("owner", "Owner"), ("kind", "Kind"),
           ("status", "Status"), ("blocked_by", "Blocked by"), ("part_of", "Part of"), ("location", "Location"))
@@ -253,30 +265,61 @@ def _code_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
-def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None) -> str:
-    """``text``'s relative links (inline, ``](path)``, ``](<path>)``, a title kept, and reference definitions,
-    ``[ref]: path``), written from directory ``src``,
-    rewritten to resolve from directory ``dst``, and a link to a file in ``moved`` (old path → new path)
-    pointed at its new path; its anchor and title kept. A URL, an absolute path, a plain anchor and a link
-    inside a code span or a fenced block are left (an indented code block is not told from prose), and so is every link when ``src`` is ``dst`` and nothing it names moved. Pure: the
-    paths are compared as text, so a link that named no file before names none after."""
+ANCHOR_RE = re.compile(r"td-0*(\d+)(?:-|$)", re.IGNORECASE)  # an entry heading's slug: `## TD-21: x` is #td-21-x
+
+
+def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None, *,
+           gone: Mapping[str, str] | None = None, targets: Mapping[int, str] | None = None,
+           here: str | None = None, warns: list[str] | None = None) -> str:
+    """``text``'s relative links (inline, ``](path)`` or ``](<path>)`` with any title, and reference
+    definitions, ``[ref]: path``), written from directory ``src``, rewritten to resolve from directory ``dst``,
+    and a link to a file in ``moved`` (old path → new path) pointed at its new path; its anchor and title
+    kept. A URL, an absolute path, a plain anchor and a link inside a code span or a fenced block are left (an
+    indented code block is not told from prose), and so is every link when ``src`` is ``dst`` and nothing it
+    names moved.
+
+    A split's links: ``gone`` maps each v1 file the split removes to the directory replacing it, and
+    ``targets`` each entry's number to its new file. A link into a gone file whose anchor is an entry
+    heading's slug (``#td-21-…``) points at that entry's file, as does a bare ``#td-…`` anchor in a text that
+    came from the gone file ``here``; one with no anchor points at the directory; any other anchor into a gone
+    file is left, and said in ``warns``. Pure: paths are compared as text, so a link that named no file
+    before names none after."""
     spans = _code_spans(text)
     moved = {os.path.abspath(k): os.path.abspath(v) for k, v in (moved or {}).items()}
+    gone = {os.path.abspath(k): os.path.abspath(v) for k, v in (gone or {}).items()}
+    targets = {n: os.path.abspath(v) for n, v in (targets or {}).items()}
+    here = os.path.abspath(here) if here else None
     src_a, dst_a = os.path.abspath(src or "."), os.path.abspath(dst or ".")
+
+    def rel(to: str, slash: bool) -> str:
+        return os.path.relpath(to, dst_a).replace(os.sep, "/") + ("/" if slash else "")
 
     def fix(m: re.Match) -> str:
         target = m.group(2)
         bracketed = target.startswith("<")
         path, hash_, frag = (target[1:-1] if bracketed else target).partition("#")
-        if not path or URL_RE.match(path) or path.startswith("/") or any(a <= m.start() < b for a, b in spans):
+        wrap = (lambda d: f"{m.group(1)}{f'<{d}>' if bracketed else d}{m.group(3)}")  # noqa: E731
+        if URL_RE.match(path) or path.startswith("/") or any(a <= m.start() < b for a, b in spans):
             return m.group(0)
-        old = os.path.normpath(os.path.join(src_a, path))
+        old = os.path.normpath(os.path.join(src_a, path)) if path else here
+        if old is None:
+            return m.group(0)
+        if old in gone:
+            a = ANCHOR_RE.match(frag)
+            if hash_ and a and int(a.group(1)) in targets:
+                return wrap(rel(targets[int(a.group(1))], False))
+            if not hash_:
+                return wrap(rel(gone[old], True))
+            if path and warns is not None:
+                warns.append(f"{target}: an anchor into {os.path.basename(old)}, which the split removes — point it "
+                             "at the entry's file by hand")
+            return m.group(0)
+        if not path:
+            return m.group(0)
         new = moved.get(old, old)
         if new == old and src_a == dst_a:
             return m.group(0)
-        rel = os.path.relpath(new, dst_a).replace(os.sep, "/") + ("/" if path.endswith("/") else "")
-        dest = f"{rel}{hash_}{frag}"
-        return f"{m.group(1)}{f'<{dest}>' if bracketed else dest}{m.group(3)}"
+        return wrap(f"{rel(new, path.endswith('/'))}{hash_}{frag}")
 
     return REF_DEF_RE.sub(fix, LINK_RE.sub(fix, text))
 
@@ -397,22 +440,97 @@ def _open_entry(led: Ledger, tid: str, why: str = "it is edited only once reopen
     return path, led.files[path]
 
 
+def _decisions(value: str | None) -> list[str]:
+    """The ``decision (<person>)`` gates of a Blocked by value, as written."""
+    return [f"decision ({p})" for p in parse_gates(value)["decisions"]]
+
+
+def _gate_route(text: str, fields: Mapping[str, str], day: str, *, by: str | None, answer: str | None,
+                suffix: str | None, override: str | None, why: str | None) -> str:
+    """``text`` with the decisions ``set``'s Blocked by drops or swaps written as the module writes them, before
+    the fields are set (SPEC *The ledger writer*, the set route): a decision removed is lifted (``lift_gate()``,
+    ``by`` the gate's person and ``answer``, default ``Go``; or with ``override``, ``by`` anyone), and one
+    decision replaced by another is reassigned (``reassign_gate()``, ``by`` and ``why``). Who may do either is
+    the caller's to check; the writer records ``by``."""
+    given = {k for k, v in (("--by", by), ("--answer", answer), ("a board flag", suffix), ("--override", override),
+                            ("--why", why)) if v is not None}
+    value = next((v for k, v in fields.items() if field_key(k) == "blocked by"), None)
+    if value is None:
+        if given:
+            raise Unusable(f"{', '.join(sorted(given))}: set takes them only with --blocked-by that drops a decision")
+        return text
+    was = _decisions(entries(text)[0]["blocked_raw"])
+    now = {" ".join(g.split()).lower() for g in _decisions(value)}
+    gone = [g for g in was if " ".join(g.split()).lower() not in now]
+    added = [g for g in _decisions(value) if " ".join(g.split()).lower() not in {" ".join(x.split()).lower() for x in was}]
+    if not gone:
+        if given:
+            raise Unusable(f"{', '.join(sorted(given))}: this Blocked by drops no decision")
+        return text
+    if by is None:
+        raise Refused(f"removing {', '.join(gone)} through set needs --by <person>: the gate's person, who answered "
+                      "(or --override with its why)")
+    if added:
+        if len(gone) != 1 or len(added) != 1:
+            raise Unusable("a reassign replaces one decision by one other: set them one at a time")
+        if answer is not None or suffix is not None or override is not None:
+            raise Unusable("a reassign takes --by and --why, no --answer, board flag or --override")
+        frm, to = parse_gates(gone[0])["decisions"][0], parse_gates(added[0])["decisions"][0]
+        return reassign_gate(text, frm, to, by=by, why=why or "", today=day)
+    if why is not None:
+        raise Unusable("--why is a reassign's: a lift takes --answer, or --override with its why")
+    for g in gone:
+        if override is not None:
+            if answer is not None or suffix is not None:
+                raise Unusable("an override lift takes --by and its why, no --answer or board flag")
+            text = lift_gate(text, g, by, override=override, today=day)
+        else:
+            text = lift_gate(text, g, by, answer=answer or "Go", suffix=suffix, today=day)
+    return text
+
+
 def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] | None = None,
-              words: str | None = None, section: str | None = None, base: Ledger | None = None,
-              resolve: Resolve | None = None, today: str | None = None) -> Plan:
+              words: str | None = None, section: str | None = None, by: str | None = None,
+              answer: str | None = None, suffix: str | None = None, override: str | None = None,
+              why: str | None = None, base: Ledger | None = None, resolve: Resolve | None = None,
+              today: str | None = None) -> Plan:
     """One edit of an open entry (``edit_entry()``): ``set`` (``fields``, an empty value removing one), ``note``
-    (``words``, a dated Log line) or ``edit`` (``section`` replaced by ``words``)."""
+    (``words``, a dated Log line) or ``edit`` (``section`` replaced by ``words``). A ``set`` whose Blocked by
+    drops a decision lifts it (``by``, ``answer``, ``suffix``, or ``override``) or, swapping it for another,
+    reassigns it (``by``, ``why``): ``_gate_route()``."""
     if action not in ("set", "note", "edit"):
         raise Unusable(f"an entry edit is set, note or edit, not {action!r}")
     path, text = _open_entry(led, tid)
     day = _today(today)
-    kw: dict = {"fields": dict(fields or {})} if action == "set" else (
-        {"words": words, "today": day} if action == "note" else {"section": section, "words": words})
-    out = edit_entry(text, action, **kw)
+    route = {"by": by, "answer": answer, "suffix": suffix, "override": override, "why": why}
+    if action != "set" and any(v is not None for v in route.values()):
+        raise Unusable(f"{action} takes no gate route: --by, --answer, --override and --why are set's")
+    if action == "set":
+        lifted = _gate_route(text, dict(fields or {}), day, **route)
+        out = edit_entry(lifted, "set", fields=dict(fields or {}))
+    else:
+        kw: dict = {"words": words, "today": day} if action == "note" else {"section": section, "words": words}
+        out = edit_entry(text, action, **kw)
     if out == text:
         return Plan(action, None, {}, {"id": entries(out)[0]["id"], "notes": []})
     notes = gate(led, {path: out}, base=base, resolve=resolve, today=day)
     return Plan(action, None, {path: out}, {"id": entries(out)[0]["id"], "notes": notes})
+
+
+def plan_lift(led: Ledger, tid: str, gate_: str, by: str, *, answer: str | None = None, evidence: str | None = None,
+              suffix: str | None = None, people: Sequence[str] | None = None, answered_by: str | None = None,
+              base: Ledger | None = None, resolve: Resolve | None = None, today: str | None = None) -> Plan:
+    """One gate lifted from open entry ``tid`` (``lift_gate()``, SPEC *Lifting a gate*): a decision by its person's
+    ``answer`` (``suffix`` at most one of ``board <repo>``, ``no board item``, ``shared board item left open``;
+    anyone on ``people`` with ``answered_by`` ``any``), an event by a person's ``answer`` (``by`` on ``people``) or a
+    host's ``evidence``, or ``until`` with none of them. Its inputs match one shape exactly; the override and the
+    reassign are ``set``'s."""
+    path, text = _open_entry(led, tid)
+    day = _today(today)
+    out = lift_gate(text, gate_, by, answer=answer, evidence=evidence, suffix=suffix, today=day,
+                    people=list(people) if people is not None else None, answered_by=answered_by)
+    notes = gate(led, {path: out}, base=base, resolve=resolve, today=day)
+    return Plan("lift", None, {path: out}, {"id": entries(out)[0]["id"], "notes": notes})
 
 
 def _why(why: str | None) -> str:
@@ -426,7 +544,7 @@ def _also(also: Mapping[str, str] | None, led: Ledger) -> dict[str, str]:
     out = dict(also or {})
     for p in out:
         if os.path.abspath(p) in {os.path.abspath(q) for q in led.files}:
-            raise Unusable(f"--also {p}: a file of the ledger, which the writer reads already")
+            raise Unusable(f"{p}: a file of the ledger, which the writer reads already — name only files outside it")
     return out
 
 
@@ -568,6 +686,71 @@ def plan_renumber(led: Ledger, tid: str, new: str, *, take: str | None = None, a
     after = {**{p: t for p, t in led.files.items() if p != path}, **also, **changes}
     return Plan("renumber", None, changes, {"id": new, "was": old, "moved": {"from": path, "to": dst},
                                             "mentions": _mentions(old, after), "notes": notes})
+
+
+def _split_targets(out: str, rels) -> dict[int, str]:
+    return {int(m.group(1)): _join(out, r) for r in rels if (m := ENTRY_FILE_RE.match(os.path.basename(r)))}
+
+
+def plan_split(led: Ledger, to: str | None = None, *, also: Mapping[str, str] | None = None) -> Plan:
+    """A v1 ledger split into its v2 directory (``split()``, SPEC *The ledger as a directory*): every file the
+    module gives written under ``to`` (default ``ledger/`` beside the v1 file), the v1 file and its archive
+    removed and the rank file moved to ``rank.yml``, as one write. Each file's relative links are rewritten
+    for where it now lives, and a link into the v1 files, in the new files and in ``also``, points at the
+    entry's file (an entry heading's anchor) or the directory (no anchor) — ``relink()``'s split. An anchor
+    it cannot place is left and listed in ``warnings``. ``to`` must not exist."""
+    if led.v2:
+        raise Unusable(f"{led.path} is a v2 directory already")
+    out = to or _join(os.path.dirname(led.path), "ledger")
+    if os.path.lexists(out):
+        raise Unusable(f"{out} exists: split writes a new directory")
+    also = _also(also, led)
+    text, arch = led.texts()
+    files = split(text, arch)
+    targets = _split_targets(out, files)
+    gone = {led.path: out, led.archive: _join(out, LEDGER_ARCHIVE)}
+    warns: list[str] = []
+    changes: dict[str, str | None] = {}
+    for rel_path, body in files.items():
+        came = led.archive if rel_path.startswith(f"{LEDGER_ARCHIVE}/") else led.path
+        dst = _join(out, rel_path)
+        changes[dst] = relink(body, os.path.dirname(came), os.path.dirname(dst), gone=gone, targets=targets,
+                              here=came, warns=warns)
+    changes[led.path] = None
+    if led.archive in led.files:
+        changes[led.archive] = None
+    rank_file = rank_path(led.path)
+    if rank_file in led.files:
+        changes[rank_path(out)] = led.files[rank_file]
+        changes[rank_file] = None
+    for p, body in also.items():
+        new = relink(body, os.path.dirname(p), os.path.dirname(p), gone=gone, targets=targets, warns=warns)
+        if new != body:
+            changes[p] = new
+    n_arch = sum(r.startswith(f"{LEDGER_ARCHIVE}/") for r in files if ENTRY_FILE_RE.match(os.path.basename(r)))
+    return Plan("split", None, changes, {"to": out, "open": len(targets) - n_arch, "archived": n_arch,
+                                         "warnings": warns})
+
+
+def plan_relink(led: Ledger, also: Mapping[str, str], was: str | None = None) -> Plan:
+    """The caller's files' links into a v1 ledger already split into ``led`` (``was``, default
+    ``technical_debt.md`` beside the directory, and its archive) pointed at the entry files, as ``plan_split()``
+    points them: for the files a split did not see."""
+    _writable(led)
+    if not also:
+        raise Unusable("relink takes the files to rewrite")
+    also = _also(also, led)
+    was = was or _join(os.path.dirname(led.path.rstrip("/")), os.path.basename(LEDGER_FILE))
+    gone = {was: led.path, archive_path(was): _join(led.path, LEDGER_ARCHIVE)}
+    rels = [os.path.relpath(p, led.path) for p in led.files]
+    targets = _split_targets(led.path, rels)
+    warns: list[str] = []
+    changes: dict[str, str | None] = {}
+    for p, body in also.items():
+        new = relink(body, os.path.dirname(p), os.path.dirname(p), gone=gone, targets=targets, warns=warns)
+        if new != body:
+            changes[p] = new
+    return Plan("relink", None, changes, {"was": was, "warnings": warns})
 
 
 def plan_fmt(led: Ledger, ids: Sequence[str] = ()) -> Plan:
@@ -757,10 +940,22 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         "edit": "replace one section of an open entry (or add it where SPEC puts it)",
         "archive": "archive an open entry (Resolved, Superseded or Dropped) and move its file to archive/",
         "reopen": "reopen an archived entry and move its file back into the ledger",
-        "renumber": "give an open entry the id the caller took: its file, heading, the fields naming it, its rank line"}[cmd])
+        "renumber": "give an open entry the id the caller took: its file, heading, the fields naming it, its rank line",
+        "lift": "lift one gate from an open entry and log it in one of the fixed gate lifted shapes",
+        "split": "split a v1 ledger file into its v2 directory, its links rewritten",
+        "relink": "point the given files' links into a split v1 ledger at its entry files"}[cmd])
     if cmd == "fmt":
         ap.add_argument("ids", nargs="*", metavar="TD-n", help="the entries to format; default: every entry")
         ap.add_argument("--check", action="store_true", help="list the entries that would change; write nothing")
+    elif cmd == "split":
+        ap.add_argument("--archive", help="the v1 ledger's archive; default: <stem>_archive.md beside it")
+        ap.add_argument("--to", metavar="DIR", help="the new directory; default: ledger/ beside the v1 file")
+        ap.add_argument("--also", nargs="+", action="extend", default=[], metavar="FILE",
+                        help="other files whose links into the v1 files are rewritten")
+    elif cmd == "relink":
+        ap.add_argument("files", nargs="+", metavar="FILE", help="the files whose links into the v1 ledger are rewritten")
+        ap.add_argument("--was", metavar="FILE", help="the v1 ledger file it was split from; default: "
+                                                      "technical_debt.md beside the directory")
     elif cmd == "new":
         ap.add_argument("--id", required=True, metavar="TD-n", help="the entry's id, taken by the caller")
         ap.add_argument("--title", required=True)
@@ -777,6 +972,20 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         ap.add_argument("id", metavar="TD-n")
         if cmd == "set":
             _field_flags(ap, {})
+            ap.add_argument("--by", help="who lifts or reassigns a decision the new Blocked by drops (the caller has "
+                                         "checked who ran it)")
+            ap.add_argument("--answer", help="the lifting answer's label (default Go)")
+            _board_flags(ap)
+            ap.add_argument("--override", metavar="WHY", help="lift the dropped decision by override: by anyone, with its why")
+            ap.add_argument("--why", help="a reassign's why (the new Blocked by swaps one decision for another)")
+        elif cmd == "lift":
+            ap.add_argument("--gate", required=True, help='the gate: "decision (<person>)", "event (<name>)" or "until D"')
+            ap.add_argument("--by", required=True, help="who lifts it: a person, or a host's token with --evidence or until")
+            ap.add_argument("--answer", help="a person's lifting answer (a decision, or an event from a sweep item)")
+            ap.add_argument("--evidence", help="a host's event lift: <repo>#<n> (pr-merged) or <repo>@<sha>")
+            _board_flags(ap)
+            ap.add_argument("--people", help="the board's People:, comma-separated")
+            ap.add_argument("--answered-by", choices=("owner", "any"), help="the board's Answered by:")
         elif cmd == "note":
             ap.add_argument("words", help="the note, one line")
         elif cmd == "edit":
@@ -798,8 +1007,23 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         if cmd in ("archive", "reopen", "renumber"):
             ap.add_argument("--also", nargs="+", action="extend", default=[], metavar="FILE",
                             help="other files whose links to the moved file are rewritten")
-    _common(ap, write_cmd=cmd != "fmt")
+    _common(ap, write_cmd=cmd not in ("fmt", "split", "relink"))
+    if cmd in ("split", "relink"):
+        ap.add_argument("--plan", action="store_true", help="print the changes as JSON and write nothing")
     return ap
+
+
+def _board_flags(ap: argparse.ArgumentParser) -> None:
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--board", metavar="REPO", help="the covering item is on that repo's board: logs ; board <repo>")
+    g.add_argument("--no-board-item", action="store_true", help="no item covers the gate: logs ; no board item")
+    g.add_argument("--shared-item", action="store_true", help="the covering item is a parent snapshot left open")
+
+
+def _suffix(a: argparse.Namespace) -> str | None:
+    if a.board is not None:
+        return f"board {a.board}"
+    return "no board item" if a.no_board_item else "shared board item left open" if a.shared_item else None
 
 
 def _ledger_arg(a: argparse.Namespace) -> str:
@@ -809,7 +1033,12 @@ def _ledger_arg(a: argparse.Namespace) -> str:
 
 
 def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
+    if cmd == "split":
+        led = Ledger.open(a.ledger or LEDGER_FILE, a.archive)
+        return plan_split(led, a.to, also={p: _read_raw(p) for p in dict.fromkeys(a.also)})
     led = Ledger.open(_ledger_arg(a))
+    if cmd == "relink":
+        return plan_relink(led, {p: _read_raw(p) for p in dict.fromkeys(a.files)}, a.was)
     if cmd == "fmt":
         return plan_fmt(led, a.ids)
     base = Ledger.open(a.base) if a.base else None
@@ -838,7 +1067,12 @@ def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
         fields = dict(_fields_given(a))
         if not fields:
             raise Unusable("give at least one field to set")
-        return plan_edit(led, "set", tid_of(a.id), fields=fields, base=base, resolve=resolve, today=a.today)
+        return plan_edit(led, "set", tid_of(a.id), fields=fields, by=a.by, answer=a.answer, suffix=_suffix(a),
+                         override=a.override, why=a.why, base=base, resolve=resolve, today=a.today)
+    if cmd == "lift":
+        people = [x.strip() for x in a.people.split(",") if x.strip()] if a.people is not None else None
+        return plan_lift(led, tid_of(a.id), a.gate, a.by, answer=a.answer, evidence=a.evidence, suffix=_suffix(a),
+                         people=people, answered_by=a.answered_by, base=base, resolve=resolve, today=a.today)
     if cmd == "note":
         return plan_edit(led, "note", tid_of(a.id), words=a.words, base=base, resolve=resolve, today=a.today)
     if cmd in ("archive", "reopen", "renumber"):
@@ -909,6 +1143,8 @@ def run_write(cmd: str, argv: list[str]) -> int:
             print(p)
         for n in plan.info.get("notes", []):
             print(f"note — {n}", file=sys.stderr)
+        for w in plan.info.get("warnings", []):
+            print(f"note — a link left as it was: {w}", file=sys.stderr)
         for m in plan.info.get("mentions", []):
             print(f"check — names {plan.info['was']} in prose: {m}", file=sys.stderr)
         for r in plan.info.get("refused", []):

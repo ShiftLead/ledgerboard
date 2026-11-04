@@ -536,7 +536,7 @@ case, an entry that does not carry `frm`'s decision or already carries `to`'s, a
 lift, a reassign or an override (a session a person started), and whether `to` has a board, are the
 consumer's to check.
 
-Moving a file into `archive/` or back, and the relative links that move with it, are the caller's.
+Moving a file into `archive/` or back, and the relative links that move with it, are the ledger writer's (*The ledger writer*).
 
 **A change to the canonical form is a minor release**: each consumer reformats its entries once,
 when it takes that release.
@@ -961,7 +961,8 @@ change), 1 a write failed (every file restored), 2 usage, 3 refused.
 
 `ledger.py`, beside the module and `board.py` in the `ledgerboard/` package, is the ledger writer over files:
 an importable library (`Ledger.open(path)`, then `plan_new`, `plan_edit`, `plan_archive`, `plan_reopen`,
-`plan_renumber`, `plan_fmt`, each returning a `Plan`, and `apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
+`plan_renumber`, `plan_lift`, `plan_split`, `plan_relink`, `plan_fmt`, each returning a `Plan`, and
+`apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
 command people run). It reads the files it is given, applies the module's edit, and writes the files back; it
 never runs git, the network or anything of a consumer's. A report reads a v1 file or a v2 directory (*The
 ledger as a directory*); a write takes a v2 directory, and a v1 file is refused (*split first*).
@@ -983,6 +984,25 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
 - **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section. An archived entry is edited only once reopened;
+- **the `set` route's gates** — a `set` whose `--blocked-by` drops a `decision (<p>)` the entry carries lifts it
+  (`lift_gate()`) and needs `--by <person>`: the gate's person, with `--answer` (default `Go`) and at most one of
+  `--board <repo>`, `--no-board-item`, `--shared-item`; or anyone, with `--override "<why>"`. One that swaps one
+  decision for another reassigns it (`reassign_gate()`), with `--by` and `--why`. Who may run either (a session a
+  person started) is the caller's to check; the writer records `by`. These flags on a `set` that drops no
+  decision are a usage error;
+- **`lift TD-n --gate "<gate>" --by <who>`** — one gate lifted (`lift_gate()`, *Lifting a gate*), its inputs one
+  shape exactly: a decision with `--answer` and at most one board flag (with `--people P,…` and `--answered-by
+  any`, anyone listed may answer); an event with `--answer` and `--people`, or with a host's `--evidence`; `until`
+  with neither. The override and the reassign are `set`'s;
+- **`split`** — a v1 ledger file (`--ledger`, default `docs/technical_debt.md`, `--archive` beside it) split into its
+  v2 directory (`split()`), `--to DIR` (default `ledger/` beside the file, which must not exist): every file
+  written, the v1 file and its archive removed and the rank file moved to `rank.yml`, as one write. Each file's
+  relative links are rewritten for where it now lives, and a link into the v1 files, in the new files and in
+  `--also`'s, points at the entry's file (an entry heading's anchor, `#td-21-…`) or the directory (no anchor);
+  any other anchor into them is left and listed (`warnings`). The module's refusals stand (an archive's
+  `## Summary`, say: move it first);
+- **`relink FILE…`** — the same rewrite of the given files' links into the v1 files, for a v2 ledger already split
+  (`--was`, the v1 file, default `technical_debt.md` beside the directory), for files the split did not see;
 - **`archive TD-n --why "<words>"`** — an open entry archived (`edit_entry()`'s archived form, `archive_plan()`
   first) and its file moved to `archive/`: Resolved (`--pr N`, `--pointer P`, `--as-is`), `--superseded-by ID`
   (`TD-n` or `<repo>#TD-n`, followed to the end of its chain; each entry Blocked by it rewired to the successor
@@ -1110,7 +1130,8 @@ v2.4 also gives the merge gate its verdicts (*The merge gate's verdicts*): `trip
 `uncovered_decisions()` and `migrate_subject()` are new, with the tree paths they read. `subject_kind()` names the
 migrate commit's subject `migrate`, where v2.3 named it nothing; nothing else a reader reads changes.
 v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit`,
-`fmt`, `archive`, `reopen` and `renumber`; nothing a reader reads changes. The board writer's write of several files
+`fmt`, `archive`, `reopen`, `renumber`, `lift`, `split` and `relink`, and `set`'s gate routes; nothing a reader
+reads changes. The board writer's write of several files
 also removes files, both or neither, for the ledger writer's moves; no board action removes one.
 
 ## Appendix: grammar

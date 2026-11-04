@@ -226,6 +226,24 @@ class MoveInputs(unittest.TestCase):
             self.assertEqual(sorted(os.listdir(d)), ["README.md", "TD-001.md"])
 
 
+class Split(unittest.TestCase):
+    def test_a_split_ledger_reads_as_the_file_did(self):
+        from ledgerboard import pickable
+        v1 = ("# Technical Debt\n\nLedgerboard: 1\n\n" + E1 + "\n"
+              + E1.replace("TD-001: The parser", "TD-002: After the parser").replace(
+                  "**Status:** Open\n", "**Status:** Open\n**Blocked by:** TD-001\n"))
+        with tempfile.TemporaryDirectory() as tmp:
+            f = os.path.join(tmp, "technical_debt.md")
+            Path(f).write_text(v1)
+            before = W.Ledger.open(f)
+            plan = W.plan_split(before)
+            W.apply(plan)
+            after = W.Ledger.open(os.path.join(tmp, "ledger"))
+            self.assertFalse(os.path.exists(f))
+            got = [pickable(*x.texts(), today="2026-01-15")["entries"] for x in (before, after)]
+            self.assertEqual([(r["id"], r["pickable"]) for r in got[0]], [(r["id"], r["pickable"]) for r in got[1]])
+
+
 class Module(unittest.TestCase):
     def test_run_as_a_module(self):
         with tempfile.TemporaryDirectory() as tmp:
