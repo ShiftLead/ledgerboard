@@ -22,7 +22,7 @@ This has already happened once. `Dropped` is v2.4's own closed-but-not-done word
 
 ## The rules
 
-1. **The known words.** An archived entry's Status is read by `first_word()`, which lower-cases the word and drops its punctuation. The word is **known** when it is one of `STATUS_WORDS`: `open`, `resolved`, `superseded`, `dropped`, `designed`, `built`, `partly`, `live`, `in`, `done`, `moved` and `obe`. A Status that is absent or blank has no word and reads as closed and done, as before. So `**Live check held …` reads `live` (known), `Resolved.` reads `resolved` (known), and `Steps 1 and 2 shipped` reads `steps` (unknown).
+1. **The known words.** An archived entry's Status is read by `first_word()`. It takes the first run of characters up to whitespace, `,` or `;`. It then strips a leading or trailing `*`, `_` or backtick, then a trailing `.` or `:` from what is left, and lower-cases the result. So the `.` or `:` goes only when nothing of the first strip follows it: `**Resolved**.` reads `resolved**`, which is unknown. The word is **known** when it is one of `STATUS_WORDS`: `open`, `resolved`, `superseded`, `dropped`, `designed`, `built`, `partly`, `live`, `in`, `done`, `moved` and `obe`. A Status that is absent or blank has no word and reads as closed and done, as before. So `**Live check held …` reads `live` (known), `Resolved.` reads `resolved` (known), and `Steps 1 and 2 shipped` reads `steps` (unknown). Other punctuation stays on the word, so `Resolved)` or `Resolved—` is unknown and holds. That is deliberate: a hand-typed Status that no writer wrote is flagged, and its fix is to write the word.
 2. **An unknown word keeps the block.** A dependent `Blocked by` an archived entry whose Status word is unknown stays blocked.
    - Local: `check()` flags it on the dependent as `blocker-unknown-status`. Like `blocker-dropped`, it joins `EDIT_ERRORS`: it is an error on an entry the edit changed, and ℹ on a standing ledger.
    - Through the resolver: an archived answer whose `status` has an unknown word is flagged as `cross-unknown-status`, which is ℹ only, like `cross-dropped`, since this repo cannot rewrite another's archive.
@@ -36,8 +36,8 @@ This has already happened once. `Dropped` is v2.4's own closed-but-not-done word
 
 ## Where it changes in the module
 
-- **`_archived_status()`** keeps a third word, `unknown`, for a known-shaped entry whose Status word is outside `STATUS_WORDS`, with the word as written. Today it folds every word but `superseded` and `dropped` into `resolved`.
-- **`_chain()`** returns the state `unknown-status` for such an end, local or through the resolver. Today the cross path returns `resolved` for any word but `dropped` and `superseded`.
+- **`_archived_status()`** keeps a third word, `unknown-status`, for an entry whose Status word is outside `STATUS_WORDS`. It also carries a new key, `status_word`, holding the word as written (before `first_word()` lower-cases it) for the flag. Today it folds every word but `superseded` and `dropped` into `resolved`. The word is `unknown-status`, never `unknown`, because `_chain()`'s `unknown` already means *no such entry*.
+- **`_chain()`** returns the state `unknown-status` for such an end, local or through the resolver. Its local path already returns the stored word. The build makes its cross path compare the resolver's `status` against `STATUS_WORDS` the same way. Today the cross path returns `resolved` for any word but `dropped` and `superseded`. The flag's `<Word>` for a single-step blocker comes from the stored `status_word`, or for a cross one from the resolver's `status`.
 - **`_ended()`** holds and flags a single-step `unknown-status` (rule 2), and adds the chain reason to its `why` map (rule 3).
 - **`EDIT_ERRORS`** gains `blocker-unknown-status`.
 - **`archive_plan()`** refuses a successor whose end is `unknown-status` (rule 4).
@@ -75,7 +75,7 @@ The review-history row at line 180 stays as it is, since it records what was dec
 
 ## The fixture cases
 
-`fixtures/ledger/unknownstatus.md`, with `unknownstatus.archive.md` and `unknownstatus.resolve.json`, is new, and `unknownstatus.json` is generated. It is a new case, so it does not touch TD-035's `crossversion` files. Its open entries:
+`fixtures/ledger/unknownstatus.md`, with `unknownstatus.archive.md` and `unknownstatus.resolve.json`, is new, and `unknownstatus.json` is generated. It is a new case, so it does not touch TD-035's `crossversion` files. Its open entries are:
 
 | entry | Blocked by | the blocker | reads |
 |---|---|---|---|
@@ -88,7 +88,7 @@ The review-history row at line 180 stays as it is, since it records what was dec
 | TD-507 | acme/tools#TD-41 | resolver: archived, `status` `Withdrawn 2026-01-05` | blocked; `cross-unknown-status` (the entry's own reproduction) |
 | TD-508 | acme/tools#TD-42 | resolver: archived, no `status` | pickable (as before) |
 
-The generated JSON pins both levels, as every ledger fixture does: `check` on the standing ledger gives ℹ throughout, and `check_since_empty`, where every entry is new, gives `blocker-unknown-status` as an error and `cross-unknown-status` as ℹ. `ledger_edit/cases.json`'s `archive_plan` group gains one refusal: superseding an open entry by TD-506's blocker TD-516, whose chain ends in TD-517's unknown word. `fixtures/run.py`'s docstring gains the `ledger/unknownstatus.md` line (v2.4).
+The generated JSON pins both levels, as every ledger fixture does: `check` on the standing ledger gives ℹ throughout, and `check_since_empty`, where every entry is new, gives `blocker-unknown-status` as an error and `cross-unknown-status` as ℹ. The `archive_plan` group reads only the shared `ledger_edit/plan/` pair. So `plan/archive.md` gains TD-425, archived `Withdrawn 2026-01-06`, which no existing case names, so their outputs are unchanged. `ledger_edit/cases.json`'s top-level `archive_plan` list gains `superseded_unknown_status`: archive TD-403, which nothing waits on, superseded by TD-425. It is refused, because the successor's chain ends in a Status word this reader does not know. `fixtures/run.py`'s docstring gains the `ledger/unknownstatus.md` line (v2.4), and its `plan/` line names the unknown-status refusal.
 
 ## The build
 
@@ -96,4 +96,4 @@ One build, `**Part of:** TD-039`. It brings everything above in one PR with its 
 
 **Done when:** an archived blocker with an unknown Status word keeps its dependent blocked and is flagged, locally and through the resolver, as *The rules* say. The four `SPEC.md` passages above land with the code, and the target design's three lines are amended. `unknownstatus` and the `archive_plan` refusal pass (`python3 fixtures/run.py`), and so does the suite.
 
-**Which release: v2.4.** v2.4 is not yet tagged (TD-036, blocked by TD-035). Shipping v2.4 with "any other word is done" and turning it in v2.5 would release blocks under one minor and hold them under the next. Each consumer would also see that change twice. So TD-036's `**Blocked by:**` gains the build when it is filed. TD-035's cross-version fixture for this half of §7.4 is this build's `unknownstatus`, so TD-035 does not wait on it.
+**Which release: v2.4.** v2.4 is not yet tagged (TD-036, blocked by TD-035 and TD-037). Shipping v2.4 with "any other word is done" and turning it in v2.5 would release blocks under one minor and hold them under the next. Each consumer would also see that change twice. So TD-036's `**Blocked by:**` gains the build when it is filed. TD-035's cross-version fixture for this half of §7.4 is this build's `unknownstatus`, so TD-035 does not wait on it.
