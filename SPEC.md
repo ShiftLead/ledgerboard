@@ -302,10 +302,18 @@ docs/ledger/
   entry's text runs from its heading to the next `## ` heading outside an HTML comment, read as
   `entries()` reads comments, and is its file with trailing blank lines trimmed to one newline.
   `README.md` is the text before the ledger's first heading, with `Ledgerboard: 2` under its title,
-  then the `## Summary` section's lines other than the table and blank lines. The archive's text
-  before its first entry is dropped. It refuses another `## ` section, an id twice, and a result
-  that does not read back the same entries (compared by id), the same `Fields:` and version 2, or
-  that `v2_problems()` flags.
+  then the `## Summary` section's lines other than the table, as written (v2.4: blank lines kept, so a
+  commented-out template there stays whole, a `|` line inside an HTML comment being no table row; of two
+  blank lines around the table one kept, none leading or trailing), and a `---` that would follow the prose's own closing `---` with nothing between them, the
+  pair that framed the table, is dropped. The archive's text before its first entry is dropped.
+  `split()` refuses another `## ` section, an id twice, and a result that does not read back the same
+  entries (compared by id), the same `Fields:` and version 2, or that `v2_problems()` flags.
+  `split_notes(readme)` (v2.4) lists the lines of that `README.md` which may still describe the v1
+  layout, as `(line number, line, why)`, for the caller to warn about and nothing rewritten: a line
+  naming the summary table (`summary table`, `table below`, `the table`), and one holding a relative
+  Markdown link or reference definition, which the move into the v2 directory breaks (a link to the v1
+  archive file among them). It is best effort, for a warning: a line inside a fenced code block, a
+  link inside a code span and an escaped one are skipped.
 
 ## The next id (v2.4)
 
@@ -1157,6 +1165,10 @@ v2.4's board writer exits by the ledger writer's table (*The board writer*): a r
 failed write 4 where v2.3 gave 1, and a bad `--today`, and a `decide` whose ledger cannot be used as asked, exit 2;
 it no longer exits 3. A consumer's wrapper
 that read v2.3's codes checks them in its v2.4 vendor PR.
+**v2.4 changes what `split()` writes** (*The ledger as a directory*): a `## Summary` section's blank lines are kept
+and the `---` pair its table's removal leaves empty becomes one, so a v1 ledger split by v2.4 gets a different
+`README.md` from one split by v2.3; a README already written is not touched, and every v2 file reads as before.
+`split_notes()` is new.
 
 ## Appendix: grammar
 

@@ -26,7 +26,8 @@ Fixtures, each an invented input and its expected JSON:
   ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
   ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
-  ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2), and ``respace()`` (v2.3); an answer's
+  ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2), and ``respace()`` (v2.3), and
+  ``split_notes()`` of a README (v2.4); an answer's
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
@@ -280,6 +281,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["respaces"] = [_refused(lambda c=c: list(L.respace(c["text"], c["ledger"], fixed=c.get("fixed", ()),  # v2.3
                                                              repo=c.get("repo", ""))))
                        for c in spec.get("respaces", [])]
+    if spec.get("split_notes"):  # v2.4: a module without split_notes() fails this key alone
+        out["split_notes"] = ([[list(n) for n in L.split_notes(t)] for t in spec["split_notes"]]
+                              if hasattr(L, "split_notes") else "the module has no split_notes — older than v2.4")
     out["rank_paths"] = {p: L.rank_path(p) for p in spec["rank_paths"]}
     out["components"] = {f: L.components(L.entries((root / f).read_text(encoding="utf-8")))
                          for f in spec["components"]}
