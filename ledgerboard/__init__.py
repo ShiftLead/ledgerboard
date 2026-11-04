@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from dataclasses import replace as _dc_replace
 from datetime import date, datetime, timezone
@@ -4557,6 +4557,408 @@ def event_problems(text: str) -> list[tuple[str, str, str]]:
             out.append(("info", "event-ungated", f"its **Event ({x['name']}):** section has no event "
                         f"({x['name']}) gate, and no gate lifted: event ({x['name']}) Log line says why"))
     return out
+
+
+# ---------------------------------------------------------------------------------------------
+# The gate sweep (v2.4): what a host's periodic sweep files, closes and lifts — decided here, its I/O the host's
+# ---------------------------------------------------------------------------------------------
+
+COVER_STATES = ("open", "decided", "closed", "closed-decided")  # covers()'s states; the first two cover
+SWEEP_REASK_DAYS = 30  # the consumer's numbers' defaults (SPEC *The gate sweep*); the rules are the module's
+SWEEP_EVENT_AGE_DAYS = 30
+# Each sweep item's condition, by the fixed words its text carries (its head), tried in this order. A `decide`
+# item keyed to a decision gate and carrying none of them is the decision's own item: its condition is
+# `uncovered`.
+SWEEP_HEADS = (("no-board", "has no board"), ("broken", "Event check broken"),
+               ("impossible", "can no longer happen"), ("still", "Still waiting on"),
+               ("audit", "holds no decided item"))
+SWEEP_KINDS = {"no-board": "act", "broken": "act", "impossible": "decide", "still": "decide", "audit": "act",
+               "uncovered": "decide"}
+SWEEP_DECISION_ANSWERS = ("Go", "Not yet")
+SWEEP_IMPOSSIBLE_ANSWERS = ("Drop the gate", "Rewrite the check", "Drop the entry")
+SWEEP_STILL_ANSWERS = ("Keep waiting", "Drop the gate", "Rewrite the check")
+SWEEP_EVENT_LIFTS = ("Drop the gate",)
+
+
+def _board_name(board: Sequence) -> str:
+    """A board's name in the sweep's output: its origin's pick key, else its checkout basename."""
+    return origin_key(board[0] or "") or str(board[1])
+
+
+def _board_pick_key(board: Sequence) -> tuple:
+    """The person's-board pick order (SPEC *The gate sweep*): keyed boards bytewise by origin_key, then the
+    boards with no readable origin by lowercased basename."""
+    key = origin_key(board[0] or "")
+    return (0, key.encode()) if key else (1, str(board[1]).lower().encode())
+
+
+def _own_board(boards: Sequence[Sequence], repo: str) -> Sequence | None:
+    by_path = [b for b in boards if origin_path(b[0] or "") == repo.lower()]
+    return (by_path or [b for b in boards if str(b[1]).lower() == repo.lower()] or [None])[0]
+
+
+def _ours(ref: str | None, own: bool, repo: str) -> int | None:
+    """The number of this repo's entry ``ref`` names, read on a board (``own``: this repo's), or None: on this
+    repo's board a bare ``TD-n``, and on any board ``<repo>#TD-n`` naming this repo (case-insensitively)."""
+    if not ref:
+        return None
+    other, sep, tid = ref.rpartition("#")
+    if not sep:
+        return _num(ref) if own and _is_id(ref) else None
+    return _num(tid) if other.lower() == repo.lower() and _is_id(tid) else None
+
+
+def _sweep_context(text: str, own: bool, repo: str) -> tuple[int, str, str] | None:
+    """An item's Context read as the sweep keys it: (this repo's entry number, the gate's key, the qualifier
+    after the gate — ``""``, ``lift`` or ``board <repo>``, lowercased), or None when it names no entry of this
+    repo with one gate."""
+    ref, gate = _item_gate(text)
+    num = _ours(ref, own, repo)
+    if num is None or gate is None:
+        return None
+    c = CONTEXT_RE.search(_gate_body(text))
+    ctx = c.group("ctx") if c else ""
+    g = CONTEXT_ANY_GATE_RE.search(ctx)
+    qual = " ".join(ctx[g.end():].strip().rstrip(".").split()).lower() if g else ""
+    return num, _gate_key(gate), qual
+
+
+def _sweep_head(text: str) -> str | None:
+    return next((cond for cond, words in SWEEP_HEADS if words in text), None)
+
+
+def _read_boards(boards: Sequence[Sequence], repo: str) -> list[dict]:
+    """Every item of every board read, open and closed (the board's and its archive's), each with what the
+    sweep compares: {board, own, item, line (the open item's line as written, else None), state, ctx, head}."""
+    out = []
+    mine = _own_board(boards, repo)
+    for b in boards:
+        name, own = _board_name(b), b is mine
+        text, archive = str(b[2] or ""), str(b[3] or "")
+        lines = text.splitlines()
+        reads = [(it, lines[it.line - 1], "decided" if it.decided else "open") for it in parse_board(text, warn=False)]
+        reads += [(it, None, "closed-decided" if it.decided else "closed")
+                  for src in (text, archive) for it in parse_closed_items(src)]
+        for it, line, state in reads:
+            out.append({"board": name, "own": own, "item": it, "line": line, "state": state,
+                        "ctx": _sweep_context(it.text, own, repo), "head": _sweep_head(it.text),
+                        "people": board_people(text)})
+    return out
+
+
+def _names_entry(r: dict, num: int, gate_key: str, parent: int | None, repo: str) -> bool:
+    """Whether a read item names entry ``num`` and the gate, or its parent with the gate and the entry among
+    its `Parts:` snapshot."""
+    if r["ctx"] is None or r["ctx"][1] != gate_key or r["ctx"][2]:
+        return False
+    if r["ctx"][0] == num:
+        return True
+    return parent is not None and r["ctx"][0] == parent and any(
+        _ours(p, r["own"], repo) == num for p in r["item"].parts)
+
+
+def _covers(reads: list[dict], num: int, gate: str, parent: int | None, repo: str) -> list[dict]:
+    key = _gate_key(gate)
+    d = GATE_DECISION_RE.match(gate)
+    who = d.group("who").lower() if d else None
+    return [r for r in reads if r["item"].kind == "decide" and _names_entry(r, num, key, parent, repo)
+            and (who is None or who in {p.lower() for p in (r["people"] or [])})]
+
+
+def covers(entry_text: str, gate: str, boards: Sequence[Sequence], repo: str) -> list[tuple[str, BoardItem, str]]:
+    """The board items that ask about one entry's gate (v2.4, SPEC *The gate sweep*): each ``decide`` item whose
+    Context names the entry and the gate, or names the entry's parent (its ``Part of``) with the gate and the
+    entry among its ``Parts:``, on a board whose ``People:`` lists the gate's person (an event gate has no
+    person, so any board). ``boards`` is ``[(origin_url, basename, text, archive_text)]``; ``repo`` this repo's
+    ``origin_path`` (else its basename), which a ``<repo>#TD-n`` ref must name. On this repo's own board (its
+    origin path, else its basename, is ``repo``) a bare ``TD-n`` is this repo's. Returns ``[(board name, item,
+    state)]``, the board named by its ``origin_key``, else its basename, and the state ``open``, ``decided``
+    (open, with ``Decided:``), ``closed`` or ``closed-decided`` (closed, on the board or in its archive). Only
+    ``open`` and ``decided`` cover."""
+    ents = entries(entry_text)
+    if not ents:
+        raise Refused("covers() reads one entry's text, and this has no `## TD-n:` heading")
+    gate = _one_gate(gate)
+    parent, _ = parse_part_of(ents[0]["part_of_raw"])
+    return [(r["board"], r["item"], r["state"])
+            for r in _covers(_read_boards(boards, repo), _num(ents[0]["id"]), gate,
+                             _num(parent) if parent else None, repo)]
+
+
+def _entry_ask(text: str, title: str) -> str:
+    """The entry's Ask as one line: its ``**Ask:**`` section's words, else its title."""
+    try:
+        sections = _entry_sections(_entry_parts(text)[2])
+    except Refused:
+        sections = []
+    at = _keyed(sections, "ask")
+    if at:
+        words = " ".join(sections[at[0]][1].split())
+        words = words[len("**Ask:**"):].strip() if words.startswith("**Ask:**") else words
+        if words:
+            return words
+    return title
+
+
+def _answered_within(r: dict, today: date, days: int) -> bool:
+    """A read item answered without a lift within ``days`` of ``today``: its ``Decided:`` label does not lift
+    and its date is newer than the window."""
+    it = r["item"]
+    return bool(it.decided) and not _lifting(it.decided[0], it.lifts) and (today - it.decided[1]).days < days
+
+
+def _log(text: str) -> list[dict]:
+    """The entry's Log, or nothing when its body cannot be read (two Log sections, no heading)."""
+    try:
+        return log_lines(text) if text else []
+    except Refused:
+        return []
+
+
+def _kept_waiting_within(text: str, gate: str, today: date, days: int) -> bool:
+    key = _gate_key(gate)
+    for rec in _log(text):
+        if rec["kind"] == "kept-waiting" and _gate_key(rec["gate"]) == key and rec["date"]:
+            if (today - date.fromisoformat(rec["date"])).days < days:
+                return True
+    return False
+
+
+def _gone(reads_num: int, gate: str, parts: list[str], own: bool, repo: str,
+          open_texts: Mapping[int, str], known: set[int]) -> bool | None:
+    """Whether the gate is gone from an item's Context entry and every listed part: True, False, or None when
+    the Context entry is in neither the ledger nor the archive (its item is left for a person)."""
+    if reads_num not in known:
+        return None
+    nums = [reads_num] + [n for n in (_ours(p, own, repo) for p in parts) if n is not None]
+    return not any(_carried(open_texts.get(n), gate) for n in nums)
+
+
+def _sweep_text(cond: str, tid: str, gate: str, extra: str = "") -> str:
+    name = gate[gate.index("(") + 1: -1] if "(" in gate else gate
+    return {"no-board": f"{gate} on {tid} has no board: no board read lists {name} in its People.",
+            "broken": f"Event check broken on {tid}: the check for {gate} errors.",
+            "impossible": f"{gate} on {tid} can no longer happen.",
+            "still": f"Still waiting on {gate} for {tid}?",
+            "audit": f"{tid}'s {gate} was lifted by an answer on {extra}'s board, which holds no decided item "
+                     f"for {tid}."}[cond]
+
+
+def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", title: str = "", extra: str = "",
+                reask_days: int = SWEEP_REASK_DAYS) -> dict:
+    """One item the sweep files, as ``item_line()``'s arguments (the host adds today, its Due:, session and
+    host): {text, context, kind, answers, default, detail, lifts}."""
+    kind = SWEEP_KINDS[cond]
+    ctx = f"{ref} {gate}" + (" board " + extra if cond == "audit" else "")
+    out: dict = {"text": ask if cond == "uncovered" else _sweep_text(cond, tid, gate, extra), "context": ctx,
+                 "kind": kind, "answers": None, "default": None, "detail": None, "lifts": None}
+    if cond == "uncovered":
+        name = gate[gate.index("(") + 1: -1]
+        out.update(answers=list(SWEEP_DECISION_ANSWERS), detail={
+            "context": f"{tid} ({title}) waits on {gate}, and no board item asked for it",
+            "question": ask,
+            "recommended": f"Only {name} can say: Go lifts the gate, and Not yet keeps it waiting, asked again "
+                           f"in {reask_days} days"})
+    elif cond == "impossible":
+        out.update(answers=list(SWEEP_IMPOSSIBLE_ANSWERS), lifts=list(SWEEP_EVENT_LIFTS), detail={
+            "context": f"The check for {gate} on {tid} says it can no longer happen",
+            "question": "Drop the gate, rewrite its check, or drop the entry?",
+            "recommended": "Only the person who knows why it waits can say"})
+    elif cond == "still":
+        out.update(answers=list(SWEEP_STILL_ANSWERS), default=0, lifts=list(SWEEP_EVENT_LIFTS), detail={
+            "context": f"{tid} has waited on {gate} for more than its age limit, and its check says not yet",
+            "question": "Keep waiting, drop the gate, or rewrite its check?",
+            "recommended": f"it is asked again in {reask_days} days"})
+    return out
+
+
+def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, today_utc: date | str,
+          today_local: date | str, reask_days: int = SWEEP_REASK_DAYS, event_age_days: int = SWEEP_EVENT_AGE_DAYS,
+          repo: str = "") -> dict:
+    """What one sweep of this repo's ledger does (v2.4, SPEC *The gate sweep*): ``{to_file: {board: [item]},
+    to_close: {board: [item key]}, lifts: [{id, gate, kind, evidence}]}``, each board named as ``covers()``
+    names it. It keeps no state: the boards and the ledger's Log are its state, so a second run over its own
+    writes files and closes nothing.
+
+    ``entries`` are this repo's ledger and archive texts (an entry is open unless its Status is an archived
+    one); ``boards`` ``[(origin_url, basename, text, archive_text)]``, this repo's own among them; ``results``
+    maps ``(TD-n, event name)`` to a check's outcome (``passed``, ``not yet``, ``impossible``, ``error``) or to
+    ``(outcome, evidence)``; ``today_utc`` dates the Log's ages and an ``until``, ``today_local`` the boards'
+    ``Decided:`` dates; ``repo`` is this repo's ``origin_path`` (else its basename). Each item filed is
+    ``item_line()``'s arguments, the host adding today, its Due:, session and host."""
+    today_u = date.fromisoformat(utc_day(today_utc, "today_utc"))
+    today_l = date.fromisoformat(_civil_date(today_local.isoformat() if isinstance(today_local, date)
+                                             else today_local, "today_local is written"))
+    for what, n in (("reask_days", reask_days), ("event_age_days", event_age_days)):
+        if not isinstance(n, int) or isinstance(n, bool) or n < 0:
+            raise Refused(f"{what} is a whole number of days, not {n!r}")
+    if not isinstance(repo, str) or not REPO_RE.fullmatch(repo):
+        raise Refused(f"repo is this repo's origin path (owner/name) or its basename, not {repo!r}")
+    own = _own_board(boards, repo)
+    if own is None:
+        raise Refused(f"boards holds no board of {repo}: its own board is where event items go")
+    own_name = _board_name(own)
+    texts: dict[int, str] = {}
+    open_texts: dict[int, str] = {}
+    for t in entries:
+        for tid, body in _entry_texts(str(t or "")).items():
+            n = _num(tid)
+            if n in open_texts:
+                continue  # the ledger's open copy is read over an archived one
+            texts[n] = body
+            e = _entries(body)[0]
+            if first_word(e["fields"].get("status")) not in ARCHIVED_WORDS:
+                open_texts[n] = body
+    known = set(texts)
+    reads = _read_boards(boards, repo)
+    to_file: dict[str, list[dict]] = {}
+    to_close: dict[str, list[str]] = {}
+    lifts: list[dict] = []
+
+    def outcome(tid: str, name: str) -> tuple[str | None, str | None]:
+        got = results.get((tid, name))
+        if isinstance(got, (tuple, list)):
+            return (got[0], got[1] if len(got) > 1 else None)
+        return (got, None)
+
+    def same(r: dict, num: int, gate: str, cond: str, qual: str = "") -> bool:
+        return (r["ctx"] == (num, _gate_key(gate), qual) and r["head"] == cond
+                and r["item"].kind == SWEEP_KINDS[cond])
+
+    def may_file(num: int, gate: str, cond: str, text: str, qual: str = "") -> bool:
+        """§1.2's one filing rule: no item of this identity open or decided on any board read, none answered
+        within the re-ask window, and no `kept waiting` line for the gate within it."""
+        mine = [r for r in reads if same(r, num, gate, cond, qual)]
+        if any(r["state"] in ("open", "decided") for r in mine):
+            return False
+        if any(_answered_within(r, today_l, reask_days) for r in mine):
+            return False
+        return not _kept_waiting_within(text, gate, today_u, reask_days)
+
+    for num in sorted(open_texts):
+        text = open_texts[num]
+        e = _entries(text)[0]
+        tid = e["id"]
+        parent, _ = parse_part_of(e["part_of_raw"])
+        pnum = _num(parent) if parent else None
+        for gate in gate_items(parse_gates(e["blocked_raw"])):
+            if gate.startswith("until "):
+                if date.fromisoformat(gate[len("until "):]) <= today_u:
+                    lifts.append({"id": tid, "gate": gate, "kind": "until", "evidence": "date reached"})
+                continue
+            if gate.startswith("decision "):
+                found = _covers(reads, num, gate, pnum, repo)
+                if any(r["state"] in ("open", "decided") for r in found):
+                    continue
+                if any(_answered_within(r, today_l, reask_days) for r in found):
+                    continue
+                if _kept_waiting_within(text, gate, today_u, reask_days):
+                    continue
+                who = gate[gate.index("(") + 1: -1].lower()
+                fit = [b for b in boards if who in {p.lower() for p in (board_people(str(b[2] or "")) or [])}]
+                pick = own if own in fit else (min(fit, key=_board_pick_key) if fit else None)
+                if pick is None:
+                    if may_file(num, gate, "no-board", text):
+                        to_file.setdefault(own_name, []).append(_sweep_item("no-board", tid, tid, gate))
+                    continue
+                ref = tid if pick is own else f"{repo}#{tid}"
+                to_file.setdefault(_board_name(pick), []).append(_sweep_item(
+                    "uncovered", tid, ref, gate, ask=_entry_ask(text, e["title"]), title=e["title"],
+                    reask_days=reask_days))
+                continue
+            name = gate[len("event ("): -1]
+            got, evidence = outcome(tid, name)
+            if got == "passed":
+                lifts.append({"id": tid, "gate": gate, "kind": "event", "evidence": evidence})
+                continue
+            cond = {"error": "broken", "impossible": "impossible"}.get(got or "")
+            if cond is None and got == "not yet":
+                try:
+                    age = gate_age(text, gate)
+                except Refused:
+                    age = None
+                cond = "still" if age is not None and (today_u - age).days > event_age_days else None
+            if cond and may_file(num, gate, cond, text):
+                to_file.setdefault(own_name, []).append(_sweep_item(cond, tid, tid, gate, reask_days=reask_days))
+        for rec in _log(text):  # the `; board <repo>` audit: a cross-repo lift whose board shows no answer
+            if rec["kind"] != "gate-lifted" or not rec.get("suffix", "").startswith("; board "):
+                continue
+            there = rec["suffix"][len("; board "):]
+            if _audit_satisfied(reads, boards, there, repo, tid):
+                continue
+            gate = rec["gate"]
+            if may_file(num, gate, "audit", "", f"board {there.lower()}"):
+                to_file.setdefault(own_name, []).append(_sweep_item("audit", tid, tid, gate, extra=there))
+
+    for r in reads:
+        if r["state"] not in ("open", "decided") or r["ctx"] is None:
+            continue
+        if _sweep_closes(r, reads, boards, results, open_texts, texts, known, repo):
+            keys = to_close.setdefault(r["board"], [])
+            k = item_key(r["line"])
+            if k not in keys:
+                keys.append(k)
+    return {"to_file": to_file, "to_close": to_close, "lifts": lifts}
+
+
+def _audit_satisfied(reads: list[dict], boards: Sequence[Sequence], there: str, repo: str, tid: str) -> bool:
+    """Whether the board a `; board <repo>` Log line names holds, open, closed or archived, an item with a
+    ``Decided:`` whose Context names ``<this repo>#TD-n``. A board not read holds nothing."""
+    named = _own_board(boards, there)
+    if named is None:
+        return False
+    name = _board_name(named)
+    want = f"{repo.lower()}#{tid}"
+    for r in reads:
+        if r["board"] != name or not r["item"].decided:
+            continue
+        ref, _ = _item_gate(r["item"].text)
+        if ref is not None and ref_key(ref) == want:
+            return True
+    return False
+
+
+def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], results: Mapping,
+                  open_texts: Mapping[int, str], texts: Mapping[int, str], known: set[int], repo: str) -> bool:
+    """The close rule (SPEC *The gate sweep*): whether the sweep closes one open item about this repo's entry."""
+    it, (num, gate_key, qual) = r["item"], r["ctx"]
+    _, gate = _item_gate(it.text)
+    if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts):
+        return False  # a work order waits for whoever acts on it
+    if qual.startswith("board "):
+        if r["head"] != "audit" or it.kind != "act" or not r["own"]:
+            return False
+        there = qual[len("board "):]
+        tid = _entries(texts[num])[0]["id"] if num in texts else _tid(num)
+        lines = [x for x in _log(texts.get(num, "")) if x["kind"] == "gate-lifted"
+                 and _gate_key(x["gate"]) == gate_key and x.get("suffix", "").lower() == f"; board {there}"]
+        return not lines or _audit_satisfied(reads, boards, there, repo, tid)
+    if qual not in ("", "lift"):
+        return False
+    gone = _gone(num, gate, it.parts, r["own"], repo, open_texts, known)
+    if gone is None:
+        return False
+    head = r["head"]
+    if qual == "lift":
+        return gone
+    if head == "no-board" and it.kind == "act":
+        text = texts.get(num, "")
+        parent, _ = parse_part_of(_entries(text)[0]["part_of_raw"]) if text else (None, None)
+        covered = any(x["state"] in ("open", "decided") for x in _covers(
+            reads, num, gate, _num(parent) if parent else None, repo))
+        return gone or covered
+    tid = _entries(texts[num])[0]["id"]
+    if head == "broken" and it.kind == "act":
+        got = results.get((tid, gate[len("event ("): -1])) if gate.startswith("event (") else None
+        got = got[0] if isinstance(got, (tuple, list)) else got
+        return gone or (got is not None and got != "error")
+    if head == "still" and it.kind == "decide":
+        got = results.get((tid, gate[len("event ("): -1])) if gate.startswith("event (") else None
+        got = got[0] if isinstance(got, (tuple, list)) else got
+        return gone or got == "impossible"
+    if it.kind == "decide":
+        return gone
+    return False
 
 
 # ---------------------------------------------------------------------------------------------

@@ -409,6 +409,47 @@ def ids_cases(L, spec: dict) -> dict:
     }
 
 
+def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
+    """The gate sweep (v2.4): ``sweep()`` over ``sweep/``'s ledger, archive and boards on each run's dates, the same
+    sweep again once the first run's items are filed and its closes made (it writes nothing new), ``covers()``
+    of entries and gates, and the refusals."""
+    if not hasattr(L, "sweep"):
+        return {"missing": "the module has no sweep — older than v2.4"}
+    d = root / "sweep"
+
+    def read(name):
+        return (d / name).read_text(encoding="utf-8") if name else ""
+    ents = [read("ledger.md"), read("archive.md")]
+    boards = [(b["url"], b["basename"], read(b["board"]), read(b["archive"])) for b in spec["boards"]]
+    results = {(r[0], r[1]): (r[2], r[3]) if len(r) > 3 else r[2] for r in spec["results"]}
+
+    def run(c, bs=boards, **kw):
+        return L.sweep(ents, bs, results, c["today_utc"], c["today_local"], repo=spec["repo"], **kw)
+    runs = {c["name"]: run(c) for c in spec["runs"]}
+    first = next(c for c in spec["runs"] if c["name"] == spec["rerun"])
+    after = []
+    for url, base, text, archive in boards:
+        name = L.origin_key(url) or base
+        keys = set(runs[first["name"]]["to_close"].get(name, []))
+        lines = [ln.replace("- [ ]", "- [x]", 1) + f" Closed: {first['today_local']} — swept."
+                 if L.is_open_item(ln) and L.item_key(ln) in keys else ln for ln in text.split("\n")]
+        for it in runs[first["name"]]["to_file"].get(name, []):
+            lines.append(L.item_line(it["text"], first["today_local"], first["today_local"], "sweep", None,
+                                     it["context"], kind=it["kind"], answers=it["answers"], default=it["default"],
+                                     detail=it["detail"], lifts=it["lifts"]).rstrip("\n"))
+        after.append((url, base, "\n".join(lines) + "\n", archive))
+    entry = L._entry_texts("\n".join(ents))
+    return {
+        "runs": runs,
+        "rerun": run(first, after),
+        "covers": [[[b, it.text, state] for b, it, state in L.covers(entry[t], g, boards, spec["repo"])]
+                   for t, g in spec["covers"]],
+        "refused": {c["name"]: _refused(lambda c=c: L.sweep(
+            ents, boards, results, "2026-11-03", "2026-11-03", repo=c["repo"],
+            **{k: c[k] for k in ("reask_days", "event_age_days") if k in c})) for c in spec["refused"]},
+    }
+
+
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
     ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
@@ -522,6 +563,8 @@ def cases(L, root: Path):
     yield root / "lift" / "expected.json", lift_cases(L, spec, root)
     spec = json.loads((root / "ids" / "cases.json").read_text(encoding="utf-8"))
     yield root / "ids" / "expected.json", ids_cases(L, spec)
+    spec = json.loads((root / "sweep" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "sweep" / "expected.json", sweep_cases(L, spec, root)
 
 
 def main(argv: list[str] | None = None) -> int:
