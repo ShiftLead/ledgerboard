@@ -426,6 +426,13 @@
    "repo": "acme/tools",
    "type": "ref-includes"
   },
+  "ref-includes acme/tools@main ghijklm": {
+   "commit": "ghijklm",
+   "problem": "the commit 'ghijklm' is not 7 to 40 of [0-9a-f]",
+   "ref": "main",
+   "repo": "acme/tools",
+   "type": "ref-includes"
+  },
   "ref-includes acme/tools@v2.4 0123456789abcdef0123456789abcdef01234567": {
    "commit": "0123456789abcdef0123456789abcdef01234567",
    "problem": null,
