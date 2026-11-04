@@ -939,6 +939,20 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   board with no `People:` line, `--by` is required and checked as a person's name only. A `People:` line the gate
   faults refuses every answer. The caller supplies the name of the person who answered; a commit's author is
   never one, since an agent commits under the person's name;
+- **the decide lift** (v2.4) — a `decide` on an item whose Context names one bare `TD-n` and one gate writes the
+  board and the ledger (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory) as one write, both
+  or neither: the entries `decide_lift()` changes, from their texts as they stand (its `People:` and `Answered by:`
+  checks, and the ledger writer's refusal, *The ledger writer*), and the board line `edit_line(…, "decide", label,
+  by, today, close=closes(item, label, entries after))` — so a lifting answer closes the item when nothing listed
+  still carries the gate, a waiting-only one closes it and logs `kept waiting`, and a work order leaves it open.
+  The board's date is the local clock's and the ledger's the UTC clock's, unless `--today` gives both. Without a
+  ledger it is refused. **`--board-only`** writes the board half alone, the same line, `closes()` reading the
+  ledger as it stands: the `set by=` route, whose `set` has lifted the gate already, so nothing is lifted twice.
+  An item whose Context names another repo's entry (`<repo>#TD-n`) is answered on the board alone and stays
+  decided but open, its lift being a tool PR in that repo (`--ledger` refused), after the same `People:` and
+  `Answered by:` checks. An item whose Context names a gate but not one entry is answered on the board alone,
+  closed per `closes()` (a waiting-only answer closes it). `--ledger` and `--board-only` on any item but a lift's
+  are a refusal;
 - **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
 - **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
   lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
@@ -950,7 +964,8 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
 Each write prints the commit subject the module gives (`subject()` with `append` for an add, the edit's,
 `archive_subject()`, `queue_subject()`) and the paths it changed, or one JSON object with `--json`. `fmt` has no
 subject of its own, and a write that changes nothing (a rank line already so) prints none, writing nothing.
-`--plan` prints the changes as JSON (each path and its new text) and writes nothing. A write of several files is
+`--plan` prints the changes as JSON (each path and its new text) and writes nothing. A decide lift also reports
+`entries` (the ids whose files it changed) and `notes`. A write of several files is
 both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
 and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
 date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
@@ -1129,7 +1144,9 @@ reads changes.
 v2.4 also gives the merge gate its verdicts (*The merge gate's verdicts*): `tripwire()`, `lift_pr_verdict()`,
 `uncovered_decisions()` and `migrate_subject()` are new, with the tree paths they read. `subject_kind()` names the
 migrate commit's subject `migrate`, where v2.3 named it nothing; nothing else a reader reads changes.
-v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit`,
+v2.4's board writer writes the decide lift (*The board writer*): `decide` on an item naming one entry and one gate
+writes the ledger too and closes the item per `closes()`, where v2.3's wrote the board alone and closed nothing;
+`--board-only` keeps the board half alone. v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit`,
 `fmt`, `archive`, `reopen`, `renumber`, `lift`, `split` and `relink`, and `set`'s gate routes; nothing a reader
 reads changes. The board writer's write of several files
 also removes files, both or neither, for the ledger writer's moves; no board action removes one.
