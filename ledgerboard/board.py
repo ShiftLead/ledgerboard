@@ -28,7 +28,9 @@ git, the network or anything of a consumer's: the caller passes who replies or a
 (``--today``, default the local clock) and the tool and session the subject names, and makes the
 commit itself.
 
-Exit: 0 written (or nothing to change); 1 a write failed (every file restored); 2 usage; 3 refused.
+Exit, the package's one table (``ledger.py`` shares it): 0 written (or nothing to change); 1 refused; 2 usage,
+or (``decide``) the ledger cannot be used as asked; 4 a write failed (every file restored). 3 is ``ledger.py``'s
+``needs`` and never the board writer's.
 """
 
 from __future__ import annotations
@@ -422,6 +424,8 @@ def _decide_ledger(board_path: str, board_text: str, body: str, label: str | Non
         got = decide_lift(body, base, label or "", by, ledger_day, board_people(board_text), answered_by(board_text))
         changes: dict[str, str | None] = {found[tid]: text for tid, text in got.items()}
         notes = L.gate(led, changes, today=ledger_day) if changes else []
+    except L.Unusable as e:
+        raise L.Unusable(f"the ledger half: {e}") from None
     except Refused as e:
         raise Refused(f"the ledger half: {e}") from None
     after = {**base, **got}
@@ -656,11 +660,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         plan = build(a)
     except Refused as e:
+        from . import ledger as L  # loaded here, as in decide: the ledger writer imports this module
+        code = 2 if isinstance(e, L.Unusable) else 1  # a ledger decide cannot use: 2, as ledger.py gives it
         if a.json or a.plan:
             print(json.dumps({"action": a.action, "refused": str(e)}, ensure_ascii=False))
         else:
             print(f"ledgerboard.board: refused: {e}", file=sys.stderr)
-        return 3
+        return code
     if a.plan:
         print(json.dumps(plan.as_json(), ensure_ascii=False))
         return 0
@@ -668,7 +674,7 @@ def main(argv: list[str] | None = None) -> int:
         paths = apply(plan)
     except OSError as e:
         print(f"ledgerboard.board: the write failed, every file restored: {e}", file=sys.stderr)
-        return 1
+        return 4
     if a.json:
         print(json.dumps({"action": plan.action, "subject": plan.subject, "paths": paths, **plan.info},
                          ensure_ascii=False))

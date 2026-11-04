@@ -1,5 +1,5 @@
 {
- "exit": 3,
+ "exit": 1,
  "out": {
   "action": "decide",
   "refused": "the item lifts decision (robin) on TD-1: pass --ledger (the v2 directory), or --board-only when the ledger is written already"

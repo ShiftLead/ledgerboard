@@ -969,8 +969,9 @@ subject of its own, and a write that changes nothing (a rank line already so) pr
 both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
 and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
 date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
-(`--tool`, `--session`). A file that declares a newer major is refused unread. Exit: 0 written (or nothing to
-change), 1 a write failed (every file restored), 2 usage, 3 refused.
+(`--tool`, `--session`). A file that declares a newer major is refused unread. Exit (v2.4), the ledger writer's
+table: 0 written (or nothing to change), 1 refused, 2 usage, or (`decide`) the ledger cannot be used as asked,
+4 a write failed (every file restored); it never exits 3, which is the ledger writer's `needs`.
 
 ## The ledger writer (v2.4)
 
@@ -1058,7 +1059,8 @@ else it would say: exit 3 with `needs: <ids>` (`--json`: `needs`), nothing writt
 runs it again. A file that declares a newer major is refused unread. Exit: 0 written (or nothing to change;
 `--check`: no error stands), 1 refused (`--check`: an error stands; `fmt`: an entry refused, or under `--check`
 one would change), 2 usage, or the ledger or an id cannot be used as asked, 3 `needs`, 4 a write failed (every
-file restored).
+file restored). The board writer exits by the same table (*The board writer*), so a code means one thing whichever
+writer ran.
 
 ## Versions
 
@@ -1150,6 +1152,9 @@ writes the ledger too and closes the item per `closes()`, where v2.3's wrote the
 `fmt`, `archive`, `reopen`, `renumber`, `lift`, `split` and `relink`, and `set`'s gate routes; nothing a reader
 reads changes. The board writer's write of several files
 also removes files, both or neither, for the ledger writer's moves; no board action removes one.
+v2.4's board writer exits by the ledger writer's table (*The board writer*): a refusal is 1 where v2.3 gave 3, a
+failed write 4 where v2.3 gave 1, and a ledger `decide` cannot use 2; it no longer exits 3. A consumer's wrapper
+that read v2.3's codes checks them in its v2.4 vendor PR.
 
 ## Appendix: grammar
 
