@@ -56,6 +56,9 @@ Fixtures, each an invented input and its expected JSON:
   starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
   as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
   exit code and the JSON it printed: the subject and the paths, the plan, or why it refused).
+- ``ledger_writer/<case>/`` (v2.4): the ledger writer, ``ledger.py`` — laid out as ``board_writer/``'s cases, each
+  ``argv`` carrying ``--json`` so what it prints is one object: a report, the paths written, the plan, why it
+  refused, or the ids it ``needs``.
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
   ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
@@ -541,9 +544,10 @@ def tree(d: Path) -> dict[str, str]:
             for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
 
 
-def writer_case(L, case: Path) -> dict:
-    """``board.py``'s ``main()`` of the case's argv, in a copy of its ``before/``: exit, printed JSON, files after."""
-    board = importlib.import_module(L.__name__ + ".board")
+def writer_case(L, case: Path, writer: str = "board") -> dict:
+    """The writer's (``board.py``'s, ``ledger.py``'s) ``main()`` of the case's argv, in a copy of its ``before/``:
+    exit, printed JSON, files after."""
+    board = importlib.import_module(f"{L.__name__}.{writer}")
     argv = json.loads((case / "cmd.json").read_text(encoding="utf-8"))["argv"]
     here = os.getcwd()
     with tempfile.TemporaryDirectory() as tmp:
@@ -593,6 +597,8 @@ def cases(L, root: Path):
     if hasattr(L, "__path__"):  # the writers ship in the package; a single module file has none
         for case in sorted(p for p in (root / "board_writer").glob("*") if p.is_dir()):
             yield case, writer_case(L, case)
+        for case in sorted(p for p in (root / "ledger_writer").glob("*") if p.is_dir()):
+            yield case, writer_case(L, case, "ledger")
     spec = json.loads((root / "ledger_edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "ledger_edit" / "expected.json", ledger_edit_cases(L, spec, root)
     spec = json.loads((root / "grammar" / "cases.json").read_text(encoding="utf-8"))
