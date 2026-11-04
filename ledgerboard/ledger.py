@@ -15,13 +15,19 @@
     python3 -m ledgerboard.ledger set  TD-n --FIELD VALUE ... [--field NAME=VALUE]...
     python3 -m ledgerboard.ledger note TD-n "words"
     python3 -m ledgerboard.ledger edit TD-n --section NAME --from FILE|-
+    python3 -m ledgerboard.ledger archive TD-n --why W [--pr N] [--pointer P] [--as-is]
+                                          [--superseded-by ID | --dropped] [--also FILE...]
+    python3 -m ledgerboard.ledger reopen TD-n --why W [--also FILE...]
+    python3 -m ledgerboard.ledger renumber TD-n --id TD-m [--take NONCE] [--also FILE...]
         every command: [--ledger PATH] [--resolved FILE] [--today D] [--json]; a write: [--base PATH] [--plan]
 
 A report reads a v1 ledger file or a v2 directory through ``load()``; a write takes a v2 directory and
 refuses a v1 file (*split first*). Every write reads the files, applies the module's edit
 (``entry_text()``, ``edit_entry()``, ``canonical()``) and writes the files back, both or neither, then
 prints the paths it changed (``--json``: one object; a ledger edit has no commit subject of its own, so
-``subject`` is null). ``--plan`` prints the changes as JSON and writes nothing.
+``subject`` is null). ``--plan`` prints the changes as JSON (a removed file's text null) and writes nothing.
+A move (``archive``, ``reopen``, ``renumber``) writes the new file and removes the old, its relative links
+rewritten for its new directory and every link to it, in the ledger and in ``--also``'s files, repointed.
 
 A write is refused when the ledger after it has a ``check()`` error the ledger before it does not, both
 checked against one base: ``--base`` (the ledger where the change started, a v1 file or a v2 directory,
@@ -45,6 +51,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -58,6 +65,8 @@ from . import (
     XREPO_ITEM_RE,
     Refused,
     Resolve,
+    _left_with_open_parts,
+    archive_plan,
     canonical,
     check,
     edit_entry,
@@ -69,7 +78,9 @@ from . import (
     heading_nums,
     load,
     pickable,
+    rank,
     rank_path,
+    set_rank,
     utc_day,
     v2_problems,
     version_problem,
@@ -78,7 +89,7 @@ from .board import Plan, write
 
 LEDGER_DIR, LEDGER_FILE = "docs/ledger", "docs/technical_debt.md"  # the defaults, relative to the working directory
 ALIASES = ("type", "owner", "kind")  # --type X is --where type=X, and so on
-WRITES = ("fmt", "new", "set", "note", "edit")
+WRITES = ("fmt", "new", "set", "note", "edit", "archive", "reopen", "renumber")
 # `new`'s and `set`'s header flags, in the canonical order: (option dest, field name)
 FIELDS = (("priority", "Priority"), ("type", "Type"), ("added", "Added"), ("owner", "Owner"), ("kind", "Kind"),
           ("status", "Status"), ("blocked_by", "Blocked by"), ("part_of", "Part of"), ("location", "Location"))
@@ -213,6 +224,57 @@ def tid_of(tid: str) -> str:
     return f"TD-{int(tid[3:]):03d}"
 
 
+# -- links ---------------------------------------------------------------------------------------------
+
+LINK_RE = re.compile(r"(\]\()([^)\s]+)((?:\s+\"[^\"\n]*\")?\))")  # an inline link, its title kept
+CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")  # a fenced code block's opening or closing line
+URL_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
+
+
+def _code_spans(text: str) -> list[tuple[int, int]]:
+    """Where ``text`` is code, not prose: each inline span and each fenced block (to the end when unclosed)."""
+    spans = [m.span() for m in CODE_SPAN_RE.finditer(text)]
+    at, opened = 0, None
+    for line in text.splitlines(keepends=True):
+        m = FENCE_RE.match(line)
+        if m and opened is None:
+            opened = (at, m.group(1))
+        elif m and opened is not None and m.group(1)[0] == opened[1][0] and len(m.group(1)) >= len(opened[1]) \
+                and not line[m.end():].strip():
+            spans.append((opened[0], at + len(line)))
+            opened = None
+        at += len(line)
+    if opened is not None:
+        spans.append((opened[0], len(text)))
+    return spans
+
+
+def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None) -> str:
+    """``text``'s relative inline links (``](path)``, ``](path "title")``), written from directory ``src``,
+    rewritten to resolve from directory ``dst``, and a link to a file in ``moved`` (old path → new path)
+    pointed at its new path; its anchor and title kept. A URL, an absolute path, a plain anchor and a link
+    inside code are left, and so is every link when ``src`` is ``dst`` and nothing it names moved. Pure: the
+    paths are compared as text, so a link that named no file before names none after."""
+    spans = _code_spans(text)
+    moved = {os.path.abspath(k): os.path.abspath(v) for k, v in (moved or {}).items()}
+    src_a, dst_a = os.path.abspath(src or "."), os.path.abspath(dst or ".")
+
+    def fix(m: re.Match) -> str:
+        target = m.group(2)
+        path, hash_, frag = target.partition("#")
+        if not path or URL_RE.match(path) or path.startswith("/") or any(a <= m.start() < b for a, b in spans):
+            return m.group(0)
+        old = os.path.normpath(os.path.join(src_a, path))
+        new = moved.get(old, old)
+        if new == old and src_a == dst_a:
+            return m.group(0)
+        rel = os.path.relpath(new, dst_a).replace(os.sep, "/") + ("/" if path.endswith("/") else "")
+        return f"{m.group(1)}{rel}{hash_}{frag}{m.group(3)}"
+
+    return LINK_RE.sub(fix, text)
+
+
 # -- the resolver --------------------------------------------------------------------------------------
 
 class Resolved:
@@ -320,12 +382,12 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
     return Plan("new", None, {path: entry}, {"id": tid, "notes": notes})
 
 
-def _open_entry(led: Ledger, tid: str) -> tuple[str, str]:
+def _open_entry(led: Ledger, tid: str, why: str = "it is edited only once reopened") -> tuple[str, str]:
     """(path, raw text) of open entry ``tid``; Unusable for one archived or in neither directory."""
     _writable(led)
     path, archived = led.entry_file(tid)
     if archived:
-        raise Unusable(f"{tid} is archived ({path}): it is edited only once reopened")
+        raise Unusable(f"{tid} is archived ({path}): {why}")
     return path, led.files[path]
 
 
@@ -345,6 +407,152 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
         return Plan(action, None, {}, {"id": entries(out)[0]["id"], "notes": []})
     notes = gate(led, {path: out}, base=base, resolve=resolve, today=day)
     return Plan(action, None, {path: out}, {"id": entries(out)[0]["id"], "notes": notes})
+
+
+def _also(also: Mapping[str, str] | None, led: Ledger) -> dict[str, str]:
+    """The caller's other files (``--also``), each path and its text; one inside the ledger is refused."""
+    out = dict(also or {})
+    for p in out:
+        if os.path.abspath(p) in {os.path.abspath(q) for q in led.files}:
+            raise Unusable(f"--also {p}: a file of the ledger, which the writer reads already")
+    return out
+
+
+def _relinked(led: Ledger, changes: dict[str, str | None], also: Mapping[str, str], moved: Mapping[str, str]
+              ) -> dict[str, str | None]:
+    """``changes`` with every other file's links to a moved file pointed at its new path: the ledger's own
+    files (as ``changes`` leaves them) and the caller's ``also``. A file whose links do not change is left."""
+    out = dict(changes)
+    for p, text in [*led.files.items(), *also.items()]:
+        if p in moved or (p in out and out[p] is None):
+            continue
+        cur = out.get(p, text)
+        new = relink(cur, os.path.dirname(p), os.path.dirname(p), moved)
+        if new != cur:
+            out[p] = new
+    return out
+
+
+def _gated(led: Ledger, changes: Mapping[str, str | None], also: Mapping[str, str], **kw) -> list[str]:
+    """``gate()`` over the ledger's part of ``changes``: the caller's other files are not the ledger."""
+    return gate(led, {p: t for p, t in changes.items() if p not in also}, **kw)
+
+
+def _parts_left(led: Ledger, changes: Mapping[str, str | None]) -> None:
+    """Refused when the write takes an entry out of the ledger while an open entry is still Part of it,
+    judged against the ledger as it stands (``check()`` judges it against the base only)."""
+    left = _left_with_open_parts(led.texts()[0], led.overlay(changes).texts()[0])
+    if left:
+        raise Refused("; ".join(r["text"] for r in left))
+
+
+def plan_archive(led: Ledger, tid: str, why: str, *, pr: int | None = None, pointer: str | None = None,
+                 as_is: bool = False, superseded_by: str | None = None, dropped: bool = False,
+                 also: Mapping[str, str] | None = None, base: Ledger | None = None, resolve: Resolve | None = None,
+                 today: str | None = None) -> Plan:
+    """Open entry ``tid`` archived (``edit_entry()``'s archived form, ``archive_plan()`` first): Resolved (``pr``,
+    ``pointer``, ``as_is``), Superseded by ``superseded_by`` (followed to the end of its chain, and each
+    dependent's Blocked by rewired to it) or ``dropped`` (refused while an entry is Blocked by it). The file
+    moves to ``archive/``, its relative links rewritten for there, and every link to it, in the ledger and
+    in ``also`` (path → text, the caller's other files), pointed at its new path."""
+    path, text = _open_entry(led, tid, "archived already")
+    tid = entries(text)[0]["id"] if entries(text) else tid
+    also = _also(also, led)
+    day = _today(today)
+    if superseded_by is not None and ID_ITEM_RE.match(superseded_by):
+        superseded_by = tid_of(superseded_by)  # a local successor at the ledger's width
+    ledger_text, arch = led.texts()
+    plan = archive_plan(ledger_text, arch, tid, superseded_by=superseded_by, dropped=dropped, resolve=resolve)
+    kw = {k: v for k, v in (("pr", pr), ("pointer", pointer), ("as_is", as_is or None),
+                            ("superseded_by", plan["successor"]), ("dropped", dropped or None)) if v is not None}
+    dst = _join(_join(led.path, LEDGER_ARCHIVE), os.path.basename(path))
+    if dst in led.files:
+        raise Unusable(f"{dst} exists already")
+    out = relink(edit_entry(text, "archive", today=day, why=why, **kw), os.path.dirname(path), os.path.dirname(dst))
+    changes: dict[str, str | None] = {path: None, dst: out}
+    for dep in plan["rewire"]:
+        p, _ = led.entry_file(dep)
+        changes[p] = edit_entry(led.files[p], "rename_ref", old=tid, new=plan["successor"])
+    changes = _relinked(led, changes, also, {path: dst})
+    _parts_left(led, changes)
+    notes = _gated(led, changes, also, base=base, resolve=resolve, today=day)
+    return Plan("archive", None, changes, {"id": tid, "moved": {"from": path, "to": dst}, "successor": plan["successor"],
+                                           "rewired": plan["rewire"], "notes": notes})
+
+
+def plan_reopen(led: Ledger, tid: str, why: str, *, also: Mapping[str, str] | None = None,
+                base: Ledger | None = None, resolve: Resolve | None = None, today: str | None = None) -> Plan:
+    """Archived entry ``tid`` reopened (``edit_entry()``'s reopened form) and moved back into the ledger, its
+    links rewritten as ``plan_archive()`` rewrites them."""
+    _writable(led)
+    path, archived = led.entry_file(tid)
+    if not archived:
+        raise Unusable(f"{tid} is open ({path}): only an archived entry is reopened")
+    text = led.files[path]
+    tid = entries(text)[0]["id"] if entries(text) else tid
+    also = _also(also, led)
+    day = _today(today)
+    dst = _join(led.path, os.path.basename(path))
+    if dst in led.files:
+        raise Unusable(f"{dst} exists already")
+    out = relink(edit_entry(text, "reopen", today=day, why=why), os.path.dirname(path), os.path.dirname(dst))
+    changes = _relinked(led, {path: None, dst: out}, also, {path: dst})
+    notes = _gated(led, changes, also, base=base, resolve=resolve, today=day)
+    return Plan("reopen", None, changes, {"id": tid, "moved": {"from": path, "to": dst}, "notes": notes})
+
+
+def _mentions(tid: str, files: Mapping[str, str | None]) -> list[str]:
+    """Each line of ``files`` that names ``tid`` in prose (``TD-7`` is ``TD-007``), as ``path:line: text``."""
+    rx = re.compile(rf"(?<![A-Za-z0-9_#/.-])TD-0*{int(tid[3:])}(?!\d)")
+    return [f"{p}:{n}: {ln.strip()[:200]}" for p, t in sorted(files.items()) if t
+            for n, ln in enumerate(t.splitlines(), 1) if rx.search(ln)]
+
+
+def plan_renumber(led: Ledger, tid: str, new: str, *, take: str | None = None, also: Mapping[str, str] | None = None,
+                  base: Ledger | None = None, resolve: Resolve | None = None, today: str | None = None) -> Plan:
+    """Open entry ``tid`` given the id ``new`` (the caller's, from its counter; ``take`` its nonce, written as
+    ``Id take``): its heading and file, every entry's Blocked by, Part of and Log ``while`` naming it, its rank
+    line, and every link to its file, in the ledger and in ``also``. The lines that still name the old id in
+    prose are listed (``mentions``), for the caller to judge; prose is never rewritten."""
+    path, text = _open_entry(led, tid, "an archived entry is not renumbered")
+    old = entries(text)[0]["id"] if entries(text) else tid
+    new = tid_of(new)
+    also = _also(also, led)
+    day = _today(today)
+    ledger_text, arch = led.texts()
+    files = {int(m.group(1)) for p in led.files if (m := ENTRY_FILE_RE.match(os.path.basename(p)))}
+    if int(new[3:]) in heading_nums(ledger_text) | heading_nums(arch) | files:
+        raise Unusable(f"{new} is in the ledger or its archive already")
+    out = edit_entry(text, "renumber", new=new)
+    if take is not None:
+        out = edit_entry(out, "set", fields={"Id take": take})
+    dst = _join(os.path.dirname(path), f"{new}.md")
+    changes: dict[str, str | None] = {path: None, dst: out}
+    rx = re.compile(rf"TD-0*{int(old[3:])}(?!\d)")
+    for p, t in sorted(led.files.items()):
+        if p == path or not ENTRY_FILE_RE.match(os.path.basename(p)) or not rx.search(t):
+            continue
+        try:
+            got = edit_entry(t, "rename_ref", old=old, new=new)
+            same = got == canonical(t)
+        except Refused as e:
+            fields = entries(t)[0]["fields"] if entries(t) else {}
+            if not any(rx.search(fields.get(k) or "") for k in ("blocked by", "part of")):
+                continue  # names it in prose only, which is listed below
+            raise Refused(f"{p} names {old}, and {e}") from None
+        if not same:
+            changes[p] = got
+    rank_file = rank_path(led.path)
+    rank_text = led.read(rank_file)
+    key = rank(rank_text)[0].get(old) if rank_text else None
+    if key is not None:
+        changes[rank_file] = set_rank(led.files.get(rank_file, rank_text), {old: None, new: key})
+    changes = _relinked(led, changes, also, {path: dst})
+    _parts_left(led, changes)
+    notes = _gated(led, changes, also, base=base, resolve=resolve, today=day)
+    after = {**{p: t for p, t in led.files.items() if p != path}, **also, **changes}
+    return Plan("renumber", None, changes, {"id": new, "was": old, "moved": {"from": path, "to": dst},
+                                            "mentions": _mentions(old, after), "notes": notes})
 
 
 def plan_fmt(led: Ledger, ids: Sequence[str] = ()) -> Plan:
@@ -531,7 +739,10 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         "new": "file a new entry in a v2 ledger, in canonical form, under an id the caller took",
         "set": "set an open entry's header fields (an empty value removes one)",
         "note": "append a dated line to an open entry's Log",
-        "edit": "replace one section of an open entry (or add it where SPEC puts it)"}[cmd])
+        "edit": "replace one section of an open entry (or add it where SPEC puts it)",
+        "archive": "archive an open entry (Resolved, Superseded or Dropped) and move its file to archive/",
+        "reopen": "reopen an archived entry and move its file back into the ledger",
+        "renumber": "give an open entry the id the caller took: its file, heading, the fields naming it, its rank line"}[cmd])
     if cmd == "fmt":
         ap.add_argument("ids", nargs="*", metavar="TD-n", help="the entries to format; default: every entry")
         ap.add_argument("--check", action="store_true", help="list the entries that would change; write nothing")
@@ -553,9 +764,25 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
             _field_flags(ap, {})
         elif cmd == "note":
             ap.add_argument("words", help="the note, one line")
-        else:
+        elif cmd == "edit":
             ap.add_argument("--section", required=True, help="the section's name: Why, Fix, Done when, …")
             ap.add_argument("--from", dest="src", required=True, metavar="FILE", help="its new text from a file, or - for stdin")
+        elif cmd in ("archive", "reopen"):
+            ap.add_argument("--why", required=True, help="one line: why it is archived, or open again")
+            if cmd == "archive":
+                ap.add_argument("--pr", type=int, help="Resolved: the PR that resolved it, as the forge numbered it")
+                ap.add_argument("--pointer", help="Resolved: where its lasting content now lives")
+                ap.add_argument("--as-is", action="store_true", help="Resolved: keep the Fix, the Resolved line after it")
+                how = ap.add_mutually_exclusive_group()
+                how.add_argument("--superseded-by", metavar="ID", help="Superseded by that entry (TD-n or <repo>#TD-n), "
+                                                                       "its dependents rewired to it")
+                how.add_argument("--dropped", action="store_true", help="Dropped: decided not to do it")
+        else:
+            ap.add_argument("--id", required=True, dest="new", metavar="TD-n", help="the new id, taken by the caller")
+            ap.add_argument("--take", metavar="NONCE", help="the counter take's nonce, written as Id take")
+        if cmd in ("archive", "reopen", "renumber"):
+            ap.add_argument("--also", nargs="+", action="extend", default=[], metavar="FILE",
+                            help="other files whose links to the moved file are rewritten")
     _common(ap, write_cmd=cmd != "fmt")
     return ap
 
@@ -599,6 +826,18 @@ def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
         return plan_edit(led, "set", tid_of(a.id), fields=fields, base=base, resolve=resolve, today=a.today)
     if cmd == "note":
         return plan_edit(led, "note", tid_of(a.id), words=a.words, base=base, resolve=resolve, today=a.today)
+    if cmd in ("archive", "reopen", "renumber"):
+        also = {p: _read_raw(p) for p in dict.fromkeys(a.also)}
+        kw = {"also": also, "base": base, "resolve": resolve, "today": a.today}
+        if cmd == "renumber":
+            return plan_renumber(led, tid_of(a.id), a.new, take=a.take, **kw)
+        if cmd == "reopen":
+            return plan_reopen(led, tid_of(a.id), a.why, **kw)
+        if (a.superseded_by or a.dropped) and (a.pr is not None or a.pointer is not None or a.as_is):
+            raise Unusable("--pr, --pointer and --as-is are a Resolved archive's: a superseded or dropped entry "
+                           "keeps its Why and Fix")
+        return plan_archive(led, tid_of(a.id), a.why, pr=a.pr, pointer=a.pointer, as_is=a.as_is,
+                            superseded_by=a.superseded_by, dropped=a.dropped, **kw)
     words = _read_src("--from", a.src).strip()
     if not words:
         raise Unusable("--from is empty: a section is never emptied by edit")
@@ -655,6 +894,8 @@ def run_write(cmd: str, argv: list[str]) -> int:
             print(p)
         for n in plan.info.get("notes", []):
             print(f"note — {n}", file=sys.stderr)
+        for m in plan.info.get("mentions", []):
+            print(f"check — names {plan.info['was']} in prose: {m}", file=sys.stderr)
         for r in plan.info.get("refused", []):
             print(f"{r['path']}: refused, left alone — {r['why']}", file=sys.stderr)
     return 1 if cmd == "fmt" and plan.info["refused"] else 0

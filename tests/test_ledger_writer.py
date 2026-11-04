@@ -1,5 +1,6 @@
 """The ledger writer (``ledgerboard/ledger.py``, SPEC *The ledger writer*): what its fixtures do not show —
-its imports, the UTC clock, the in-process resolver, a failed write, and running as a module."""
+its imports, the UTC clock, the in-process resolver, a failed write or move, the link rewriter, and running
+as a module."""
 
 import ast
 import contextlib
@@ -46,7 +47,7 @@ class Boundary(unittest.TestCase):
         tree = ast.parse((ROOT / "ledgerboard" / "ledger.py").read_text(encoding="utf-8"))
         names = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
         names |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
-        self.assertLessEqual(names, {"__future__", "argparse", "json", "os", "sys", "collections", "datetime", "board"})
+        self.assertLessEqual(names, {"__future__", "argparse", "json", "os", "re", "sys", "collections", "datetime", "board"})
 
     def test_the_header_and_no_shebang(self):
         first = (ROOT / "ledgerboard" / "ledger.py").read_text(encoding="utf-8").splitlines()[:2]
@@ -125,6 +126,29 @@ class Write(unittest.TestCase):
             self.assertEqual(Path(d, "TD-001.md").read_text(), E1)
             self.assertEqual(sorted(os.listdir(d)), ["README.md", "TD-001.md"])
 
+    def test_a_failed_move_restores_the_file_and_makes_no_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            real, old = os.unlink, os.path.join(d, "TD-001.md")
+
+            def unlink(path):  # the old file's removal fails; every other unlink (the rollback's) is real
+                if path == old:
+                    raise OSError("busy")
+                real(path)
+            with mock.patch("ledgerboard.board.os.unlink", side_effect=unlink):
+                code, _, err = run("archive", "TD-1", "--why", "fixed", "--ledger", d, "--today", "2026-01-15")
+            self.assertEqual(code, 4, err)
+            self.assertEqual(Path(d, "TD-001.md").read_text(), E1)
+            self.assertFalse(Path(d, "archive").exists())
+
+    def test_a_failed_rename_takes_back_the_directory_it_made(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            with mock.patch("ledgerboard.board.os.replace", side_effect=OSError("read-only")):
+                code, _, _ = run("archive", "TD-1", "--why", "fixed", "--ledger", d, "--today", "2026-01-15")
+            self.assertEqual(code, 4)
+            self.assertEqual(sorted(os.listdir(d)), ["README.md", "TD-001.md"])
+
     def test_plain_output_is_the_path_and_its_notes(self):
         with tempfile.TemporaryDirectory() as tmp:
             d = ledger(tmp)
@@ -137,6 +161,41 @@ class Write(unittest.TestCase):
             code, _, err = run("--pickable", "--ledger", d, "--today", "2026-01-15")
             self.assertEqual(code, 2)
             self.assertIn("not read", err)
+
+
+class Relink(unittest.TestCase):
+    def test_a_moved_file_keeps_its_targets(self):
+        got = W.relink("[a](../plans/x.md#y) [b](TD-002.md \"t\") [c](dir/)", "docs/ledger", "docs/ledger/archive")
+        self.assertEqual(got, "[a](../../plans/x.md#y) [b](../TD-002.md \"t\") [c](../dir/)")
+
+    def test_what_is_left(self):
+        text = ("[u](https://example.com/x.md) [m](mailto:a@example.com) [abs](/x.md) [h](#why) `[c](x.md)`\n"
+                "```\n[f](x.md)\n```\n")
+        self.assertEqual(W.relink(text, "docs/ledger", "docs/ledger/archive"), text)
+
+    def test_a_link_to_a_moved_file_follows_it(self):
+        got = W.relink("[x](ledger/TD-001.md#why) [y](ledger/TD-002.md)", "docs", "docs",
+                       {"docs/ledger/TD-001.md": "docs/ledger/archive/TD-001.md"})
+        self.assertEqual(got, "[x](ledger/archive/TD-001.md#why) [y](ledger/TD-002.md)")
+
+
+class Moves(unittest.TestCase):
+    def test_a_successor_in_another_repo_is_resolved_in_process(self):
+        e2 = E1.replace("TD-001: The parser", "TD-002: After the parser").replace(
+            "**Status:** Open\n", "**Status:** Open\n**Blocked by:** TD-001\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            led = W.Ledger.open(ledger(tmp, **{"TD-002.md": e2}))
+            asked = []
+
+            def resolve(item):
+                asked.append(item)
+                return {"state": "open", "status": "Open"}
+            plan = W.plan_archive(led, "TD-1", "the tool repo covers it", superseded_by="tools#TD-4",
+                                  resolve=resolve, today="2026-01-15")
+            self.assertIn("tools#TD-4", asked)
+            self.assertEqual(plan.info["rewired"], ["TD-002"])
+            self.assertIn("**Blocked by:** tools#TD-4", plan.changes[os.path.join(led.path, "TD-002.md")])
+            self.assertIsNone(plan.changes[os.path.join(led.path, "TD-001.md")])
 
 
 class Module(unittest.TestCase):

@@ -960,8 +960,8 @@ change), 1 a write failed (every file restored), 2 usage, 3 refused.
 ## The ledger writer (v2.4)
 
 `ledger.py`, beside the module and `board.py` in the `ledgerboard/` package, is the ledger writer over files:
-an importable library (`Ledger.open(path)`, then `plan_new`, `plan_edit`, `plan_fmt`, each returning a `Plan`,
-and `apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
+an importable library (`Ledger.open(path)`, then `plan_new`, `plan_edit`, `plan_archive`, `plan_reopen`,
+`plan_renumber`, `plan_fmt`, each returning a `Plan`, and `apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
 command people run). It reads the files it is given, applies the module's edit, and writes the files back; it
 never runs git, the network or anything of a consumer's. A report reads a v1 file or a v2 directory (*The
 ledger as a directory*); a write takes a v2 directory, and a v1 file is refused (*split first*).
@@ -983,6 +983,24 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
 - **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section. An archived entry is edited only once reopened;
+- **`archive TD-n --why "<words>"`** — an open entry archived (`edit_entry()`'s archived form, `archive_plan()`
+  first) and its file moved to `archive/`: Resolved (`--pr N`, `--pointer P`, `--as-is`), `--superseded-by ID`
+  (`TD-n` or `<repo>#TD-n`, followed to the end of its chain; each entry Blocked by it rewired to the successor
+  in the same write) or `--dropped` (refused while an entry is Blocked by it). Refused while an open entry is
+  still Part of it;
+- **`reopen TD-n --why "<words>"`** — an archived entry reopened (`edit_entry()`'s reopened form) and its file moved
+  back into the ledger;
+- **`renumber TD-n --id TD-m`** — an open entry given the id the caller took (`--take`, its nonce, written as `Id
+  take`): its file and heading, every entry's Blocked by, Part of and Log `while` naming it, and its rank line.
+  Refused for an archived entry and for an id the ledger or its archive holds. The lines that still name the old
+  id in prose, in the ledger and in `--also`'s files, are listed (`mentions`) for the caller to judge; prose is
+  never rewritten.
+
+  A move (`archive`, `reopen`, `renumber`) writes the entry's new file and removes its old one, as one write. The
+  moved file's relative inline links (`](path)`) are rewritten to name the same paths from its new directory
+  (`relink()`), and every link to the file, in the ledger's other files and in `--also <file>…` (the caller's
+  other files, which it found), is pointed at its new path. A URL, an absolute path, a plain anchor and a link
+  in code are left, and paths are compared as text: a link that named no file before names none after;
 - **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
   an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
 
@@ -994,7 +1012,7 @@ it judges on the `--plan`.
 
 A ledger write prints the paths it changed, or one JSON object with `--json` (`subject` is null: a ledger edit has
 no commit subject of its own, so the caller names its commit). `--plan` prints the changes as JSON (each path and
-its new text) and writes nothing. A write of several files is both or neither, as the board writer's is. The caller
+its new text, `null` for a file removed) and writes nothing. A write of several files is both or neither, as the board writer's is. The caller
 passes what lies outside the files: the id, who filed the entry, the date (`--today`, else the UTC clock: every
 ledger date is the UTC date) and the state of other repos' entries — in-process the `resolve` callback, on the
 command line `--resolved <file>`, a JSON object from `<repo>#TD-n` to `{"state": "open" | "archived" |
@@ -1089,8 +1107,9 @@ reads changes.
 v2.4 also gives the merge gate its verdicts (*The merge gate's verdicts*): `tripwire()`, `lift_pr_verdict()`,
 `uncovered_decisions()` and `migrate_subject()` are new, with the tree paths they read. `subject_kind()` names the
 migrate commit's subject `migrate`, where v2.3 named it nothing; nothing else a reader reads changes.
-v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit` and
-`fmt`; nothing a reader reads changes.
+v2.4 also ships the ledger writer, `ledger.py` (*The ledger writer*): its reports, `new`, `set`, `note`, `edit`,
+`fmt`, `archive`, `reopen` and `renumber`; nothing a reader reads changes. The board writer's write of several files
+also removes files, both or neither, for the ledger writer's moves; no board action removes one.
 
 ## Appendix: grammar
 
