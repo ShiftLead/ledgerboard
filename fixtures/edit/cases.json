@@ -1643,6 +1643,7 @@
   "split_notes": [
     "# Ledger\n\nLedgerboard: 2\n\nEach open entry is a file here; the table below is gone, and [the old archive](../ledger_archive.md) moved.\nSee [the cadence](https://example.com/cadence.md), [this section](#entries) and [the root](/docs/x.md).\n\n```\nA [link in a fence](kept.md) and the summary table.\n```\n",
     "# Ledger\n\nLedgerboard: 2\n\nNothing here names the old layout.\n",
-    "# Ledger\n\n````\n```\nthe table, inside a four-backtick fence\n````\n```py\nthe table\n```\nA `[code](span.md)` and an escaped \\[link](x.md) are no links.\n[ref]: ../old_archive.md\n"
+    "# Ledger\n\n````\n```\nthe table, inside a four-backtick fence\n````\n```py\nthe table\n```\nA `[code](span.md)` and an escaped \\[link](x.md) are no links.\n[ref]: ../old_archive.md\n",
+    "# Ledger\n\nLedgerboard: 2\n\nThe ledger was `docs/technical_debt.md`; closed entries went to technical_debt_archive.md.\nSee [the old file](https://example.com/technical_debt.md) and [the archive](technical_debt_archive.md).\n[old]: https://example.com/docs/technical_debt.md\nmy_technical_debt.md, technical_debt.mdx and technical-debt.md are other names.\n```\ncat docs/technical_debt.md\n```\n"
   ]
 }

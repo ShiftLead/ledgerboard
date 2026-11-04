@@ -2990,14 +2990,17 @@ SPLIT_TABLE_RE = re.compile(r"\b(?:summary table|table below|the table)\b", re.I
 INLINE_CODE_RE = re.compile(r"(`+).*?\1")  # a code span: no link inside one
 SPLIT_LINK_RE = re.compile(r"(?<!\\)\[[^\]]*\]\((?![a-z][a-z0-9+.-]*:|#|/)(?P<target>[^)\s]+)\)"
                            r"|^ {0,3}\[[^\]]+\]:\s*(?![a-z][a-z0-9+.-]*:|#|/)(?P<ref>\S+)", re.IGNORECASE)
+ANY_LINK_RE = re.compile(r"(?<!\\)\[[^\]]*\]\([^)]*\)|^ {0,3}\[[^\]]+\]:\s*\S+")  # a link or definition, any target
+V1_NAME_RE = re.compile(r"(?<![\w.-])technical_debt(?:_archive)?\.md\b")  # the v1 files, by LEDGER_V1_PATH's name
 
 
 def split_notes(readme: str) -> list[tuple[int, str, str]]:
     """The lines of a ``README.md`` that ``split()`` wrote which may still describe the v1 layout (v2.4), for a
     caller to warn about: ``(line number, line, why)`` for a line naming the summary table, which a v2 ledger
-    has none of, and for one holding a relative Markdown link, which the move from beside the v1 file into the
-    v2 directory breaks (a link to the v1 archive file among them), or a reference definition doing the same.
-    Best effort, for a warning: a line inside a fenced code block, and a link inside a code span, are skipped;
+    has none of, for one holding a relative Markdown link, which the move from beside the v1 file into the
+    v2 directory breaks (a link to the v1 archive file among them), or a reference definition doing the same,
+    and for one naming a v1 file (``technical_debt.md``, ``technical_debt_archive.md``) outside a link, in a code
+    span too. Best effort, for a warning: a line inside a fenced code block, and a link inside a code span, are skipped;
     nothing is rewritten."""
     out, fence = [], ""
     for n, line in enumerate(readme.splitlines(), 1):
@@ -3016,6 +3019,9 @@ def split_notes(readme: str) -> list[tuple[int, str, str]]:
         for m in SPLIT_LINK_RE.finditer(INLINE_CODE_RE.sub("", line)):
             target = m.group("target") or m.group("ref")
             out.append((n, line, f"links {target} relatively: the README moved into the ledger directory"))
+        named = V1_NAME_RE.search(ANY_LINK_RE.sub("", line))  # backticked names count; a link's are its own
+        if named:
+            out.append((n, line, f"names {named.group(0)}, a v1 file: the ledger is now this directory"))
     return out
 
 

@@ -312,7 +312,8 @@ docs/ledger/
   layout, as `(line number, line, why)`, for the caller to warn about and nothing rewritten: a line
   naming the summary table (`summary table`, `table below`, `the table`), and one holding a relative
   Markdown link or reference definition, which the move into the v2 directory breaks (a link to the v1
-  archive file among them). It is best effort, for a warning: a line inside a fenced code block, a
+  archive file among them), and one naming a v1 file, `technical_debt.md` or `technical_debt_archive.md`,
+  outside a link (in prose or a code span). It is best effort, for a warning: a line inside a fenced code block, a
   link inside a code span and an escaped one are skipped.
 
 ## The next id (v2.4)
