@@ -43,7 +43,7 @@ This has already happened once. `Dropped` is v2.4's own closed-but-not-done word
 - **`_ended()`** holds and flags a single-step `unknown-status` (rule 2), and adds the chain reason to its `why` map (rule 3).
 - **`EDIT_ERRORS`** gains `blocker-unknown-status`.
 - **`STATUS_WORDS`** is unchanged, but it gains a comment saying that a word added to it is a word `pickable()` reads, as closed and done unless it joins Superseded's or Dropped's rules. A unit test pins that coupling: every word in `STATUS_WORDS` but `superseded` and `dropped` releases a dependent, and a word outside it holds one. So a word added for the Log alone cannot silently become a done word.
-- **Comments and docstrings.** The `Resolve` comment ("…else closed and done") and the docstrings of `_archived_status()`, `_chain()` (its states, and its third value), `_ended()` and `archive_plan()` say the new rule.
+- **Comments and docstrings.** The `Resolve` comment above `Resolve = Callable` (its "Superseded, Dropped, else closed and done", wrapped across two lines) and the docstrings of `_archived_status()`, `_chain()` (its states, and its third value), `_ended()` and `archive_plan()` say the new rule.
 - **`archive_plan()`** refuses a successor whose end is `unknown-status` (rule 4).
 
 Nothing reads git, the network or a file. The resolver stays what the caller passes in.
