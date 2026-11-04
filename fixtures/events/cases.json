@@ -37,6 +37,7 @@
     "ref-includes acme/tools@v2.4 0123456789abcdef0123456789abcdef01234567",
     "ref-includes acme/tools 0123abc",
     "ref-includes acme/tools@main ABCDEF1",
+    "ref-includes acme/tools@main ghijklm",
     "ref-includes acme/tools@main 012345",
     "ref-includes acme/tools@main 0123456789abcdef0123456789abcdef012345678",
     "ref-includes acme/tools@.hidden 0123abc",
