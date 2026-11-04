@@ -76,11 +76,12 @@ NEEDS = "## Needs the user"  # where an add goes by default (cadence's board con
 
 @dataclass
 class Plan:
-    """A write, built and not yet made: each path's new text, the commit subject, and what the action reports."""
+    """A write, built and not yet made: each path's new text (or None, removed), the commit subject, and what
+    the action reports."""
 
     action: str
     subject: str | None
-    changes: dict[str, str] = field(default_factory=dict)
+    changes: dict[str, str | None] = field(default_factory=dict)  # None: the file is removed
     info: dict = field(default_factory=dict)
 
     def as_json(self) -> dict:
@@ -107,12 +108,25 @@ def read(path: str, missing_ok: bool = False) -> str:
     return text
 
 
-def write(changes: Mapping[str, str]) -> list[str]:
-    """Write every path's new text, both or neither: each to a temporary file beside it, then each renamed
-    into place; when a rename fails, the files already replaced are put back and OSError is raised."""
+def write(changes: Mapping[str, str | None]) -> list[str]:
+    """Write every path's new text, or remove it (None), both or neither: each text to a temporary file beside
+    it (its directory made when missing), then each renamed into place, then each removal; when a step
+    fails, the files already replaced or removed are put back, the directories made are removed, and
+    OSError is raised."""
     temps: list[tuple[str, str]] = []
+    made: list[str] = []
     try:
         for path, text in changes.items():
+            if text is None:
+                continue
+            d = os.path.dirname(os.path.abspath(path))
+            missing = []
+            while not os.path.isdir(d):
+                missing.append(d)
+                d = os.path.dirname(d)
+            for m in reversed(missing):
+                os.mkdir(m)
+                made.append(m)
             fd, tmp = tempfile.mkstemp(prefix=".ledgerboard-", dir=os.path.dirname(os.path.abspath(path)))
             temps.append((path, tmp))
             with os.fdopen(fd, "w", encoding="utf-8", errors="surrogateescape", newline="") as f:
@@ -123,11 +137,11 @@ def write(changes: Mapping[str, str]) -> list[str]:
                 mask = os.umask(0)
                 os.umask(mask)
                 os.chmod(tmp, 0o666 & ~mask)
-        olds: dict[str, bytes | None] = {}
+        olds: dict[str, tuple[bytes, int] | None] = {}
         for p in changes:
             if os.path.exists(p):
                 with open(p, "rb") as f:
-                    olds[p] = f.read()
+                    olds[p] = (f.read(), os.stat(p).st_mode & 0o7777)
             else:
                 olds[p] = None
         done: list[str] = []
@@ -135,14 +149,29 @@ def write(changes: Mapping[str, str]) -> list[str]:
             for path, tmp in temps:
                 os.replace(tmp, path)
                 done.append(path)
+            for path, text in changes.items():
+                if text is None and olds[path] is not None:
+                    os.unlink(path)
+                    done.append(path)
         except OSError:
             for path in done:
                 if olds[path] is None:
                     os.unlink(path)
                 else:
                     with open(path, "wb") as f:
-                        f.write(olds[path])
+                        f.write(olds[path][0])
+                    os.chmod(path, olds[path][1])
             raise
+    except OSError:
+        for _, tmp in temps:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        for m in reversed(made):
+            try:
+                os.rmdir(m)
+            except OSError:
+                pass
+        raise
     finally:
         for _, tmp in temps:
             if os.path.exists(tmp):
