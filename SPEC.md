@@ -992,15 +992,17 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   back into the ledger;
 - **`renumber TD-n --id TD-m`** — an open entry given the id the caller took (`--take`, its nonce, written as `Id
   take`): its file and heading, every entry's Blocked by, Part of and Log `while` naming it, and its rank line.
-  Refused for an archived entry and for an id the ledger or its archive holds. The lines that still name the old
+  Refused for an archived entry, for `TD-0`, and for an id the ledger or its archive holds. The lines that still name the old
   id in prose, in the ledger and in `--also`'s files, are listed (`mentions`) for the caller to judge; prose is
   never rewritten.
 
   A move (`archive`, `reopen`, `renumber`) writes the entry's new file and removes its old one, as one write. The
-  moved file's relative inline links (`](path)`) are rewritten to name the same paths from its new directory
-  (`relink()`), and every link to the file, in the ledger's other files and in `--also <file>…` (the caller's
-  other files, which it found), is pointed at its new path. A URL, an absolute path, a plain anchor and a link
-  in code are left, and paths are compared as text: a link that named no file before names none after;
+  moved file's relative links (inline, `](path)` or `](<path>)` with any title, and reference definitions,
+  `[ref]: path`) are rewritten to name the same paths from its new directory (`relink()`), its links to itself
+  included, and every link to the file, in the ledger's other files and in `--also <file>…` (the caller's other
+  files, which it found), is pointed at its new path. A URL, an absolute path, a plain anchor and a link in a code
+  span or a fenced block are left (an indented code block is read as prose), and paths are compared as text: a
+  link that named no file before names none after. `--why` is required and not empty;
 - **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
   an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
 

@@ -219,16 +219,19 @@ def _today(today: str | date | datetime | None) -> str:
 
 def tid_of(tid: str) -> str:
     """An id at the ledger's width, ``TD-`` and at least three digits (``TD-3`` is ``TD-003``)."""
-    if not ID_ITEM_RE.match(tid or ""):
-        raise Unusable(f"an entry's id is TD-n, not {tid!r}")
+    if not ID_ITEM_RE.match(tid or "") or int(tid[3:]) < 1:
+        raise Unusable(f"an entry's id is TD-n, n from 1, not {tid!r}")
     return f"TD-{int(tid[3:]):03d}"
 
 
 # -- links ---------------------------------------------------------------------------------------------
 
-LINK_RE = re.compile(r"(\]\()([^)\s]+)((?:\s+\"[^\"\n]*\")?\))")  # an inline link, its title kept
+# An inline link's destination (bare, or <in brackets>) and its title ("…", '…' or (…)), kept as written;
+# and a reference definition's destination.
+LINK_RE = re.compile(r"(\]\()(<[^<>\n]*>|[^)\s<]+)((?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'|\([^()\n]*\)))?[ \t]*\))")
+REF_DEF_RE = re.compile(r"^( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^<>\n]*>|\S+)()", re.MULTILINE)
 CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
-FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")  # a fenced code block's opening or closing line
+FENCE_RE = re.compile(r"^[ \t]*(`{3,}|~{3,})")  # a fenced code block's opening or closing line, a list item's too
 URL_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 
@@ -251,10 +254,11 @@ def _code_spans(text: str) -> list[tuple[int, int]]:
 
 
 def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None) -> str:
-    """``text``'s relative inline links (``](path)``, ``](path "title")``), written from directory ``src``,
+    """``text``'s relative links (inline, ``](path)``, ``](<path>)``, a title kept, and reference definitions,
+    ``[ref]: path``), written from directory ``src``,
     rewritten to resolve from directory ``dst``, and a link to a file in ``moved`` (old path → new path)
     pointed at its new path; its anchor and title kept. A URL, an absolute path, a plain anchor and a link
-    inside code are left, and so is every link when ``src`` is ``dst`` and nothing it names moved. Pure: the
+    inside a code span or a fenced block are left (an indented code block is not told from prose), and so is every link when ``src`` is ``dst`` and nothing it names moved. Pure: the
     paths are compared as text, so a link that named no file before names none after."""
     spans = _code_spans(text)
     moved = {os.path.abspath(k): os.path.abspath(v) for k, v in (moved or {}).items()}
@@ -262,7 +266,8 @@ def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None
 
     def fix(m: re.Match) -> str:
         target = m.group(2)
-        path, hash_, frag = target.partition("#")
+        bracketed = target.startswith("<")
+        path, hash_, frag = (target[1:-1] if bracketed else target).partition("#")
         if not path or URL_RE.match(path) or path.startswith("/") or any(a <= m.start() < b for a, b in spans):
             return m.group(0)
         old = os.path.normpath(os.path.join(src_a, path))
@@ -270,9 +275,10 @@ def relink(text: str, src: str, dst: str, moved: Mapping[str, str] | None = None
         if new == old and src_a == dst_a:
             return m.group(0)
         rel = os.path.relpath(new, dst_a).replace(os.sep, "/") + ("/" if path.endswith("/") else "")
-        return f"{m.group(1)}{rel}{hash_}{frag}{m.group(3)}"
+        dest = f"{rel}{hash_}{frag}"
+        return f"{m.group(1)}{f'<{dest}>' if bracketed else dest}{m.group(3)}"
 
-    return LINK_RE.sub(fix, text)
+    return REF_DEF_RE.sub(fix, LINK_RE.sub(fix, text))
 
 
 # -- the resolver --------------------------------------------------------------------------------------
@@ -409,6 +415,12 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
     return Plan(action, None, {path: out}, {"id": entries(out)[0]["id"], "notes": notes})
 
 
+def _why(why: str | None) -> str:
+    if not why or not why.strip():
+        raise Unusable("--why is required: one line, why it moves")
+    return why
+
+
 def _also(also: Mapping[str, str] | None, led: Ledger) -> dict[str, str]:
     """The caller's other files (``--also``), each path and its text; one inside the ledger is refused."""
     out = dict(also or {})
@@ -468,7 +480,8 @@ def plan_archive(led: Ledger, tid: str, why: str, *, pr: int | None = None, poin
     dst = _join(_join(led.path, LEDGER_ARCHIVE), os.path.basename(path))
     if dst in led.files:
         raise Unusable(f"{dst} exists already")
-    out = relink(edit_entry(text, "archive", today=day, why=why, **kw), os.path.dirname(path), os.path.dirname(dst))
+    out = relink(edit_entry(text, "archive", today=day, why=_why(why), **kw), os.path.dirname(path),
+                 os.path.dirname(dst), {path: dst})
     changes: dict[str, str | None] = {path: None, dst: out}
     for dep in plan["rewire"]:
         p, _ = led.entry_file(dep)
@@ -495,7 +508,8 @@ def plan_reopen(led: Ledger, tid: str, why: str, *, also: Mapping[str, str] | No
     dst = _join(led.path, os.path.basename(path))
     if dst in led.files:
         raise Unusable(f"{dst} exists already")
-    out = relink(edit_entry(text, "reopen", today=day, why=why), os.path.dirname(path), os.path.dirname(dst))
+    out = relink(edit_entry(text, "reopen", today=day, why=_why(why)), os.path.dirname(path), os.path.dirname(dst),
+                 {path: dst})
     changes = _relinked(led, {path: None, dst: out}, also, {path: dst})
     notes = _gated(led, changes, also, base=base, resolve=resolve, today=day)
     return Plan("reopen", None, changes, {"id": tid, "moved": {"from": path, "to": dst}, "notes": notes})
@@ -527,6 +541,7 @@ def plan_renumber(led: Ledger, tid: str, new: str, *, take: str | None = None, a
     if take is not None:
         out = edit_entry(out, "set", fields={"Id take": take})
     dst = _join(os.path.dirname(path), f"{new}.md")
+    out = relink(out, os.path.dirname(path), os.path.dirname(dst), {path: dst})
     changes: dict[str, str | None] = {path: None, dst: out}
     rx = re.compile(rf"TD-0*{int(old[3:])}(?!\d)")
     for p, t in sorted(led.files.items()):

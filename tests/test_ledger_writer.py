@@ -173,6 +173,15 @@ class Relink(unittest.TestCase):
                 "```\n[f](x.md)\n```\n")
         self.assertEqual(W.relink(text, "docs/ledger", "docs/ledger/archive"), text)
 
+    def test_every_link_form_moves(self):
+        got = W.relink("[a](../n.md 'q') [b](<../my n.md>) [c](../n.md (p))\n[ref]: ../n.md#x\n",
+                       "docs/ledger", "docs/ledger/archive")
+        self.assertEqual(got, "[a](../../n.md 'q') [b](<../../my n.md>) [c](../../n.md (p))\n[ref]: ../../n.md#x\n")
+
+    def test_a_fence_in_a_list_item_is_code(self):
+        text = "- a step:\n\n      ```\n      [f](../n.md)\n      ```\n"
+        self.assertEqual(W.relink(text, "docs/ledger", "docs/ledger/archive"), text)
+
     def test_a_link_to_a_moved_file_follows_it(self):
         got = W.relink("[x](ledger/TD-001.md#why) [y](ledger/TD-002.md)", "docs", "docs",
                        {"docs/ledger/TD-001.md": "docs/ledger/archive/TD-001.md"})
@@ -196,6 +205,25 @@ class Moves(unittest.TestCase):
             self.assertEqual(plan.info["rewired"], ["TD-002"])
             self.assertIn("**Blocked by:** tools#TD-4", plan.changes[os.path.join(led.path, "TD-002.md")])
             self.assertIsNone(plan.changes[os.path.join(led.path, "TD-001.md")])
+
+
+class MoveInputs(unittest.TestCase):
+    def test_a_moved_entry_keeps_its_links_to_itself(self):
+        e1 = E1.replace("is lost.", "is lost; [the fix](TD-001.md#fix).")
+        with tempfile.TemporaryDirectory() as tmp:
+            led = W.Ledger.open(ledger(tmp, **{"TD-001.md": e1}))
+            arch = W.plan_archive(led, "TD-1", "fixed", today="2026-01-15")
+            self.assertIn("[the fix](TD-001.md#fix)", arch.changes[os.path.join(led.path, "archive", "TD-001.md")])
+            ren = W.plan_renumber(led, "TD-1", "TD-9", today="2026-01-15")
+            self.assertIn("[the fix](TD-009.md#fix)", ren.changes[os.path.join(led.path, "TD-009.md")])
+
+    def test_id_zero_and_an_empty_why_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            for argv in (["renumber", "TD-1", "--id", "TD-0"], ["archive", "TD-1", "--why", " "]):
+                code, _, _ = run(*argv, "--ledger", d, "--today", "2026-01-15")
+                self.assertEqual(code, 2, argv)
+            self.assertEqual(sorted(os.listdir(d)), ["README.md", "TD-001.md"])
 
 
 class Module(unittest.TestCase):
