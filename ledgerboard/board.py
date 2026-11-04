@@ -354,7 +354,7 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
     close = False
     if action == "decide":
         by = who_answered(old, by)
-        close, changes, info = _decide_ledger(old, body, answer, by, day, ledger, board_only, today)
+        close, changes, info = _decide_ledger(board, old, body, answer, by, day, ledger, board_only, today)
         info = {"line": line, **info}
     new = edit_line(body, action, to=when, answer=answer, why=why, reply=text, by=by, today=day, close=close)
     lines[line - 1] = new + eol
@@ -363,7 +363,23 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
     return Plan(action, msg, {board: "".join(lines), **changes}, info)
 
 
-def _decide_ledger(board_text: str, body: str, label: str | None, by: str, day: date, ledger: str | None,
+def _may_answer(board_text: str, gate_: str, by: str) -> None:
+    """``decide_lift()``'s People: and Answered by: checks, for an item it does not lift (another repo's entry):
+    the gate's person and who answered are on `People:`, and under `owner` a decision is answered by its person."""
+    people = board_people(board_text)
+    if people is None:
+        return
+    on = {x.lower() for x in people}
+    person = gate_[len("decision ("):-1] if gate_.startswith("decision") else None
+    if person is not None and person.lower() not in on:
+        raise Refused(f"the gate's person {person} is not on the board's People: ({', '.join(people)})")
+    if by.lower() not in on:
+        raise Refused(f"{by} is not on the board's People: ({', '.join(people)}) — only a listed person answers")
+    if person is not None and (answered_by(board_text) or "owner").lower() == "owner" and by.lower() != person.lower():
+        raise Refused(f"only {person} answers for {gate_} on a board whose Answered by is owner, not {by}")
+
+
+def _decide_ledger(board_path: str, board_text: str, body: str, label: str | None, by: str, day: date, ledger: str | None,
                    board_only: bool, today: str | date | None) -> tuple[bool, dict[str, str | None], dict]:
     """A decide's ledger half (v2.4, SPEC *The board writer*): (whether the answer closes the item, the ledger
     files it changes, what it reports). An item whose Context names one bare ``TD-n`` and one gate is the
@@ -375,13 +391,15 @@ def _decide_ledger(board_text: str, body: str, label: str | None, by: str, day: 
     if ref is None or gate_ is None:
         if ledger is not None or board_only:
             raise Refused("--ledger and --board-only are for a decide item whose Context names one entry and one gate")
-        return False, {}, {}
+        return closes(body, label or "", {}), {}, {}  # a waiting-only answer on a gate item still closes it
     if "#" in ref:
         if ledger is not None:
             raise Refused(f"{ref} is another repo's entry: its lift is a tool PR there, so no --ledger here")
+        _may_answer(board_text, gate_, by)
         return closes(body, label or "", {}), {}, {"entries": [], "board_only": True}
     from . import ledger as L  # the ledger writer imports this module, so it is loaded here, when needed
-    path = ledger or (L.LEDGER_DIR if os.path.isdir(L.LEDGER_DIR) else None)
+    beside = os.path.join(os.path.dirname(board_path) or ".", "ledger")
+    path = ledger or (beside if os.path.isdir(beside) else None)
     if path is None:
         raise Refused(f"the item lifts {gate_} on {ref}: pass --ledger (the v2 directory), or --board-only when "
                       "the ledger is written already")
@@ -581,7 +599,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--set", action="append", default=[], help="rank: TD-n=KEY, a line to set")
     ap.add_argument("--drop", action="append", default=[], help="rank: TD-n, a line to remove")
     ap.add_argument("--ledger", help="rank --action respace: the ledger (a file or a v2 directory); decide: the v2 "
-                                     "ledger the lift writes (default: docs/ledger when it is a directory)")
+                                     "ledger the lift writes (default: ledger/ beside the board, when it is a directory)")
     ap.add_argument("--board-only", action="store_true",
                     help="decide: write the board half alone (the set by= route, whose ledger is written already)")
     ap.add_argument("--fixed", action="append", default=[],

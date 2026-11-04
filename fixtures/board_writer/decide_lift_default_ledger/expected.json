@@ -8,7 +8,7 @@
   "line": 7,
   "notes": [],
   "paths": [
-   "board.md",
+   "docs/board.md",
    "docs/ledger/TD-001.md"
   ],
   "subject": "ledgerboard: decide Go on the export format?: Go (session n/a)"

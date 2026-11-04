@@ -2,7 +2,7 @@
  "argv": [
   "decide",
   "--board",
-  "board.md",
+  "docs/board.md",
   "--line",
   "7",
   "--expect",

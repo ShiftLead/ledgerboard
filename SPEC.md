@@ -940,7 +940,7 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   faults refuses every answer. The caller supplies the name of the person who answered; a commit's author is
   never one, since an agent commits under the person's name;
 - **the decide lift** (v2.4) — a `decide` on an item whose Context names one bare `TD-n` and one gate writes the
-  board and the ledger (`--ledger <v2 directory>`, default `docs/ledger` when it is a directory) as one write, both
+  board and the ledger (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory) as one write, both
   or neither: the entries `decide_lift()` changes, from their texts as they stand (its `People:` and `Answered by:`
   checks, and the ledger writer's refusal, *The ledger writer*), and the board line `edit_line(…, "decide", label,
   by, today, close=closes(item, label, entries after))` — so a lifting answer closes the item when nothing listed
@@ -949,8 +949,10 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   ledger it is refused. **`--board-only`** writes the board half alone, the same line, `closes()` reading the
   ledger as it stands: the `set by=` route, whose `set` has lifted the gate already, so nothing is lifted twice.
   An item whose Context names another repo's entry (`<repo>#TD-n`) is answered on the board alone and stays
-  decided but open, its lift being a tool PR in that repo (`--ledger` refused). `--ledger` and `--board-only` on
-  any other item are a refusal;
+  decided but open, its lift being a tool PR in that repo (`--ledger` refused), after the same `People:` and
+  `Answered by:` checks. An item whose Context names a gate but not one entry is answered on the board alone,
+  closed per `closes()` (a waiting-only answer closes it). `--ledger` and `--board-only` on any item but a lift's
+  are a refusal;
 - **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
 - **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
   lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
