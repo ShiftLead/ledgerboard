@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # release.sh <x.y>        — on a new branch release-v<x.y> from a fresh origin/main, stamp the
 #                           first line of every file in the package (ledgerboard/*.py) with the
-#                           release and that file's hash, run the checks, and commit
+#                           release and that file's hash, write fixtures/MANIFEST (the release and
+#                           every fixture file's sha256, fixtures/run.py --stamp), run the checks, and commit
 #                           "Release v<x.y>". Push it and PR it like any change.
 # release.sh --tag <x.y>  — after that PR has squash-merged, with HEAD at origin/main (main in the
 #                           anchor's checkout, or `git checkout --detach origin/main` in a worktree,
@@ -12,7 +13,8 @@
 # The header is  # ledgerboard v<x.y> sha256:<sha256 of every byte after the first line>
 # — the release travels inside each file, so a consumer's copy proves which release it is
 # (fixtures/run.py --check-header). Between releases a PR that changes the package may leave the
-# headers as they are: only a tagged commit's headers are checked. Pushes nothing.
+# headers as they are: only a tagged commit's headers are checked. The fixtures carry the same release in
+# fixtures/MANIFEST, checked by the same --check-header. Pushes nothing.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 tag=0
@@ -43,8 +45,18 @@ for p in sorted(pathlib.Path("ledgerboard").glob("*.py")):
     assert first.startswith(b"# ledgerboard "), (p, first)
     p.write_bytes(f"# ledgerboard v{sys.argv[1]} sha256:{hashlib.sha256(rest).hexdigest()}\n".encode() + rest)
 PY
+python3 fixtures/run.py --stamp "$v"
+if ! (cd fixtures && git ls-files -z) | python3 fixtures/run.py --check-tracked; then
+    if git ls-files --error-unmatch fixtures/MANIFEST >/dev/null 2>&1; then
+        git checkout -q -- fixtures/MANIFEST
+    else
+        rm -f fixtures/MANIFEST
+    fi
+    exit 2
+fi
 python3 fixtures/run.py --check-header
 python3 fixtures/run.py
 python3 -m unittest discover -s tests -q
-git commit -qm "Release v$v" -- ledgerboard
+git add fixtures/MANIFEST
+git commit -qm "Release v$v" -- ledgerboard fixtures/MANIFEST
 echo "committed Release v$v on release-v$v — push it, PR it, merge it, then: ./release.sh --tag $v"
