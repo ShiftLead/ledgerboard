@@ -936,3 +936,15 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         for bad in (("2.x", 3), ("2.4", -1), ("2.4", True)):
             with self.assertRaises(L.Refused):
                 L.migrate_subject(*bad)
+
+    def test_a_line_break_that_split_misses_numbers_as_parse_board_does(self):
+        base, head = self.trees("a decide lift")
+        for b in ("\x0c", " "):  # str.splitlines() breaks on these, as parse_board() numbers lines
+            with self.subTest(brk=repr(b)):
+                odd = lambda t: t.replace("\n\n", "\n" + b + "\n", 1)  # noqa: E731
+                bt, ht = {**base, L.BOARD_PATH: odd(base[L.BOARD_PATH])}, {**head, L.BOARD_PATH: odd(head[L.BOARD_PATH])}
+                self.assertEqual(L.tripwire(bt, ht, "", "acme/widgets"), [])
+                new = ht[L.BOARD_PATH] + "- [ ] decide 2026-01-06 (n/a) — Which store? Context: TD-100 decision (pat). " \
+                    "Due: 2026-01-20. Answers: Files | Db.\n"
+                got = L.uncovered_decisions(bt, {**ht, L.BOARD_PATH: new}, [], "acme/widgets")[0]
+                self.assertEqual([k for k, _ in got], ["decision-no-lift"])

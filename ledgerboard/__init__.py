@@ -5060,8 +5060,7 @@ def _new_log(base: str | None, head: str) -> list[dict]:
 def _board_line_reads(text: str) -> dict[str, list[tuple[str, BoardItem]]]:
     """Every item line of a board's (or archive's) text by its item key: each (line, item), read open or closed."""
     out: dict[str, list[tuple[str, BoardItem]]] = {}
-    for ln in text.split("\n"):
-        ln = ln.rstrip("\r")
+    for ln in text.splitlines():
         if ITEM_RE.match(ln):
             got = parse_board(ln, warn=False)
         elif CLOSED_ITEM_RE.match(ln):
@@ -5105,8 +5104,9 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
     b_open, _, _ = _tree_ledger(base_tree)
     h_open, _, _ = _tree_ledger(head_tree)
     b_board, h_board = _tree_board(base_tree, repo), _tree_board(head_tree, repo)
-    b_lines = b_board[2].split("\n")
-    h_reads = _board_line_reads(h_board[2] + "\n" + h_board[3])
+    b_lines, h_lines = b_board[2].splitlines(), h_board[2].splitlines()  # as parse_board() numbers them
+    b_archived = set(b_board[3].splitlines())
+    h_reads = _board_line_reads("\n".join([*h_lines, *(x for x in h_board[3].splitlines() if x not in b_archived)]))
     people = board_people(b_board[2])
     anyone = (answered_by(b_board[2]) or "").lower() == "any"
     flags: list[tuple[str, str]] = []
@@ -5137,7 +5137,7 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
             cov_h = [(it, s) for _, it, s in covers(htext, gate, [h_board], repo) if s in COVERING]
             answered_here = []  # the covering items the head answers: (base item, head line, head item)
             for it, s in cov_b:
-                bl = b_lines[it.line - 1].rstrip("\r")
+                bl = b_lines[it.line - 1]
                 for hl, hit in h_reads.get(item_key(bl), []):
                     closed = bool(CLOSED_ITEM_RE.match(hl))
                     gained = hit.decided is not None and (hit.decided, hit.decided_by) != (it.decided, it.decided_by)
@@ -5154,11 +5154,11 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                     flags.append(("tripwire-no-board-item", f"{tid} lifts {gate} with no board item, but an open "
                                   "item on this repo's board asks it — answer that item"))
             elif suffix == "; shared board item left open":
-                still = {item_key(b_lines[it.line - 1].rstrip("\r")) for it, _ in cov_b} & {
-                    item_key(h_board[2].split("\n")[it.line - 1].rstrip("\r")) for it, _ in cov_h}
+                still = {item_key(b_lines[it.line - 1]) for it, _ in cov_b} & {
+                    item_key(h_lines[it.line - 1]) for it, _ in cov_h}
                 shared = False
                 for it, _ in cov_h:
-                    if item_key(h_board[2].split("\n")[it.line - 1].rstrip("\r")) not in still:
+                    if item_key(h_lines[it.line - 1]) not in still:
                         continue
                     ref, _g = _item_gate(it.text)
                     listed = [x for x in [ref, *it.parts] if x and "#" not in x and _num(x) != num]
@@ -5216,11 +5216,11 @@ def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, st
                 flags.append(("decision-elsewhere", f"{tid} gains {gate}, and this repo's board does not list {person}: "
                               + (f"covered on {where}, which not every machine reads" if where else
                                  "no board read covers it — the sweep files its item")))
-    base_keys = {item_key(ln.rstrip("\r")) for ln in str(base_tree.get(BOARD_PATH) or "").split("\n")
+    base_keys = {item_key(ln) for ln in str(base_tree.get(BOARD_PATH) or "").splitlines()
                  if ITEM_RE.match(ln) or CLOSED_ITEM_RE.match(ln)}
-    lines = own[2].split("\n")
+    lines = own[2].splitlines()  # as parse_board() numbers them
     for it in parse_board(own[2], warn=False):
-        ln = lines[it.line - 1].rstrip("\r")
+        ln = lines[it.line - 1]
         if it.kind != "decide" or item_key(ln) in base_keys:
             continue
         _, gate = _item_gate(it.text)
@@ -5274,6 +5274,8 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
     if len(b_lines) != len(h_lines) or len(diff) != 1:
         return review("lift-board-diff", "the board diff is not one item line changed in place")
     end = "\r" if b_lines[diff[0]].endswith("\r") else ""
+    if h_lines[diff[0]].endswith("\r") != bool(end):
+        return review("lift-board-diff", "the answered line changes its line ending")
     bl, hl = b_lines[diff[0]].removesuffix(end), h_lines[diff[0]].removesuffix(end)
     if not ITEM_RE.match(bl) or not (ITEM_RE.match(hl) or CLOSED_ITEM_RE.match(hl)) or item_key(bl) != item_key(hl):
         return review("lift-board-diff", "the changed board line is not one open item answered in place")
