@@ -1,0 +1,287 @@
+# TD-050: the writer of a decide's `Parts:`
+
+**Status:** Draft 1, 2026-11-04 (session lb-designer). Class: **wide** (a vendored, published format: a new
+`item_line()` keyword, a new pure function and a new `board.py add` option, which both consumers vendor; cap 6
+rounds, cadence.md §4.8). Rounds: in progress (the record: [docs/reviews/TD-050.md](../reviews/TD-050.md)).
+
+**Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
+
+## The problem
+
+`Parts:` has been read, ordered and keyed since v2.3 (SPEC *The board*, `Parts:`), and v2.4's `covers()`,
+`decide_lift()` and `closes()` all read it. No writer writes it: `item_line()` takes no `parts=` (and its
+read-back refuses any line that reads back with parts, `ledgerboard/__init__.py`, the `got[0].parts` test at the
+end of `item_line`), and `board.py`'s `TAKES["add"]` holds no `parts`. SPEC says so: "What an answer does to the
+parts it lists is v2.4's, and so is its writer." Target design §7.1's v2.3 row: "the writer that fills it and
+checks the parts' gates comes in v2.4". v2.4 shipped without it.
+
+So a design's end-of-rounds item cannot hold its builds. The shape target design §6 (*One go for a parent's
+parts*) agreed is one `decide` whose Context names the parent and its gate, `Context: TD-12 decision (Paul).
+Parts: TD-15, TD-16.`, which `covers()` counts as covering each listed part's gate, and whose one answer
+`decide_lift()` applies to all of them. Without the writer, a consumer has no tool to write it, and the gate sweep
+files one `Go | Not yet` item per held build beside the parent's.
+
+## What is already settled
+
+These are written down, and this design takes them as given:
+- the field's form, place, order and key (SPEC *The board*, `Parts:`; *The form the writers write*; the grammar
+  appendix's `parts`), and the line checks `item_problem()` already makes (only on a `decide`, ids each once,
+  right after the Context, a period after the ids);
+- **the writer refuses a snapshot whose parts do not all carry the gate, or are not all `Part of` the named
+  parent** (target design §6, *One go for a parent's parts*, agreed 2026-11-02). So TD-050's open option "no check
+  at write time" is out;
+- the parent need not carry the gate itself; the item names exactly one entry; parts that need a different Ask get
+  their own items (same section);
+- what an answer does to the parts it lists (SPEC *The decide lift*, *Closing on the answer*).
+
+## Decisions
+
+**D1. It ships in v2.5, the next tagged release.** A release is `v<major>.<minor>` (SPEC *Versions*), so there is no
+v2.4 patch to put it in; v2.4 is tagged, and SPEC already labels the next release's additions v2.5 (*Host-log checks*). It
+is no version event: the item key and the line's form are unchanged, and v2.3 and v2.4 read every line it writes.
+
+**D2. The work is split as the package splits** (target design §1.1): the line in the module, the ledger in the
+file writer.
+- **`item_line(…, parts=None)`** writes the field and checks what the line alone can show. `parts` is a list of
+  ids, a list or tuple of strings, each exactly `TD-<digits>` (no stripping, no other case: `td-9` and ` TD-9` are
+  refused, and a bare string is refused as not a list), written ` Parts: <ids>.` right after the Context (ahead of the `Due:`), ordered by number (`TD-9` before
+  `TD-10`), separated by `, `, each as the caller spelled it. It is refused on any kind but `decide`; for an empty
+  list; for an id that is not a bare `TD-n`; for two ids of one number (`TD-15`, `TD-015`); for an id of the
+  Context entry's number; and unless the Context names exactly one entry, a bare `TD-n`, and exactly one gate,
+  which is a `decision (<p>)` (as `_item_gate()` reads them); and unless one of its answers lifts (`Go` among the
+  answers when `lifts` is not given, else `lifts` given), since a snapshot no answer lifts is a question no press
+  can act on. The read-back test checks the line reads back with
+  exactly those parts, in place of refusing any.
+- **`parts_problems(item_line, entries, archived=()) -> list[str]`** (new, pure) checks a snapshot against the
+  ledger, and never raises: it lists problems, each a fixed string.
+  - **Its inputs.** `entries` maps id to text, open and archived texts alike, read as `decide_lift()` reads them:
+    ids compared by number (`TD-15` in the line finds the entry `TD-015`), the first key of a number winning, a
+    key that is not an id ignored; an id it lacks is missing. `archived` holds the ids the caller read from the
+    ledger's archive. An entry is archived when its id is in `archived` (an archived entry may read `Open`, SPEC
+    *Superseded and dropped*) or its Status's first word is an archived one (`ARCHIVED_WORDS`). A gate is carried
+    as `decide_lift()` reads it (`_carried`: the person compared case-insensitively); an archived entry carries
+    nothing. The parent may carry the gate or not.
+  - **Nothing to judge, `[]`:** a string that is not an open item line, an item that is not a `decide`, or one
+    with no `Parts:`.
+  - **The Context first.** A `decide` with `Parts:` whose Context does not name exactly one entry, a bare `TD-n`,
+    and one `decision (<p>)` gives the one problem `context: not one entry and one decision`, and nothing else is
+    judged. Otherwise the Context entry missing gives `<ref>: missing`, archived `<ref>: archived`, and the parts
+    are judged still (each `Part of` is compared with the Context's id, by number, which needs no text).
+  - **Then each part, in the line's order, its first fault alone**, in this order: `<id>: another repo's entry`
+    (not a bare `TD-n`), `<id>: the Context's entry` (its number), `<id>: missing`, `<id>: archived`, `<id>: not
+    Part of <ref>` (its `Part of` names another, or it has none), `<id>: does not carry <gate>`. `<id>` and
+    `<ref>` are as the line spells them, `<gate>` as the Context writes it.
+- **`board.py add --parts TD-a,TD-b`** passes the list to `item_line()`, reads the ledger (`--ledger <v2
+  directory>`, else `ledger/` beside the board when it is a directory, as `decide` does), and refuses the write
+  (exit 1) when `parts_problems()` names any problem, listing them all. Its checks run in this order, the first
+  that fails deciding the exit and the message, with `--plan` as with a write:
+  1. the options: `--parts` with `--decided`, `--ledger` without `--parts`, an empty piece (exit 1);
+  2. `item_line()` (exit 1): the kind, the ids' form (so `other#TD-9` is refused here, and `parts_problems()`'s
+     check of it serves other writers), their numbers, the Context, a lifting answer, as `_lifting()` reads one
+     (any case, never a waiting-only label);
+  3. the ledger: none found (exit 1), or one that cannot be used (exit 2);
+  4. `parts_problems()` (exit 1, every problem);
+  5. the board's gate, `board_problems()`, as for every `add`.
+  - `--parts` may be given more than once, as `--answer` and `--lift` are; each value is split on `,`, each piece
+    stripped of whitespace, and an empty piece (`TD-15,`) is a refusal.
+  - It writes each id as given, as it writes the Context; `plan_add` gains `parts` and `ledger` keywords.
+  - It hands `parts_problems()` the open and the archived text of the Context entry and of each part, each read
+    through `Ledger.entry_file(tid_of(id))` and `files[path]`, as `_decide_ledger` reads them, but keeping the
+    archived ones, which `decide`'s ledger half drops, and naming them in `archived` (the `archived` flag
+    `entry_file` returns); an id `entry_file` refuses is skipped, so it is a listed problem (missing), never a
+    usage error.
+  - No `--ledger` and no `ledger/` beside the board is a refusal naming `--ledger` (exit 1). The ledger is opened
+    as `_decide_ledger` opens it, `Ledger.open` then `_writable`, so an explicit `--ledger` that cannot be used
+    (missing, a v1 ledger, a newer major) is exit 2, as for `decide`.
+  - `TAKES["add"]` gains `parts` and `ledger`, `DEFAULTS` gains `"parts": []`, and `--parts` is an `append` option;
+    `--ledger` on an `add` without `--parts` is then a `Refused` (exit 1), not argparse's usage error.
+  - `--parts` combines with `--said` and `--by` (both lines `plan_add` composes carry it). `--parts` with
+    `--decided`, and `--ledger` on an `add` without `--parts`, are refused.
+
+**Why the check is at write time and in the writer.** `item_line()` is pure and reads no file (AGENTS.md), and
+`board_problems()`, the board's gate, has no ledger, so neither can check a part's `Part of` or gate. A snapshot
+written unchecked would let `covers()` count a build as covered by an item whose answer `decide_lift()` then
+refuses (a part not `Part of` the parent), leaving the person a question no press can answer. `parts_problems()`
+is pure over texts the caller passes, as `pickable()`'s resolver and `decide_lift()`'s entries are, so a consumer
+writing a line by other means calls the same check. It is stricter than `decide_lift()` on purpose: a part
+that does not carry the gate is refused at write time, where at answer time `decide_lift()` skips it and logs `gate
+lift skipped` (the part lost the gate after the question was asked). An archived part is where they differ most:
+`decide_lift()` skips one whose Status is an archived word and whose text it is given; `board.py decide` today gives
+it no text for an entry in the archive directory (`_decide_ledger` keeps open entries alone), so the lift refuses
+the whole answer as a part missing. That is a gap in `decide`, not here: B3 closes it, giving `decide_lift()` the same `archived`.
+
+**Why ordered by number, and spelled as given.** The snapshot is part of the item key, "since a changed snapshot
+is a different question". The same parts in another order are the same question, so the writer orders them. Their
+spelling is the caller's, as the Context's entry is on every item: a v2 ledger pads its ids (`TD-009`) and the sweep
+writes an entry's id as the ledger spells it, where a caller of `item_line()` writes what it was given, and every reader (`covers()`, `decide_lift()`, `closes()`) compares
+ids by number, so a spelling changes a key but never a meaning. Spelling one canonical way would be a rule for
+every ref on the board, not for this field.
+
+**Why bare ids only.** `decide_lift()` refuses a `<repo>#TD-n` part ("a part is Part of its parent, in the same
+ledger"), and `covers()` finds a part through its own `Part of`, in its own ledger. A cross-repo Context entry
+(`<repo>#TD-n`) is refused for the same reason: its parts live in a ledger this writer is not given.
+
+**Why a decision gate only.** Target design §6 has the parent item name "a person's gate", and the case it serves
+is a design's builds, held on the person's go. An `event (<name>)` gate is matched by its name, but each entry
+carries its own check section, so one name on a parent and its parts can be different checks, which one `Drop the
+gate` would lift together. The writer refuses it for now; loosening a writer's refusal later moves nothing that is
+read, where tightening one would leave lines already written. The reader and `decide_lift()` are unchanged and
+still read an event snapshot written by hand.
+
+**D3. Nothing else changes.** No edit writes or rewrites `Parts:` (a changed snapshot is a new item: close the old
+one, add the new); `item_problem()`, `canonical_item()`, `covers()`, `decide_lift()`, `closes()` and `sweep()` are
+unchanged; the sweep still files per-entry items for gates nothing covers, and a parent item written by this
+writer is what covers them.
+
+## Consumers
+
+agent-cadence's `board_edit.py` passes `add` through, so `--parts` needs only its vendor PR (its TD-221, filed).
+ShiftLead's Queue shows the field (its TD-1378, filed). No new consumer entry is needed. A consumer writes
+`Parts:` only once every reader of its board runs v2.3, which every consumer already does.
+
+## The SPEC text the builds land
+
+Each build lands only text that is true once it merges: B1's text names no `board.py` option, and B2 adds those
+clauses.
+
+**1. *The board*, the `Parts:` paragraph.** Its last sentence, "What an answer does to the parts it lists is
+v2.4's, and so is its writer.", becomes, in B1:
+
+> What an answer does to the parts it lists is *The decide lift*'s (v2.4). `item_line(parts=)` writes it, and
+> `parts_problems()` checks it against the ledger (v2.5, *Edits*).
+
+and B2 inserts, after "`item_line(parts=)`", " and `board.py add --parts`" (so "… `item_line(parts=)` and
+`board.py add --parts` write it, …").
+
+**2. *Edits*, *A new item*** (B1). The signature gains `parts`:
+`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts,
+parts)`, and the one-line form becomes `… — <text> Context: <context>.[ Parts: <ids>.] Due: <due>.` After the
+sentence on `Lifts: …`, add:
+
+> A decide's `parts` (v2.5) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated
+> by `, `, each as given. It is refused on any kind but `decide`, for an empty list, for an id that is not a bare
+> `TD-n` or shares its number with another or with the Context's entry, unless the Context names exactly one
+> entry, a bare `TD-n`, and one gate, a `decision (<person>)`, and unless one of its answers lifts (as *Closing on
+> the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written,
+> and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling
+> is a different key.
+
+and after the paragraph on `decided_line()`, a new paragraph:
+
+> **A snapshot against the ledger** (`parts_problems(item_line, entries, archived=())`, v2.5) lists, and never
+> raises, why a `decide` line's `Parts:` does not match `entries` (id to text, open and archived alike, read as *The
+> decide lift* reads them: by number, the first of a number winning, an id they lack missing). An entry is
+> archived when its id is in `archived`, the ids read from the ledger's archive, or its Status is an archived one.
+> A line that is no open `decide`, or carries no `Parts:`, gives `[]`. One whose Context does not name exactly one
+> bare `TD-n` and one `decision (<person>)` gives `context: not one entry and one decision` alone. Otherwise the
+> Context entry gives `<ref>: missing` or `<ref>: archived`, and each part, in the line's order, its first fault
+> of `<id>: another repo's entry`, `<id>: the Context's entry`, `<id>: missing`, `<id>: archived`, `<id>: not Part
+> of <ref>`, `<id>: does not carry <gate>`. It is stricter than *The decide lift*, which skips a part that no
+> longer carries the gate: the snapshot is checked when the question is asked, the lift when it is answered. The
+> line alone cannot show these, so `item_line()` does not check them; a writer that reads the ledger calls it.
+
+**3. *The board writer*, the `add` bullet** (B2). After "`--hide-until`)", add:
+
+> ; with `--parts TD-a,TD-b` (v2.5; repeatable, split on `,`), a decide's snapshot (`item_line(parts=)`), read against the ledger (`--ledger <v2 directory>`, default `ledger/`
+> beside the board when it is a directory, its open and archived entries) and refused, with every problem, when
+> `parts_problems()` names any, or when no ledger is found; the line's own refusals come before the ledger is read. `--parts` with `--decided`, and `--ledger` without
+> `--parts`, are refused
+
+and in the exit table, "or, for `decide`, a ledger that cannot be used as asked" becomes "or, for `decide` and
+`add --parts`, a ledger that cannot be used as asked".
+
+**4. *Versions*.** A paragraph after v2.5's others, in B1:
+
+> **v2.5 gives `Parts:` its writer** (*Edits*): `item_line(parts=)` and `parts_problems()`. Nothing read changes:
+> v2.3 and v2.4 read every line it writes, and no key moves.
+
+and B2 changes "(*Edits*): `item_line(parts=)` and `parts_problems()`" to "(*Edits*, *The board writer*):
+`item_line(parts=)`, `parts_problems()` and `board.py add --parts`".
+
+The grammar appendix is unchanged: `parts` and its "each id once" rule are there since v2.3.
+
+## Fixtures
+
+Fixture names are invented (`pat`), never a person's (AGENTS.md).
+
+`fixtures/edit` (`item_line`):
+- a `decide` with `parts=["TD-10", "TD-9"]`, Context `TD-4 decision (pat)`, a Due, answers and a detail block:
+  the line carries ` Parts: TD-9, TD-10.` between the Context and the `Due:` (numeric, not lexical, order),
+  `item_problem()` gives None, and the key holds the field;
+- `parts=["TD-015"]` is written `TD-015` (the caller's spelling);
+- refused: an `act` with parts; a decide whose answers are `Yes | No` with no `lifts`; `parts="TD-9"` (a
+  string); `td-9`; ` TD-9`; `parts=[]`; `TD-15` and `TD-015`; `other#TD-15`; the Context's own `TD-4`, and
+  `TD-004`; a Context naming two entries; a Context naming an entry and no gate; a Context naming
+  `TD-4 event (build-green)`; a Context naming `other#TD-4`.
+
+`parts_problems()`, a new `parts_problems` key in `fixtures/sweep/cases.json`, each case carrying its own `entries`
+(id to text) and, where it needs one, its own board text, so the sweep's shared `ledger.md` and boards, and every
+`runs` and `rerun` expectation, are untouched:
+- matching snapshots, each `[]`: `Context: TD-4 decision (pat). Parts: TD-9, TD-10.` with both parts `Part of:
+  TD-4` carrying `decision (pat)` and the parent carrying none; the same with the parent carrying it; the parts
+  carrying `decision (Pat)` (the person in another case); the line listing `TD-9` and `TD-10` for the ledger's `TD-009` and `TD-010`;
+- one problem each, its string as above: a part `Part of` another entry; a part with no `Part of`; a part not
+  carrying the gate; a part archived by its Status; a part named in `archived` whose Status reads `Open`; a part
+  missing; a part `other#TD-9`; a part `TD-04`; the Context entry archived; the Context entry missing;
+- order: two faulty parts, listed in the line's order; one part both not `Part of` the parent and not carrying the
+  gate, giving `not Part of` alone; the Context entry missing with a faulty part, giving both;
+- `entries` holding `TD-9` and `TD-009` (the first wins), and a key that is no id (ignored);
+- `context:`, alone: a Context naming two entries; naming `TD-4 event (build-green)`; naming `other#TD-4`;
+- `[]`: an `act` line, a `decide` with no `Parts:`, a closed `- [x]` decide, a string that is no item;
+- for each matching case, `covers()` over its line, on a board that is the repo's own (named by the `repo` the
+  case gives, as `acme/widgets` is in the sweep's cases, since a bare `TD-n` is read only there) and whose
+  `People:` lists `pat`, reads each listed part, one by one, as covered (`open`) by the parent's item;
+- the cross-check with *The decide lift*: for each matching case, `decide_lift()` answered `Go` by `pat`, with `board_people=["pat"]`, accepts
+  it and changes every listed part; for the not-`Part of`, no-`Part of`, missing and `other#TD-9` cases it refuses;
+  for the Context entry archived or missing and a `context:` case it refuses; for the not-carrying case and the
+  part archived by its Status (its text given) it accepts and logs `gate lift skipped`, where the two differ.
+
+`fixtures/run.py` gains what runs these: `parts` in the `edit` runner's `item_line` keywords, the
+`parts_problems` loop in `sweep_cases()` (guarded by `hasattr(L, "parts_problems")`, as it guards `sweep`), with
+its `covers()` and `decide_lift()` checks, and a v2.5 line in its docstring.
+
+`fixtures/board_writer`:
+- `add_parts`: the line written, its `--json` output, `ledger/` found beside the board;
+- `add_parts_ledger`: the same through `--ledger`;
+- `add_parts_order`: `--parts TD-10,TD-9` against the ledger's `TD-009.md` and `TD-010.md`, written
+  `Parts: TD-9, TD-10.` (ordered, spelled as given);
+- `add_parts_split`: `--parts "TD-9, TD-10"` and `--parts TD-9 --parts TD-10` write the same line;
+- `add_parts_said`: with `--said` and `--by`, the line carries both, and the subject keeps the words out;
+- `add_parts_archived_part`: a part found only in the archive: refused (exit 1), the problem `archived`;
+- refused (exit 1, files unchanged), each with a usable `ledger/` beside the board unless named: `add_parts_not_part_of`,
+  `add_parts_gate_gone`, `add_parts_no_ledger` (none), `add_parts_on_act`, `add_parts_on_act_no_ledger` (none: the
+  kind's refusal, step 2, before the ledger's), `add_parts_xrepo` (`other#TD-9`: `item_line()`'s refusal),
+  `add_parts_decided`, `add_parts_empty_piece` (`TD-9,`), `add_ledger_without_parts`;
+- `add_parts_on_act_v1` (an `act` with a v1 `--ledger`): exit 1, the kind's refusal, the ledger never opened;
+- `add_parts_missing` (a part the ledger holds in neither its open nor its archived files): exit 1, the problem
+  listed;
+- `add_parts_ledger_v1` (a v1 ledger file passed as `--ledger`) and `add_parts_ledger_none` (a `--ledger` path
+  that does not exist): exit 2;
+- `add_parts_context_archived` (the parent in `archive/`): exit 1, `TD-4: archived`;
+- `add_parts_archived_dir` (a part in `archive/` whose Status reads `Open`): exit 1, `TD-9: archived`;
+- `add_parts_plan`: `--plan` prints the line and writes nothing;
+- `add_parts_no_kind`: `--parts` with no `--kind`: refused (exit 1), the kind's refusal.
+
+## The builds
+
+Filed on Paul's go, each `**Part of:** TD-050`:
+- **B1, the module half:** `item_line(parts=)` and `parts_problems()`, B1's SPEC text (1, 2 and 4 as above), the
+  `edit` and `sweep` fixtures above, and `fixtures/run.py`'s runners for them. Done when those fixtures pass and
+  that SPEC text lands with the code.
+- **B2, the file writer:** `board.py add --parts` and `--ledger` on `add`, B2's SPEC text (3, and its clauses in 1
+  and 4), the `board_writer` fixtures above, and `board.py`'s own text: its usage block, the module docstring's
+  exit line and the `--ledger` help. SPEC's v2.4 exit note under *Versions* is history and stays. Blocked by B1.
+  Done when those fixtures pass and that SPEC text lands with the code.
+- **B3, `decide` and an archived part** (found while designing; independent of B1 and B2): `decide_lift()` gains `archived=()`, read as `parts_problems()` reads
+  it: a listed part whose id is in it carries nothing, so a lifting answer skips it and logs `gate lift skipped`,
+  whatever its Status reads. `board.py decide` hands `decide_lift()` the texts of listed parts in the archive
+  directory too, naming them in `archived`, so a part archived after the question was asked is skipped and logged
+  as *The decide lift* says for a part that no longer carries the gate, in place of refusing the whole answer as a
+  part missing. The Context entry stays open-only (an archived one is refused, as SPEC says). `lift_pr_verdict()`
+  passes no `archived`, so a lift PR whose parts were archived meanwhile still takes ordinary review. SPEC *The
+  decide lift* and *The board writer*'s decide-lift bullet say so. Done when a `lift` fixture shows `archived`
+  skipping a part whose Status reads `Open`, a `board_writer` fixture shows a part moved to `archive/` skipped and
+  the others lifted, and that SPEC text lands with the code.
+
+Target design §7.1's v2.3 row is amended by a dated note under the table, as TD-045's is, in this plan's PR; and
+§6 *One go for a parent's parts* by a dated note naming the writer's decision-only rule.
