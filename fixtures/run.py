@@ -14,7 +14,7 @@ the module instead of comparing — for the ledgerboard repo only, after a delib
 review the diff. ``--check-header`` checks only the first line of every ``*.py`` file in the
 package: a release's ``# ledgerboard v<x.y> sha256:<hex>`` whose hash is that of every byte after
 the first line, the same release in each (exit 1 when one is not a release header, its hash does
-not match, or two name different releases). It then checks this set's ``MANIFEST`` (v2.4): the release it
+not match, or two name different releases). It then checks this set's ``MANIFEST`` (v2.5): the release it
 names and the sha256 of every other file here, which must match, with no file missing or added, and the same
 release as the package (exit 1 on any difference). ``--stamp <x.y>`` writes that ``MANIFEST`` for this set,
 and ``--check-tracked`` compares its paths with the NUL-separated paths on stdin (what git tracks, which
@@ -160,14 +160,14 @@ def headers_problem(path: Path) -> str | None:
     return None
 
 
-# The set's release (v2.4, TD-040): fixtures/MANIFEST, a release line and `<sha256>  <path>` for every other
+# The set's release (v2.5, TD-040): fixtures/MANIFEST, a release line and `<sha256>  <path>` for every other
 # file of the set, sorted by the path's UTF-8 bytes. `--stamp` writes it, `--check-header` checks it beside the
 # package's headers and `--check-tracked` compares it with what git tracks (piped in: this file runs no git).
 MANIFEST = "MANIFEST"
 RELEASE_LINE_RE = re.compile(r"# ledgerboard v([0-9]+\.[0-9]+) fixtures")
 RELEASE_ARG_RE = re.compile(r"[0-9]+\.[0-9]+")
 ENTRY_HEAD_RE = re.compile(r"[0-9a-f]{64}  ")
-NO_MANIFEST = "no MANIFEST — this set names no release (a set from before v2.4 is its tag's)"
+NO_MANIFEST = "no MANIFEST — this set names no release (a set from before v2.5 is its tag's)"
 NOT_A_FILE = "MANIFEST is not a file"
 NOT_LF_TEXT = "MANIFEST is not UTF-8 text with LF line endings and a final LF"
 
