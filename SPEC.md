@@ -2,7 +2,7 @@
 
 This is the formats' one definition in prose; the module, `ledgerboard/__init__.py`, is the one implementation and
 `fixtures/` the cases any implementation must reproduce. Where this text and the module disagree,
-the fixtures decide, and the disagreement is a bug here. From v2.4 the set names the release it belongs
+the fixtures decide, and the disagreement is a bug here. From v2.5 the set names the release it belongs
 to (*Versions*). *What to do* with a field — lanes,
 routing, who may write what, when a sweep runs — is a consumer's, never the format's.
 
@@ -1213,7 +1213,11 @@ and the `---` pair its table's removal leaves empty becomes one, so a v1 ledger 
 `README.md` from one split by v2.3; a README already written is not touched, and every v2 file reads as before.
 `split_notes()` is new.
 
-**v2.4 stamps the fixtures with their release:** `fixtures/MANIFEST` names the release and lists the sha256 of
+**v2.4 adds notes on a hide** (*The board*, *The board writer*): `item_notes()` is new, `item_record()` gains
+`notes`, and `board.py`'s writes that leave an open line report them. Nothing is read differently: every line reads
+and keys as in v2.3, and a v2.3 reader of `item_record()` by key ignores the new one.
+
+**v2.5 stamps the fixtures with their release:** `fixtures/MANIFEST` names the release and lists the sha256 of
 every other file in the set, so a copy of the set proves which release it is, as each package file's first
 line does, and an implementation of release `x.y` runs the set stamped `x.y`. Its first line is `# ledgerboard
 v<x.y> fixtures`. Each later line is `<sha256>  <path>` (64 lower-case hex digits and two spaces, as
@@ -1222,12 +1226,8 @@ v<x.y> fixtures`. Each later line is `<sha256>  <path>` (64 lower-case hex digit
 paths' UTF-8 bytes, every line ending in LF. The hash is of the file's bytes as stored. A case names no
 release of its own: the set's release is the one whose module wrote every expected output in it. A release
 stamps the manifest when it stamps the package; between releases it is left as it is, and only a release's is
-checked (`fixtures/run.py --check-header`). A set from before v2.4 carries no manifest; its release is its
+checked (`fixtures/run.py --check-header`). A set from before v2.5 carries no manifest (v2.4 was tagged before the manifest landed); its release is its
 tag's. Nothing a reader reads changes.
-
-**v2.4 adds notes on a hide** (*The board*, *The board writer*): `item_notes()` is new, `item_record()` gains
-`notes`, and `board.py`'s writes that leave an open line report them. Nothing is read differently: every line reads
-and keys as in v2.3, and a v2.3 reader of `item_record()` by key ignores the new one.
 
 ## Appendix: grammar
 
