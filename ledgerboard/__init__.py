@@ -3333,6 +3333,7 @@ _ENTRY_ARGS = {"set": {"fields"}, "note": {"words"}, "edit": {"section", "words"
                "archive": {"why", "pr", "pointer", "as_is", "superseded_by", "dropped"}, "reopen": {"why"},
                "renumber": {"new"}, "rename_ref": {"old", "new"}}  # each action's keyword arguments
 _DATED_ACTIONS = ("note", "archive", "reopen")  # the actions that write today's date
+_TODAY_ACTIONS = _DATED_ACTIONS + ("set",)  # the actions that take today: set only to date a gate it adds (v2.5)
 PR_IN_TEXT_RE = re.compile(r"#\d+")  # a consumer reads the first `#<digits>` of a Resolved line as its PR
 ISO_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")  # the one form a date is written in
 
@@ -3631,6 +3632,19 @@ def gate_age(text: str, gate: str) -> date | None:
     return date.fromisoformat(added.group(0)) if added else None
 
 
+def gate_added(text: str, gate: str) -> date | None:
+    """When ``gate`` (as written in Blocked by) was added, on one entry (v2.5, SPEC *The Log*): the date of
+    the last ``gate added`` Log line for it in the Log's order (never by date), compared as ``gate_age()``
+    compares; None when there is none, or when a ``gate lifted`` line for it follows that line. Unlike
+    ``gate_age()``, it never falls back."""
+    key, found = _gate_key(gate), None
+    for rec in log_lines(text):
+        if rec["date"] is None or rec["kind"] not in ("gate-added", "gate-lifted") or _gate_key(rec["gate"]) != key:
+            continue
+        found = rec["date"] if rec["kind"] == "gate-added" else None
+    return date.fromisoformat(found) if found else None
+
+
 def utc_day(value: object, what: str) -> str:
     """A ledger date as ``YYYY-MM-DD`` (SPEC: every ledger date is the UTC date): a date, or a
     ``YYYY-MM-DD`` string, as given; an aware datetime turned into its UTC date. Refused: a naive
@@ -3788,7 +3802,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
 
     - ``set`` (``fields``: {name: value}; an empty value removes the field); a Blocked by (v2.4) is
       written with its ids first, then its gates in the canonical order, and refused in the old form,
-      or when it adds a gate to an entry whose Blocked by still holds the old form;
+      or when it adds a gate to an entry whose Blocked by still holds the old form; from v2.5 each gate
+      it adds that the entry did not carry is logged ``- <today>: gate added: <gate>`` in that order;
     - ``note`` (``words``): the Status's notes lifted into the Log (``status_notes_to_log``), then
       ``- <today>: <words>`` appended to it; refused for words that begin with a Log writer's prefix;
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
@@ -3810,7 +3825,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       Blocked by, Part of and a Log ``filed by`` line's ``while``; a Blocked by that then names an id twice
       keeps its first copy (v2.4).
 
-    ``today`` is the caller's date, taken by note, archive and reopen only (none is read here): a date,
+    ``today`` is the caller's date, required by note, archive and reopen, and taken by set (v2.5), which
+    requires it only for a Blocked by that adds a gate (none is read here): a date,
     ``YYYY-MM-DD``, or an aware datetime, written as its UTC date; a naive datetime is refused. A writer
     that appends to the Log refuses one that is not the body's last section. Every edit is refused for an entry
     ``canonical()`` refuses, and unless the result reads back exactly the change meant — the id,
@@ -3822,10 +3838,10 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                             ("pr", pr), ("pointer", pointer), ("as_is", as_is or None),
                             ("superseded_by", superseded_by), ("new", new), ("old", old),
                             ("dropped", dropped or None)) if v is not None}
-    stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _DATED_ACTIONS else [])
+    stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _TODAY_ACTIONS else [])
     if stray:
         raise Refused(f"{action} takes no {', '.join(stray)}")
-    day = utc_day(today, action) if action in _DATED_ACTIONS else ""
+    day = utc_day(today, action) if action in _DATED_ACTIONS or today is not None else ""
     m, header, body = _entry_parts(canonical(text))
     tid, title = m.group(1), m.group(3).strip()
     title_read = entries(canonical(text))[0]["title"]  # as the reader reads it: an HTML comment dropped
@@ -3845,7 +3861,17 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 continue
             value = _one_line(f"the {name} field", value)
             if field_key(name) == "blocked by":
-                value = _written_blocked(value, _value(header, "blocked by"))
+                current = _value(header, "blocked by")
+                value = _written_blocked(value, current)
+                was = parse_gates(current)
+                had = {_gate_key(x) for x in gate_items(was)} | (
+                    {_gate_key(f"decision ({was['old_form'][0]})")} if was["old_form"] else set())
+                added = [x for x in gate_items(parse_gates(value)) if _gate_key(x) not in had]
+                if added and not day:
+                    raise Refused(f"set adds {', '.join(added)}, which the Log dates — pass today (v2.5)")
+                if added:
+                    sections = _log_insert(sections, [(day, f"gate added: {x}") for x in added], by_date=False)
+                    body_changed = True
             fm = FIELD_RE.match(f"**{name}:** {value}")
             if not fm or fm.group(1) != name or fm.group(2) != value:
                 raise Refused(f"{name!r}: {value!r} would not read back as one field")

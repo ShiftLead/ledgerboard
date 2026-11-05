@@ -466,6 +466,9 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
 - **A gate's age** (`gate_age(text, gate)`) is the date of the latest `gate added`, `kept waiting` or
   `gate reassigned` (to it) line for that gate, a person's name compared in any case. With none, it
   is the first Log line's date, then the `Added` date.
+- **When a gate was added** (`gate_added(text, gate)`, v2.5) is the date of the last `gate added` line for
+  that gate in the Log's order (never by date), compared as for its age, or none: none too when a `gate
+  lifted` line for the gate follows that line in the Log. Unlike its age, it never falls back.
 - **Status notes become Log lines** through `status_notes_to_log(text)`, which `note`, `archive` and
   `reopen` run before they write:
   - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
@@ -500,12 +503,21 @@ and return it in canonical form. Each is refused for an entry `canonical()` refu
 nothing else: the same id, title, fields and sections but for the change. An edit that rewrites
 the body joins its sections with one blank line, and is refused when an HTML comment there spans
 paragraphs. The date is the caller's (`today`, a date, `YYYY-MM-DD` or an aware datetime, written as its UTC date; a time is never written, and a naive datetime is refused), and
-an argument the action does not take is refused. What a field's value means (a
+an argument the action does not take is refused (`today` is taken by `note`, `archive` and `reopen`, which
+require it, and from v2.5 by `set`, which requires it only to date a gate). What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
   it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order;
   it is refused in the old form, and when it adds a gate to an entry whose `Blocked by` still holds the
   old form. A value holding an item the grammar does not read is written as given, for `check()`.
+  From v2.5, `set` takes an optional `today`, and a `Blocked by` that adds a gate the entry did not carry
+  needs it: it also appends `gate added: <gate>` to the Log for each, in the order the gates are written,
+  dated `today`, making the Log at the end of the body if there is none (a Log that is not last is
+  refused, as for `note`; the Status's notes are not lifted). A gate it keeps is not logged again. **The
+  gates the entry carried** are its `gate_items()` plus, when its `Blocked by` holds the old form, that
+  form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So
+  migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept. The old
+  form's refusals come before the refusal for a missing `today`.
 - **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
   Log, making it at the end of the body if there is none. It is refused if the words begin with a
   writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
@@ -1228,6 +1240,12 @@ release of its own: the set's release is the one whose module wrote every expect
 stamps the manifest when it stamps the package; between releases it is left as it is, and only a release's is
 checked (`fixtures/run.py --check-header`). A set from before v2.5 carries no manifest (v2.4 was tagged before the manifest landed); its release is its
 tag's. Nothing a reader reads changes.
+
+**v2.5 dates the gates `set` adds** (*The Log*, *Edits*): `gate_added()` is new, and `set` now takes `today`
+and logs `gate added` for each gate its `Blocked by` adds, and **refuses a `set` that adds a gate without
+`today`**, which v2.4 accepted: a consumer's caller of `edit_entry(…, "set", …)` that can add a gate passes
+`today` in its vendor PR (`ledger.py set` does). A `set` that adds no gate is unchanged, with no `today` or
+a valid one. Nothing is read differently: v2.4 reads the new Log lines as it reads `new`'s.
 
 ## Appendix: grammar
 
