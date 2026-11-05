@@ -113,15 +113,33 @@ check: file-contains acme/vendor files/lib.py "v2.4"
   | `pr-merged <repo>#<n>` | the forge says the PR is merged | it is open | it is closed unmerged | it is not found (a forge answers 404 for missing and for unauthorised alike), or the forge cannot be read |
   | `file-contains <repo>[@<ref>] <path> "<text>"` | the file at the ref (none: the default branch; a tag is a ref) contains the text | the file, the ref or the text is not there yet | never | the repo is not found, or cannot be read |
   | `ref-includes <repo>@<ref> <commit>` | the commit is an ancestor of the ref (a pin at or past it) | the commit or the ref is not there yet | never | the repo is not found, or cannot be read |
+  | `host-log <source> [kind <kind>] [times <N>] "<text>"` (v2.5) | at least N (none: 1) counted records were read: records of the source, as resolved for the ledger's repo on this host (*Host-log checks*), of the kind if named, tied to the ledger's repo when the source maps `repo`, public when the ledger is, dated at or after 00:00 UTC of the day after the gate's `gate added` line (`gate_added()`), whose text contains the text; this wins over any error met while reading | fewer were read, and no error below applies, including when an existing source has no file or no record, or no longer reaches back to that day | never | before reading: `gate_added()` gives none; the host's configuration (the reader's) cannot be read or is refused, or names a path that does not exist; the source is private for a public ledger, or its root does not serve this repo or requires a `repo` mapping the source lacks; a kind is named against a source with none. While fewer than N were read: a file outside the host's allowed roots, not a regular file, or not the file its path resolved to; a file that cannot be read, an unsupported format, or a corrupt settled file; a read that would go past the reader's file, byte or time limit |
 
   A new type comes in a format PR and states all four outcomes. Every check is also an error when the
   host's own rule refuses it: a check reaches a repo only on the host's roster and at least as visible as
   the ledger's own repo, with read-only tokens.
+
+  `host-log` (v2.5) reads logs on the host (*Host-log checks*), not a repo, so the roster and visibility rule
+  above does not apply to it; *Host-log checks*' allowed roots and visibility take its place. Its source names
+  and kinds are configuration, never the package's. A host with no host file, or whose host file has no table
+  for the ledger's repo, or that declares no source of the check's name for it (once its configuration can be
+  read; otherwise it is an error), gives no outcome for it, so it neither files nor closes an item about it, and
+  a gate no host answers waits silently, past the sweep's age limit too. The count is one host's, never summed
+  across hosts. The day after the gate was added is the first counted, so the event that prompted the gate
+  never passes it, and an event later that day is not counted either. A gate lifted and added again counts from
+  its new `gate added` line. Records are only appended, so a passed check stays passed while its check is
+  unchanged (an edit that changes it dates the wait anew, *Edits*), and a source that no longer reaches back to
+  the first instant counted reads not yet, never error. An error's reason stays on the host: the board's item
+  has fixed words. Its evidence names a record on the host, and is the host's word: a reviewer cannot re-run it
+  from the ledger.
 - **Arguments are confined**, since anyone with PR rights can edit the ledger and a check runs with the
   host's credentials. `parse_check()` gives a `problem`, and `check()` refuses the section, for:
   - a `<repo>` outside the `<repo>` grammar (below);
   - an `n` that is not 1 to 18 of `[0-9]`;
   - a `commit` that is not 7 to 40 of `[0-9a-f]`;
+  - a `host-log` `<source>` or `kind` token that is not 1 to 40 of `[a-z0-9-]` or starts with `-` (v2.5);
+  - a `host-log` count that is not 1 to 3 of `[0-9]` with no leading zero; or arguments before the text other
+    than the source, then optionally `kind` and its token, then optionally `times` and its count, in that order;
   - a `ref` that fails git's `check-ref-format --allow-onelevel` rules (a component starting with `.` or
     ending `.lock`, a control character, a space, any of `~^:?*[\`, `//`, a trailing `/` or `.`, `@{`, or
     `@` alone), or that starts with `-` or holds `..` or `:` — no option injection (`--output=x`), no
@@ -142,7 +160,19 @@ check: file-contains acme/vendor files/lib.py "v2.4"
     no `check:` line, two, a line after it, words past the first line, an unknown type or a confined
     argument;
   - `event-ungated` (ℹ): a section with no gate of its name, unless a `gate lifted: event (<name>)` Log line
-    says why.
+    says why;
+  - `event-undated` (⚠, v2.5; one per gate): an `event (<name>)` gate whose one readable section's check is
+    `host-log` and for which `gate_added()` gives none (no `gate added` Log line for it, or a `gate lifted`
+    after the latest, or a Log that cannot be read), so the host has no day to count from; and, on an edit
+    (`check()` given `old`), one newly carried, or whose `host-log` check changed, or whose check became
+    `host-log` or whose `host-log` section is new (judged on `parse_check()`'s record: source, kind, count and
+    text), and was not **dated anew**, since a changed question counts from when it was asked. Dated anew means
+    all three: (a) the gate's `gate added` lines in the new Log, in Log order and compared as (date, gate)
+    pairs over this gate's lines only, are its old ones followed by at least one more; (b) the last, dated L,
+    has floor ≤ L ≤ `today`, the floor being the old Log's latest readable date, else the entry's `Added`
+    date, else none, and lowered to `today` if after it; (c) when the old Log had a `gate added` line for the
+    gate (the last, dated P), L is `today` or after P. An entry absent from the old ledger has an empty old
+    Log; an old Log that cannot be read is never dated anew.
 - **Lifting is text.** When a check passes, the host's tool PR removes the gate and logs `gate lifted:
   event (<name>) — by <host>; <type> passed; <evidence>` (*The Log*). **The section stays**, as an Ask stays
   after its decision lifts, so the entry still says what was waited for and how it was checked. A gate
@@ -150,6 +180,50 @@ check: file-contains acme/vendor files/lib.py "v2.4"
   never re-arms: a later regression is a new entry, or a new gate on a reopened one.
 - What is not an event: anything whose telling needs judgment ("the page looks right") is work, an
   entry of its own that the waiting entry is blocked by.
+
+**Host-log checks** (v2.5). A `host-log` check is answered by a host from logs on that host, through a
+**reader** (agent-cadence's `hostlog.py` is the reference). **Which files of a source are read, and that each is
+read once, are the reader's**, pinned by its tests; any reader follows the host rules below and passes those
+tests. This section defines the count over the records a reader yields, and the host rules every reader keeps.
+
+- **A record** is `{at, kind, text, id, public}`: `at` a UTC time; `kind`, `text` and `id` a string or none;
+  `public` whether a ledger that is not private may count it. When a source names each record's repo, a reader
+  yields only records whose repo equals the ledger's (compared without case; a record naming none is not
+  yielded); otherwise it yields every record of the source.
+- **Functions.** `first_instant(since)` takes the `date` of `gate_added()` and gives an aware UTC `datetime`;
+  `count_host_log(records, chk, since, *, public_only)` gives `{"outcome": "passed" | "not yet", "count": <every
+  counted record>, "evidence": <token> | None}`. Fixtures write `at` as ISO 8601 with `Z`. `chk` is
+  `parse_check()`'s record, refused (`Refused`) when it has a problem or is not `host-log`; `since` is a `date`
+  or a `YYYY-MM-DD` string, as other module dates (`utc_day`); a record whose `at` is not an aware `datetime` is
+  refused; one whose `text` is not a string never counts; an aware `at` in another zone is ordered as given and
+  written in the token after conversion to UTC. `fixtures/run.py` reads `at` with
+  `strptime("%Y-%m-%dT%H:%M:%SZ")`, never `fromisoformat` (which refuses `Z` on 3.10).
+- **What counts.** The first instant counted is 00:00 UTC of the day after `gate_added()` (`first_instant()`). A
+  record counts when it is dated at or after that instant, its `kind` equals the check's (exactly, when one is
+  named), its `text` contains the check's text (literally, case-sensitively), and, unless the ledger is
+  private, it is public (an `internal` ledger, or one of unknown visibility, counts only public records).
+- **The evidence** is the N-th counted record, ordered by `at`, then `id` (none first, then by code point):
+  `<source>/<id>` when the record has an id of at most 80 characters that makes a valid token with no empty,
+  `.` or `..` segment, else `<source>@<YYYYMMDDTHHMMSSZ>`.
+- **The outcome, tested in this order:** (0) the host's own configuration exists but cannot be read or is
+  refused: **error**; (1) the host has no configuration for the ledger's repo: **no outcome**; (2) the repo's
+  configuration cannot be read or is refused, or names a selection the repo does not define: **error**; (3) the
+  check's source is not declared for the repo on this host: **no outcome**; (4) the gate has no `gate added`
+  line, or the source is misconfigured (its effective table refused, a path that does not exist, a private
+  source for a ledger that is not private, an allowed folder that does not serve the repo or requires a repo
+  mapping the source lacks, a kind named against a source whose records carry none): **error**; (5) reading:
+  **passed** when at least N records count, whatever else the read met; else **error** when the read met an
+  error (a file it may not or cannot read, an unsupported or corrupt file, a limit), else **not yet**. A
+  reader that cannot run on a host answers no outcome itself. `count_host_log()` gives passed or not yet; the
+  reader applies the rest.
+- **Host rules.** A reader reads only under folders the host allows, resolving links, and never a file that is
+  not a regular file; it treats a folder's visibility as the host sets it, the most private of every allowed
+  folder that covers a file, and only the host may declare a private log's kinds public; an allowed folder may
+  name the repos it serves and require that a source name each record's repo; the repo's configuration is the
+  file `docs/ledger/log-sources.toml` (its contents the reader's; an absent file reads as empty, so every source
+  is undeclared and the host gives no outcome), read from the same tree as the ledger, and each consumer treats
+  that file as person-only; a read that runs past the reader's file, byte or time limit stops there, and is
+  error unless N already counted; and a reason for an error stays on the host, never on the board.
 
 **`<repo>`** (v2.4) — the repo in another repo's id, wherever one is written (`Blocked by`, `Part of`,
 `Escaped from`, a Context or `Parts:` ref, a Log line): a name, or `/`-separated components
@@ -469,7 +543,8 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
   is the first Log line's date, then the `Added` date.
 - **When a gate was added** (`gate_added(text, gate)`, v2.5) is the date of the last `gate added` line for
   that gate in the Log's order (never by date), compared as for its age, or none: none too when a `gate
-  lifted` line for the gate follows that line in the Log. Unlike its age, it never falls back.
+  lifted` line for the gate follows that line in the Log, or when the Log cannot be read. Unlike its age, it
+  never falls back.
 - **Status notes become Log lines** through `status_notes_to_log(text)`, which `note`, `archive` and
   `reopen` run before they write:
   - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
@@ -505,7 +580,7 @@ nothing else: the same id, title, fields and sections but for the change. An edi
 the body joins its sections with one blank line, and is refused when an HTML comment there spans
 paragraphs. The date is the caller's (`today`, a date, `YYYY-MM-DD` or an aware datetime, written as its UTC date; a time is never written, and a naive datetime is refused), and
 an argument the action does not take is refused (`today` is taken by `note`, `archive` and `reopen`, which
-require it, and from v2.5 by `set`, which requires it only to date a gate). What a field's value means (a
+require it, and from v2.5 by `set` and `edit`, which require it only to date a gate). What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
   it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order;
@@ -526,7 +601,11 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
 - **edit** (`section`, `words`): replaces the named section's paragraphs, keeping its lead as
   written. A section the body lacks is added after the first Why, else before the first Done when,
   Related or Log, else at the end. It is refused when two sections have the name, and for the Log,
-  which only its writers write.
+  which only its writers write. From v2.5, `edit` takes an optional `today`. Replacing or adding an
+  `**Event (<name>):**` section for a gate the entry carries, when its check becomes `host-log` or its
+  `host-log` source, kind, count or text changes (read by `parse_check()`, so spacing alone is no change),
+  appends `gate added: event (<name>)` to the Log, dated `today`, which that case requires: a changed question
+  is a new wait. The Log is made and refused as for `set`.
 - **archive** (`why`, and `pr`, `pointer`, `as_is`, or else `superseded_by`, or else `dropped`) lifts the Status's
   notes, then writes the archived entry, above, with the Status `Resolved YYYY-MM-DD` and the Log
   line `archived: Resolved — <why>` (or `Superseded YYYY-MM-DD by TD-n` or, v2.4, `by <repo>#TD-n`, and
@@ -564,8 +643,10 @@ shape exactly, and anything else is refused:
   override: <why>`.
 - **an event lifted by a person** (from a sweep's item): `answer`, with `by` on `people`, which is then
   required. No suffix.
-- **an event lifted by a host:** `evidence`, `<repo>#<n>` for a `pr-merged` check (its own repo and PR) or
-  `<repo>@<sha>` for the other two (its own repo, and the commit the file or ref was read at); the check type is
+- **an event lifted by a host:** `evidence`, `<repo>#<n>` for a `pr-merged` check (its own repo and PR),
+  `<repo>@<sha>` for `file-contains` and `ref-includes` (its own repo, and the commit the file or ref was read
+  at), or, for `host-log` (v2.5), its own source then `/` and the record's id (holding no empty, `.` or `..`
+  segment), or `@` and the record's UTC time as `YYYYMMDDTHHMMSSZ`, a token of `[A-Za-z0-9_.@/-]+`; the check type is
   read from the entry's `**Event (<name>):**` section, never passed in. `by` is the host's token.
 - **`until D`:** none of them; `today` must have reached D.
 
@@ -1059,7 +1140,9 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   Log's `filed by` line and a `gate added` line per gate it is filed with;
 - **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
-  --from FILE|-` replaces one section. An archived entry is edited only once reopened;
+  --from FILE|-` replaces one section. An archived entry is edited only once reopened. From v2.5 `set` and `edit`
+  pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
+  section `edit` makes a new `host-log` wait;
 - **the `set` route's gates** — a `set` whose `--blocked-by` drops a `decision (<p>)` the entry carries lifts it
   (`lift_gate()`) and needs `--by <person>`: the gate's person, with `--answer` (default `Go`) and at most one of
   `--board <repo>`, `--no-board-item`, `--shared-item`; or anyone, with `--override "<why>"`. One that swaps one
@@ -1243,11 +1326,17 @@ stamps the manifest when it stamps the package; between releases it is left as i
 checked (`fixtures/run.py --check-header`). A set from before v2.5 carries no manifest (v2.4 was tagged before the manifest landed); its release is its
 tag's. Nothing a reader reads changes.
 
-**v2.5 dates the gates `set` adds** (*The Log*, *Edits*): `gate_added()` is new, and `set` now takes `today`
-and logs `gate added` for each gate its `Blocked by` adds, and **refuses a `set` that adds a gate without
-`today`**, which v2.4 accepted: a consumer's caller of `edit_entry(…, "set", …)` that can add a gate passes
-`today` in its vendor PR (`ledger.py set` does). A `set` that adds no gate is unchanged, with no `today` or
-a valid one. Nothing is read differently: v2.4 reads the new Log lines as it reads `new`'s.
+**v2.5 adds the `host-log` check** (*Events*) **and *Host-log checks***: `CHECK_TYPES` gains it, `parse_check()`
+reads it, `gate_added()` is new, `check()` gains `event-undated`, and the module gains `first_instant` and
+`count_host_log`; the reader, and its configuration, are agent-cadence's `hostlog.py`. `set` now takes `today` and
+logs `gate added` for each gate it adds, and **refuses a `set` that adds a gate without `today`**, which v2.4
+accepted; `edit` takes `today` too, dates a changed `host-log` check with a `gate added` line, and refuses that
+case without it: a consumer's caller of `edit_entry(…, "set" | "edit", …)` that can add a gate or change a check
+passes `today` in its vendor PR (`ledger.py set` and `edit` do). A `set` or `edit` that dates no gate is
+unchanged, with no `today` or a valid one. The unknown-type message now lists `host-log`. An older reader reads
+a `host-log` check as an unknown type (`event-check`, an error on an edit), and its gate still holds, so a
+consumer writes one only once every reader and host of its ledger runs v2.5, and once a host that declares its
+repo sweeps it: a gate no host answers waits silently. v2.4 reads the new Log lines as it reads `new`'s.
 
 ## Appendix: grammar
 
@@ -1353,7 +1442,11 @@ Its line ending is `\n`; a writer ends the section there.
 event-section  ::= "**Event (" event-name "):** " event-words #xA check-line
 event-words    ::= [^#x20#x9#xA] char*
 check-line     ::= "check: " check
-check          ::= pr-merged | file-contains | ref-includes
+check          ::= pr-merged | file-contains | ref-includes | host-log
+host-log       ::= "host-log " source ( " kind " token )? ( " times " count )? " " quoted
+source         ::= token
+token          ::= [a-z0-9] [a-z0-9-]*
+count          ::= [1-9] [0-9]? [0-9]?
 pr-merged      ::= "pr-merged " repo "#" digit+
 file-contains  ::= "file-contains " repo ( "@" ref )? " " path " " quoted
 ref-includes   ::= "ref-includes " repo "@" ref " " commit
@@ -1370,7 +1463,8 @@ hex            ::= [0-9a-f]
 What the productions leave to prose: a `ref` follows git's `check-ref-format --allow-onelevel` rules and more —
 it does not start with `-`, hold `..` or `@{`, or equal `@`; it does not end with `/` or `.`, hold `//`, or have a
 component that starts with `.` or ends with `.lock`. A `path` is not absolute, has no empty, `.`, `..` or `.git`
-segment and does not start with `-`. A `commit` is at most 40 digits, and a PR's number at most 18. The quoted text runs from its first `"` to the line's last, and
+segment and does not start with `-`. A `commit` is at most 40 digits, and a PR's number at most 18. A `token`
+(v2.5) is at most 40 characters; arguments are separated by spaces and tabs, as for every check. The quoted text runs from its first `"` to the line's last, and
 is not spaces alone. The reader also reads any spaces or tabs between the arguments and after `check:`, and drops
 those that end a line; no other whitespace separates arguments.
 

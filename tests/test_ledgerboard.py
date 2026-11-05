@@ -858,6 +858,15 @@ class TheLog(unittest.TestCase):
         self.assertEqual(L.gate_age(text, "decision (Paul)"), date(2026, 1, 9))
         self.assertEqual(L.gate_age(text, "until 2026-05-01"), date(2026, 1, 3))
 
+    def test_gate_added_of_an_unreadable_log_is_none(self):  # v2.5: no day to count from, and check() goes on
+        two = ("## TD-084: Two Logs\n\n**Priority:** Low\n**Blocked by:** event (x)\n\n**Why:** w\n\n"
+               "**Event (x):** the next record.\ncheck: host-log s \"x\"\n\n**Log:**\n- 2026-01-02: gate added: event (x)"
+               "\n\n**Log:**\n- 2026-01-03: a note\n")
+        self.assertIsNone(L.gate_added(two, "event (x)"))
+        kinds = [r["kind"] for r in L.check("# L\n\n" + two, "", today="2026-01-20")]
+        self.assertIn("event-undated", kinds)
+        self.assertIn("log-not-last", kinds)
+
 
 class NextId(unittest.TestCase):
     """v2.4: the counter's takes judged (SPEC *The next id*)."""

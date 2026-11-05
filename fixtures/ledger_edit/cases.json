@@ -1270,6 +1270,129 @@
    ]
   },
   {
+   "name": "edit_redates_a_changed_host_log_check",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the next Apply.\ncheck: host-log team-events kind press times 2 \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_refused_changed_host_log_check_without_today",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the next Apply.\ncheck: host-log team-events \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_spacing_only_logs_nothing",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the next Apply.\ncheck: host-log  team-events  kind press \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_words_only_logs_nothing",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the grind team's next Apply.\ncheck: host-log team-events kind press \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_adds_a_host_log_section_for_a_carried_gate",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply), event (docs)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (docs)",
+      "words": "the docs team's next message.\ncheck: host-log team-events kind msg \"docs\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_a_section_of_no_carried_gate_logs_nothing",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (docs)",
+      "words": "the docs team's next message.\ncheck: host-log team-events kind msg \"docs\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_a_refused_check_logs_nothing",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the next Apply.\ncheck: host-log Team \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_to_host_log_from_another_type",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: pr-merged acme/tools#4\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Event (apply)",
+      "words": "the next Apply.\ncheck: host-log team-events kind press \"Apply\""
+     }
+    }
+   ]
+  },
+  {
+   "name": "edit_why_with_today",
+   "text": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Why",
+      "words": "another reason"
+     }
+    }
+   ]
+  },
+  {
    "name": "set_no_gate_with_today",
    "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
    "today": "2026-01-20",
@@ -1408,6 +1531,17 @@
   {
    "name": "log_flags_no_old",
    "ledger": "check/log_after.md",
+   "archive": ""
+  },
+  {
+   "name": "host_log_dated_anew",
+   "ledger": "check/hostlog_after.md",
+   "archive": "",
+   "old": "check/hostlog_before.md"
+  },
+  {
+   "name": "host_log_no_old",
+   "ledger": "check/hostlog_after.md",
    "archive": ""
   }
  ],
