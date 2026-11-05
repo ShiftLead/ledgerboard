@@ -1338,8 +1338,9 @@ a `host-log` check as an unknown type (`event-check`, an error on an edit), and 
 consumer writes one only once every reader and host of its ledger runs v2.5, and once a host that declares its
 repo sweeps it: a gate no host answers waits silently. v2.4 reads the new Log lines as it reads `new`'s.
 
-**v2.5 fixes v2.4's `check()` raising on a field below the header block** (TD-049): such a field is read and
-flagged as the header block's rules say, where v2.4 raised; nothing else is read differently.
+**v2.5 fixes v2.4's `check()` raising** (TD-049) `Refused` on an entry with a `decision` gate whose header block
+the edits refuse (a field below it, a repeated field, a line that is not a field): `check()` reads on, as it
+does for every entry `entries()` reads, and a field below the header block keeps its ℹ `below-header`.
 
 ## Appendix: grammar
 
