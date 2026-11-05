@@ -1145,6 +1145,27 @@
    "today": "2026-01-20"
   },
   {
+   "name": "set_migrates_old_form_no_today",
+   "text": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (pat)"
+      }
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Ask",
+      "words": "the board's 2026-01-03 item"
+     }
+    }
+   ]
+  },
+  {
    "name": "set_other_field_keeps_old_form",
    "text": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat) — the board's 2026-01-03 item\n\n**Why:** w\n",
    "steps": [
