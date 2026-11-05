@@ -33,7 +33,7 @@ check: host-log team-events kind press "Apply"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)
@@ -78,7 +78,7 @@ check: host-log team-events kind press "Apply"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-20: gate added: event (apply)
@@ -93,7 +93,7 @@ check: host-log team-events kind press "Apply dc-grind"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)
@@ -108,7 +108,7 @@ check: host-log team-events kind press "Apply dc-grind"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)
@@ -124,7 +124,7 @@ check: host-log team-events kind press "Apply dc-grind"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)
@@ -139,7 +139,7 @@ check: host-log team-events kind press "Apply dc-grind"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)
@@ -183,7 +183,7 @@ check: host-log team-events kind press "Apply"
 **Why:** a wait on the host's log.
 
 **Event (apply):** the next record.
-check: host-log team-events kind press "Apply dc-grind"
+check: host-log team-events kind press "Apply nightly-build"
 
 **Log:**
 - 2026-01-05: gate added: event (apply)

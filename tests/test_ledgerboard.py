@@ -866,6 +866,9 @@ class TheLog(unittest.TestCase):
         kinds = [r["kind"] for r in L.check("# L\n\n" + two, "", today="2026-01-20")]
         self.assertIn("event-undated", kinds)
         self.assertIn("log-not-last", kinds)
+        bad = two.replace("\n\n**Log:**\n- 2026-01-03: a note\n", "\n").replace("2026-01-02: gate", "2026-02-30: gate")
+        self.assertIsNone(L.gate_added(bad, "event (x)"))  # no day, never a ValueError
+        self.assertIn("event-undated", [r["kind"] for r in L.check("# L\n\n" + bad, "", old="", today="2026-01-20")])
 
 
 class NextId(unittest.TestCase):

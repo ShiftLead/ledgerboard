@@ -79,8 +79,8 @@ check: pr-merged acme/tools#1
 **Added:** 2026-01-10
 **Blocked by:** event (dated), event (undated), event (readded), event (merged)
 
-**Event (dated):** the grind team's next Apply.
-check: host-log team-events kind press "Apply dc-grind"
+**Event (dated):** the build team's next Apply.
+check: host-log team-events kind press "Apply nightly-build"
 
 **Event (undated):** a precheck failing on the parser's test.
 check: host-log ci times 2 "test_parse failed"

@@ -15,7 +15,7 @@
     {
      "at": "2026-01-11T09:30:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "rec-1"
     }
@@ -29,7 +29,7 @@
     {
      "at": "2026-01-10T23:59:59Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "rec-1"
     }
@@ -43,7 +43,7 @@
     {
      "at": "2026-01-11T00:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "rec-1"
     }
@@ -57,28 +57,28 @@
     {
      "at": "2026-01-12T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "c"
     },
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a"
     },
     {
      "at": "2026-01-13T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "d"
     },
     {
      "at": "2026-01-11T12:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     }
@@ -92,14 +92,14 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a"
     },
     {
      "at": "2026-01-12T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     }
@@ -113,21 +113,21 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "Press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a"
     },
     {
      "at": "2026-01-11T11:00:00Z",
      "kind": null,
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     },
     {
      "at": "2026-01-11T12:00:00Z",
      "kind": "msg",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "c"
     }
@@ -141,14 +141,14 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": null,
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a"
     },
     {
      "at": "2026-01-11T11:00:00Z",
      "kind": "msg",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     }
@@ -191,14 +191,14 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": false,
      "id": "a"
     },
     {
      "at": "2026-01-11T11:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     }
@@ -213,7 +213,7 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": false,
      "id": "a"
     }
@@ -227,21 +227,21 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     },
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "B"
     },
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true
     }
    ]
@@ -254,13 +254,13 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true
     },
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true
     }
    ]
@@ -273,21 +273,21 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a"
     },
     {
      "at": "2026-01-12T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "b"
     },
     {
      "at": "2026-01-13T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "c"
     }
@@ -301,7 +301,7 @@
     {
      "at": "2026-01-16T09:30:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true
     }
    ]
@@ -314,7 +314,7 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
@@ -328,7 +328,7 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
@@ -342,21 +342,21 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a/../b"
     },
     {
      "at": "2026-01-12T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a b"
     },
     {
      "at": "2026-01-13T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "a//b"
     }
@@ -370,7 +370,7 @@
     {
      "at": "2026-01-11T10:00:00Z",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true,
      "id": "2026/01/rec-9"
     }
@@ -402,7 +402,7 @@
     {
      "at": "2026-01-11T10:00:00",
      "kind": "press",
-     "text": "Apply dc-grind",
+     "text": "Apply nightly-build",
      "public": true
     }
    ]

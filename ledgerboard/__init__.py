@@ -3651,7 +3651,10 @@ def gate_added(text: str, gate: str) -> date | None:
         if rec["date"] is None or rec["kind"] not in ("gate-added", "gate-lifted") or _gate_key(rec["gate"]) != key:
             continue
         found = rec["date"] if rec["kind"] == "gate-added" else None
-    return date.fromisoformat(found) if found else None
+    try:
+        return date.fromisoformat(found) if found else None
+    except ValueError:  # a line shaped as a date that is no day (2026-02-30): no day to count from
+        return None
 
 
 def utc_day(value: object, what: str) -> str:

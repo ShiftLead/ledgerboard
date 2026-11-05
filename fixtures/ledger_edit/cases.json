@@ -1317,7 +1317,7 @@
      "action": "edit",
      "args": {
       "section": "Event (apply)",
-      "words": "the grind team's next Apply.\ncheck: host-log team-events kind press \"Apply\""
+      "words": "the build team's next Apply.\ncheck: host-log team-events kind press \"Apply\""
      }
     }
    ]

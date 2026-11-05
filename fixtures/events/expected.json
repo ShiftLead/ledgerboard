@@ -496,11 +496,11 @@
    "times": 1,
    "type": "host-log"
   },
-  "host-log team-events kind press times 2 \"Apply dc-grind\"": {
+  "host-log team-events kind press times 2 \"Apply nightly-build\"": {
    "kind": "press",
    "problem": null,
    "source": "team-events",
-   "text": "Apply dc-grind",
+   "text": "Apply nightly-build",
    "times": 2,
    "type": "host-log"
   },
@@ -737,19 +737,19 @@
    "problem": "the event name 'Ships' is not [a-z0-9-]+",
    "words": "the vendor ships."
   },
-  "**Event (applied):** the next Apply of the grind team.\ncheck: host-log team-events kind press \"Apply dc-grind\"": {
+  "**Event (applied):** the next Apply of the build team.\ncheck: host-log team-events kind press \"Apply nightly-build\"": {
    "check": {
     "kind": "press",
     "problem": null,
     "source": "team-events",
-    "text": "Apply dc-grind",
+    "text": "Apply nightly-build",
     "times": 1,
     "type": "host-log"
    },
-   "first": "**Event (applied):** the next Apply of the grind team.",
+   "first": "**Event (applied):** the next Apply of the build team.",
    "name": "applied",
    "problem": null,
-   "words": "the next Apply of the grind team."
+   "words": "the next Apply of the build team."
   },
   "**Event (ships):**\ncheck: pr-merged acme/tools#3": {
    "check": null,
