@@ -1,0 +1,135 @@
+# TD-045: the `host-log` check type
+
+**Status:** Draft 2026-11-04 (the designer). Class: **wide**, because it changes a vendored, published format: a new check type every consumer's merge gate reads and every host's event runner runs, and a change to what the ledger writer's `set` writes (cap 6 rounds, cadence.md §4.8 *Design review rounds*). The review record is `docs/reviews/TD-045.md`.
+
+**Entry:** [TD-045](../ledger/TD-045.md). Its consumer half is shiftlead#TD-1295 (the host's event log and its query). TD-046 (a new `Waits` line becomes an error) waits on this and on shiftlead#TD-1295.
+
+## The problem
+
+An `event (<name>)` gate names one of v2.4's three typed checks, all of which read a forge or a file. Target design §4 sorts every wait into three kinds: what a typed check sees, what the host already witnesses (a precheck failing again, a person's press, a session's message), and judgment, which is work blocked on by id. The second kind has no check type. §4.2's *Later: `host-log`* sketches one, `host-log <kind> "<text>" [times N]`, with `since` "defaulting to the gate's `gate added` date".
+
+Until it exists, such a wait is written as a retired `**Waits:** event — …` line, which no ledgerboard reader takes as a gate, or as `until <date>` plus a re-check entry, which is a guess on a date in place of the event. TD-046 cannot make a new `Waits` line an error until every wait has a gate form.
+
+Three things the sketch leaves open have to be settled before it can be built:
+1. **Where `times N` goes.** SPEC says the quoted text "runs from its opening `"` to the line's last `"` … and nothing follows it". The sketch puts `times N` after the text.
+2. **What `since` is.** Ledger dates are days (*every ledger date is the UTC date*), and a host's records have times. And today only `new` writes a `gate added` line: a gate that `set` adds has none, so most gates have no date to count from.
+3. **What the evidence is, and what the check may reach.** The other types reach a repo, and the host's visibility rule confines them. This one reads the host's own log, which holds mail and presses that may be private.
+
+## Options weighed
+
+**Where `times N` goes.**
+- **(a) After the text, as sketched:** `host-log <kind> "<text>" [times N]`. The text would then run to the last `"`, and `times N` could follow it. That needs an exception to the one rule every type shares ("nothing follows it"), and a reader that sees `… "a" times 2` cannot tell the count from text unless it knows the type first. Rejected.
+- **(b) Before the text (chosen):** `host-log <kind> [times <N>] "<text>"`. The quoted text stays the last argument, as in `file-contains`, so the shared rule stands unchanged and `parse_check()` reads the tokens before the quote as it already does.
+
+**What `since` is.**
+- **(a) Records on or after the day the gate was added.** This counts the same day's records from before the gate was written. The usual case is "the test fails again": the gate is written the day the test failed, so the failure that prompted it would pass the check at once. A false pass lifts the gate before the event, which is the failure TD-045 exists to prevent. Rejected.
+- **(b) Records dated after the day the gate was added (chosen).** A record counts when its time is at or after 00:00 UTC of the next day. It never counts the event that prompted the gate. Its cost: an event later on the same day is missed, so the check waits for the next one, and the 30-day *Still waiting* item catches a wait that never recurs. A late pass costs a day, while an early pass costs the whole wait.
+- **(c) A time on the `gate added` line.** Exact, but it gives one Log shape a time that no other line has, against the rule that every ledger date is a day. If (b)'s lost same-day event proves to matter in use, (c) is the later change. Rejected for now.
+
+Whatever `since` is, it needs a `gate added` line, and **`set` writes none today**. Only `new` does, and only when it is given `filed` (`entry_text(filed=)`, module lines 3291–3303; `ledger.py new` builds it from `--by --session --words` together, refusing some but not all, `ledger.py:1068-1075`). A `new` without `filed` writes no Log at all, so a gate filed that way stays undated and `check()` flags it (rule 4): a `host-log` gate is filed with `--by --session --words`, or added later by `set`. So this design makes `set` log `gate added: <gate>` for each gate it adds. That also fixes `gate_age()` for every gate `set` adds: today it falls back to the Log's first line, which can be months older.
+
+**A gate with no `gate added` line** (hand-typed, or added before this release). Falling back as `gate_age()` does (the first Log line, then `Added`) would count records from before the wait began, which is a false pass again. So the check has no `since`. `check()` flags it (`event-undated`, below), and a host answers **error**.
+
+**The evidence.** The other types cite where they were read (`<repo>#<n>`, `<repo>@<sha>`). This one cites the record that made the count reach N: its id in the host's log, a token of the Log's `[A-Za-z0-9_.@/-]+`, so a reviewer can look it up. shiftlead#TD-1295's records (`{at, kind, text}` in its Fix) need an id and the repo they concern. Both are named below as what that design must give.
+
+**What it may reach.** A ledger is text anyone with PR rights can edit, and a lift PR is as public as the ledger. Without a bound, `host-log msg "<a guess>"` in a public ledger would test, one bit per sweep, whether any message the host ever logged contains the guess. Tying records to the ledger's repo limits which repo's events can be probed, but not how private their text is: a message about a public repo can still quote private mail. So the bound is the repo rule's, applied to the log and **denying by default**. A host counts only records it ties to the ledger's own repo, and answers a kind for a ledger only when it has declared that kind's records no more private than the ledger's repo (a precheck's failing test name, say). Every other kind is an error, and so is any case where it cannot tell.
+
+## The rules
+
+1. **The check:** `host-log <kind> [times <N>] "<text>"`.
+   - `<kind>`: 1 to 40 of `[a-z0-9-]`, not starting with `-`. The kinds are the host's vocabulary (shiftlead#TD-1295's first are `precheck-fail`, `press` and `msg`). The package confines the token and never lists the kinds.
+   - `times <N>`: optional, the word `times` then 1 to 3 digits with no leading zero (`[1-9][0-9]{0,2}`, so 1 to 999). Without it, N is 1.
+   - `"<text>"`: as `file-contains`'s quoted text. It runs to the line's last `"`, nothing follows it, and it is not empty, not spaces alone and holds no control character. The host matches it literally and case-sensitively, as a substring of the record's text.
+   - The arguments before the text are one token (the kind) or three (the kind, `times`, `N`). Any other count, a second token other than `times`, or an `N` outside its form is refused. `host-log times "x"` names the kind `times`.
+   - **`parse_check()`'s record** for it is `{type: "host-log", kind, times, text, problem}`: `times` an int (1 when absent), and no `repo`. The quoted-text handling now inside `if kind == "file-contains"` (module 4585–4597) is lifted out to serve both types, and `host-log` gets its own argument branch before the `want` table and the repo and `@` handling, neither of which applies to it. Every reader of a check record that assumes `repo` (`lift_gate`, module 4354) branches on `host-log` first. The unknown-type message lists `CHECK_TYPES`' keys in order, so it becomes `unknown check type '<t>' — one of pr-merged, file-contains, ref-includes, host-log`, and the expected files that pin it are regenerated: `events/expected.json`, `grammar/expected.json` and `ledger/events.json`.
+2. **Its outcomes.** `since` is `gate_added(text, "event (<name>)")`, the date of the entry's latest `gate added` Log line for that gate (none: `None`). A record counts when it is of the kind, ties to the ledger's own repo, is dated at or after 00:00 UTC of the day after `since`, and its text contains the quoted text.
+   - **passed:** the host's log holds at least N such records. The evidence is the id of the N-th, oldest first.
+   - **not yet:** it holds fewer.
+   - **impossible:** never, since a record may still come.
+   - **error:** the host keeps an event log and cannot read it, does not know the kind or has not declared it answerable for this ledger (rule 7), or holds fewer than N records and no longer holds records back to `since` (retention, so the count may be short); or `since` is `None`. Once N counted records are held, passed wins over retention.
+   - **no outcome:** a host that keeps no event log gives none (`sweep()`: nothing). That way a host without the log, such as agent-cadence's runner, neither files *Event check broken* nor closes one another host filed.
+   - **The cost of (b):** an event later on the day the gate was added is never counted, which is the common case for "the next Apply" written mid-day. The wait then runs to the next event, or to the 30-day *Still waiting* item. If that bites in use, the first change is a host-supplied instant or a time on the `gate added` line (option (c)).
+
+   - **The count is the one host's**, from its own log, never summed across hosts. Hosts of one consumer that keep the log share it (shiftlead#TD-1295's log is the home's, one per install), so they agree. Two that keep different logs could disagree, one's `not yet` closing an *Event check broken* item another's `error` filed, and that item would be filed again on the next sweep. That flap is accepted as a known limit: the remedy is one log per consumer, not a rule here.
+   - **A gate no host answers is silent.** With no outcome, `sweep()` neither lifts it nor files *Still waiting* or *Event check broken*, so the 30-day backstop does not reach it. A consumer writes a `host-log` gate only once a host that keeps the log sweeps its ledger (the Versions text says so).
+   - **The evidence is trusted, not re-run.** A reviewer cannot re-run a `host-log` check from its evidence, as they can a forge check: the record id points into the host's own log. The lift rests on the host, as a person's answer rests on the person.
+
+   Records are only ever appended and `since` is fixed while the gate stands, so the count only grows: a passed check stays passed. A gate lifted and added again counts from its new `gate added` line, and from none if its re-adding wrote none (rule 3).
+3. **`gate_added(text, gate) -> date | None`** (new): the date of the latest `gate added` Log line whose gate is `gate`, compared as `gate_age()` compares (a person's name in any case). It has no fallback, unlike `gate_age()`. It is None, too, when a `gate lifted` line for that gate comes after that `gate added` line in the Log's order (the order the lines are written, not their dates, so a lift and a re-add on one day are told apart). So a lifted gate re-added by hand, with no new `gate added` line, never counts from the old one: it is undated, flagged and an error, where counting from the old date would pass it at once on the records since then.
+4. **`check()`'s `event-undated`** (⚠, new): an open entry's `event (<name>)` gate whose Event section's check is `host-log` and that has no `gate added` line for it. It is scoped as the other event flags: an error on an entry the edit changed, ℹ on a standing ledger. So it joins `EVENT_KINDS` (module 851), and through it `TEXT_KINDS`, and `event_problems()`'s and `check()`'s docstrings name it.
+5. **`set` logs the gates it adds.** `edit_entry(text, "set", fields=…, today=…)` whose `Blocked by` adds a gate the entry did not carry appends `- <today>: gate added: <gate>` for each, in the canonical order the `Blocked by` is written in (`gate_items()`: decisions, `until`, events), creating the Log at the end of the body when the entry has none and refusing, as `note` does, a Log that is not last. Unlike `note`, it does not lift the Status's notes. A gate it keeps is not logged again. **The gates the entry carried** are its `gate_items()` plus, when its `Blocked by` holds the old form, that form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept. Dropping a gate is unchanged: the lift and reassign routes write their own lines. `set` now takes an optional `today` (SPEC's *Edits* refuses an argument an action does not take, so today `set` refuses it), and refuses a gate-adding `Blocked by` without it. A `set` that adds no gate is unchanged with no `today` or a valid one (an invalid one is refused by `utc_day`). The mechanism: `_DATED_ACTIONS` (module 3335, `note`, `archive`, `reopen`, which require `today` at 3828) is left alone. The stray-`today` check (3825) passes `set` too (a new tuple, `_TODAY_ACTIONS = _DATED_ACTIONS + ("set",)`). `set` validates `today` with `utc_day` only when it is given, and raises `Refused` when it adds a gate and `today` is None. `edit_entry`'s docstring ("taken by note, archive and reopen only", module ~3813) names `set` too, SPEC's *Edits* opening gains the `set` text below, and `fixtures/run.py` passes a `set` step its own `today` only when the case gives one (570–571's `dated` list passes `c.get("today", spec["today"])` to every step of the other three; `set` is not added to that list). `ledger.py`'s `plan_edit` passes its `day` to the `set` edit (it does not today, `ledger.py:516`).
+6. **The lift.** `lift_gate(…, evidence=)` for a `host-log` check takes a token of `[A-Za-z0-9_.@/-]+` (the record's id), and refuses anything else. There is no repo to compare. The Log line is the existing shape: `gate lifted: event (<name>) — by <host>; host-log passed; <id>`.
+7. **Host rules** (SPEC's, not checkable by the package), denying by default: a host counts only records it ties to the ledger's own repo, and answers a kind for a ledger only when it has declared that kind's records no more private than the ledger's repo. Any other kind, or a case it cannot tell, is an error. A host-log check reaches no forge, so the roster and visibility rule for repos does not apply to it; this rule takes its place.
+
+## The `SPEC.md` text
+
+**`## The ledger` → *Events*, the check table.** Add this row after `ref-includes`:
+
+> | `host-log <kind> [times <N>] "<text>"` | the host's event log holds at least N (none: 1) records of the kind, tied to the ledger's own repo, dated at or after 00:00 UTC of the day after the gate's `gate added` line (`gate_added()`), whose text contains the text | it holds fewer | never | the host cannot read its log, does not know the kind or has not declared it answerable for this ledger, holds fewer than N and no longer holds records back to that day, or the gate has no `gate added` line since it was last lifted |
+
+**After the table's paragraph** ("A new type comes in a format PR …"), add:
+
+> `host-log` reads the host's own log of the events it witnesses (a precheck failing, for one), not a repo, so the roster and visibility rule above does not apply to it; the rules here take its place. Its kinds are the host's vocabulary, never the package's. A host that keeps no such log gives no outcome for it, so it neither files nor closes an item about it, and a gate no host answers waits silently, past the sweep's age limit too. A host counts only records it ties to the ledger's own repo, and answers a kind for a ledger only when it has declared that kind's records no more private than the ledger's repo: any other kind, or a case it cannot tell, is an error, since a lift PR is as public as the ledger. The count is one host's, never summed across hosts. The day after the gate was added is the first counted, so the event that prompted the gate never passes it, and an event later that day is not counted either. A gate lifted and added again counts from its new `gate added` line. Records are only appended, so a passed check stays passed, and passed wins over a log that no longer reaches back. Its evidence, a record's id, is the host's word: a reviewer cannot re-run it from the ledger.
+
+**The confinement list** (*Arguments are confined*), add two bullets after the `commit` bullet:
+
+> - a `host-log` `<kind>` that is not 1 to 40 of `[a-z0-9-]` or starts with `-`;
+> - a `host-log` count that is not `times` followed by 1 to 3 of `[0-9]` with no leading zero, or any arguments before the text other than the kind, or the kind, `times` and the count;
+
+**`check()`'s events list**, add after `event-check`:
+
+> - `event-undated` (⚠): an `event (<name>)` gate whose section's check is `host-log` with no `gate added` Log line for it (`gate_added()`), so the host has no day to count from;
+
+**`## Ledger entries and their edits` → *The Log*,** after the `gate_age` bullet, add:
+
+> - **When a gate was added** (`gate_added(text, gate)`) is the date of the latest `gate added` line for that gate, compared as for its age, or none: none too when a `gate lifted` line for the gate follows that line in the Log. Unlike its age, it never falls back.
+
+**`## Ledger entries and their edits` → *Edits*, the `- **set** (`fields`)` bullet,** at the bullet's end (after "…written as given, for `check()`."), add:
+
+> From v<x.y>, `set` takes an optional `today`, and a `Blocked by` that adds a gate the entry did not carry needs it: it also appends `gate added: <gate>` to the Log for each, in the order the gates are written, dated `today`, making the Log at the end of the body if there is none (a Log that is not last is refused, as for `note`; the Status's notes are not lifted). A gate it keeps is not logged again. **The gates the entry carried** are its `gate_items()` plus, when its `Blocked by` holds the old form, that form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept.
+
+**`## Lifting a gate` → *an event lifted by a host*,** replace "(its own repo and PR) or `<repo>@<sha>` for the other two (its own repo, and the commit the file or ref was read at)" (SPEC lines 553–554) with:
+
+> (its own repo and PR), `<repo>@<sha>` for `file-contains` and `ref-includes` (its own repo, and the commit the file or ref was read at), or, for `host-log`, the id of the record that made the count reach N, a token of `[A-Za-z0-9_.@/-]+`
+
+**`## Versions`, a new paragraph** after v2.4's last (the release is the next one tagged after the build lands, so `<x.y>` is filled in by the build):
+
+> **v<x.y> adds the `host-log` check** (*Events*): `CHECK_TYPES` gains it, `parse_check()` reads it, `gate_added()` is new, and `check()` gains `event-undated`. `set` now takes `today` and logs `gate added` for each gate it adds, and **refuses a `set` that adds a gate without `today`**, which v2.4 accepted: a consumer's caller of `edit_entry(…, "set", …)` that can add a gate passes `today` in its vendor PR (`ledger.py set` does). An older reader reads a `host-log` check as an unknown type (`event-check`, an error on an edit), and its gate still holds, so a consumer writes one only once every reader and host of its ledger runs v<x.y>, and once a host that keeps the log sweeps it: a gate no host answers waits silently.
+
+**`## Appendix: grammar` → *An Event section*:**
+
+> ```ebnf
+> check          ::= pr-merged | file-contains | ref-includes | host-log
+> host-log       ::= "host-log " kind ( " times " count )? " " quoted
+> kind           ::= [a-z0-9] [a-z0-9-]*
+> count          ::= [1-9] [0-9]? [0-9]?
+> ```
+> and in the prose below it: "A `kind` is at most 40 characters."
+
+## The target design
+
+Amend `docs/plans/target-design.md` §4.2's *Later: `host-log`* paragraph with a dated pointer: *(Amended 2026-11-04, TD-045: `docs/plans/TD-045-host-log.md` — the count goes before the text, `since` is the day after the `gate added` line, and `set` logs that line.)* Amend §7.1 with the same pointer below its table: `host-log`, `gate_added()`, `event-undated` and `set`'s `gate added` lines ship in the release that ships TD-045 (the next tagged after B2 lands), whichever number that is. §7.3's *for a host-witnessed event, `until` plus a re-check entry* stands under v2.4. The re-check entry becomes a `host-log` gate once the release and shiftlead#TD-1295 are live.
+
+## What a consumer must do
+
+- **shiftlead#TD-1295** (already filed, design-first): its records carry an **id** (a token of `[A-Za-z0-9_.@/-]+`, the lift's evidence) and the **repo** each concerns. Its query counts by kind, literal case-sensitive substring, the repo and records at or after a UTC instant (the day after `since`). It answers error on retention past `since`. The consumer's event runner passes `gate_added()`, gives no outcome when the home keeps no log, and vendors the release first. That is a line in this entry's Fix for the techlead to carry to shiftlead (this designer files nothing there).
+- **agent-cadence:** its vendor PR for the release makes its event runner give no outcome for `host-log` (it keeps no log), whatever it does today with a type it does not run, and passes `today` to any `set` edit that can add a gate. That is a line in this entry's Fix for agent-cadence's own entry.
+
+## The fixture cases
+
+- **`events/cases.json` → `parse_check`:** read as given, `host-log precheck-fail "test_x failed"` (times 1), `host-log precheck-fail times 1 "x"` (times 1 explicit), `host-log precheck-fail<TAB>"x"` and `host-log k  times  2  "x"` (tabs and double spaces between arguments), `host-log press times 2 "Apply dc-grind"`, `host-log msg "say "hi" now"`, `host-log times times 3 "x"` (kind `times`), `host-log k times 999 "x"`, and a 40-character kind. Refused: `host-log "x"`, `host-log Press "x"`, `host-log -x "x"`, `host-log a_b "x"`, a 41-character kind, `host-log k times 0 "x"`, `host-log k Times 2 "x"`, `host-log k times 01 "x"`, `host-log k times 1000 "x"`, `host-log k times "x"`, `host-log k twice 2 "x"`, `host-log k 2 "x"`, `host-log k extra "x"`, `host-log k "x" times 2`, `host-log k ""`, `host-log k " "`, `host-log k x`, and `host-log k "a<TAB>b"` (the control character in the text).
+- **`events/cases.json` → `parse_event_section`:** one section with a `host-log` check, read.
+- **`ledger/events.md`** (a standing ledger, so ℹ): a `host-log` gate with its `gate added` line (no flag), one without (`event-undated`, ℹ), one lifted and re-added by hand with no new line (`event-undated`), and a `pr-merged` gate without one (no flag). **An edit case** (in `ledger_edit/` or `check()`'s old/new cases, wherever `event-check`'s edit grading is pinned today) adding a `host-log` gate with no `gate added` line: `event-undated` an error.
+- **`gate_added`** (beside `gate_age` in `ledger_edit/cases.json`'s `log` cases, `log()` at `run.py:549-555`, each case's output gaining it, the key added inside the returned dict (553–555) only when `hasattr(L, "gate_added")`, so an older module fails that case on its diff rather than losing the other outputs): the latest of two `gate added` lines, a decision compared in any case, no line (`None`), an entry whose only line is `kept waiting` (`None`, where `gate_age()` gives a date), a `gate lifted` after the latest `gate added` (`None`), and a lift then a re-add on the same day, Log order deciding (the date).
+- **`lift/`:** `lift_gate` of a `host-log` gate with evidence `rec-0042` (lifted; the Log line `… host-log passed; rec-0042`), and refused with `a b` and `x:y`.
+- **`sweep/`:** a `host-log` gate passed with evidence (a lift; its evidence carried through to `lifts`). `sweep()` reads no check type, so the no-outcome rule is pinned by one more `sweep/` entry: a `host-log` gate with no outcome and an open board item `Event check broken on TD-n: …` about it, which stays open and files nothing.
+- **`ledger_edit/`** (existing cases that change): `refused_today_on_an_undated_action` becomes an `edit` step (`section`, `words`, `today`), expecting `edit takes no today` (`set` now takes it); `set_blocked_by_canonical_order` adds gates, so it gains a `today` and its expected Log lines; in `set_migrates_old_form` only step 3 (adding `until 2026-02-01`) does, while step 1's migration logs nothing and needs no `today`; `run.py`'s `dated` list (570–571) passes `today` to `set` when a case gives one. `tests/test_ledgerboard.py:728` calls `set` with no `today` on a change that adds no gate, and stays as it is.
+- **`ledger_writer/`:** `set_gate_added` (adding an `until` and an `event` to an entry with a Log gives two `gate added` lines in order), `set_gate_added_no_log` (the Log created), `set_gate_kept` (re-setting the same `Blocked by` logs nothing), and refusals: a gate added with no `today`, a gate added to an entry whose Log is not last, and an old-form migration that also adds an `until` (only the `until` logged).
+
+## The builds
+
+Two builds, in series, since both edit `SPEC.md`, the module and the fixtures:
+- **B1, `set` logs its gates, and `gate_added()`:** rules 3 and 5; SPEC's *The Log* and `set` text; `ledger.py`'s `plan_edit` passing `day`; the `gate_added`, changed `ledger_edit/` and `ledger_writer/set_*` cases.
+- **B2, the `host-log` check:** rules 1, 2, 4, 6 and 7; the rest of the SPEC text above (the table, the paragraph, confinement, `event-undated`, the lift's evidence, the grammar, the Versions paragraph); the `parse_check`, `parse_event_section`, `ledger/events.md`, `lift/` and `sweep/` cases; and the target design's amendments. It ships in the next release tagged after it lands.
+
+TD-046 (the error on a new `Waits` line) cannot land with B2: until a host that keeps the log sweeps a ledger, a `host-log` gate there waits silently, so `Waits` stays the only way to write such a wait that anyone sees. This PR adds `shiftlead#TD-1295` to TD-046's `Blocked by`, beside TD-045 (TD-1295 archives once the log, the query and the check run on the live install).
