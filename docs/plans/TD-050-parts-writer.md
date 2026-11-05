@@ -2,7 +2,11 @@
 
 **Status:** Draft 1, 2026-11-04 (session lb-designer). Class: **wide** (a vendored, published format: a new
 `item_line()` keyword, a new pure function and a new `board.py add` option, which both consumers vendor; cap 6
-rounds, cadence.md §4.8). Rounds: in progress (the record: [docs/reviews/TD-050.md](../reviews/TD-050.md)).
+rounds, cadence.md §4.8). Rounds: **ended at the cap**, 2026-11-04 (the record: [docs/reviews/TD-050.md](../reviews/TD-050.md)).
+Build-changing findings per round 1–6, design reviews 1, 2, 2, 2, 1, 3; fact-checks apart 0, 0, 0, 2, 3, 3, and the
+closing fact-check 2. Recurring topic: how `parts_problems()` judges a line written by hand (F41, F57, F74, F75,
+F82, F83), narrowed in round 5 to `item_problem()`, then a shared helper, then the ledger. F74–F84 are applied and
+read by no design review. Waits on Paul's go (the board's decide item); recommended: One more round.
 
 **Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
 
@@ -48,7 +52,7 @@ file writer.
   written ` Parts: <ids>.` right after the Context (ahead of the `Due:`), ordered by number (`TD-9` before
   `TD-10`), separated by `, `, each as the caller spelled it. It is refused, each a refusal of its own:
   - on any kind but `decide`;
-  - for an empty list, an id not of that form (`other#TD-9` among them), two ids of one number (`TD-15`,
+  - for an empty list, an id not of that form, a `<repo>#` id, two ids of one number (`TD-15`,
     `TD-015`), or an id of the Context entry's number;
   - when the Context does not name exactly one entry, a bare `TD-[0-9]{1,18}`, and exactly one gate, a
     `decision (<p>)` (as `_item_gate()` reads them);
@@ -56,24 +60,48 @@ file writer.
     is not given, else `lifts` given; never a waiting-only label), since a snapshot no answer lifts is a question
     no press can act on.
 
-  An element that is not a string is refused as not an id (`Refused`, never a `TypeError`). These checks on the
-  parts and the Context are one private helper, which `parts_problems()` also calls, so the two cannot drift. The
+  An element that is not a string is refused as not an id (`Refused`, never a `TypeError`). The checks on the
+  parts and the Context are one private helper, which `parts_problems()` also calls, so the two cannot drift. It
+  takes the Context's words and the list of parts (the caller's list in `item_line()`; `parse_parts()`'s in
+  `parts_problems()`, which reads only `TD-`-shaped tokens, so a stray word there is `item_problem()`'s to fault)
+  and gives its first fault as a fixed string, or None, checking in this order:
+  1. `context: not one entry and one decision` — the Context does not name exactly one bare `TD-[0-9]{1,18}` and
+     one `decision (<p>)`;
+  2. then each part in order, its first fault: `<id>: another repo's entry` (`<repo>#TD-[0-9]{1,18}`, `<repo>`
+     matching `REPO_RE`), `<id>: not
+     an id` (anything else that is not a bare `TD-[0-9]{1,18}`; a non-string element is written `<repr>: not an
+     id`), `<id>: the Context's entry` (its number), `<id>: twice` (an earlier part of its number, so the later
+     one is named);
+  3. `no parts` for an empty list.
+
+  `item_line()` refuses with that string as the reason (its kind and lifting-answer refusals stay its own, outside
+  the helper). With `parts`, its order is: the kind; then the helper, ahead of every existing check that reads the
+  Context (so a two-entry Context is refused as `context: not one entry and one decision`, not as today's "a
+  decide that lifts a gate names exactly one entry"); then its existing checks; then the lifting answer, after
+  the existing checks on `answers` and `lifts`. Without `parts` nothing moves. The
   read-back test checks the line reads back with exactly those parts, in place of refusing any. `parts=None` is no
   field; every check above concerns a call that passes parts.
 - **`parts_problems(item_line, entries, archived=()) -> list[str]`** (new, pure) checks a snapshot against the
   ledger. It judges what needs the ledger, and leaves what the line alone shows to `item_line()`'s helper. It never
   raises, on any string, any mapping and any iterable: it lists problems, each a fixed string.
-  - **Nothing to judge, `[]`:** a string that is not an open item line, an item that is not a `decide`, or one
-    with no `Parts:`.
-  - **The line first.** A `decide` with `Parts:` that `item_line()`'s helper faults (an id not
-    `TD-[0-9]{1,18}`, a `<repo>#` part, two ids of one number, an id of the Context entry's number, a Context not
-    naming one bare entry and one `decision (<p>)`) gives the one problem `line: <the helper's reason>`, the words
-    `item_line()` refuses with, and nothing else is judged. So no id outside `TD-[0-9]{1,18}` reaches a number.
+  - **Nothing to judge, `[]`:** a string that does not parse to exactly one open item (a line with its detail
+    block is one item; a whole board is not), an item that is not a `decide`, or one whose `parse_parts()` is
+    empty (no `Parts:`, or one holding no `TD-`-shaped token, such as `Parts: foo.`). So `no parts` is
+    `item_line()`'s alone.
+  - **The form first.** `item_problem()` is given the item's first line, the line `parse_board()` read (never
+    its detail block, which `item_problem()` would fault as `open: not an open item`); the helper and
+    `parse_parts()` read that same line. A line it faults gives the one problem `line: <item_problem()'s
+    words>`, and nothing else is judged: a hand-written `Parts: TD-9, TD-9.`, `Parts: TD-9,TD-10.`, a stray word
+    beside an id (`Parts: TD-9, foo.`) and a two-entry Context (`context: a decide that lifts a gate names exactly
+    one entry in its Context`) are the reader's form faults, never re-judged here.
+  - **Then the helper.** A line whose Context or parts the helper faults gives the one problem `line: <its
+    string>` (`line: TD-009: twice` for `Parts: TD-9, TD-009.`), and nothing else is judged. So no id outside `TD-[0-9]{1,18}` reaches a
+    number.
   - **Its inputs.** `entries` maps id to text, open and archived texts alike, by number (`TD-9` in the line finds
     the entry `TD-009`), the first key of a number winning. A key that is not a bare `TD-[0-9]{1,18}` (`x`,
     `TD-١٢`, a 19-digit number, `other#TD-9`) is ignored, and a value that is not a string, or holds no entry, is
     no entry. `archived` holds the ids the caller read from the ledger's archive, by number, a member that is not
-    such an id ignored. This is narrower than `decide_lift()`, which reads any `\d+` run as a number. An entry is
+    such an id ignored. A key or member that is not a string is ignored. This is narrower than `decide_lift()`, which reads any `\d+` run as a number. An entry is
     archived when its number is in `archived` (an archived entry may read `Open`, SPEC *Superseded and dropped*)
     or its Status's first word is an archived one (`ARCHIVED_WORDS`). A gate is carried as `decide_lift()` reads
     it (`_carried`: the person compared case-insensitively); an archived entry carries nothing. A part's `Part of`
@@ -84,19 +112,22 @@ file writer.
     Part of <ref>`, `<id>: does not carry <gate>`. `<id>` and `<ref>` are as the line spells them, `<gate>` as the
     Context writes it.
 
-  The line's faults are `item_line()`'s, judged once, so `parts_problems()` holds six strings of its own. They
-  exist in it, as `line:`, only so that it never raises on a line written by hand.
+  The line's faults are the helper's, written once; `parts_problems()`'s own forms are `missing`, `archived`, `not
+  Part of` and `does not carry`, and it passes the helper's on as `line:` only so that it never raises on a line
+  written by hand.
 - **`board.py add --parts TD-a,TD-b`** passes the list to `item_line()`, reads the ledger (`--ledger <v2
   directory>`, else `ledger/` beside the board when it is a directory, as `decide` does), and refuses the write
   (exit 1) when `parts_problems()` names any problem, listing them all. Its checks run in this order, the first
   that fails deciding the exit and the message, with `--plan` as with a write:
   1. the options: `--parts` with `--decided`, `--ledger` without `--parts`, an empty piece (exit 1);
-  2. `item_line()` (exit 1): the kind, the ids' form (so `other#TD-9` is refused here, and `parts_problems()`'s
+  2. `item_line()` (exit 1): the kind, the ids (so `other#TD-9` is refused here, as another repo's entry, and `parts_problems()`'s
      `line:` serves other writers), their numbers, the Context, a lifting answer, as `_lifting()` reads one
      (any case, never a waiting-only label);
   3. the ledger: none found (exit 1), or one that cannot be used (exit 2);
   4. `parts_problems()` (exit 1, every problem): refused as `the snapshot does not match the ledger: <p1>; <p2>`,
-     the problems in `parts_problems()`'s order, joined by `; `;
+     the problems in `parts_problems()`'s order, joined by `; `. `add` has no "ledger half", so step 3's refusals
+     carry no `the ledger half: ` prefix (which `_decide_ledger` gives its own): they are `Ledger.open`'s and
+     `_writable`'s words as they stand, and the fixtures pin them;
   5. the board's gate, `board_problems()`, as for every `add`.
   - `--parts` may be given more than once, as `--answer` and `--lift` are; each value is split on `,`, each piece
     stripped of whitespace, and an empty piece (`TD-15,`) is a refusal.
@@ -107,7 +138,8 @@ file writer.
   - It hands `parts_problems()` the open and the archived text of the Context entry and of each part, each read
     through `Ledger.entry_file(tid_of(id))` and `files[path]`, as `_decide_ledger` reads them, but keeping the
     archived ones, which `decide`'s ledger half drops, and naming them in `archived` (the `archived` flag
-    `entry_file` returns); an id `entry_file` refuses is skipped, so it is a listed problem (missing), never a
+    `entry_file` returns); an id `entry_file` or `tid_of()` refuses (`Unusable`, a `Refused`, as for `TD-0`) is
+    caught as `Refused`, as `_decide_ledger` catches it, and skipped, so it is a listed problem (missing), never a
     usage error.
   - No `--ledger` and no `ledger/` beside the board is a refusal naming `--ledger` (exit 1). The ledger is opened
     as `_decide_ledger` opens it, `Ledger.open` then `_writable`, so an explicit `--ledger` that cannot be used
@@ -202,25 +234,31 @@ sentence on `Lifts: …`, add:
 and after the paragraph on `decided_line()`, a new paragraph:
 
 > **A snapshot against the ledger** (`parts_problems(item_line, entries, archived=())`, v2.5) lists, and never
-> raises, why a `decide` line's `Parts:` does not match the ledger. A line that is no open `decide`, or carries no
-> `Parts:`, gives `[]`. One whose parts or Context `item_line()` would refuse gives `line: <its reason>` alone.
-> Otherwise it reads `entries` (id to text, open and archived alike, by number, the first of a number winning; a
-> key that is not a bare `TD-` and 1 to 18 ASCII digits is ignored, and a value that is not a string, or holds no
-> entry, is no entry) and `archived` (the ids read from the ledger's archive, by number). An entry is archived
-> when its number is in `archived` or its Status is an archived one. The Context entry gives `<ref>: missing` or
-> `<ref>: archived`, and each part, in the line's order, its first fault of `<id>: missing`, `<id>: archived`,
-> `<id>: not Part of <ref>`, `<id>: does not carry <gate>`. It is stricter than *The decide lift*, which skips a
-> part that no longer carries the gate (one archived by its Status among them) and still lifts an `event
-> (<name>)` snapshot: the snapshot is checked when the question is asked, the lift when it is answered. The ledger
-> is not in the line, so `item_line()` does not check these; a writer that reads the ledger calls it.
+> raises, why a `decide` line's `Parts:` does not match the ledger. A string that is not exactly one open item, an
+> item that is no `decide`, or one whose `Parts:` holds no id `parse_parts()` reads gives `[]`. One that
+> `item_problem()` faults (judging the item's first line, never its detail block) gives `line: <its words>` alone,
+> a Context naming two entries among them. One whose Context or parts the check `item_line()`
+> shares faults gives `line: <that fault>` alone, the fault one of `context: not one entry and one decision`,
+> `<id>: another repo's entry`, `<id>: not an id`, `<id>: the Context's entry` and `<id>: twice`; the kind, an
+> empty list and the lifting answer are `item_line()`'s alone. Otherwise it reads `entries` (id to text, open and
+> archived alike, by number, the first of a number winning; a key that is not a bare `TD-` and 1 to 18 ASCII
+> digits is ignored, and a value that is not a string, or holds no entry, is no entry) and `archived` (the ids
+> read from the ledger's archive, by number). An entry is archived when its number is in `archived` or its Status
+> is an archived one. It judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each
+> part still, in the line's order, its first fault of `<id>: missing`, `<id>: archived`, `<id>: not Part of
+> <ref>`, `<id>: does not carry <gate>`. It is stricter than *The decide lift*, which skips a part that no longer
+> carries the gate (one archived by its Status among them) and still lifts an `event (<name>)` snapshot: the
+> snapshot is checked when the question is asked, the lift when it is answered. The ledger is not in the line, so
+> `item_line()` does not check these; a writer that reads the ledger calls it.
 
 **3. *The board writer*, the `add` bullet** (B2). After "`--hide-until`)", add:
 
-> ; with `--parts TD-a,TD-b` (v2.5; repeatable, split on `,`), a decide's snapshot (`item_line(parts=)`). The
-> line's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default `ledger/` beside
-> the board when it is a directory, its open and archived entries), and the write is refused, with every problem,
-> when `parts_problems()` names any, or when no ledger is found. `--parts` with `--decided`, and `--ledger`
-> without `--parts`, are refused
+> ; with `--parts TD-a,TD-b` (v2.5), a decide's snapshot (`item_line(parts=)`): the option may be repeated,
+> each value is split on `,` and each piece trimmed, and an empty piece is refused; `--parts` with `--decided` is
+> refused, and so is `--ledger` without `--parts`. The line's own refusals come first. Then the ledger is read
+> (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory, its open and archived
+> entries), and the write is refused, with every problem, when `parts_problems()` names any, or when no ledger is
+> found
 
 and in the exit table, "or, for `decide`, a ledger that cannot be used as asked" becomes "or, for `decide` and
 `add --parts`, a ledger that cannot be used as asked".
@@ -246,10 +284,10 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
 - `parts=["TD-015"]` is written `TD-015` (the caller's spelling);
 - with `parts`, `lifts` and `hide_until` together: ` Parts:` after the Context and before ` Due:` and ` Hide until:`,
   ` Lifts:` after the Answers; answers `go — build both | Not yet` (a lower-case `Go` with a consequence) accepted;
-- refused: an `act` with parts; a decide whose answers are `Yes | No` with no `lifts`; `parts="TD-9"` (a
+- refused, each with its pinned message: a two-entry Context and an `other#TD-4` Context, each
+  `context: not one entry and one decision` (the helper ahead of today's one-entry check); an `act` with parts; a decide whose answers are `Yes | No` with no `lifts`; `parts="TD-9"` (a
   string); `parts=[9]` and `[None]`; a Context naming a 19-digit entry or `TD-١٢`; `td-9`; ` TD-9`; `TD-١٢`; `TD-` and 19 digits; `parts=[]`; `TD-15` and `TD-015`; `other#TD-15`; the Context's own `TD-4`, and
-  `TD-004`; a Context naming two entries; a Context naming an entry and no gate; a Context naming
-  `TD-4 event (build-green)`; a Context naming `other#TD-4`.
+  `TD-004`; a Context naming an entry and no gate; a Context naming `TD-4 event (build-green)`.
 
 `parts_problems()`, a new `parts_problems` key in `fixtures/sweep/cases.json`, each case carrying its own `entries`
 (id to text) and, where it needs one, its own board text, so the sweep's shared `ledger.md` and boards, and every
@@ -265,21 +303,28 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   gate, giving `not Part of` alone; the Context entry missing with a faulty part, giving both;
 - inputs: `entries` holding `TD-9` and `TD-009` (the first wins); keys that are no id (`x`, a 19-digit and a
   5000-digit id, `TD-١٢`, `other#TD-9`: each ignored, no exception); a text holding no entry and a value that is no
-  string (missing); `archived` holding `other#TD-9` and `5` (ignored);
-- `line:`, alone, the reason `item_line()` gives: a Context naming two entries; naming `TD-4 event (build-green)`;
+  string (missing); `archived` holding `other#TD-9`, the string `"5"` and the int `5`, and `entries` an int key (each ignored);
+- `line:`, alone, the helper's string (each pinned, e.g. `line: TD-009: twice`): a Context naming `TD-4 event (build-green)`;
   naming `other#TD-4`; naming a 19-digit entry; hand-written `Parts: TD-9, TD-009.`, `Parts: TD-١٢.`, a 19-digit
   part, `Parts: other#TD-9, TD-9.` (no exception in any);
+- `line: <item_problem()'s words>`, alone: hand-written `Parts: TD-9, TD-9.`, `Parts: TD-9,TD-10.` and
+  `Parts: TD-9, foo.`; a Context naming two entries;
+- `[]`: `Parts: foo.`; a two-item string;
+- a matching snapshot's line with its detail block: judged as one item, giving `[]` (not `line: open: …`), and a
+  faulty one with its detail block giving its ledger problems;
 - `[]`: an `act` line, a `decide` with no `Parts:`, a closed `- [x]` decide, a string that is no item;
 - for each matching case, `covers()` over its line, on a board that is the repo's own (named by the `repo` the
   case gives, as `acme/widgets` is in the sweep's cases, since a bare `TD-n` is read only there) and whose
   `People:` lists `pat`, reads each listed part, one by one, as covered (`open`) by the parent's item;
-- the cross-check with *The decide lift*: for each matching case, `decide_lift()` answered `Go` by `pat`, with `board_people=["pat"]`, accepts
-  it and changes every listed part; for the not-`Part of`, no-`Part of`, missing and `other#TD-9` cases it refuses;
-  for the Context entry archived or missing, and the two-entry and `other#TD-4` `line:` cases, it refuses;
-  where the two differ by design: the not-carrying case and the part archived by its Status (its text given) it
-  accepts and logs `gate lift skipped`; the `TD-4 event (build-green)` case (both parts carrying the event) it
-  accepts and lifts both; the part named in `archived` reading `Open` (its text given) it accepts and lifts, the
-  case TD-051 settles.
+- the cross-check with *The decide lift*: for each matching case, `decide_lift()` answered `Go` by `pat`, with
+  `board_people=["pat"]`, accepts it and changes every listed part; for the not-`Part of`, no-`Part of`, `Part of`
+  `other#TD-4` and missing cases it refuses; for the Context entry archived or missing, and the two-entry,
+  `other#TD-4` and `other#TD-9` `line:` cases, it refuses; where the two differ by design: the not-carrying case
+  and the part archived by its Status (its text given) it accepts and logs `gate lift skipped`; the
+  `TD-4 event (build-green)` case (both parts carrying the event) it accepts and lifts both; the part named in
+  `archived` reading `Open` (its text given) it accepts and lifts, the case TD-051 settles. The 5000-digit and
+  `TD-١٢` cases are not cross-checked: `decide_lift()` reads any `\d+` run as a number, and raises `ValueError`
+  on 5000 digits (`int()`'s limit), which this design does not change.
 
 These sit in `fixtures/sweep`, not `fixtures/lift`, because the `covers()` check needs a board, its `People:` and
 a `repo`, which the sweep's runner already reads; the `decide_lift()` cross-check rides with them.
@@ -302,14 +347,17 @@ its `covers()` and `decide_lift()` checks, and a v2.5 line in its docstring.
   kind's refusal, step 2, before the ledger's), `add_parts_xrepo` (`other#TD-9`: `item_line()`'s refusal),
   `add_parts_decided`, `add_parts_empty_piece` (`TD-9,`), `add_ledger_without_parts`;
 - `add_parts_on_act_v1` (an `act` with a v1 `--ledger`): exit 1, the kind's refusal, the ledger never opened;
-- `add_parts_missing` (a part the ledger holds in neither its open nor its archived files): exit 1, the problem
-  listed;
+- `add_parts_missing` (a part the ledger holds in neither its open nor its archived files, and `TD-0`, which
+  `tid_of()` refuses): exit 1, each listed as `missing`;
 - `add_parts_ledger_v1` (a v1 ledger file passed as `--ledger`) and `add_parts_ledger_none` (a `--ledger` path
   that does not exist): exit 2;
 - `add_parts_context_archived` (the parent in `archive/`): exit 1, `TD-4: archived`;
 - `add_parts_archived_dir` (a part in `archive/` whose Status reads `Open`): exit 1, `TD-9: archived`;
 - `add_parts_plan`: `--plan` prints the line and writes nothing;
-- `add_parts_no_kind`: `--parts` with no `--kind`: refused (exit 1), the kind's refusal.
+- `add_parts_no_kind`: `--parts` with no `--kind`: refused (exit 1), the kind's refusal;
+- `add_parts_both_faults`: a bad part and a gate person missing from `People:`: exit 1, step 4's refusal;
+- `add_parts_twice_repeat`: `--parts TD-9 --parts TD-9`: exit 1, `TD-9: twice`;
+- `add_parts_hide_until`: with `--hide-until`, the line carries both in order.
 
 ## The builds
 
@@ -325,8 +373,9 @@ plan's PR, as a design of its own:
   help. SPEC's v2.4 exit note under *Versions* is history and stays. Blocked by B1. Done when those fixtures and
   tests pass and that SPEC text lands with the code.
 
-B1 and B2 both say v2.5, so the v2.5 tag (Paul's) follows B2; a tag cut between them would ship `item_line(parts=)`
-without its writer, and B2 would be relabelled.
+B1 and B2 both say v2.5, so the v2.5 tag (Paul's) follows this B2, as it follows TD-045's B2 (target design §7.1's
+note): a tag cut between TD-050's B1 and B2 would ship `item_line(parts=)` without its writer, and B2 would be
+relabelled. Either the tag waits for both, or Paul moves TD-050 to the next.
 
 This plan's PR also rewrites TD-050's Fix and Done when to point here (`ledger.py edit`), adds TD-051 to its
 `Related`, and files TD-051.
