@@ -63,6 +63,10 @@ Fixtures, each an invented input and its expected JSON:
 - ``ledger/unknownstatus.md`` (v2.4, TD-039): an archived blocker whose Status word this reader does not know keeps
   the block and is flagged — here and through the resolver, at a chain's end, and each edge of the word rule: prose,
   punctuation kept on the word, a first run that strips to nothing, no first run, a known word in capitals, ``Open``.
+- ``host-log-pure/cases.json`` → ``host-log-pure/expected.json`` (v2.5): a ``host-log`` check counted with no file —
+  ``first_instant()`` of each date, and ``count_host_log()`` of each case's records (``at`` written
+  ``YYYY-MM-DDTHH:MM:SSZ``, read with ``strptime``, never ``fromisoformat``, which refuses ``Z`` on 3.10), or why it
+  is refused.
 - ``verdict/cases.json`` → ``verdict/expected.json`` (v2.4): the merge gate's verdicts — ``lift_pr_verdict()``,
   ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
   ``cases/<name>/base/``, then its ``cases/<name>/head/`` over that, less its ``delete`` paths.
@@ -119,7 +123,7 @@ import shutil
 import stat
 import sys
 import tempfile
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -573,7 +577,7 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
             for st in c["steps"]:
                 dated = st["action"] in ("note", "archive", "reopen")  # these require a date
                 args = ({"today": c.get("today", spec["today"])} if dated
-                        else {"today": c["today"]} if st["action"] == "set" and "today" in c else {})  # v2.5: set's own
+                        else {"today": c["today"]} if st["action"] in ("set", "edit") and "today" in c else {})  # v2.5: their own
                 out = L.edit_entry(out, st["action"], **{**args, **st["args"]})
             return out
         return _refused(run)
@@ -583,7 +587,7 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                                      old=text({"file": c["old"]}) if c.get("old") else None,
                                                      today=spec["today"])
                                   if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
-                                                   "log-not-last", "log-line")]
+                                                   "log-not-last", "log-line", "event-undated")]
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],
@@ -703,6 +707,24 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
             ents, boards, results, "2026-11-03", "2026-11-03", repo=c["repo"],
             **{k: c[k] for k in ("reask_days", "event_age_days") if k in c})) for c in spec["refused"]},
     }
+
+
+def host_log_cases(L, spec: dict) -> dict:
+    """A host-log check counted over records (v2.5): ``first_instant()`` and ``count_host_log()``, no file read."""
+    if not hasattr(L, "count_host_log"):
+        return {"missing": "the module has no count_host_log — older than v2.5"}
+
+    def rec(r):
+        at = r.get("at")
+        if isinstance(at, str) and at.endswith("Z"):
+            at = datetime.strptime(at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        return {**r, "at": at}
+
+    def count(c):
+        return _refused(lambda: L.count_host_log([rec(r) for r in c["records"]], L.parse_check(c["check"]),
+                                                 c["since"], public_only=c.get("public_only", False)))
+    return {"first_instant": {d: _refused(lambda d=d: L.first_instant(d).isoformat()) for d in spec["first_instant"]},
+            "count_host_log": {c["name"]: count(c) for c in spec["count_host_log"]}}
 
 
 def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
@@ -862,6 +884,8 @@ def cases(L, root: Path):
     yield root / "ids" / "expected.json", ids_cases(L, spec)
     spec = json.loads((root / "sweep" / "cases.json").read_text(encoding="utf-8"))
     yield root / "sweep" / "expected.json", sweep_cases(L, spec, root)
+    spec = json.loads((root / "host-log-pure" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "host-log-pure" / "expected.json", host_log_cases(L, spec)
     spec = json.loads((root / "verdict" / "cases.json").read_text(encoding="utf-8"))
     yield root / "verdict" / "expected.json", verdict_cases(L, spec, root)
 

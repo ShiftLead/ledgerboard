@@ -113,6 +113,122 @@
   }
  },
  "check": {
+  "host_log_dated_anew": [
+   {
+    "field": "event",
+    "id": "TD-301",
+    "kind": "event-undated",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-301: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   },
+   {
+    "field": "event",
+    "id": "TD-302",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-302: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   },
+   {
+    "field": "event",
+    "id": "TD-303",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-303: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-304",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-304: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   },
+   {
+    "field": "event",
+    "id": "TD-305",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-305: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-306",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-306: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-307",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-307: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-308",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-308: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-312",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-312: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-313",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-313: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   },
+   {
+    "field": "event",
+    "id": "TD-316",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-316: its event (apply) gate's host-log wait is new or changed, and no gate added: event (apply) Log line dated today dates it anew"
+   }
+  ],
+  "host_log_no_old": [
+   {
+    "field": "event",
+    "id": "TD-301",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-301: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   },
+   {
+    "field": "event",
+    "id": "TD-302",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-302: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   },
+   {
+    "field": "event",
+    "id": "TD-304",
+    "kind": "event-undated",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-304: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   }
+  ],
   "log_flags_no_old": [
    {
     "field": "log",
@@ -250,6 +366,15 @@
   "crlf_note": {
    "ok": "## TD-067: CRLF\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Log:**\n- 2026-01-20: read through CRLF\n"
   },
+  "edit_a_refused_check_logs_nothing": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log Team \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n"
+  },
+  "edit_a_section_of_no_carried_gate_logs_nothing": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (docs):** the docs team's next message.\ncheck: host-log team-events kind msg \"docs\"\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n"
+  },
+  "edit_adds_a_host_log_section_for_a_carried_gate": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply), event (docs)\n\n**Why:** w\n\n**Event (docs):** the docs team's next message.\ncheck: host-log team-events kind msg \"docs\"\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n- 2026-01-20: gate added: event (docs)\n"
+  },
   "edit_adds_a_section_before_the_log": {
    "ok": "## TD-081: Notes written into the Status before the Log\n\n**Priority:** Low\n**Added:** 2026-01-02 found while building TD-80\n**Status:** Open 2026-01-04: half built 2026-01-06: the rest built — was: Resolved 2026-01-03: done too soon — was: Open\n\n**Why:** a reason.\n\n**Related:** TD-80.\n\n**Log:**\n- 2026-01-03: an earlier line\n- 2026-01-05: a later line\n"
   },
@@ -268,8 +393,14 @@
   "edit_fix_after_reopen": {
    "ok": "## TD-062: An archived entry\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** a reason.\n\n**Fix:** fix it again.\n\n**Resolved:** 2026-01-05 (PR #7) — `docs/thing.md`\n\n**Log:**\n- 2026-01-05: built\n- 2026-01-20: reopened — it broke\n"
   },
+  "edit_redates_a_changed_host_log_check": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press times 2 \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n- 2026-01-20: gate added: event (apply)\n"
+  },
   "edit_refused_bold_paragraph": {
    "refused": "after the edit the entry would not read back as meant, with the rest unchanged — rephrase it, or edit by hand"
+  },
+  "edit_refused_changed_host_log_check_without_today": {
+   "refused": "edit makes event (apply)'s host-log check a new wait, which the Log dates — pass today (v2.5)"
   },
   "edit_refused_the_log": {
    "refused": "the Log is written by its writers (note, archive, reopen), never replaced by edit"
@@ -277,8 +408,20 @@
   "edit_refused_two_named": {
    "refused": "the body has 2 sections named 'Note' — edit it by hand"
   },
+  "edit_spacing_only_logs_nothing": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log  team-events  kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n"
+  },
+  "edit_to_host_log_from_another_type": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n- 2026-01-20: gate added: event (apply)\n"
+  },
   "edit_why": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** a new reason.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+  },
+  "edit_why_with_today": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** another reason\n\n**Event (apply):** the next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n"
+  },
+  "edit_words_only_logs_nothing": {
+   "ok": "## TD-122: An entry waiting on a host's log\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** event (apply)\n\n**Why:** w\n\n**Event (apply):** the build team's next Apply.\ncheck: host-log team-events kind press \"Apply\"\n\n**Log:**\n- 2026-01-02: gate added: event (apply)\n"
   },
   "note": {
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n\n**Log:**\n- 2026-01-12: half built\n- 2026-01-20: the second half built\n"

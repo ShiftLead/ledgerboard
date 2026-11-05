@@ -515,7 +515,8 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
         lifted = _gate_route(text, dict(fields or {}), day, **route)
         out = edit_entry(lifted, "set", fields=dict(fields or {}), today=day)  # v2.5: dates a gate it adds
     else:
-        kw: dict = {"words": words, "today": day} if action == "note" else {"section": section, "words": words}
+        kw: dict = {"words": words} if action == "note" else {"section": section, "words": words}
+        kw["today"] = day  # note's date; edit's (v2.5) only to date a host-log check it makes a new wait
         out = edit_entry(text, action, **kw)
     if out == text:
         return Plan(action, None, {}, {"id": entries(out)[0]["id"], "notes": []})
@@ -993,7 +994,8 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
             ap.add_argument("--gate", required=True, help='the gate: "decision (<person>)", "event (<name>)" or "until D"')
             ap.add_argument("--by", required=True, help="who lifts it: a person, or a host's token with --evidence or until")
             ap.add_argument("--answer", help="a person's lifting answer (a decision, or an event from a sweep item)")
-            ap.add_argument("--evidence", help="a host's event lift: <repo>#<n> (pr-merged) or <repo>@<sha>")
+            ap.add_argument("--evidence", help="a host's event lift: <repo>#<n> (pr-merged), <repo>@<sha> (file-contains, ref-includes), "
+                                                    "or <source>/<id> or <source>@<YYYYMMDDTHHMMSSZ> (host-log)")
             _board_flags(ap)
             ap.add_argument("--people", help="the board's People:, comma-separated")
             ap.add_argument("--answered-by", choices=("owner", "any"), help="the board's Answered by:")
