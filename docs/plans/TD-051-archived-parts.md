@@ -5,8 +5,8 @@
 cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule after round 1**, 2026-11-05 (the record:
 [docs/reviews/TD-051.md](../reviews/TD-051.md)). Build-changing findings: the design review 0; the fact-checks apart
 1 (F1), and the closing fact-check 1 (F13, a sentence in D4 the code never reaches, removed). F8–F15 are applied
-and read by no design review. Waits on Paul's go (the board's decide item); recommended: One more round, as a
-closing fact-check's build-changing finding makes it (cadence.md §4.8).
+and read by no design review. Paul said **Go** on 2026-11-05 (the board's decide item): the build is
+[TD-052](../ledger/TD-052.md), with F8–F15 in its Fix.
 
 **Entry:** [TD-051](../ledger/TD-051.md). Found while designing TD-050 ([its plan](TD-050-parts-writer.md),
 *Why the check is at write time*).
@@ -56,7 +56,10 @@ answer should go through. It does not:
 
 ## Decisions
 
-**D1. Option A.** It ships in v2.5, beside TD-045's `host-log` and TD-050's `Parts:` writer. It is no version
+**D1. Option A.** It ships in the next tagged release after v2.5, written v2.6 here, beside TD-050's `Parts:`
+writer: v2.5 was tagged 2026-11-05 (#158) without it. The target design (§7.1's note of 2026-11-05) calls its
+next Status release v2.6; whichever is tagged first takes v2.6, and if the Status release is, the build writes
+the number of the release it ships in where this plan writes v2.6. It is no version
 event: no key, line form or canonical entry form changes. A caller written for v2.4 passes no `archived` and
 gets exactly v2.4's result.
 
@@ -130,7 +133,7 @@ becomes
 > `decide_lift(item_line, entries, label, by, today, board_people, answered_by, archived=())` returns `{id: new
 > text}` for each entry it changes, from the base item line, the base texts of the Context entry and each `Parts:`
 > id that the ledger's directory holds, whatever its Status (`entries`), the ids of those only its `archive/` holds
-> (*The ledger as a directory*; `archived`, v2.5: each `TD-n`
+> (*The ledger as a directory*; `archived`, v2.6: each `TD-n`
 > read as `entries`' keys are, by number, any other member ignored; an id among `entries` is read from its text even when `archived`
 > holds its number, open before archived as `entry_path()`), and the base board's `People:` (None: none, and the
 > board checks below are skipped) and `Answered by:`.
@@ -164,7 +167,7 @@ becomes
 becomes
 
 > neither that entry nor any `Parts:` id (an id `entries_after` lacks carries nothing). Its callers give it the
-> open entries' texts alone, so an archived part, left out, carries nothing (v2.5).
+> open entries' texts alone, so an archived part, left out, carries nothing (v2.6).
 
 **3. *The board writer*, the decide-lift bullet.**
 
@@ -173,7 +176,7 @@ becomes
 becomes
 
 > or neither: the entries `decide_lift()` changes, from their texts as they stand, each listed id the ledger's
-> `archive/` holds passed in `archived` (as its heading spells it), never as a text (v2.5) (its `People:` and
+> `archive/` holds passed in `archived` (as its heading spells it), never as a text (v2.6) (its `People:` and
 > `Answered by:`
 
 **4. *The merge gate's verdicts*, (c).**
@@ -185,12 +188,12 @@ becomes
 
 > `decide_lift()` of the base line, the base texts of its Context and `Parts:` entries that the base ledger's
 > directory holds, whatever their Status, and, in `archived`, the ids of those only its `archive/` holds (by which
-> text holds the heading, not by Status; v2.5), with the base board's `People:` and `Answered by:`, accepts the answer, and `closes()` reads the
+> text holds the heading, not by Status; v2.6), with the base board's `People:` and `Answered by:`, accepts the answer, and `closes()` reads the
 > open texts after it;
 
 **5. *Versions*.** A paragraph after v2.5's others:
 
-> **v2.5 answers a parent's item whose part was archived** (*The decide lift*): `decide_lift()` gains
+> **v2.6 answers a parent's item whose part was archived** (*The decide lift*): `decide_lift()` gains
 > `archived=()`, and `board.py decide` and `lift_pr_verdict()` pass the archive's ids in it, so such a part is
 > skipped and logged where v2.4 refused the answer (the writer) or judged the part by its Status (the verdict). A
 > caller that passes no `archived` gets v2.4's result.
