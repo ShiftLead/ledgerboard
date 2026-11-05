@@ -43,6 +43,8 @@ Fixtures, each an invented input and its expected JSON:
   ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
+- ``ledger/belowheader.md`` (TD-049): a ``decision`` gate below the header block — ``check()`` gives its ℹ and
+  reads on, where v2.4 raised, so the next entry's reassign note still comes.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
   and each check; ``components()`` of it joins through the field.
 - ``ledger_edit/cases.json`` (+ the entry files it names) → ``ledger_edit/expected.json`` (v2.2): one

@@ -824,7 +824,10 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
                          "text": f"{'⚠' if level == 'error' else 'ℹ'} {tid}: {why}", "standing": False})
         e = entries(text)
         for gate in (gate_items(parse_gates(e[0]["blocked_raw"])) if e else []):
-            n = reassigns(text, gate) if gate.startswith("decision") else 0
+            try:  # an entry _entry_parts() refuses (a field below its header block) has its ℹ already
+                n = reassigns(text, gate) if gate.startswith("decision") else 0
+            except Refused:
+                n = 0
             if n > 2:
                 recs.append({"level": "info", "id": tid, "field": "blocked by", "kind": "gate-reassigned-often",
                              "text": f"ℹ {tid}: {gate} was reassigned {n} times — is the decision stuck?",
