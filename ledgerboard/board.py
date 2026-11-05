@@ -402,8 +402,8 @@ def _decide_ledger(board_path: str, board_text: str, body: str, label: str | Non
                    board_only: bool, today: str | date | None) -> tuple[bool, dict[str, str | None], dict]:
     """A decide's ledger half (v2.4, SPEC *The board writer*): (whether the answer closes the item, the ledger
     files it changes, what it reports). An item whose Context names one bare ``TD-n`` and one gate is the
-    decide lift: ``decide_lift()`` on the ledger's base texts of that entry and its `Parts:`, judged as the
-    ledger writer judges a write, then ``closes()`` on the texts after. With ``board_only`` (the ``set by=``
+    decide lift: ``decide_lift()`` on the ledger's base texts of that entry and its `Parts:` (a listed id only the
+    archive holds passed as an id in ``archived``, never as a text, v2.6), judged as the ledger writer judges a write, then ``closes()`` on the texts after. With ``board_only`` (the ``set by=``
     route, which has written the ledger already) nothing is written there, and ``closes()`` reads the ledger as
     it stands. An item naming another repo's entry is answered on the board alone and stays open."""
     ref, gate_ = _item_gate(ITEM_RE.match(body).group("text").strip())
@@ -427,18 +427,23 @@ def _decide_ledger(board_path: str, board_text: str, body: str, label: str | Non
         L._writable(led)
         ids = [ref, *[x for x in parse_parts(ITEM_RE.match(body).group("text")) if "#" not in x]]
         found = {}
+        gone = []  # each listed id only the archive holds, as its heading spells it: an id, never a text (v2.6)
         for x in ids:
             try:
                 p, archived = led.entry_file(L.tid_of(x))
             except Refused:
                 continue
-            if not archived:
-                found[entries(led.files[p])[0]["id"]] = p
+            tid = entries(led.files[p])[0]["id"]
+            if archived:
+                gone.append(tid)
+            else:
+                found[tid] = p
         base = {tid: led.files[p] for tid, p in found.items()}
         if board_only:
             return closes(body, label or "", base), {}, {"entries": [], "board_only": True}
         ledger_day = L._today(today)
-        got = decide_lift(body, base, label or "", by, ledger_day, board_people(board_text), answered_by(board_text))
+        got = decide_lift(body, base, label or "", by, ledger_day, board_people(board_text), answered_by(board_text),
+                          archived=gone)
         changes: dict[str, str | None] = {found[tid]: text for tid, text in got.items()}
         notes = L.gate(led, changes, today=ledger_day) if changes else []
     except L.Unusable as e:

@@ -6,9 +6,9 @@ cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule after round 1*
 [docs/reviews/TD-051.md](../reviews/TD-051.md)). Build-changing findings: the design review 0; the fact-checks apart
 1 (F1), and the closing fact-check 1 (F13, a sentence in D4 the code never reaches, removed). F8–F15 are applied
 and read by no design review. Paul said **Go** on 2026-11-05 (the board's decide item): the build is
-[TD-052](../ledger/TD-052.md), with F8–F15 in its Fix.
+[TD-052](../ledger/archive/TD-052.md), with F8–F15 in its Fix.
 
-**Entry:** [TD-051](../ledger/TD-051.md). Found while designing TD-050 ([its plan](TD-050-parts-writer.md),
+**Entry:** [TD-051](../ledger/archive/TD-051.md). Found while designing TD-050 ([its plan](TD-050-parts-writer.md),
 *Why the check is at write time*).
 
 ## The problem
