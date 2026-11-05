@@ -85,7 +85,7 @@ unknown:
   `decision (…)`, reserved by name — today `designer`. A retired gate keeps the block, and a retired
   decision is still a decision by its holder;
 - the Status words of an open entry `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in
-  `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.5's `migrate`'s to map.
+  `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.6's `migrate`'s to map.
 
 **Events** (v2.4). An `event (<name>)` gate pairs with an **Event section** in the entry's body, which
 says what is waited for and how a host tells it happened:
@@ -309,7 +309,7 @@ Log* lifts notes from, so a bold-led `**Live check held**` is a known word here 
 alone. `Superseded … by <id>` and `Dropped` apply the rules below, and so does a word this reader does not
 know. Every other Status reads as closed and done, which releases the dependents, as before. That covers the
 reader's other Status words, dated or not: `Resolved`, and on an archived entry also `Open` and *Retired
-words*' list (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), which v2.5's `migrate`
+words*' list (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), which v2.6's `migrate`
 maps or stops on. It also covers a Status with no word. A duplicate is `Superseded D by` the original; there
 is no separate word.
 - **A blocker that was superseded** has moved its requirement to its successor. The reader follows the chain
@@ -548,7 +548,7 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
 - **Status notes become Log lines** through `status_notes_to_log(text)`, which `note`, `archive` and
   `reopen` run before they write:
   - It reads the Status as `<Word>[.] [YYYY-MM-DD] [by <id>] [[:] <tail>] [ — was: <Status>]…`,
-    where `<Word>` is a known one: `Open`, `Resolved`, `Superseded`, `Dropped`, or one v2.5's
+    where `<Word>` is a known one: `Open`, `Resolved`, `Superseded`, `Dropped`, or one v2.6's
     `migrate` maps (`Designed`, `Built`, `Partly`, `Live`, `In`, `Done`, `Moved`, `OBE`), in any case,
     not in bold, and followed by its end, a `.`, a `:`, its date or `by`. A date or `by <id>` in the
     head is followed by the end, whitespace or a `:`. So `In progress`, `Open, held`, `**Open** x`,
@@ -1337,6 +1337,10 @@ unchanged, with no `today` or a valid one. The unknown-type message now lists `h
 a `host-log` check as an unknown type (`event-check`, an error on an edit), and its gate still holds, so a
 consumer writes one only once every reader and host of its ledger runs v2.5, and once a host that declares its
 repo sweeps it: a gate no host answers waits silently. v2.4 reads the new Log lines as it reads `new`'s.
+
+**v2.5 fixes v2.4's `check()` raising** (TD-049) `Refused` on an entry with a `decision` gate whose header block
+the edits refuse (a field below it, a repeated field, a line that is not a field): `check()` reads on, as it
+does for every entry `entries()` reads, and a field below the header block keeps its ℹ `below-header`.
 
 ## Appendix: grammar
 
