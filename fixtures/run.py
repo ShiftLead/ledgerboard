@@ -115,6 +115,7 @@ import argparse
 import contextlib
 import hashlib
 import importlib.util
+import inspect
 import io
 import json
 import os
@@ -611,9 +612,15 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
     def entry(tid):
         return (d / f"{tid}.md").read_text(encoding="utf-8")
     lines = spec["lines"]
-    decided = {c["name"]: _refused(lambda c=c: L.decide_lift(
-        lines[c["line"]], {t: entry(t) for t in c["entries"]}, c["label"], c["by"], spec["today"],
-        c["people"], c["answered_by"])) for c in spec["decide_lift"]}
+    takes_archived = "archived" in inspect.signature(L.decide_lift).parameters  # v2.6
+
+    def decide(c):
+        if "archived" in c and not takes_archived:  # a v2.4 module is never handed the keyword
+            return {"missing": "the module's decide_lift takes no archived — older than v2.6"}
+        return _refused(lambda: L.decide_lift(
+            lines[c["line"]], {t: entry(t) for t in c["entries"]}, c["label"], c["by"], spec["today"],
+            c["people"], c["answered_by"], **({"archived": c["archived"]} if "archived" in c else {})))
+    decided = {c["name"]: decide(c) for c in spec["decide_lift"]}
     lifted = {c["name"]: _refused(lambda c=c: L.lift_gate(
         entry(c["file"]), c["gate"], c["by"], today=c.get("today", spec["today"]),
         **{k: c[k] for k in ("answer", "evidence", "suffix", "override", "people", "answered_by") if k in c}))
@@ -637,7 +644,8 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
             for c in spec["reassign"]},
         "reassigns": [L.reassigns(entry(t), g) for t, g in spec["reassigns"]],
         "check": [r for r in L.check(ledger, "", today=spec["today"]) if r["kind"] == "gate-reassigned-often"],
-        "closes": [L.closes(lines[c["line"]], c["label"], after(c)) for c in spec["closes"]],
+        "closes": [decided[c["after"]] if "missing" in decided.get(c.get("after"), {})
+                   else L.closes(lines[c["line"]], c["label"], after(c)) for c in spec["closes"]],
         "close": {c["name"]: close(c) for c in spec["close"]},
         "waiting_only": {x: L.waiting_only(x) for x in spec["waiting_only"]},
         "closed_items": [[{"line": it.line, "text": it.text, "kind": it.kind, "answers": it.answers, "lifts": it.lifts,

@@ -854,28 +854,35 @@ the same either way.
 v2.4, of a board or its archive: each a `BoardItem` with its line and detail block).
 
 **The decide lift** (v2.4) is what a lifting answer on a `decide` item whose Context names one entry and one gate
-does to the ledger: `decide_lift(item_line, entries, label, by, today, board_people, answered_by)` returns `{id:
-new text}` for each entry it changes, from the base item line, the base texts of the Context entry and each
-`Parts:` id, and the base board's `People:` (None: none, and the board checks below are skipped) and `Answered
-by:`. It covers a `decision (<p>)` and an `event (<name>)` alike:
+does to the ledger: `decide_lift(item_line, entries, label, by, today, board_people, answered_by, archived=())`
+returns `{id: new text}` for each entry it changes, from the base item line, the base texts of the Context entry
+and each `Parts:` id that the ledger's directory holds, whatever its Status (`entries`), the ids of those only its
+`archive/` holds (*The ledger as a directory*; `archived`, v2.6: each `TD-n` read as `entries`' keys are, by
+number, any other member ignored; an id among `entries` is read from its text even when `archived` holds its
+number, open before archived as `entry_path()`), and the base board's `People:` (None: none, and the board checks
+below are skipped) and `Answered by:`. It covers a `decision (<p>)` and an `event (<name>)` alike:
 - a lifting answer lifts the gate through `lift_gate()` on the Context entry, if it carries it, and on each
-  listed part that does; each listed part that no longer carries it is logged on the Context entry as `gate lift
-  skipped: <id> no longer carries <gate>`;
+  listed part that does; each listed part that no longer carries it, an archived one among them (whatever its
+  Status reads; its `Part of` is not read), is logged on the Context entry as `gate lift skipped: <id> no longer
+  carries <gate>`, in the `Parts:` line's order, an archived part spelled as the first member of its number in
+  `archived` spells it;
 - a waiting-only answer logs `kept waiting: <gate> — by <by>; answer "<label>"` on each of those that still
   carries it, which resets the gate's age; for a decision, so does every other answer (a work order such as
   `One more round`); for an event, any other answer (`Rewrite the check`, `Drop the entry`) writes nothing;
 - `<p>` is compared case-insensitively, and the Log writes the entry's own spelling.
 
 It refuses an item that is not a `decide` naming one entry and one gate; another repo's entry (its lift is a
-tool PR in that repo); a Context entry missing or archived; a `Parts:` id missing, of another repo, or not `Part
-of` the Context entry (the snapshot does not match); a gate's person not on `People:`; an answerer not on
+tool PR in that repo); a Context entry missing or archived (in `archived`, or its Status an archived one); a
+`Parts:` id in neither `entries` nor `archived`, of another repo, or, given as a text, not `Part of` the Context
+entry (the snapshot does not match); a gate's person not on `People:`; an answerer not on
 `People:`, or, for a decision under `owner`, not the gate's person. An event has no gate person, so anyone on
 `People:` may answer it. Its output for an entry is byte for byte `lift_gate()`'s for the same answer.
 
 **Closing on the answer** (v2.4): `closes(item, label, entries_after)` says whether answering closes the item in
 the same write. On an item whose Context names a gate, a waiting-only answer closes it, and a lifting one does
 when the Context names this repo's entry (a bare `TD-n`) and nothing listed still carries the gate after the write
-— neither that entry nor any `Parts:` id (an id `entries_after` lacks carries nothing). Every other answer is a
+— neither that entry nor any `Parts:` id (an id `entries_after` lacks carries nothing). Its callers give it the
+open entries' texts alone, so an archived part, left out, carries nothing (v2.6). Every other answer is a
 work order, and the item stays open until whoever acts on it closes it; a lifting answer on another repo's entry
 stays open until that repo's lift merges.
 
@@ -978,8 +985,10 @@ datetime, taken as its UTC date. The carve-out needs every one of:
   closed and a finished lift never left open; D lies from `created_at − 1` to the merge date (else
   `created_at`) `+ 1`, the board's local day running up to a day from UTC;
 - **(c)** for this repo's entry, the ledger is v2 (a v1 ledger's lift takes review) and `decide_lift()` of the
-  base line and the base texts of its Context and `Parts:` entries, with the base board's `People:` and `Answered
-  by:`, accepts the answer; the PR changes exactly the board and the open file of each entry it changes, each
+  base line, the base texts of its Context and `Parts:` entries that the base ledger's directory holds, whatever
+  their Status, and, in `archived`, the ids of those only its `archive/` holds (by which text holds the heading,
+  not by Status; v2.6), with the base board's `People:` and `Answered by:`, accepts the answer, and `closes()`
+  reads the open texts after it; the PR changes exactly the board and the open file of each entry it changes, each
   byte-equal to its result; every new Log line carries one date T, which is `decide_lift()`'s today, within a day
   of `created_at` and not after the merge (else `created_at + 1`). An answer that changes no entry is windowed by D
   alone. A suffix, a host's lift, an override or a reassign cannot equal `decide_lift()`'s output, so takes
@@ -1074,8 +1083,9 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   never one, since an agent commits under the person's name;
 - **the decide lift** (v2.4) — a `decide` on an item whose Context names one bare `TD-n` and one gate writes the
   board and the ledger (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory) as one write, both
-  or neither: the entries `decide_lift()` changes, from their texts as they stand (its `People:` and `Answered by:`
-  checks, and the ledger writer's refusal, *The ledger writer*), and the board line `edit_line(…, "decide", label,
+  or neither: the entries `decide_lift()` changes, from their texts as they stand, each listed id the ledger's
+  `archive/` holds passed in `archived` (as its heading spells it), never as a text (v2.6) (its `People:` and
+  `Answered by:` checks, and the ledger writer's refusal, *The ledger writer*), and the board line `edit_line(…, "decide", label,
   by, today, close=closes(item, label, entries after))` — so a lifting answer closes the item when nothing listed
   still carries the gate, a waiting-only one closes it and logs `kept waiting`, and a work order leaves it open.
   The board's date is the local clock's and the ledger's the UTC clock's, unless `--today` gives both. Without a
@@ -1341,6 +1351,11 @@ repo sweeps it: a gate no host answers waits silently. v2.4 reads the new Log li
 **v2.5 fixes v2.4's `check()` raising** (TD-049) `Refused` on an entry with a `decision` gate whose header block
 the edits refuse (a field below it, a repeated field, a line that is not a field): `check()` reads on, as it
 does for every entry `entries()` reads, and a field below the header block keeps its ℹ `below-header`.
+
+**v2.6 answers a parent's item whose part was archived** (*The decide lift*): `decide_lift()` gains
+`archived=()`, and `board.py decide` and `lift_pr_verdict()` pass the archive's ids in it, so such a part is
+skipped and logged where v2.4 refused the answer (the writer) or judged the part by its Status (the verdict). A
+caller that passes no `archived` gets v2.4's result.
 
 ## Appendix: grammar
 

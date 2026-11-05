@@ -4481,23 +4481,30 @@ def reassigns(text: str, gate: str) -> int:
 
 
 def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str, today: date | str,
-                board_people: list[str] | None, answered_by: str | None) -> dict[str, str]:
+                board_people: list[str] | None, answered_by: str | None,
+                archived: Iterable[str] = ()) -> dict[str, str]:
     """The decide lift's ledger half (v2.4, SPEC *The decide lift*): ``{id: new_text}`` for each entry the answer
     ``label``, given by ``by``, changes, from the ``decide`` item ``item_line`` (the base board line) and
-    ``entries`` (id to base text: its Context entry and each `Parts:` id). ``board_people`` and
-    ``answered_by`` are the base board's `People:` (None: none, and its checks are skipped) and `Answered by:`
-    (None: ``owner``). Whichever gate the Context names, ``decision (<p>)`` or ``event (<name>)``:
+    ``entries`` (id to base text: its Context entry and each `Parts:` id the ledger's directory holds, whatever
+    its Status). ``archived`` (v2.6) are the ids of those only the ledger's archive holds, each ``TD-n`` read by
+    number as ``entries``' keys are, any other member ignored; an id among ``entries`` is read from its text
+    even when ``archived`` holds its number (open before archived). ``board_people`` and ``answered_by`` are the
+    base board's `People:` (None: none, and its checks are skipped) and `Answered by:` (None: ``owner``).
+    Whichever gate the Context names, ``decision (<p>)`` or ``event (<name>)``:
 
     - a lifting label (one of `Lifts:`, `Go` when it has none, compared in any case; never a waiting-only one)
       lifts the gate through lift_gate() on the Context entry, if it carries it, and on each listed part that
-      does; each listed part that no longer does is logged on the Context entry as ``gate lift skipped``;
+      does; each listed part that no longer does, an archived one among them (its text never read), is logged
+      on the Context entry as ``gate lift skipped``, in the `Parts:` line's order, an archived part spelled as
+      the first member of its number in ``archived`` spells it;
     - a waiting-only label (`Keep waiting`, `Not yet`) logs ``kept waiting`` on each of those that still carries
       it; for a decision, so does any other label; for an event, any other label writes nothing.
 
     Refused: an item that is not a ``decide`` naming one entry and one gate; another repo's entry (its lift is
-    a tool PR there); a Context entry missing or archived; a `Parts:` id missing, of another repo, or not `Part
-    of` the Context entry; a gate's person not on `People:`; an answerer not on `People:`, or, for a decision
-    under ``owner``, not the gate's person."""
+    a tool PR there); a Context entry missing or archived (in ``archived``, or its Status an archived one); a
+    `Parts:` id in neither ``entries`` nor ``archived``, of another repo, or, given as a text, not `Part of` the
+    Context entry; a gate's person not on `People:`; an answerer not on `People:`, or, for a decision under
+    ``owner``, not the gate's person."""
     day = utc_day(today, "decide_lift()'s today")
     got = parse_board(item_line if ITEM_RE.match(item_line) else "", warn=False)
     if len(got) != 1 or got[0].kind != "decide":
@@ -4531,15 +4538,24 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
     for k, v in entries.items():
         if _is_id(k):
             by_num.setdefault(_num(k), (k, v))
+    gone: dict[int, str] = {}  # an archived id's number, spelled as its first member in ``archived`` (v2.6)
+    for x in archived:
+        if _is_id(x):
+            gone.setdefault(_num(x), x)
+    if _num(ref) not in by_num and _num(ref) in gone:
+        raise Refused(f"{ref}, the item's Context entry, is archived — the answer lifts nothing; it takes review")
     if _num(ref) not in by_num or not _entries(by_num[_num(ref)][1]):
         raise Refused(f"{ref}, the item's Context entry, is not among the entries given")
     key, ctx_text = by_num[_num(ref)]
     if first_word(_entries(ctx_text)[0]["fields"].get("status")) in ARCHIVED_WORDS:
         raise Refused(f"{ref}, the item's Context entry, is archived — the answer lifts nothing; it takes review")
-    parts = []
+    parts: list[tuple[str, str | None]] = []  # (id, text), or (its archived spelling, None)
     for p in item.parts:
         if "#" in p:
             raise Refused(f"{p} is another repo's entry — a part is Part of its parent, in the same ledger")
+        if _num(p) not in by_num and _num(p) in gone:
+            parts.append((gone[_num(p)], None))  # archived: carries nothing, and its Part of is not read
+            continue
         if _num(p) not in by_num or not _entries(by_num[_num(p)][1]):
             raise Refused(f"{p}, a part the item lists, is not among the entries given")
         pe = _entries(by_num[_num(p)][1])[0]
@@ -4554,6 +4570,10 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
     targets = [(key, ctx_text), *parts]
     skipped = []
     for k, t in targets:
+        if t is None:  # an archived part (v2.6): skipped on a lifting answer, nothing written otherwise
+            if lifting:
+                skipped.append(k)
+            continue
         written = _carried(t, gate)
         if written is None:
             if lifting and (k, t) != (key, ctx_text):
@@ -5383,6 +5403,21 @@ def _tree_ledger(tree: Mapping[str, str]) -> tuple[dict[int, str], dict[int, str
     return open_t, closed_t, v2
 
 
+def _tree_ledger_by_place(tree: Mapping[str, str]) -> tuple[dict[int, str], dict[int, str]]:
+    """(each text the ledger's directory holds, whatever its Status; each id only its archive holds, as its
+    heading spells it), both by number, of the v2 ledger a tree holds: archived by which text holds the heading,
+    as load() splits them (SPEC *The ledger as a directory*), not by Status as _tree_ledger() does (v2.6)."""
+    led, arch = load(LEDGER_DIR, _tree_ls(tree), lambda p: tree.get(p))
+    here: dict[int, str] = {}
+    for tid, body in _entry_texts(led).items():
+        here.setdefault(_num(tid), body)
+    gone: dict[int, str] = {}
+    for tid in _entry_texts(arch):
+        if _num(tid) not in here:
+            gone.setdefault(_num(tid), tid)
+    return here, gone
+
+
 def _tree_board(tree: Mapping[str, str], repo: str) -> tuple[str, str, str, str]:
     """This repo's own board as the sweep's board tuple, read from a tree."""
     return ("", repo, str(tree.get(BOARD_PATH) or ""), str(tree.get(BOARD_ARCHIVE_PATH) or ""))
@@ -5677,15 +5712,17 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
         entries_given: dict[str, str] = {}
         result: dict[str, str] = {}
     else:
-        b_open, b_closed, v2 = _tree_ledger(base_tree)
-        if not v2:
+        if _tree_ls(base_tree)(LEDGER_DIR) is None:
             return review("lift-v1", "a v1 ledger's lift is not recomputed — it takes ordinary review")
+        b_here, b_gone = _tree_ledger_by_place(base_tree)
         entries_given = {}
+        gone: list[str] = []  # the listed ids only the base archive holds: ids, never texts (v2.6)
         for x in [ref, *b_item.parts]:
             n = _num(x) if _is_id(x) else None
-            got = b_open.get(n, b_closed.get(n)) if n is not None else None
-            if got is not None:
-                entries_given[_entries(got)[0]["id"]] = got
+            if n is not None and n in b_here:
+                entries_given[_entries(b_here[n])[0]["id"]] = b_here[n]
+            elif n is not None and n in b_gone:
+                gone.append(b_gone[n])
         ls = _tree_ls(base_tree)
         h_ls = _tree_ls(head_tree)
         days = set()
@@ -5698,7 +5735,7 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
             return review("lift-log-date", f"the new Log lines carry more than one date: {sorted(days)}")
         t = date.fromisoformat(days.pop()) if days else created
         try:
-            result = decide_lift(bl, entries_given, label, by, t, people, answered)
+            result = decide_lift(bl, entries_given, label, by, t, people, answered, archived=gone)
         except Refused as e:
             return review("lift-refused", f"decide_lift refuses it: {e}")
         if result and not (created - one <= t <= min(created + one, merged or created + one)):
