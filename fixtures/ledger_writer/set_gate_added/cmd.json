@@ -3,7 +3,7 @@
   "set",
   "TD-2",
   "--blocked-by",
-  "until 2026-02-01, TD-001",
+  "TD-001, until 2026-02-01, event (ships)",
   "--ledger",
   "ledger",
   "--today",

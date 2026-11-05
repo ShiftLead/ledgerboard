@@ -400,6 +400,9 @@
   "set_migrates_old_form": {
    "ok": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat), until 2026-02-01\n\n**Why:** w\n\n**Ask:** the board's 2026-01-03 item\n\n**Log:**\n- 2026-01-20: gate added: until 2026-02-01\n"
   },
+  "set_migrates_old_form_no_today": {
+   "ok": "## TD-120: An entry in the old form\n\n**Priority:** Medium\n**Blocked by:** TD-3, decision (pat)\n\n**Why:** w\n\n**Ask:** the board's 2026-01-03 item\n"
+  },
   "set_no_gate_with_today": {
    "ok": "## TD-121: An entry with a gate\n\n**Priority:** High\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n"
   },
