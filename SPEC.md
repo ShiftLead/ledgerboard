@@ -22,7 +22,8 @@ first wins. Names compare case- and separator-insensitively (`Blocked by`, `bloc
 `BLOCKED_BY`). **A field's value is its first word**, lower-cased; the rest of the line is a free
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
 feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` and `Id take` (v2.2). A
-`Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged.
+`Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged
+(ℹ `below-header`), and `check()` reads on past it: it never raises on an entry `entries()` reads (TD-049).
 A `Priority` other than High, Medium or Low (v2.4) is read after Low and flagged (`priority`): an error on
 an entry the edit changed, ℹ on a standing ledger.
 
