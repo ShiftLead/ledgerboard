@@ -53,7 +53,8 @@ Fixtures, each an invented input and its expected JSON:
   each is refused; and ``check()``'s Part of flags of a ledger before and after an archive
   (``check/``), ``archive-open-parts`` among them. From v2.4, the Log: ``entry_text(filed=)``, the
   writers' Log lines, and per ``log`` case ``log_lines()``, ``log_problems()``, ``status_notes_to_log()``
-  and ``gate_age()`` of each gate the case names. Also from v2.4, ``archive_plan()`` of each ``archive_plan`` case
+  and ``gate_age()`` of each gate the case names (from v2.5 ``gate_added()`` too, and a ``set`` step takes the
+  case's own ``today`` when it gives one). Also from v2.4, ``archive_plan()`` of each ``archive_plan`` case
   (``plan/``: a supersede, its chain, each refusal, a chain ending in a Status word this reader does not know
   among them), the Dropped archive, and ``rename_ref`` keeping one copy.
 - ``ledger/supersede.md`` (v2.4): an archived blocker's Status read — Resolved, Superseded (by an open entry, a
@@ -554,7 +555,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         t = text(c)
         return {"log_lines": L.log_lines(t), "log_problems": [list(x) for x in L.log_problems(t)],
                 "status_notes_to_log": _refused(lambda: L.status_notes_to_log(t)),
-                "gate_age": {g: L.gate_age(t, g) for g in c["gates"]}}
+                "gate_age": {g: L.gate_age(t, g) for g in c["gates"]},
+                **({"gate_added": {g: L.gate_added(t, g) for g in c["gates"]}} if hasattr(L, "gate_added") else {})}
 
     def plan(c):  # v2.4: what an archive leaves its dependents
         if not hasattr(L, "archive_plan"):
@@ -569,8 +571,9 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         def run():
             out = text(c)
             for st in c["steps"]:
-                dated = st["action"] in ("note", "archive", "reopen")  # the others take no date
-                args = {"today": c.get("today", spec["today"])} if dated else {}
+                dated = st["action"] in ("note", "archive", "reopen")  # these require a date
+                args = ({"today": c.get("today", spec["today"])} if dated
+                        else {"today": c["today"]} if st["action"] == "set" and "today" in c else {})  # v2.5: set's own
                 out = L.edit_entry(out, st["action"], **{**args, **st["args"]})
             return out
         return _refused(run)

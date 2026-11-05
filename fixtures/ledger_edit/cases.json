@@ -900,11 +900,9 @@
    "file": "reordered.md",
    "steps": [
     {
-     "action": "set",
+     "action": "renumber",
      "args": {
-      "fields": {
-       "Priority": "High"
-      },
+      "new": "TD-41",
       "today": "2026-01-20"
      }
     }
@@ -1085,7 +1083,8 @@
       }
      }
     }
-   ]
+   ],
+   "today": "2026-01-20"
   },
   {
    "name": "set_refused_old_form",
@@ -1142,7 +1141,8 @@
       }
      }
     }
-   ]
+   ],
+   "today": "2026-01-20"
   },
   {
    "name": "set_other_field_keeps_old_form",
@@ -1153,6 +1153,162 @@
      "args": {
       "fields": {
        "Priority": "High"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_logs_each_gate_it_adds",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (Kim), event (ships), until 2026-02-01"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_makes_the_log_for_a_gate",
+   "file": "reordered.md",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-012, decision (kim)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_gate_without_today",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (kim), until 2026-02-01"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_keeps_a_gate_without_today",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "decision (Kim)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_drops_a_gate_logs_nothing",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_readds_a_dropped_gate",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3"
+      }
+     }
+    },
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (kim)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_logs_a_repeated_gate_once",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (kim), decision (Lee), Decision (LEE)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_no_gate_with_today",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_bad_today",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-1-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Priority": "High"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "set_refused_gate_on_a_log_not_last",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n\n**Related:** TD-3.\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (kim), event (ships)"
       }
      }
     }
@@ -1312,6 +1468,26 @@
    "name": "was_takes_the_resolved_date",
    "text": "## TD-092: x\n\n**Added:** 2026-09-01\n**Status:** Open 2026-11-01: looked again — was: Resolved: built\n\n**Why:** w\n\n**Resolved:** 2026-10-01 (PR #3)\n",
    "gates": []
+  },
+  {
+   "name": "gate_added",
+   "file": "gate_added.md",
+   "gates": [
+    "decision (KIM)",
+    "until 2026-03-01",
+    "event (tool-v3)",
+    "event (docs)",
+    "event (late)",
+    "event (none-added)",
+    "event (never)"
+   ]
+  },
+  {
+   "name": "gate_added_reopened",
+   "file": "gate_added_reopened.md",
+   "gates": [
+    "event (ships)"
+   ]
   }
  ],
  "archive_plan": [

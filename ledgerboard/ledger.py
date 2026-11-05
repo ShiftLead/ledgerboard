@@ -513,7 +513,7 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
         raise Unusable(f"{action} takes no gate route: --by, --answer, --override and --why are set's")
     if action == "set":
         lifted = _gate_route(text, dict(fields or {}), day, **route)
-        out = edit_entry(lifted, "set", fields=dict(fields or {}))
+        out = edit_entry(lifted, "set", fields=dict(fields or {}), today=day)  # v2.5: dates a gate it adds
     else:
         kw: dict = {"words": words, "today": day} if action == "note" else {"section": section, "words": words}
         out = edit_entry(text, action, **kw)
