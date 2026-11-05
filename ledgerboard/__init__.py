@@ -3866,7 +3866,11 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 was = parse_gates(current)
                 had = {_gate_key(x) for x in gate_items(was)} | (
                     {_gate_key(f"decision ({was['old_form'][0]})")} if was["old_form"] else set())
-                added = [x for x in gate_items(parse_gates(value)) if _gate_key(x) not in had]
+                added = []
+                for x in gate_items(parse_gates(value)):  # a gate named twice is logged once, as first written
+                    if _gate_key(x) not in had:
+                        had.add(_gate_key(x))
+                        added.append(x)
                 if added and not day:
                     raise Refused(f"set adds {', '.join(added)}, which the Log dates — pass today (v2.5)")
                 if added:

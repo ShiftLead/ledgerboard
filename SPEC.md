@@ -513,7 +513,8 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   From v2.5, `set` takes an optional `today`, and a `Blocked by` that adds a gate the entry did not carry
   needs it: it also appends `gate added: <gate>` to the Log for each, in the order the gates are written,
   dated `today`, making the Log at the end of the body if there is none (a Log that is not last is
-  refused, as for `note`; the Status's notes are not lifted). A gate it keeps is not logged again. **The
+  refused, as for `note`; the Status's notes are not lifted). A gate it keeps is not logged again, and a gate the value names twice is
+  logged once, as first written. **The
   gates the entry carried** are its `gate_items()` plus, when its `Blocked by` holds the old form, that
   form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So
   migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept. The old

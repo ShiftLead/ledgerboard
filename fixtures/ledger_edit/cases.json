@@ -1255,6 +1255,21 @@
    ]
   },
   {
+   "name": "set_logs_a_repeated_gate_once",
+   "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
+   "today": "2026-01-20",
+   "steps": [
+    {
+     "action": "set",
+     "args": {
+      "fields": {
+       "Blocked by": "TD-3, decision (kim), decision (Lee), Decision (LEE)"
+      }
+     }
+    }
+   ]
+  },
+  {
    "name": "set_no_gate_with_today",
    "text": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3, Decision (kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n",
    "today": "2026-01-20",
