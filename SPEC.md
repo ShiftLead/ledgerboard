@@ -87,6 +87,13 @@ unknown:
 - the Status words of an open entry `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in
   `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.7's `migrate`'s to map.
 
+**A new `Waits` line is an error** (v2.7). Every wait now has a gate form — a date as `until YYYY-MM-DD`,
+an event as `event (<name>)` with its Event section, a `host-log` check among them (*Events*) — so a `Waits`
+line an edit writes is a mistake. Given the ledger before the edit, `check()` grades the retired `Waits` field
+an error (kind `retired`, field `waits`) on an entry whose `Waits` line the edit added or whose text it
+changed, naming the gate form to write. A `Waits` line the edit left as it was keeps its ℹ, on a changed
+entry as on an untouched one, and with no ledger before the edit every `Waits` line is ℹ.
+
 **Events** (v2.4). An `event (<name>)` gate pairs with an **Event section** in the entry's body, which
 says what is waited for and how a host tells it happened:
 
@@ -1388,6 +1395,10 @@ caller that passes no `archived` gets v2.4's result.
 **v2.6 gives `Parts:` its writer** (*Edits*, *The board writer*): `item_line(parts=)`, `parts_problems()` and
 `board.py add --parts`. Nothing read changes:
 v2.3, v2.4 and v2.5 read every line it writes, and no key moves.
+
+**v2.7 makes a new `Waits` line an error** (*Retired words*): `check()` with the ledger before an edit grades
+the retired field ⚠ on an entry whose `Waits` line the edit added or changed, where v2.4 to v2.6 noted it ℹ.
+Nothing read changes, and a ledger whose `Waits` lines no edit touches checks as before.
 
 ## Appendix: grammar
 

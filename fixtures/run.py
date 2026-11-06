@@ -61,7 +61,9 @@ Fixtures, each an invented input and its expected JSON:
   and ``gate_age()`` of each gate the case names (from v2.5 ``gate_added()`` too, and a ``set`` step takes the
   case's own ``today`` when it gives one). Also from v2.4, ``archive_plan()`` of each ``archive_plan`` case
   (``plan/``: a supersede, its chain, each refusal, a chain ending in a Status word this reader does not know
-  among them), the Dropped archive, and ``rename_ref`` keeping one copy.
+  among them), the Dropped archive, and ``rename_ref`` keeping one copy. From v2.7, ``check()``'s ``retired`` flag on a
+  ``Waits`` line (``check/waits_*``): an error where the edit added or changed the line, ℹ where it left it, or with
+  no ``old``.
 - ``ledger/supersede.md`` (v2.4): an archived blocker's Status read — Resolved, Superseded (by an open entry, a
   Resolved one, another repo's, a chain ending in Dropped, a loop, no successor) and Dropped, here and through the
   resolver's ``status`` and ``successor``.
@@ -594,7 +596,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                                      old=text({"file": c["old"]}) if c.get("old") else None,
                                                      today=spec["today"])
                                   if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
-                                                   "log-not-last", "log-line", "event-undated")]
+                                                   "log-not-last", "log-line", "event-undated")
+                                  or (r["kind"], r["field"]) == ("retired", "waits")]  # v2.7
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],

@@ -309,6 +309,90 @@
     "standing": false,
     "text": "⚠ TD-020: left the ledger while TD-021, TD-022 are still Part of it — archive its parts first, or point their Part of at its new id or another parent"
    }
+  ],
+  "waits_no_old": [
+   {
+    "field": "waits",
+    "id": "TD-401",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-401: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-402",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-402: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-403",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-403: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-404",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-404: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-406",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-406: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   }
+  ],
+  "waits_written_is_an_error": [
+   {
+    "field": "waits",
+    "id": "TD-401",
+    "kind": "retired",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-401: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-402",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-402: the Waits field is retired — write a gate in Blocked by — until YYYY-MM-DD or event (<name>) (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-403",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-403: a new or changed Waits line — the field is retired and no reader takes it as a gate; write the wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-404",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-404: a new or changed Waits line — the field is retired and no reader takes it as a gate; write the wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section (SPEC *Retired words*)"
+   },
+   {
+    "field": "waits",
+    "id": "TD-406",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-406: a new or changed Waits line — the field is retired and no reader takes it as a gate; write the wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section (SPEC *Retired words*)"
+   }
   ]
  },
  "edit_entry": {
