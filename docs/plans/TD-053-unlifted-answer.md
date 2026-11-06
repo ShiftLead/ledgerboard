@@ -14,7 +14,7 @@ more round (2026-11-06): its design review read the whole plan, F66–F71 first,
 so the rounds end by the stop rule; round 8 changed no text, so its closing fact-check had nothing to read. Every
 finding has been read by a design review. Waits on Paul's go (the board's decide item); recommended: Go.
 
-**Entry:** [TD-053](../ledger/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
+**Entry:** [TD-053](../ledger/archive/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
 2026-11-05).
 
 ## The problem
