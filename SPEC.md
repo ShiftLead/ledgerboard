@@ -787,7 +787,7 @@ and the gate faults, any other.
 written (`parse_parts()`, `BoardItem.parts`, `item_record()`'s `parts`): every `TD-NNN` or `<repo>#TD-NNN` in it,
 each once, and never one inside a reply's words. The writers write the ids in number order, separated by `, `. Its ids are not Context refs, and it is
 part of the item key, since a changed snapshot is a different question. What an answer does to the parts it
-lists is *The decide lift*'s (v2.4). `item_line(parts=)` writes it, and `parts_problems()` checks it against the
+lists is *The decide lift*'s (v2.4). `item_line(parts=)` and `board.py add --parts` write it, and `parts_problems()` checks it against the
 ledger (v2.6, *Edits*).
 
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
@@ -1089,7 +1089,12 @@ importable library (`plan_add`, `plan_edit`, `plan_archive`, `plan_fmt`, `plan_r
 being the command people run). It reads the files it is given, applies the module's edit, and writes the files
 back; it never runs git, the network or anything of a consumer's. Its actions:
 - **`list`** — every open item's record (`item_record()`), read-only;
-- **`add`** — a new item (`item_line()`, any kind, its answers and detail block, `--hide-until`); with `--said` and `--by`, a
+- **`add`** — a new item (`item_line()`, any kind, its answers and detail block, `--hide-until`); with `--parts TD-a,TD-b` (v2.6), a
+  decide's snapshot (`item_line(parts=)`): the option may be repeated, each value is split on `,` and each piece
+  trimmed, and an empty piece is refused; `--parts` with `--decided` is refused, and so is `--ledger` without
+  `--parts`. The line's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default
+  `ledger/` beside the board when it is a directory, its open and archived entries), and the write is refused,
+  with every problem, when `parts_problems()` names any, or when no ledger is found; with `--said` and `--by`, a
   question already answered, its answer following the text as ` — <by>, <date>: <words>`; with `--decided`, an
   item the person decided elsewhere (`decided_line()`). It goes above the first item of the section the
   `--under` heading opens (`## Needs the user` by default), or right under that heading when its section holds
@@ -1136,8 +1141,8 @@ both or neither: each is written to a temporary file beside it and renamed into 
 and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
 date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
 (`--tool`, `--session`). A file that declares a newer major is refused unread. Exit (v2.4), the ledger writer's
-table: 0 written (or nothing to change), 1 refused, 2 usage (a bad `--today` among it) or, for `decide`, a ledger
-that cannot be used as asked,
+table: 0 written (or nothing to change), 1 refused, 2 usage (a bad `--today` among it) or, for `decide` and
+`add --parts`, a ledger that cannot be used as asked,
 4 a write failed (every file restored); it never exits 3, which is the ledger writer's `needs`.
 
 From v2.4, a write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()`
@@ -1380,7 +1385,8 @@ does for every entry `entries()` reads, and a field below the header block keeps
 skipped and logged where v2.4 refused the answer (the writer) or judged the part by its Status (the verdict). A
 caller that passes no `archived` gets v2.4's result.
 
-**v2.6 gives `Parts:` its writer** (*Edits*): `item_line(parts=)` and `parts_problems()`. Nothing read changes:
+**v2.6 gives `Parts:` its writer** (*Edits*, *The board writer*): `item_line(parts=)`, `parts_problems()` and
+`board.py add --parts`. Nothing read changes:
 v2.3, v2.4 and v2.5 read every line it writes, and no key moves.
 
 ## Appendix: grammar

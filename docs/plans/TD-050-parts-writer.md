@@ -24,7 +24,7 @@ applied; the closing fact-check raised one minor (F114: `decide_lift()` raises o
 applied. So the rounds end by the stop rule. Build-changing findings per round 1–10, design reviews only: 1, 2, 2,
 2, 1, 3, 1, 4, 1, 0. Waits on Paul's go (the board's decide item); recommended: Go.
 
-**Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
+**Entry:** [TD-050](../ledger/archive/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
 
 ## The problem
 
