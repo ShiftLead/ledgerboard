@@ -13,8 +13,10 @@ words after the gate defeat `covers()`) is a new topic. The plan also moves to t
 tagged 2026-11-05 without it (D1). Paul bought **one more round** again (round 8, 2026-11-05): a design review of
 F86–F96, which raised four build-changing findings (F97–F100: a SPEC rule text 2 cited but SPEC never stated; the
 plan stale against TD-051's build, TD-052, already merged into v2.6; two fixture cases undefined or in the wrong
-runner) and four minor ones (F101–F104). F97–F104 are applied and read by no design review. Waits on Paul's go
-(the board's decide item); recommended: One more round.
+runner) and four minor ones (F101–F104). Paul bought **one more round** again (round 9, 2026-11-06): a design
+review of F97–F104 found them applied as described and raised one build-changing finding (F105: an id in
+`archived` with no text was `missing` or `archived` by guess) and four minor ones (F106–F109). F105–F109 are applied
+and read by no design review. Waits on Paul's go (the board's decide item); recommended: One more round.
 
 **Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
 
@@ -60,7 +62,8 @@ writes.
 **D2. The work is split as the package splits** (target design §1.1): the line in the module, the ledger in the
 file writer.
 - **`item_line(…, parts=None)`** writes the field and checks what the line alone can show. `parts` is a list or
-  tuple of strings, each exactly `TD-` and 1 to 18 ASCII digits, `TD-[0-9]{1,18}` (no stripping, no other case:
+  tuple of strings, each exactly `TD-` and 1 to 18 ASCII digits, `TD-[0-9]{1,18}` matched whole (`fullmatch`, so
+  `TD-9\n` is refused; no stripping, no other case:
   `td-9`, ` TD-9`, `TD-١٢` and a 19-digit id are refused, and a bare string is refused as not a list). It is
   written ` Parts: <ids>.` right after the Context (ahead of the `Due:`), ordered by number (`TD-9` before
   `TD-10`), separated by `, `, each as the caller spelled it. It is refused, each a refusal of its own:
@@ -91,7 +94,8 @@ file writer.
 
   `item_line()` refuses with that string as the whole of its `Refused` message, exactly (`context: not one entry
   and one decision`, `TD-9: twice`), with no prefix (its kind and lifting-answer refusals stay its own, outside
-  the helper). With `parts`, its order is: the kind, and `parts` not a list or tuple, right after it; then the
+  the helper). With `parts`, its order is: the existing kind check (a kind not in `KINDS`), then `parts` on a kind
+  other than `decide`, then `parts` not a list or tuple; then the
   existing checks up to and including the Context's own words, in the code's order as today (the text, today, the
   Due, a host without its session, the session's and host's names, then `_item_words(context)`); then the helper, given the Context as `item_line()` then holds it (`ctx`,
   its final `.` removed; `none` when no Context was given, which the helper faults), ahead of every existing
@@ -130,7 +134,9 @@ file writer.
     no entry. `archived` holds the ids the caller read from the ledger's archive, by number, a member that is not
     such an id ignored. A key or member that is not a string is ignored. This is narrower than `decide_lift()`, which reads any `\d+` run as a number. An entry is
     archived when its number is in `archived` (an archived entry may read `Open`, SPEC *Superseded and dropped*)
-    or its Status's first word is an archived one (`ARCHIVED_WORDS`). A gate is carried as `decide_lift()` reads
+    or its Status's first word is an archived one (`ARCHIVED_WORDS`). `archived` is read first: a number in it
+    with no text in `entries` is `archived`, never `missing`, as `decide_lift()` reads a number in `archived` it
+    is given no text for (the way `board.py decide` calls it). A gate is carried as `decide_lift()` reads
     it (`_carried`: the person compared case-insensitively); an archived entry carries nothing. A part's `Part of`
     is the Context's entry only when `parse_part_of(…)[0]` is a bare `TD-[0-9]{1,18}` of its number: none, a second
     parent, another repo's or an unreadable value is not. The parent may carry the gate or not.
@@ -360,7 +366,8 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   `Part of` is `other#TD-4`, a 5000-digit id or `TD-١٢`; a part not carrying the gate; a part archived by its
   Status; a part named in `archived` whose Status reads `Open`; a part missing; the Context entry archived by its
   Status (`<ref>: archived`); the Context entry named in `archived` whose Status reads `Open`, its text given
-  (`<ref>: archived`); the Context entry missing;
+  (`<ref>: archived`); the Context entry missing; a part, and the Context entry, each named in `archived` with no
+  key in `entries` (`<id>: archived`, `<ref>: archived`, never `missing`);
 - order: two faulty parts, listed in the line's order; one part both not `Part of` the parent and not carrying the
   gate, giving `not Part of` alone; the Context entry missing with a faulty part, giving both;
 - inputs: `entries` holding `TD-9` and `TD-009` (the first wins); keys that are no id (`x`, a 19-digit and a
@@ -379,9 +386,12 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   item, giving `[]`, and a faulty one with its detail block giving its ledger problems;
 - `[]`: an `act` line, a `decide` with no `Parts:`, a closed `- [x]` decide, a decided decide (`Decided: Go (by
   pat) (…)`) whose part is archived, a string that is no item, and `None`, `5` and `b"…"` as `item_line`;
-- for each matching case, `covers()` over its line, on a board that is the repo's own (named by the `repo` the
-  case gives, as `acme/widgets` is in the sweep's cases, since a bare `TD-n` is read only there) and whose
-  `People:` lists `pat`, reads each listed part, one by one, as covered (`open`) by the parent's item;
+- for each matching case, `covers()` over its line, on a board the runner builds from the case: a one-item board
+  holding the line under a `People: pat` header, given as the repo's own (its origin URL and basename those of the
+  sweep's `acme/widgets` board, and `repo` `acme/widgets`, since a bare `TD-n` is read only there), and each part's
+  text with the gate as that part carries it (`decision (Pat)` in that case), reads each listed part, one by one,
+  as covered (`open`) by the parent's item; and for each words-after-the-gate `line:` case, with a matching ledger,
+  `covers()` on the same board shape gives `[]` for each part (SPEC text 5);
 - the cross-check with *The decide lift*: for each matching case, `decide_lift()` answered `Go` by `pat`, with
   `board_people=["pat"]`, accepts it and changes every listed part; for the not-`Part of`, no-`Part of`, `Part of`
   `other#TD-4` and missing cases it refuses; for the Context entry archived by its Status or missing, and the two-entry,
@@ -395,7 +405,12 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   cross-checked: the 5000-digit and `TD-١٢` cases (`decide_lift()` reads any `\d+` run as a number, and raises
   `ValueError` on 5000 digits, `int()`'s limit, which this design does not change), and the `line:` cases for
   `twice` (`Parts: TD-9, TD-009.`, which `decide_lift()` accepts, lifting the one entry) and a 19-digit part,
-  each a hand-written form the writer never writes.
+  each a hand-written form the writer never writes; the order and inputs cases and the read-as-`parse_parts()`
+  cases, which test `parts_problems()`'s own reading and say nothing of the lift; and the `line:` case naming a
+  19-digit Context entry, which `decide_lift()` refuses as not among the entries given. The words-after-the-gate
+  cases carry a matching ledger, both parts `Part of: TD-4` carrying `decision (pat)`. The cases named in
+  `archived` with no text are cross-checked with that `archived`: `decide_lift()` refuses the Context entry as
+  archived, and skips the part, logging `gate lift skipped`.
 
 These sit in `fixtures/sweep`, not `fixtures/lift`, because the `covers()` check needs a board, its `People:` and
 a `repo`, which the sweep's runner already reads; the `decide_lift()` cross-check rides with them.
