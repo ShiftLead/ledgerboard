@@ -261,6 +261,69 @@ class Usage(unittest.TestCase):
             self.assertEqual(out.splitlines(), ["ledgerboard: done Merge it. (session n/a)", board])
 
 
+class AddParts(unittest.TestCase):  # v2.6: add --parts, a decide's Parts: snapshot (ledgerboard TD-050 B2)
+    PART = ("## {}: A build\n\n**Priority:** Medium\n**Status:** Open\n**Blocked by:** decision (pat)\n"
+            "**Part of:** {}\n\n**Why:** w.\n\n**Ask:** go?\n")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.board = os.path.join(self.tmp.name, "board.md")
+        self.led = os.path.join(self.tmp.name, "ledger")
+        os.makedirs(self.led)
+        Path(self.board).write_text("# Board\n\nPeople: pat\n\n## Needs the user\n\n")
+        Path(self.led, "README.md").write_text("# Ledger\n\nLedgerboard: 2\n")
+        Path(self.led, "TD-004.md").write_text("## TD-004: The parent\n\n**Priority:** Medium\n**Status:** Open\n\n**Why:** w.\n")
+        Path(self.led, "TD-009.md").write_text(self.PART.format("TD-009", "TD-004"))
+        Path(self.led, "TD-010.md").write_text(self.PART.format("TD-010", "TD-005"))  # not Part of TD-4
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def add(self, *more, kind="decide", context="TD-4 decision (pat)"):
+        return run("add", "--board", self.board, *(["--kind", kind] if kind else []), "--text", "Go on both?",
+                   "--context", context, "--due", "2026-01-20", "--answer", "Go", "--answer", "Not yet",
+                   *(["--detail", json.dumps({"context": "c", "question": "q", "recommended": "r"})]
+                     if kind == "decide" else []),
+                   "--today", "2026-01-15", *more)
+
+    def test_takes_and_defaults(self):
+        self.assertLessEqual({"parts", "ledger"}, B.TAKES["add"])
+        self.assertEqual(B.DEFAULTS["parts"], [])
+
+    def test_ledger_without_parts_is_a_refusal_not_a_usage_error(self):
+        code, _, err = self.add("--ledger", self.led)
+        self.assertEqual(code, 1, err)
+        self.assertIn("give --parts too", err)
+
+    def test_no_parts_never_reads_a_ledger(self):
+        os.rename(self.led, self.led + ".gone")
+        code, _, err = self.add()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("Parts:", Path(self.board).read_text())
+
+    def test_the_checks_run_in_order(self):
+        before = Path(self.board).read_text()
+        steps = [  # each refusal is the first failing step's; the board is never written
+            ((self.add("--parts", "TD-9,", "--decided", "Go", kind=None)), 1, "empty piece"),  # 1: the options
+            ((self.add("--parts", "TD-9", kind="act")), 1, "only a decide lists its parts"),  # 2: before the ledger
+            ((self.add("--parts", "TD-9", "--ledger", os.path.join(self.tmp.name, "none"),
+                       context="TD-4 decision (pat) — later")), 1, "context: not one entry"),  # 2: the helper
+            ((self.add("--parts", "TD-9,TD-10", "--ledger", os.path.join(self.tmp.name, "none"))), 2, "no such ledger"),
+            ((self.add("--parts", "TD-9,TD-10", context="TD-4 decision (kim)")), 1,  # 4: before the board's gate
+             "the snapshot does not match the ledger: TD-9: does not carry decision (kim); TD-10: not Part of TD-4"),
+        ]
+        for (code, _, err), want_code, want in steps:
+            self.assertEqual(code, want_code, err)
+            self.assertIn(want, err)
+            self.assertEqual(Path(self.board).read_text(), before)
+
+    def test_a_matching_snapshot_is_written(self):
+        Path(self.led, "TD-010.md").write_text(self.PART.format("TD-010", "TD-004"))
+        code, _, err = self.add("--parts", "TD-10", "--parts", "TD-9")
+        self.assertEqual(code, 0, err)
+        self.assertIn("Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due:", Path(self.board).read_text())
+
+
 class HideNotes(unittest.TestCase):
     """``item_notes()`` (v2.4, SPEC *Notes on a hide*) and how the writer reports them."""
 
