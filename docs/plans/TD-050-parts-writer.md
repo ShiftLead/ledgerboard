@@ -13,7 +13,7 @@ words after the gate defeat `covers()`) is a new topic. The plan also moves to t
 tagged 2026-11-05 without it (D1). Paul bought **one more round** again (round 8, 2026-11-05): a design review of
 F86–F96, which raised four build-changing findings (F97–F100: a SPEC rule text 2 cited but SPEC never stated; the
 plan stale against TD-051's build, TD-052, already merged into v2.6; two fixture cases undefined or in the wrong
-runner) and four minor ones (F101–F104). Paul bought **one more round** again (round 9, 2026-11-06): a design
+runner) and four minor ones (F101–F104). Paul bought **one more round** again (round 9, 2026-11-05): a design
 review of F97–F104 found them applied as described and raised one build-changing finding (F105: an id in
 `archived` with no text was `missing` or `archived` by guess) and four minor ones (F106–F109). F105–F109 are applied
 and read by no design review. Waits on Paul's go (the board's decide item); recommended: One more round.
@@ -134,9 +134,11 @@ file writer.
     no entry. `archived` holds the ids the caller read from the ledger's archive, by number, a member that is not
     such an id ignored. A key or member that is not a string is ignored. This is narrower than `decide_lift()`, which reads any `\d+` run as a number. An entry is
     archived when its number is in `archived` (an archived entry may read `Open`, SPEC *Superseded and dropped*)
-    or its Status's first word is an archived one (`ARCHIVED_WORDS`). `archived` is read first: a number in it
-    with no text in `entries` is `archived`, never `missing`, as `decide_lift()` reads a number in `archived` it
-    is given no text for (the way `board.py decide` calls it). A gate is carried as `decide_lift()` reads
+    or its Status's first word is an archived one (`ARCHIVED_WORDS`). A number in `archived` with no key in
+    `entries` is `archived`, never `missing`, as `decide_lift()` reads it (the way `board.py decide` calls it). A
+    number with a key in `entries` whose value is no string or holds no entry is no entry; with its number also in
+    `archived` it is `archived` here, where `decide_lift()`, which reads by key, says "not among the entries given":
+    a difference by design, since the snapshot is judged by where the ledger keeps the entry. A gate is carried as `decide_lift()` reads
     it (`_carried`: the person compared case-insensitively); an archived entry carries nothing. A part's `Part of`
     is the Context's entry only when `parse_part_of(…)[0]` is a bare `TD-[0-9]{1,18}` of its number: none, a second
     parent, another repo's or an unreadable value is not. The parent may carry the gate or not.
@@ -288,8 +290,8 @@ and after the paragraph on `decided_line()`, a new paragraph:
 > empty list and the lifting answer are `item_line()`'s alone. Otherwise it reads `entries` (id to text, open and
 > archived alike, by number, the first of a number winning; a key that is not a bare `TD-` and 1 to 18 ASCII
 > digits is ignored, and a value that is not a string, or holds no entry, is no entry) and `archived` (the ids
-> read from the ledger's archive, by number). An entry is archived when its number is in `archived` or its Status
-> is an archived one. It judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each
+> read from the ledger's archive, by number). An entry is archived when its number is in `archived` (whether or not
+> `entries` holds a text for it) or its Status is an archived one. It judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each
 > part still, in the line's order, its first fault of `<id>: missing`, `<id>: archived`, `<id>: not Part of
 > <ref>`, `<id>: does not carry <gate>`. It is stricter than *The decide lift*, which skips a part that no longer
 > carries the gate (one archived by its Status, or named in `archived` and not given, among them), still lifts an
