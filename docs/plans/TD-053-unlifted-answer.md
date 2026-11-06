@@ -1,8 +1,8 @@
 # TD-053: a lifting answer closed with no lift
 
 **Status:** Draft 1, 2026-11-05 (session lb-designer). Class: **wide** (a vendored, published format: what
-`sweep()` files and closes, which both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended at the
-cap**, 2026-11-05 (the record: [docs/reviews/TD-053.md](../reviews/TD-053.md)). Build-changing findings per round
+`sweep()` files and closes, which both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the
+stop rule** at round 8, 2026-11-06, after ending at the cap (6) on 2026-11-05 and two rounds Paul bought (the record: [docs/reviews/TD-053.md](../reviews/TD-053.md)). Build-changing findings per round
 1–6: the fact-check 4 (round 1), design reviews 5, 1, 3, 1, 1, 1. Recurring topic: which answers, boards and
 entries one act speaks for (F1, F12, F13, F34, F42, F47), settled as one group per Context entry and gate across
 the boards read. Round 6's one build-changing finding (F55) was a fixture's wording. Round 7, bought by Paul's
