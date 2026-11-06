@@ -440,6 +440,62 @@ class Lifts(unittest.TestCase):
         self.assertEqual([r for r in L.check("# Ledger\n\n" + got, "", today=TODAY) if r["level"] == "error"], [])
 
 
+class Parts(unittest.TestCase):
+    """v2.6: the writer of a decide's `Parts:` (ledgerboard TD-050 B1) — what the fixtures' JSON cannot carry."""
+
+    DETAIL = {"context": "c.", "question": "q?", "recommended": "go."}
+    PART = "## {}: x\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** decision (pat)\n**Part of:** TD-4\n\n**Why:** w.\n"
+    ENTRIES = {"TD-4": "## TD-4: p\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w.\n",
+               "TD-9": PART.format("TD-9"), "TD-10": PART.format("TD-10")}
+
+    def line(self, context="TD-4 decision (pat)", parts=("TD-10", "TD-9")):
+        return L.item_line("Go on the builds?", "2026-01-20", "2026-01-15", "w-1", None, context, kind="decide",
+                           answers=["Go", "Not yet"], detail=self.DETAIL, parts=list(parts))
+
+    def test_the_line_reads_back_with_its_parts_in_number_order(self):
+        got = L.parse_board(self.line(), warn=False)
+        self.assertEqual(got[0].parts, ["TD-9", "TD-10"])
+        self.assertEqual(L.parts_problems(self.line(), self.ENTRIES), [])
+
+    def test_a_tuple_of_parts_is_a_list(self):
+        self.assertIn(" Parts: TD-9, TD-10. Due:", self.line(parts=("TD-9", "TD-10")))
+
+    def test_item_line_and_parts_problems_share_their_line_faults(self):
+        for context, parts in (("TD-4, TD-5 decision (pat)", ["TD-9"]), ("TD-4 event (go)", ["TD-9"]),
+                               ("TD-4 decision (pat) — later", ["TD-9"]), ("TD-4 decision (pat)", ["TD-9", "TD-009"]),
+                               ("TD-4 decision (pat)", ["TD-004"]), ("TD-4 decision (pat)", ["other#TD-9"])):
+            with self.assertRaises(L.Refused) as r:
+                self.line(context, parts)
+            hand = (f"- [ ] decide 2026-01-15 (n/a) — Go? Context: {context}. Parts: {', '.join(parts)}. "
+                    "Due: 2026-01-20. Answers: Go | Not yet.")
+            self.assertEqual(L.parts_problems(hand, self.ENTRIES), [f"line: {r.exception}"])
+
+    def test_inputs_json_cannot_carry(self):
+        line = self.line()
+        self.assertEqual(L.parts_problems(line.encode(), self.ENTRIES), [])
+        self.assertEqual(L.parts_problems(line, [("TD-9", "x")]), ["TD-4: missing", "TD-9: missing", "TD-10: missing"])
+        self.assertEqual(L.parts_problems(line, {**self.ENTRIES, 9: "x", b"TD-9": "x", None: 5}), [])
+        for archived in (None, 5, object(), [b"TD-9", 9, ("TD-9",)]):
+            self.assertEqual(L.parts_problems(line, self.ENTRIES, archived), [])
+        self.assertEqual(L.parts_problems(line, self.ENTRIES, iter(["TD-009"])), ["TD-9: archived"])
+
+    def test_parts_problems_never_raises(self):
+        import random
+        rnd = random.Random(2026)
+        words = ["TD-4", "TD-9", "TD-009", "TD-10", "TD-١٢", "other#TD-9", "TD-" + "9" * 40, "decision (pat)",
+                 "event (x)", "Context:", "Parts:", "Due: 2026-01-20.", "Answers: Go | Not yet.", "Decided: Go (by pat)",
+                 "- [ ]", "- [x]", "\n", "  - **Context:** c.", ",", ".", "—", "foo", "(", ")", "#", ""]
+        keys = ["TD-4", "TD-9", "TD-009", "TD-10", "x", 9, None, b"TD-9", "TD-" + "1" * 5000]
+        values = [self.ENTRIES["TD-4"], self.ENTRIES["TD-9"], "words", None, 5, b"bytes", self.PART.format("TD-009")]
+        for _ in range(1500):
+            line = "- [ ] decide 2026-01-15 (n/a) — " + " ".join(rnd.choice(words) for _ in range(rnd.randint(0, 14)))
+            ents = {rnd.choice(keys): rnd.choice(values) for _ in range(rnd.randint(0, 5))}
+            archived = rnd.choice([(), ["TD-9"], "TD-9", None, 5, [None, "TD-4", 5]])
+            self.assertIsInstance(L.parts_problems(line, ents, archived), list)
+            self.assertIsInstance(L.parts_problems(line.replace("decide 2026-01-15 (n/a) — ", ""), rnd.choice(
+                [ents, None, 5, "x"]), archived), list)
+
+
 if __name__ == "__main__":
     unittest.main()
 

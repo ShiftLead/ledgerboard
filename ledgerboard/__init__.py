@@ -2120,19 +2120,64 @@ def _a_kind(kind: str | None) -> str:
     return "an item with no kind" if kind is None else f"{'an' if kind[0] in 'aeiou' else 'a'} {kind}"
 
 
+PART_ID_RE = re.compile(r"TD-[0-9]{1,18}")  # a part, or a snapshot's Context entry (v2.6): ASCII digits, capped
+XREPO_PART_RE = re.compile(rf"{REPO}#TD-[0-9]{{1,18}}")
+PARTS_CONTEXT_FAULT = "context: not one entry and one decision"
+
+
+def _part_id(x: object) -> bool:
+    return isinstance(x, str) and bool(PART_ID_RE.fullmatch(x))
+
+
+def _parts_fault(ctx: str, parts: list) -> str | None:
+    """The first fault of a `Parts:` snapshot (v2.6) that the line alone shows, as a fixed string, or None:
+    ``ctx`` the Context's words (its final `.` removed), ``parts`` the ids. The Context names exactly one entry,
+    a bare ``TD-n``, and one gate, a ``decision (<p>)``, with nothing after the gate; then each part, its first
+    fault (another repo's entry, not an id, the Context's entry, twice); then an empty list. ``item_line()`` and
+    ``parts_problems()`` share it, so the two cannot drift."""
+    refs = list(dict.fromkeys(ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)))
+    ref = next((x.group(0) for x in REF_TD_RE.finditer(ctx)), None)
+    gates = list(dict.fromkeys(" ".join(g.group(0).split()) for g in CONTEXT_ANY_GATE_RE.finditer(ctx)))
+    g = CONTEXT_ANY_GATE_RE.search(ctx)
+    qual = ctx[g.end():].strip().rstrip(".").strip() if g else ""
+    if len(refs) != 1 or not _part_id(ref) or len(gates) != 1 or not CONTEXT_GATE_RE.fullmatch(gates[0]) or qual:
+        return PARTS_CONTEXT_FAULT
+    seen: set[int] = set()
+    for p in parts:
+        if not isinstance(p, str):
+            return f"{p!r}: not an id"
+        if XREPO_PART_RE.fullmatch(p):
+            return f"{p}: another repo's entry"
+        if not PART_ID_RE.fullmatch(p):
+            return f"{p}: not an id"
+        if _num(p) == _num(ref):
+            return f"{p}: the Context's entry"
+        if _num(p) in seen:
+            return f"{p}: twice"
+        seen.add(_num(p))
+    return None if parts else "no parts"
+
+
 def item_line(text: str, due: str | None, today: str, session: str | None, host: str | None,
               context: str | None, *, kind: str | None = None, answers: list[str] | None = None,
               default: int | None = None, detail: Mapping | None = None, hide_until: str | None = None,
-              lifts: list[str] | None = None) -> str:
+              lifts: list[str] | None = None, parts: list[str] | None = None) -> str:
     """A new item, in the board's own format, with its line ending and its detail block —
-    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Due: <due>.][ Hide until: <date>.][ Answers: <answers>.]
-    [ Lifts: <labels>.]`, `lifts` (v2.3, a decide's) naming which of its answers lift, written unless it is `Go` alone,
+    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Due: <due>.][ Hide until: <date>.]
+    [ Answers: <answers>.][ Lifts: <labels>.]`, `lifts` (v2.3, a decide's) naming which of its answers lift, written
+    unless it is `Go` alone, `parts` (v2.6, a decide's) its `Parts:` snapshot, ordered by number and spelled as given,
     the head ``session `<name>` on <host>``, ``session `<name>` `` or `n/a`. What each kind takes
     (a decide its answers and detail block, a look the fixed pair, an fyi no Due:) is SPEC
     *Edits*; refused, with why, for what the writer does not write and for any result the
     reader would not read back as exactly the item meant."""
     if kind is not None and kind not in KINDS:
         raise Refused(f"a kind is one of {', '.join(KINDS)}, not {kind!r}")
+    if parts is not None:
+        if kind != "decide":
+            raise Refused(f"only a decide lists its parts (parts), not {_a_kind(kind)}")
+        if not isinstance(parts, (list, tuple)):
+            raise Refused(f"parts is a list of ids, not {type(parts).__name__}")
+        parts = list(parts)
     words = _sentence(_item_words(text, "a board line's text"))
     today = _civil_date(today, "today is written")
     if kind == "fyi":
@@ -2149,6 +2194,11 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
             raise Refused(f"a {what} name holds no whitespace and none of ` , ; ) — not {name!r}")
     ctx = _item_words(context, "the context").removesuffix(".") if str(context or "").strip() else ""
     ctx = ctx or "none"
+    if parts is not None:
+        fault = _parts_fault(ctx, parts)
+        if fault is not None:
+            raise Refused(fault)
+        parts = sorted(parts, key=_num)
 
     offered = _answer_parts(answers) if answers is not None else []
     if kind == "decide":
@@ -2193,7 +2243,10 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     waits = [x for x in lifted if waiting_only(x)]
     if waits:
         raise Refused(f"{waits[0]!r} only keeps the gate waiting — it never lifts (v2.4)")
-    label = offered[default][0] if offered and default is not None else None
+    if parts is not None and not any(_lifting(lbl, lifted or None) for lbl, _ in offered):
+        raise Refused("a decide with parts offers an answer that lifts (Go, or one named in lifts): "
+                      "a snapshot no answer lifts is a question no press can act on")
+    label =offered[default][0] if offered and default is not None else None
     lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
 
     def written(lbl: str, cons: str, marked: bool) -> str:
@@ -2201,6 +2254,8 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
                 + (CONSEQUENCE_SEP + cons.replace("|", "\\|") if cons else ""))
     head = f"session `{session}`{f' on {host}' if host is not None else ''}" if session is not None else "n/a"
     body = f"{f'{kind} ' if kind else ''}{today} ({head}) — {words} Context: {ctx}."
+    if parts:
+        body += f" Parts: {', '.join(parts)}."
     if due is not None:
         body += f" Due: {due}."
     if hide_until is not None:
@@ -2220,7 +2275,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
                 got[0].default, item_head(got[0].text), item_refs(got[0].text), got[0].detail) != meant \
             or got[0].decided is not None or parse_replies(got[0].text) or got[0].fyi_due or got[0].bad_due \
             or (got[0].hide_until and got[0].hide_until.isoformat()) != hide_until \
-            or got[0].lifts != (lifted or None) or got[0].parts:
+            or got[0].lifts != (lifted or None) or got[0].parts != (parts or []):
         raise Refused("the board's reader would not read this item back as meant — rephrase it")
     return new
 
@@ -4590,6 +4645,70 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
         spelled = _carried(ctx_text, gate) or gate
         out[key] = _logged(out.get(key, ctx_text), "lift", _entries(out.get(key, ctx_text))[0]["blocked_raw"],
                            [f"gate lift skipped: {s} no longer carries {spelled}" for s in skipped], day)
+    return out
+
+
+def parts_problems(item_line: str, entries: Mapping[str, str], archived: Iterable[str] = ()) -> list[str]:
+    """Why a ``decide`` line's `Parts:` snapshot does not match the ledger (v2.6, SPEC *Edits*), each a fixed
+    string, or ``[]``; it never raises. The item is read as *The decide lift* reads it (``parse_board()``, its
+    detail block or a board holding it as its one open item included), and its form is left to
+    ``item_problem()``: anything but one open, undecided ``decide`` whose `Parts:` holds an id gives ``[]``. A
+    fault of the check ``item_line()`` shares is ``line: <fault>`` alone. Otherwise ``entries`` (id to text, open
+    and archived alike, by number, the first key of a number winning; a key that is not a bare ``TD-n`` of 1 to
+    18 ASCII digits is ignored, and a value that is no string or holds no entry is no entry) and ``archived``
+    (the ids read from the ledger's archive, by number) judge the Context entry (``<ref>: missing`` or
+    ``<ref>: archived``) and then each part, in the line's order, its first fault of ``<id>: missing``,
+    ``<id>: archived``, ``<id>: not Part of <ref>``, ``<id>: does not carry <gate>``. An entry is archived when
+    its number is in ``archived`` or its Status is an archived word."""
+    if not isinstance(item_line, str):
+        return []
+    got = parse_board(item_line, warn=False)
+    if len(got) != 1 or got[0].kind != "decide" or got[0].decided is not None or not got[0].parts:
+        return []
+    item = got[0]
+    c = CONTEXT_RE.search(_gate_body(item.text))
+    ctx = c.group("ctx").strip().removesuffix(".") if c else ""
+    fault = _parts_fault(ctx, item.parts)
+    if fault is not None:
+        return [f"line: {fault}"]
+    ref = next(x.group(0) for x in REF_TD_RE.finditer(ctx))
+    gate = " ".join(CONTEXT_ANY_GATE_RE.search(ctx).group(0).split())
+    by_num: dict[int, object] = {}
+    if isinstance(entries, Mapping):
+        for k, v in entries.items():
+            if _part_id(k):
+                by_num.setdefault(_num(k), v)
+    gone: set[int] = set()
+    try:
+        members = iter(archived)
+    except TypeError:
+        members = iter(())
+    for x in members:
+        if _part_id(x):
+            gone.add(_num(x))
+
+    def where(tid: str) -> tuple[str | None, dict | None]:
+        """(``missing`` or ``archived`` or None, the entry read)."""
+        text = by_num.get(_num(tid))
+        e = _entries(text)[0] if isinstance(text, str) and _entries(text) else None
+        if _num(tid) in gone or (e is not None and first_word(e["fields"].get("status")) in ARCHIVED_WORDS):
+            return "archived", e
+        return ("missing", None) if e is None else (None, e)
+
+    out = []
+    state, _ = where(ref)
+    if state:
+        out.append(f"{ref}: {state}")
+    for p in item.parts:
+        state, e = where(p)
+        if state:
+            out.append(f"{p}: {state}")
+            continue
+        par = parse_part_of(e["part_of_raw"])[0]
+        if not _part_id(par) or _num(par) != _num(ref):
+            out.append(f"{p}: not Part of {ref}")
+        elif _carried(by_num[_num(p)], gate) is None:
+            out.append(f"{p}: does not carry {gate}")
     return out
 
 
