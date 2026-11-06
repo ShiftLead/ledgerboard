@@ -5,8 +5,12 @@
 cap**, 2026-11-05 (the record: [docs/reviews/TD-053.md](../reviews/TD-053.md)). Build-changing findings per round
 1–6: the fact-check 4 (round 1), design reviews 5, 1, 3, 1, 1, 1. Recurring topic: which answers, boards and
 entries one act speaks for (F1, F12, F13, F34, F42, F47), settled as one group per Context entry and gate across
-the boards read. Round 6's one build-changing finding (F55) is a fixture's wording. F55–F59 are applied and read by
-no design review. Waits on Paul's go (the board's decide item); recommended: One more round.
+the boards read. Round 6's one build-changing finding (F55) was a fixture's wording. Round 7, bought by Paul's
+One more round (2026-11-05): its fact-check raised six minor findings (F60–F65); its design review found F55–F59
+and the cross-board grouping sound and raised one build-changing finding (F66: an answer dated in the future let a
+closed act refile each day; such an answer now owes nothing), reopening F50, and three minor (F67–F69, F69 the
+fixtures' id table). F66–F71 are applied and read by no design review (F70–F71, the closing fact-check's, SPEC wording). Waits on Paul's go again (the board's decide
+item); recommended: One more round.
 
 **Entry:** [TD-053](../ledger/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
 2026-11-05).
@@ -78,8 +82,9 @@ entry `c` and a `decision (<p>)` gate with an empty qualifier, whose `Decided:` 
 Its answerer (`Decided: … (by <x>)`) is one `decide_lift()` would accept: `<p>` (compared case-insensitively), or,
 on a board whose `Answered by:` is `any`, a name on its `People:`; an answer by anyone else owes nothing, and the
 gate is asked again as today (the merge gate would refuse the lift it asks for). An answer with no `(by …)`
-(`BoardItem.decided_by` None, as an answer written before v2.3 or before the decide lift is) counts as `<p>`'s,
-as the tripwire reads a missing one. `Answered by:` is read per board: `_read_boards()` gains
+(`BoardItem.decided_by` None, as an answer written before v2.3 or before the decide lift is) counts as `<p>`'s:
+the sweep reads it so because the live case has that shape (the tripwire and the lift-PR verdict read a missing
+one their own way, `lift-no-by`, and are unchanged). `Answered by:` is read per board: `_read_boards()` gains
 `"answered_by": answered_by(text)` beside `people`, and only `any` (in any case) is `any`; every other value,
 none among them, is `owner`. The entries it **covers** are `c` and each `Parts:` id whose open entry is `Part of` `c` (as `_names_entry()`
 reads a part). With `D` its `Decided:` date, it **owes** the lift to each covered entry that:
@@ -88,8 +93,12 @@ reads a part). With `D` its `Decided:` date, it **owes** the lift to each covere
 - has no `gate added:` Log line for the gate dated on or after `D + 2` (a gate removed with no Log line, by hand,
   and added again since the answer is a new question, not a missed lift).
 
-An answer that owes nothing is settled, as today. A Log line is compared by its date (`date.fromisoformat`),
-and a line whose date does not read (`2026-02-30`) is skipped, as `gate_added()` skips one; an entry whose Log
+An answer dated after `today_local` owes nothing: it is not an answer item, and its gate is asked again as today.
+A date in the future is a typo or a skewed clock, and no date guard (D3) can hold a filing against an answer not yet
+reached: an act filed and closed by hand would be filed again each day until then. An answer that owes nothing is
+settled, as today. A Log line is compared by its date (`date.fromisoformat`),
+and a line whose date does not read (`2026-02-30`) is not counted (each line on its own, which is not how
+`gate_added()` reads its last one); an entry whose Log
 does not read at all (two Log sections, which `_log()` reads as none) has no line, so it is owed.
 
 **The one day either way.** A `Decided:` date is the board's local date and a Log date is UTC (SPEC *The gate
@@ -106,11 +115,11 @@ re-added, and answered `Go` again with the second answer closed and never lifted
 **group** per question answered, whichever boards hold its answers. For each group:
 
 - an answer is **within the window** when `(today_local − D).days < reask_days` (`_answered_within()`'s
-  arithmetic; that function itself returns False for a lifting label, so it is not called), a `D` after
-  `today_local` among them; a group holds only answers that owe something;
+  arithmetic; that function itself returns False for a lifting label, so it is not called); a group holds only
+  answers that owe something, so none is dated after `today_local` (D2);
 - **its act is filed** when it has an answer within the window and at least one entry the group owes is not
   covered (no `open` or `decided` item `covers()` finds for it): one `act` (below) on the newest answer's board
-  (between boards holding answers of one date, the first by `_board_pick_key`, as the re-ask picks), its text's
+  (between boards holding answers of one date, the first by `_board_pick_key`, this repo's own board given no preference, unlike the re-ask's `pick`), its text's
   `<D>` the newest answer's date (the newest of the group is then within the window), its `<ids>` every entry any
   answer of the group owes that is not covered, fixed when it is filed. It is not filed while an item of its
   identity (Context `c`, the gate and `lift`, `act`, the words `was answered with a lift`) is open on any board
@@ -131,7 +140,7 @@ Otherwise the gate is asked again as today (`Go | Not yet`). An entry re-added a
 asked at once, as TD-211 is, even while its parent's act stands for its siblings. A group whose answers are all
 past the window, with no act open, gets no act, and its entries are asked again as today: a person's own answer
 older than `reask_days` is a stale question, and the re-ask is how it is recovered. With `reask_days` 0 no answer
-dated on or before `today_local` is within the window, so such answers file no act.
+is within the window, so such answers file no act.
 
 An act's `<ids>` are fixed when it is filed. When a newer answer owes more while the act is open, no second act is
 filed (its identity is open); the newer entries are held, unnamed, and keep the act open (D4). A person who closes
@@ -156,8 +165,9 @@ The host's "lift was closed" item is unchanged and holds nothing new.
   gate was never lifted on <ids>", `question` "Lift the gate by hand, or ask the question again?", `recommended`
   "Lift it by hand (an `override:` naming the answer); to ask again instead, close this and add the question".
 
-The act is the sweep's first `act` with a detail block; `item_line()` writes one on any kind, and SPEC's board
-format already gives an `act` one when its line alone does not say what to do, so no SPEC text is needed for it.
+The act is the sweep's first `act` with a detail block; `item_line()` writes one on any kind (SPEC *Versions*, v2.3:
+"`item_line()` writes every kind with its answers and detail block"), and `detail` is among the filed item's
+arguments in *The gate sweep*, so no SPEC text is needed for it.
 
 Like every item the sweep files, the host dates it with its own today, the board's local date. An item's date is
 its head's: `BoardItem` has no date field, so it is read from `item.text` by a new pattern,
@@ -197,9 +207,9 @@ held by an answer owing a lift (below)" before its colon; and after the bullet's
 `<p>`: … on this repo's own board;"), replacing its `;` with `.`, add:
 
 > An **answer owing a lift** (v2.6) is an item `covers()` would find for an entry's `decision (<p>)`, closed, whose
-> `Decided:` label lifts, dated `D`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
-> `People:`). It owes the lift to each entry it covers (its Context entry, and each `Parts:`
-> id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
+> `Decided:` label lifts, dated `D` no later than `today_local`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
+> `People:`). It owes the lift to each entry it covers (its Context entry, in the ledger or the
+> archive, and each `Parts:` id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
 > or after `D − 1` and no `gate added:` line for it dated on or after `D + 2` (a board's date is local, a Log's UTC).
 > The answers owing for one Context entry and gate, on any board read, file one `act` on the newest one's board
 > (between boards whose newest answer shares that date, the first by pick key), when one of them is within
@@ -208,8 +218,8 @@ held by an answer owing a lift (below)" before its colon; and after the bullet's
 > date and `<gate>` as its Context spells it, `<ids>` every entry they owe that nothing covers, in number order; not while one of its identity
 > is open, nor when one, open or closed, on any board read or its archive is dated on or after the newest answer's
 > `D − 1`. An entry
-> owed is held: it is not asked again while an answer owing it is within `reask_days` (a `D` after today among
-> them), or while an act of its group is open on a board read or filed in the same sweep;
+> owed is held: it is not asked again while an answer owing it is within `reask_days`, or while an act
+> for the Context entry and gate of an answer owing it is open on a board read or filed in the same sweep;
 
 **2. *One filing rule*.** "holds for every item but the decision's own (whose rule is *covered*, above)" becomes
 "holds for every item but the decision's own (whose rule is *covered*, above) and the `was answered with a lift`
@@ -229,7 +239,7 @@ close once it is gone;", and a bullet follows that one:
 > - the `was answered with a lift` `act` once no answer on any board read for its Context entry and gate owes the lift
 >   (v2.6);
 
-**4. *Versions*.** A paragraph after the v2.6 ones:
+**4. *Versions*.** A paragraph after the v2.6 paragraph:
 
 > **v2.6 stops the sweep re-asking a lifting answer closed with no lift** (*The gate sweep*): within `reask_days`,
 > once per answer, an `act` says the lift is owed, in place of `Go | Not yet`, and closes once nothing is owed. A
@@ -238,9 +248,7 @@ close once it is gone;", and a bullet follows that one:
 ## Fixtures
 
 Invented names only (`pat`, `kim`, `acme/widgets`), never a person's (AGENTS.md). New entries in
-`fixtures/sweep/ledger.md` from TD-224 (the last is TD-223), numbered in the order the cases below list them
-(TD-230 to TD-235 are the close case's; every other new entry is numbered from TD-224 in listing order, skipping
-them), new items on `widgets.md` (`People:` lists `pat`),
+`fixtures/sweep/ledger.md` from TD-224 (the last is TD-223), numbered as the table after the cases gives them, new items on `widgets.md` (`People:` lists `pat`),
 `beta.md` (`People: kim`) and `beta.archive.md`, the `runs` and `rerun` expectations updated for them (`today`
 2026-11-03, `two days later` 2026-11-05; the window 30 days, so an answer dated 2026-10-05 or later is within it on
 `today`, 2026-10-07 or later on `two days later`), and the new entries added to `cases.json`'s `covers` list where a state is shown. Each case below gives
@@ -262,9 +270,12 @@ its dates:
   (2026-10-24, answer 2026-10-25), the gate re-added 2026-10-30: lifted, so it files the `decide`. And one whose
   only `gate added` line is dated the day after its answer (2026-10-26): owed, so the act.
 - **Two answers for one Context entry** on one board, `Go` 2026-10-20 and `Go` 2026-10-27, both closed, both owing:
-  one act, its text's `<D>` the newer's. And an old and a new answer in one group, a parent's: `Go` 2026-09-20 (past the
-  window) owing one part, `Go` 2026-10-27 owing another: one act naming both, and no `decide` for the older answer's part in that run; with the newer's part lifted, the act
-  stays open while the older's part is owed.
+  one act, its text's `<D>` the newer's. And an old and a new answer in one group, a parent's (the parent lifted,
+  logged 2026-09-20, carrying nothing): `Go` 2026-09-20 (past the window), `Parts:` the first part alone, and `Go`
+  2026-10-27, `Parts:` the second alone, each part carrying the gate with no Log line: one act naming both, and no
+  `decide` for the first part in that run. Its close variant, on a parent and parts of its own with the same two
+  answers and their act open (dated 2026-10-28), the second part lifted (logged 2026-10-28) and free: the act
+  stays open while the first part is owed.
 - **A parent's answer and a part's own:** a part owed by both its parent's answer and its own: one act for each
   Context entry, the part in both `<ids>`; no `decide`. Two acts for one lift are accepted: each says what one
   answered question left undone, and one lift closes both.
@@ -290,6 +301,8 @@ its dates:
   `acme/widgets#TD-n decision (pat) lift`; no `decide`. A variant, on its own entry and its own items (the shared boards hold one state per run), with `alpha.md`'s act
   (dated 2026-10-28) closed by hand: no act (the closed act's date guard, read on `alpha.md`) and no `decide` (both answers within the
   window). The rerun of the first files nothing.
+- **A future answer:** an answer `Go` dated 2026-11-06 (three days after `today`), closed, never lifted: owes
+  nothing (D2), so it files the `decide` and no act; the rerun files nothing (the `decide` covers it).
 - **A non-lifting label closed:** `Decided: Not yet …`, closed: the existing window, nothing new.
 - **`reask_days` 0:** a run with `reask_days: 0` (as of `today`): TD-224 files its `decide`, no act.
 - **The close:** fresh parents, each lifted (logged 2026-10-28), each with its answer `Go` (2026-10-28) closed and
@@ -297,11 +310,37 @@ its dates:
   TD-230 with parts TD-231 (carrying, no Log line) and TD-232 (lifted 2026-10-28, re-added 2026-10-31): the act
   stays open; TD-233 with parts TD-234 (lifted, free) and TD-235 (lifted 2026-10-28, re-added 2026-10-31): the act
   closes while TD-235 still carries the gate (TD-232 and TD-235, re-added after their lifts, each get a `decide`); the `rerun` closes nothing more and
-  files no act again. The host's `Lift of decision (pat) on TD-n was closed` act (Context `TD-n decision (pat)
+  files no act again. The host's `Lift of decision (pat) on TD-269 was closed` act (Context `TD-269 decision (pat)
   lift`), with no answer item, closes once the entry is free, as today, and holds no re-ask.
 
+The new entries, by case (each case's own entries and items, apart from every other's; `P` a parent, its parts
+after it):
+
+| case | entries |
+|---|---|
+| Never lifted (and `reask_days` 0) | TD-224 |
+| A parent's answer | TD-225 (P), TD-226 to TD-229 |
+| The close | TD-230 (P), TD-231, TD-232; TD-233 (P), TD-234, TD-235 |
+| Removed by hand and re-added | TD-236 |
+| The one-day skew | TD-237 (lifted the day before), TD-238 (added the day after) |
+| Two answers for one Context entry | TD-239 |
+| An old and a new answer | TD-240 (P), TD-241 (the older's), TD-242 (the newer's) |
+| Its close variant | TD-243 (P), TD-244 (the older's), TD-245 (the newer's) |
+| A parent's answer and a part's own | TD-246 (P), TD-247 |
+| Past the window | TD-248 (no act), TD-249 (its act open), TD-250 (its act closed) |
+| Filed once | TD-251 (act dated after the answer), TD-252 (act dated the day before) |
+| Covered | TD-253; TD-254 (P), TD-255 (covered), TD-256 (named) |
+| Who answered | TD-257 (`by kim`, `widgets.md`), TD-258 (no `by`), TD-259 (`alpha.md`, `by kim`), TD-260 (`alpha.md`, `by lee`) |
+| The window's edge | TD-261 |
+| Archived | TD-262 (its answer in `beta.archive.md`); TD-263 (P, in `archive.md`), TD-264 |
+| Two boards | TD-265; TD-266 (the variant) |
+| A future answer | TD-267 |
+| A non-lifting label closed | TD-268 |
+| The host's `lift was closed` act | TD-269 |
+
 `fixtures/run.py` gains one thing: a run in `runs` may give its own `reask_days`, which `run()` in
-`sweep_cases()` reads (`c.get("reask_days")`) and passes to `sweep()`, as the `refused` cases already pass theirs. It already compares
+`sweep_cases()` passes to `sweep()` only when the run has the key (its first call and the `rerun`'s alike; a run
+without it passes none, so `sweep()`'s default stands), as the `refused` cases already pass theirs. It already compares
 `to_file`, `to_close` and `covers()`.
 
 ## The builds
