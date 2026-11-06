@@ -20,6 +20,7 @@ raised two minor findings (F110–F111: the archived-with-no-text case split in 
 reaches the part, and a case for a key holding no entry whose number is in `archived`), applied. Its design review
 found F105–F111 applied and the archived model sound (one rule: a snapshot is judged by where the ledger keeps an
 entry, the lift by the text it is given), raised nothing build-changing and two minor fixture gaps (F112–F113),
+applied; the closing fact-check raised one minor (F114: `decide_lift()` raises on a value that is no string),
 applied. So the rounds end by the stop rule. Build-changing findings per round 1–10, design reviews only: 1, 2, 2,
 2, 1, 3, 1, 4, 1, 0. Waits on Paul's go (the board's decide item); recommended: Go.
 
@@ -142,8 +143,9 @@ file writer.
     or its Status's first word is an archived one (`ARCHIVED_WORDS`). A number in `archived` with no key in
     `entries` is `archived`, never `missing`, as `decide_lift()` reads it (the way `board.py decide` calls it). A
     number with a key in `entries` whose value is no string or holds no entry is no entry; with its number also in
-    `archived` it is `archived` here, where `decide_lift()`, which reads by key, says "not among the entries given":
-    a difference by design, since the snapshot is judged by where the ledger keeps the entry. A gate is carried as `decide_lift()` reads
+    `archived` it is `archived` here, where `decide_lift()`, which reads by key, says "not among the entries given"
+    of a text holding no entry (and raises `TypeError` on a value that is no string, which this design does not
+    change): a difference by design, since the snapshot is judged by where the ledger keeps the entry. A gate is carried as `decide_lift()` reads
     it (`_carried`: the person compared case-insensitively); an archived entry carries nothing. A part's `Part of`
     is the Context's entry only when `parse_part_of(…)[0]` is a bare `TD-[0-9]{1,18}` of its number: none, a second
     parent, another repo's or an unreadable value is not. The parent may carry the gate or not.
@@ -417,7 +419,8 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   cross-checked: the 5000-digit and `TD-١٢` cases (`decide_lift()` reads any `\d+` run as a number, and raises
   `ValueError` on 5000 digits, `int()`'s limit, which this design does not change), and the `line:` cases for
   `twice` (`Parts: TD-9, TD-009.`, which `decide_lift()` accepts, lifting the one entry) and a 19-digit part,
-  each a hand-written form the writer never writes; the order and inputs cases and the read-as-`parse_parts()`
+  each a hand-written form the writer never writes; the order and inputs cases (among them `TD-9` as `None` before a valid `TD-009`, on which `decide_lift()` raises
+  `TypeError`) and the read-as-`parse_parts()`
   cases, which test `parts_problems()`'s own reading and say nothing of the lift; and the `line:` case naming a
   19-digit Context entry, which `decide_lift()` refuses as not among the entries given. The words-after-the-gate
   cases carry a matching ledger, both parts `Part of: TD-4` carrying `decision (pat)`. The two cases named in
