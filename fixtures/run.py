@@ -40,7 +40,12 @@ Fixtures, each an invented input and its expected JSON:
   (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``edit_action()``, ``item_key()`` of lines
   that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
   and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
-  ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate.
+  ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate; and ``item_line(parts=)`` (v2.6):
+  the snapshot written in number order, spelled as given, and each of its refusals.
+- ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
+  boards; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
+  ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
+  and the ``decide_lift()`` cross-check of a ``Go``.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
 - ``ledger/belowheader.md`` (TD-049): a ``decision`` gate below the header block — ``check()`` gives its ℹ and
@@ -493,7 +498,8 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
     for c in spec["compose"]:
         if c["fn"] == "item_line":
-            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts") if k in c}  # v2.3's keywords
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts")
+                  if k in c}  # v2.3's keywords; parts v2.6
             out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
                 c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:
@@ -706,7 +712,9 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
                                      detail=it["detail"], lifts=it["lifts"]).rstrip("\n"))
         after.append((url, base, "\n".join(lines) + "\n", archive))
     entry = L._entry_texts("\n".join(ents))
+    out = {"parts_problems": _parts_cases(L, spec, boards[0])} if spec.get("parts_problems") else {}
     return {
+        **out,
         "runs": runs,
         "rerun": run(first, after),
         "covers": [[[b, it.text, state] for b, it, state in L.covers(entry[t], g, boards, spec["repo"])]
@@ -715,6 +723,50 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
             ents, boards, results, "2026-11-03", "2026-11-03", repo=c["repo"],
             **{k: c[k] for k in ("reask_days", "event_age_days") if k in c})) for c in spec["refused"]},
     }
+
+
+def _parts_entry(tid: str, e) -> object:
+    """A ``parts_problems`` case's entry: an object is built into an entry's text (its ``status``, ``blocked``
+    and ``part_of``); anything else (a text holding no entry, a value that is no string) is given as it is."""
+    if not isinstance(e, dict):
+        return e
+    head = ["**Priority:** Medium", "**Type:** debt", "**Added:** 2026-11-01", f"**Status:** {e.get('status', 'Open')}"]
+    head += [f"**Blocked by:** {e['blocked']}"] if e.get("blocked") else []
+    head += [f"**Part of:** {e['part_of']}"] if e.get("part_of") else []
+    return f"## {tid}: {e.get('title', 'An invented entry')}\n\n" + "\n".join(head) + "\n\n**Why:** Invented.\n"
+
+
+def _parts_cases(L, spec: dict, own) -> dict:
+    """``parts_problems()`` (v2.6) of each case; a case's line is its ``line``, else a decide built from its
+    ``context`` and ``parts``. ``covers``: each listed part's ``covers()`` on a one-item board holding the line,
+    given as this repo's own board. ``lift``: ``decide_lift()`` of ``Go`` by ``pat``, ``People: pat``, with the
+    case's ``lift_archived`` (else its ``archived``): the ids it changes and the Log lines it adds, or its
+    refusal (each case's entries carry no Log, so every Log line is the lift's)."""
+    if not hasattr(L, "parts_problems"):
+        return {"missing": "the module has no parts_problems — older than v2.6"}
+    out = {}
+    for c in spec["parts_problems"]:
+        line = c["line"] if "line" in c else (
+            f"- [ ] decide 2026-11-06 (session `w-1`) — Go on the builds? Context: {c.get('context', 'TD-4 decision (pat)')}."
+            f" Parts: {c.get('parts', 'TD-9, TD-10')}. Due: 2026-11-20. Answers: Go | Not yet.")
+        ents = {k: _parts_entry(k, v) for k, v in c.get("entries", {}).items()}
+        got = {"problems": L.parts_problems(line, ents, c.get("archived", []))}
+        if c.get("covers"):
+            board = f"# Needs the user\n\nKinds: decide | act | look | watch | fyi\nPeople: pat\n\n{line}\n"
+            boards = [(own[0], own[1], board, "")]
+            gate = L.CONTEXT_ANY_GATE_RE.search(L.CONTEXT_RE.search(line).group("ctx")).group(0)
+            by_num = {L._num(k): v for k, v in ents.items()}
+            got["covers"] = {p: [[b, state] for b, _, state in L.covers(
+                by_num[L._num(p)], L._carried(by_num[L._num(p)], gate) or gate, boards, spec["repo"])]
+                for p in L.parse_parts(line)}
+        if c.get("lift"):
+            def lift(c=c, line=line, ents=ents):
+                new = L.decide_lift(line, ents, "Go", "pat", "2026-11-06", ["pat"], None,
+                                    archived=c.get("lift_archived", c.get("archived", [])))
+                return {k: [ln["text"] for ln in L.log_lines(t)] for k, t in sorted(new.items())}  # no case's entry has a Log
+            got["lift"] = _refused(lift)
+        out[c["name"]] = got
+    return out
 
 
 def host_log_cases(L, spec: dict) -> dict:

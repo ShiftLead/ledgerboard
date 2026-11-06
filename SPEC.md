@@ -785,9 +785,10 @@ and the gate faults, any other.
 **`Parts:`** (v2.3) — `Parts: TD-15, TD-16.`, right after the Context, ahead of the `Due:`, and only on a
 `decide`: the parts of the parent its Context names that its question asks about, a snapshot taken when it was
 written (`parse_parts()`, `BoardItem.parts`, `item_record()`'s `parts`): every `TD-NNN` or `<repo>#TD-NNN` in it,
-each once, and never one inside a reply's words. The writers write the ids separated by `, `. Its ids are not Context refs, and it is
+each once, and never one inside a reply's words. The writers write the ids in number order, separated by `, `. Its ids are not Context refs, and it is
 part of the item key, since a changed snapshot is a different question. What an answer does to the parts it
-lists is v2.4's, and so is its writer.
+lists is *The decide lift*'s (v2.4). `item_line(parts=)` writes it, and `parts_problems()` checks it against the
+ledger (v2.6, *Edits*).
 
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
 line's end, in this order:
@@ -894,7 +895,8 @@ else by its basename; **this repo's own board** is the one whose `origin_path` i
 On it a bare `TD-n` names this repo's entry; on any board, `<repo>#TD-n` with `repo` (compared case-insensitively).
 
 `covers(entry_text, gate, boards, repo)` returns `[(board, item, state)]`: each `decide` item whose Context names
-the entry and the gate, or the entry's parent (its `Part of`) with the gate and the entry among its `Parts:`, on a
+the entry and the gate, or the entry's parent (its `Part of`) with the gate and the entry among its `Parts:`, with
+nothing after the gate (a Context that goes on past it, `TD-4 decision (pat) — design ready`, names no entry here), on a
 board whose `People:` lists the gate's person (any board, for an event). Its state is `open`, `decided` (open, with
 `Decided:`), `closed` or `closed-decided` (closed on the board or in its archive). Only `open` and `decided` cover.
 
@@ -1023,7 +1025,7 @@ back exactly what was meant:
   says when to pass it);
 - **reply** appends a reply tail.
 
-**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>. Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
+**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts, parts)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.] Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). A decide's `parts` (v2.6) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated by `, `, each as given. It is refused on any kind but `decide`. It is refused for an empty list, for an id that is not `TD-` and 1 to 18 ASCII digits, and for an id that shares its number with another or with the Context's entry. It is refused unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`, with nothing after the gate (*The gate sweep* reads an item whose Context goes on past its gate as naming no entry, so it would cover no part). And it is refused unless one of its answers lifts (as *Closing on the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written, and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling is a different key. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
 - a `decide` carries two or more distinct answers, at most one marked ` (default)`, and a detail block;
 - a `look` carries exactly `Answers: Works | Not right: <what>.`, which the writer writes itself, `Works` marked ` (default)` only when the caller asks;
 - an `fyi` carries no `Due:`, and every other kind carries one;
@@ -1036,6 +1038,27 @@ The **detail block** is composed from named parts, in the order `Context`, `Ques
 The writer refuses text, a context, an answer or a detail value that carries a field name, or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
 
 An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line(…, by=)`), whose `Decided:` names who gave it as **decide** does, with the same refusals (v2.3).
+
+**A snapshot against the ledger** (`parts_problems(item_line, entries, archived=())`, v2.6) lists, and never
+raises, why a `decide` line's `Parts:` does not match the ledger. It reads the item as *The decide lift* does,
+its detail block or a board holding it as its one open item included, and leaves its form to `item_problem()`. A
+string that is not exactly one open item, an item that is no `decide` or is decided, or one whose `Parts:` holds
+no id `parse_parts()` reads gives `[]`. One whose Context or parts the check `item_line()` shares faults gives
+`line: <that fault>` alone, the fault one of `context: not one entry and one decision` (a Context naming two
+entries, or going on past its gate, among them), `<id>: another repo's entry`, `<id>: not an id`, `<id>: the
+Context's entry` and `<id>: twice`; the kind, an empty list and the lifting answer are `item_line()`'s alone.
+Otherwise it reads `entries` (id to text, open and archived alike, by number, the first of a number winning; a
+key that is not a bare `TD-` and 1 to 18 ASCII digits is ignored, and a value that is not a string, or holds no
+entry, is no entry) and `archived` (the ids read from the ledger's archive, by number). An entry is archived when
+its number is in `archived` (whether or not `entries` holds a text for it) or its Status is an archived one. It
+judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each part still, in the line's
+order, its first fault of `<id>: missing`, `<id>: archived`, `<id>: not Part of <ref>`, `<id>: does not carry
+<gate>`. It is stricter than *The decide lift*, which skips a part that no longer carries the gate (one archived
+by its Status, or named in `archived` and not given, among them), still lifts an `event (<name>)` snapshot and
+one whose Context goes on past its gate, and, reading a text it is given ahead of `archived`, lifts a part and a
+Context entry named in `archived` whose Status reads `Open`: the snapshot is checked when the question is asked,
+the lift when it is answered. The ledger is not in the line, so `item_line()` does not check these; a writer that
+reads the ledger calls it.
 
 **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
 - opens `- [ ] ` at column 0;
@@ -1356,6 +1379,9 @@ does for every entry `entries()` reads, and a field below the header block keeps
 `archived=()`, and `board.py decide` and `lift_pr_verdict()` pass the archive's ids in it, so such a part is
 skipped and logged where v2.4 refused the answer (the writer) or judged the part by its Status (the verdict). A
 caller that passes no `archived` gets v2.4's result.
+
+**v2.6 gives `Parts:` its writer** (*Edits*): `item_line(parts=)` and `parts_problems()`. Nothing read changes:
+v2.3, v2.4 and v2.5 read every line it writes, and no key moves.
 
 ## Appendix: grammar
 
