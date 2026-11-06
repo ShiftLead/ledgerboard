@@ -4,7 +4,6 @@ description: "Paul wants to consider a regular transcript review for orchestrati
 metadata:
   node_type: memory
   type: project
-  originSessionId: ca9ba866-d7f9-4da4-b11b-9d425b13cf6f
   modified: 2026-11-06T23:10:14.803Z
 ---
 
