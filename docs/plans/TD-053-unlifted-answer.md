@@ -78,8 +78,9 @@ entry `c` and a `decision (<p>)` gate with an empty qualifier, whose `Decided:` 
 Its answerer (`Decided: … (by <x>)`) is one `decide_lift()` would accept: `<p>` (compared case-insensitively), or,
 on a board whose `Answered by:` is `any`, a name on its `People:`; an answer by anyone else owes nothing, and the
 gate is asked again as today (the merge gate would refuse the lift it asks for). An answer with no `(by …)`
-(`BoardItem.decided_by` None, as an answer written before v2.3 or before the decide lift is) counts as `<p>`'s,
-as the tripwire reads a missing one. `Answered by:` is read per board: `_read_boards()` gains
+(`BoardItem.decided_by` None, as an answer written before v2.3 or before the decide lift is) counts as `<p>`'s:
+the sweep reads it so because the live case has that shape (the tripwire and the lift-PR verdict read a missing
+one their own way, `lift-no-by`, and are unchanged). `Answered by:` is read per board: `_read_boards()` gains
 `"answered_by": answered_by(text)` beside `people`, and only `any` (in any case) is `any`; every other value,
 none among them, is `owner`. The entries it **covers** are `c` and each `Parts:` id whose open entry is `Part of` `c` (as `_names_entry()`
 reads a part). With `D` its `Decided:` date, it **owes** the lift to each covered entry that:
@@ -89,7 +90,8 @@ reads a part). With `D` its `Decided:` date, it **owes** the lift to each covere
   and added again since the answer is a new question, not a missed lift).
 
 An answer that owes nothing is settled, as today. A Log line is compared by its date (`date.fromisoformat`),
-and a line whose date does not read (`2026-02-30`) is skipped, as `gate_added()` skips one; an entry whose Log
+and a line whose date does not read (`2026-02-30`) is not counted (each line on its own, which is not how
+`gate_added()` reads its last one); an entry whose Log
 does not read at all (two Log sections, which `_log()` reads as none) has no line, so it is owed.
 
 **The one day either way.** A `Decided:` date is the board's local date and a Log date is UTC (SPEC *The gate
@@ -156,8 +158,9 @@ The host's "lift was closed" item is unchanged and holds nothing new.
   gate was never lifted on <ids>", `question` "Lift the gate by hand, or ask the question again?", `recommended`
   "Lift it by hand (an `override:` naming the answer); to ask again instead, close this and add the question".
 
-The act is the sweep's first `act` with a detail block; `item_line()` writes one on any kind, and SPEC's board
-format already gives an `act` one when its line alone does not say what to do, so no SPEC text is needed for it.
+The act is the sweep's first `act` with a detail block; `item_line()` writes one on any kind (SPEC *Versions*, v2.3:
+"`item_line()` writes every kind with its answers and detail block"), and `detail` is among the filed item's
+arguments in *The gate sweep*, so no SPEC text is needed for it.
 
 Like every item the sweep files, the host dates it with its own today, the board's local date. An item's date is
 its head's: `BoardItem` has no date field, so it is read from `item.text` by a new pattern,
@@ -198,8 +201,8 @@ held by an answer owing a lift (below)" before its colon; and after the bullet's
 
 > An **answer owing a lift** (v2.6) is an item `covers()` would find for an entry's `decision (<p>)`, closed, whose
 > `Decided:` label lifts, dated `D`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
-> `People:`). It owes the lift to each entry it covers (its Context entry, and each `Parts:`
-> id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
+> `People:`). It owes the lift to each entry it covers (its Context entry, in the ledger or the
+> archive, and each `Parts:` id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
 > or after `D − 1` and no `gate added:` line for it dated on or after `D + 2` (a board's date is local, a Log's UTC).
 > The answers owing for one Context entry and gate, on any board read, file one `act` on the newest one's board
 > (between boards whose newest answer shares that date, the first by pick key), when one of them is within
@@ -229,7 +232,7 @@ close once it is gone;", and a bullet follows that one:
 > - the `was answered with a lift` `act` once no answer on any board read for its Context entry and gate owes the lift
 >   (v2.6);
 
-**4. *Versions*.** A paragraph after the v2.6 ones:
+**4. *Versions*.** A paragraph after the v2.6 paragraph:
 
 > **v2.6 stops the sweep re-asking a lifting answer closed with no lift** (*The gate sweep*): within `reask_days`,
 > once per answer, an `act` says the lift is owed, in place of `Go | Not yet`, and closes once nothing is owed. A
@@ -301,7 +304,8 @@ its dates:
   lift`), with no answer item, closes once the entry is free, as today, and holds no re-ask.
 
 `fixtures/run.py` gains one thing: a run in `runs` may give its own `reask_days`, which `run()` in
-`sweep_cases()` reads (`c.get("reask_days")`) and passes to `sweep()`, as the `refused` cases already pass theirs. It already compares
+`sweep_cases()` passes to `sweep()` only when the run has the key (its first call and the `rerun`'s alike; a run
+without it passes none, so `sweep()`'s default stands), as the `refused` cases already pass theirs. It already compares
 `to_file`, `to_close` and `covers()`.
 
 ## The builds
