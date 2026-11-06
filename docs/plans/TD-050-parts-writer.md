@@ -10,8 +10,11 @@ Recurring topic: how `parts_problems()` judges a line written by hand (F41, F57,
 F83); round 7's review called the `item_problem()`-first layer the wrong shape (F87), and the plan now reads the
 item as `decide_lift()` does and leaves the form to `board_problems()`. Round 7's build-changing finding (F86,
 words after the gate defeat `covers()`) is a new topic. The plan also moves to the next release after v2.5,
-tagged 2026-11-05 without it (D1). F86–F96 are applied and read by no design review. Waits
-on Paul's go (the board's decide item); recommended: One more round.
+tagged 2026-11-05 without it (D1). Paul bought **one more round** again (round 8, 2026-11-05): a design review of
+F86–F96, which raised four build-changing findings (F97–F100: a SPEC rule text 2 cited but SPEC never stated; the
+plan stale against TD-051's build, TD-052, already merged into v2.6; two fixture cases undefined or in the wrong
+runner) and four minor ones (F101–F104). F97–F104 are applied and read by no design review. Waits on Paul's go
+(the board's decide item); recommended: One more round.
 
 **Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
 
@@ -48,8 +51,10 @@ These are written down, and this design takes them as given:
 **D1. It ships in the next tagged release after v2.5, written v2.6 here.** A release is `v<major>.<minor>` (SPEC
 *Versions*), so there is no v2.5 patch to put it in; v2.5 is tagged (2026-11-05, #158) without it. The target
 design (§7.1's note of 2026-11-05) calls its next Status release v2.6; whichever is tagged first takes v2.6, and
-if the Status release is, each build writes the number of the release it ships in where this plan writes v2.6. It
-is no version event: the item key and the line's form are unchanged, and v2.3, v2.4 and v2.5 read every line it
+if the Status release is, each build writes the number of the release it ships in where this plan writes v2.6.
+v2.6 is not tagged, and SPEC's *Versions* already holds an untagged v2.6 paragraph (TD-051's build, TD-052, #163:
+`decide_lift(archived=)`), so this plan's v2.6 text joins that release as a paragraph of its own beside it (SPEC
+text 4). It is no version event: the item key and the line's form are unchanged, and v2.3, v2.4 and v2.5 read every line it
 writes.
 
 **D2. The work is split as the package splits** (target design §1.1): the line in the module, the ledger in the
@@ -84,10 +89,11 @@ file writer.
      one is named);
   3. `no parts` for an empty list.
 
-  `item_line()` refuses with that string as the reason (its kind and lifting-answer refusals stay its own, outside
+  `item_line()` refuses with that string as the whole of its `Refused` message, exactly (`context: not one entry
+  and one decision`, `TD-9: twice`), with no prefix (its kind and lifting-answer refusals stay its own, outside
   the helper). With `parts`, its order is: the kind, and `parts` not a list or tuple, right after it; then the
-  existing checks up to and including the Context's own words (`_item_words(context)`, the text, the Due, the
-  session and the host, as today); then the helper, given the Context as `item_line()` then holds it (`ctx`,
+  existing checks up to and including the Context's own words, in the code's order as today (the text, today, the
+  Due, a host without its session, the session's and host's names, then `_item_words(context)`); then the helper, given the Context as `item_line()` then holds it (`ctx`,
   its final `.` removed; `none` when no Context was given, which the helper faults), ahead of every existing
   check that reads the Context's entries or gate (so a two-entry Context is refused as `context: not one entry
   and one decision`, not as today's "a decide that lifts a gate names exactly one entry"); then the remaining
@@ -141,7 +147,8 @@ file writer.
   (exit 1) when `parts_problems()` names any problem, listing them all. Its checks run in this order, the first
   that fails deciding the exit and the message, with `--plan` as with a write:
   1. the options: `--parts` with `--decided`, `--ledger` without `--parts`, an empty piece (exit 1);
-  2. `item_line()` (exit 1), in its order (D2): the kind, the line's own checks, the helper (the Context, then
+  2. `item_line()` (exit 1, its `Refused` message as it stands, a helper fault being the helper's string
+     exactly), in its order (D2): the kind, the line's own checks, the helper (the Context, then
      each id, so `other#TD-9` is refused here, as another repo's entry, and `parts_problems()`'s `line:` serves
      other writers), the answers, a lifting answer, as `_lifting()` reads one (any case, never a waiting-only
      label);
@@ -184,17 +191,19 @@ writing a line by other means calls the same check. It is stricter than `decide_
 - a Context with words after its gate (`TD-4 decision (pat) — design ready`) is refused, where `decide_lift()`
   reads no qualifier and lifts it: `covers()` reads such an item as naming no entry, so the writer refuses a
   snapshot the sweep would not count, though its answer would still lift;
-- an archived part is refused. `decide_lift()` skips one whose Status is an archived word and whose text it is
-  given, and lifts one whose text it is given that reads `Open` (it has no `archived` input). `board.py decide`
-  today gives it no text for an entry in the archive directory (`_decide_ledger` keeps open entries alone), so the
-  lift refuses the whole answer as a part missing;
+- an archived part is refused. `decide_lift()` (v2.6, TD-052) skips and logs a part named in `archived` whose
+  text it is not given, and one whose text it is given and whose Status is an archived word; a part named in
+  `archived` whose text it is also given is read from the text (open before archived), so one reading `Open` and
+  carrying the gate is lifted. `board.py decide` passes the archive's ids in `archived` and no archived text, so
+  through it an archived part is always skipped; `parts_problems()`, where a number in `archived` wins, calls it
+  `archived` either way;
 - a Context entry named in `archived` whose Status reads `Open` is `<ref>: archived`, where `decide_lift()`,
-  given its text, lifts (it refuses only a Context entry whose Status is an archived word).
+  given its text, lifts (the text wins; it refuses a Context entry in `archived` only when it is not given its
+  text, and one whose Status is an archived word).
 
-The last two are a gap in `decide`, and its reach (`closes()`, `lift_pr_verdict()`) is its own design: TD-051, filed
-by this plan's PR and named in TD-050's `Related`. Nothing here depends on it, and the release need not wait for it: the
-gap is there today for any snapshot written by hand. Until it lands, a parent's item whose part was archived after
-it was asked is answered by closing it (`done`) and adding a fresh snapshot of the parts still held.
+The archived cases differ on purpose: a snapshot is judged by where the ledger keeps the entry, and the lift by the
+text its caller hands it (TD-051's plan, Option A). TD-051 was filed by this plan's first PR (#154) and built as
+TD-052 (#163); nothing here depends on it beyond the release they share.
 
 **Why ordered by number, and spelled as given.** The snapshot is part of the item key, "since a changed snapshot
 is a different question". The same parts in another order are the same question, so the writer orders them. Their
@@ -277,8 +286,9 @@ and after the paragraph on `decided_line()`, a new paragraph:
 > is an archived one. It judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each
 > part still, in the line's order, its first fault of `<id>: missing`, `<id>: archived`, `<id>: not Part of
 > <ref>`, `<id>: does not carry <gate>`. It is stricter than *The decide lift*, which skips a part that no longer
-> carries the gate (one archived by its Status among them), still lifts an `event (<name>)` snapshot and one whose
-> Context goes on past its gate, and lifts a Context entry named in `archived` whose Status reads `Open`: the
+> carries the gate (one archived by its Status, or named in `archived` and not given, among them), still lifts an
+> `event (<name>)` snapshot and one whose Context goes on past its gate, and, reading a text it is given ahead of
+> `archived`, lifts a part and a Context entry named in `archived` whose Status reads `Open`: the
 > snapshot is checked when the question is asked, the lift when it is answered. The ledger is not in the line, so
 > `item_line()` does not check these; a writer that reads the ledger calls it.
 
@@ -294,13 +304,28 @@ and after the paragraph on `decided_line()`, a new paragraph:
 and in the exit table, "or, for `decide`, a ledger that cannot be used as asked" becomes "or, for `decide` and
 `add --parts`, a ledger that cannot be used as asked".
 
-**4. *Versions*.** A paragraph after v2.5's others, in B1:
+**4. *Versions*.** A paragraph after the existing "**v2.6 answers a parent's item whose part was archived**"
+paragraph (TD-052's, in the same untagged release), in B1:
 
 > **v2.6 gives `Parts:` its writer** (*Edits*): `item_line(parts=)` and `parts_problems()`. Nothing read changes:
 > v2.3, v2.4 and v2.5 read every line it writes, and no key moves.
 
+If v2.6 is tagged before B1 merges, B1 writes the release it ships in, and its paragraph follows that release's
+others (D1).
+
 and B2 changes "(*Edits*): `item_line(parts=)` and `parts_problems()`" to "(*Edits*, *The board writer*):
 `item_line(parts=)`, `parts_problems()` and `board.py add --parts`".
+
+**5. *The gate sweep*, the `covers()` paragraph** (B1). Text 2 rests on a rule the code has had since v2.4 and SPEC
+never stated (`_names_entry()` takes only an item whose `_sweep_context()` qualifier is empty). "each `decide` item
+whose Context names the entry and the gate, or the entry's parent (its `Part of`) with the gate and the entry among
+its `Parts:`," becomes:
+
+> each `decide` item whose Context names the entry and the gate, or the entry's parent (its `Part of`) with the gate
+> and the entry among its `Parts:`, with nothing after the gate (a Context that goes on past it, `TD-4 decision
+> (pat) — design ready`, names no entry here),
+
+It describes what v2.4 already does, so no *Versions* line goes with it.
 
 The grammar appendix is unchanged: `parts` and its "each id once" rule are there since v2.3.
 
@@ -320,8 +345,9 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   string); `parts=[9]` and `[None]`; a Context naming a 19-digit entry or `TD-١٢`; `td-9`; ` TD-9`; `TD-١٢`; `TD-` and 19 digits; `parts=[]`; `TD-15` and `TD-015`; `other#TD-15`; the Context's own `TD-4`, and
   `TD-004`; a Context naming an entry and no gate; a Context naming `TD-4 event (build-green)`; Contexts
   `TD-4 decision (pat) — design ready` and `TD-4 decision (pat), PR #3 merged` (words after the gate), each
-  `context: not one entry and one decision`; a Context `Design TD-4 decision (pat)` (words before it) accepted,
-  and `covers()` reads it.
+  `context: not one entry and one decision`; a Context `Design TD-4 decision (pat)` (words before it) accepted
+  (that `covers()` reads it is pinned in `parts_problems`' matching cases, below, since the `edit` runner calls no
+  `covers()`).
 
 `parts_problems()`, a new `parts_problems` key in `fixtures/sweep/cases.json`, each case carrying its own `entries`
 (id to text) and, where it needs one, its own board text, so the sweep's shared `ledger.md` and boards, and every
@@ -329,10 +355,12 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
 - matching snapshots, each `[]`: `Context: TD-4 decision (pat). Parts: TD-9, TD-10.` with both parts `Part of:
   TD-4` carrying `decision (pat)` and the parent carrying none; the same with the parent carrying it; the parts
   carrying `decision (Pat)` (the person in another case); the line listing `TD-9` and `TD-10` for the ledger's `TD-009` and `TD-010`;
+  `Context: Design TD-4 decision (pat). Parts: TD-9, TD-10.` (words before the gate);
 - one problem each, its string as above: a part `Part of` another entry; a part with no `Part of`; a part whose
   `Part of` is `other#TD-4`, a 5000-digit id or `TD-١٢`; a part not carrying the gate; a part archived by its
-  Status; a part named in `archived` whose Status reads `Open`; a part missing; the Context entry archived; the
-  Context entry missing;
+  Status; a part named in `archived` whose Status reads `Open`; a part missing; the Context entry archived by its
+  Status (`<ref>: archived`); the Context entry named in `archived` whose Status reads `Open`, its text given
+  (`<ref>: archived`); the Context entry missing;
 - order: two faulty parts, listed in the line's order; one part both not `Part of` the parent and not carrying the
   gate, giving `not Part of` alone; the Context entry missing with a faulty part, giving both;
 - inputs: `entries` holding `TD-9` and `TD-009` (the first wins); keys that are no id (`x`, a 19-digit and a
@@ -361,10 +389,13 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   and the part archived by its Status (its text given) it accepts and logs `gate lift skipped`; the
   `TD-4 event (build-green)` case (both parts carrying the event) and the words-after-the-gate cases it accepts
   and lifts both; the part named in
-  `archived` reading `Open` (its text given) it accepts and lifts, the case TD-051 settles, and so for a Context
-entry named in `archived` reading `Open`. The 5000-digit and
-  `TD-١٢` cases are not cross-checked: `decide_lift()` reads any `\d+` run as a number, and raises `ValueError`
-  on 5000 digits (`int()`'s limit), which this design does not change.
+  `archived` reading `Open` (its text given, and its id in `decide_lift()`'s `archived` too) it accepts and lifts,
+  the text read ahead of `archived` (TD-052), and so for the Context entry named in `archived` reading `Open` (its
+  text given). The Context entry archived by its Status is the one refused among the Context cases above. Not
+  cross-checked: the 5000-digit and `TD-١٢` cases (`decide_lift()` reads any `\d+` run as a number, and raises
+  `ValueError` on 5000 digits, `int()`'s limit, which this design does not change), and the `line:` cases for
+  `twice` (`Parts: TD-9, TD-009.`, which `decide_lift()` accepts, lifting the one entry) and a 19-digit part,
+  each a hand-written form the writer never writes.
 
 These sit in `fixtures/sweep`, not `fixtures/lift`, because the `covers()` check needs a board, its `People:` and
 a `repo`, which the sweep's runner already reads; the `decide_lift()` cross-check rides with them.
@@ -404,9 +435,9 @@ its `covers()` and `decide_lift()` checks, and a v2.6 line in its docstring.
 
 ## The builds
 
-Filed on Paul's go, each `**Part of:** TD-050`. TD-051 (`decide` and an archived part) is filed apart, by this
-plan's PR, as a design of its own:
-- **B1, the module half:** `item_line(parts=)` and `parts_problems()`, B1's SPEC text (1, 2 and 4 as above), the
+Filed on Paul's go, each `**Part of:** TD-050`. TD-051 (`decide` and an archived part) was filed apart, by this
+plan's first PR (#154), as a design of its own, and built as TD-052 (#163):
+- **B1, the module half:** `item_line(parts=)` and `parts_problems()`, B1's SPEC text (1, 2, 4 and 5 as above), the
   `edit` and `sweep` fixtures above, `fixtures/run.py`'s runners for them, and unit tests in `tests/` where its
   suites cover the code touched (`item_line`'s read-back), with one that `parts_problems()` never raises on
   arbitrary lines, ids and mappings. Done when those fixtures and tests pass and that SPEC text lands with the code.
@@ -420,8 +451,8 @@ B1 and B2 both say v2.6, so the tag that ships them (Paul's) follows this B2: a 
 would ship `item_line(parts=)` without its writer, and B2 would be relabelled. Either the tag waits for both, or
 Paul moves TD-050 to the release after it.
 
-This plan's PR also rewrites TD-050's Fix and Done when to point here (`ledger.py edit`), adds TD-051 to its
-`Related`, and files TD-051.
+This plan's first PR (#154) rewrote TD-050's Fix and Done when to point here (`ledger.py edit`), added TD-051 to
+its `Related`, and filed TD-051.
 
 Target design §7.1's v2.3 row is amended by a dated note under the table, as TD-045's is, in this plan's PR; and
 §6 *One go for a parent's parts* by a dated note naming the writer's decision-only rule.
