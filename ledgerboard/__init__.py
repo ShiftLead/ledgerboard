@@ -2246,7 +2246,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     if parts is not None and not any(_lifting(lbl, lifted or None) for lbl, _ in offered):
         raise Refused("a decide with parts offers an answer that lifts (Go, or one named in lifts): "
                       "a snapshot no answer lifts is a question no press can act on")
-    label =offered[default][0] if offered and default is not None else None
+    label = offered[default][0] if offered and default is not None else None
     lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
 
     def written(lbl: str, cons: str, marked: bool) -> str:
@@ -4674,18 +4674,19 @@ def parts_problems(item_line: str, entries: Mapping[str, str], archived: Iterabl
     ref = next(x.group(0) for x in REF_TD_RE.finditer(ctx))
     gate = " ".join(CONTEXT_ANY_GATE_RE.search(ctx).group(0).split())
     by_num: dict[int, object] = {}
-    if isinstance(entries, Mapping):
-        for k, v in entries.items():
+    gone: set[int] = set()
+    try:  # a caller's mapping or iterable may raise while read: what was read before it stands
+        for k, v in (entries.items() if isinstance(entries, Mapping) else ()):
             if _part_id(k):
                 by_num.setdefault(_num(k), v)
-    gone: set[int] = set()
+    except Exception:  # noqa: BLE001  # never raises, on any argument (SPEC *Edits*)
+        pass
     try:
-        members = iter(archived)
-    except TypeError:
-        members = iter(())
-    for x in members:
-        if _part_id(x):
-            gone.add(_num(x))
+        for x in archived:
+            if _part_id(x):
+                gone.add(_num(x))
+    except Exception:  # noqa: BLE001  # not an iterable, or one that raises: what was read before it stands
+        pass
 
     def where(tid: str) -> tuple[str | None, dict | None]:
         """(``missing`` or ``archived`` or None, the entry read)."""

@@ -479,6 +479,16 @@ class Parts(unittest.TestCase):
             self.assertEqual(L.parts_problems(line, self.ENTRIES, archived), [])
         self.assertEqual(L.parts_problems(line, self.ENTRIES, iter(["TD-009"])), ["TD-9: archived"])
 
+        class Raising(dict):
+            def items(self):
+                raise RuntimeError("a hostile mapping")
+
+        def raising():
+            yield "TD-9"
+            raise RuntimeError("a hostile iterable")
+        self.assertEqual(L.parts_problems(line, Raising(self.ENTRIES)), ["TD-4: missing", "TD-9: missing", "TD-10: missing"])
+        self.assertEqual(L.parts_problems(line, self.ENTRIES, raising()), ["TD-9: archived"])
+
     def test_parts_problems_never_raises(self):
         import random
         rnd = random.Random(2026)
