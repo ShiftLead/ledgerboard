@@ -217,7 +217,10 @@ RETIRED_ROLES = ("designer",)  # a role in `decision (…)`, reserved by name (S
 RETIRED_FIELDS = {"waits": "a gate in Blocked by — until YYYY-MM-DD or event (<name>)",
                   "taken by": "Id take, the counter take's nonce",
                   "resolved": "the **Resolved:** body line of an archived entry"}
-RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
+WAITS_WRITTEN = ("a new or changed Waits line — the field is retired and no reader takes it as a gate; write the "
+                 "wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section "
+                 "(SPEC *Retired words*)")  # check()'s error on a Waits line an edit wrote (v2.7)
+RETIRED_GATES = {"hold":"decision (<person>), with an **Ask:**"}
 RETIRED_STATUS = {"designed": "Open, with Kind build", "built": "Open, with Kind live-check", "partly": "Open",
                   "live": "Open", "in": "Open"}  # an open entry's; the archived ones are migrate's to map
 OLD_FORM_REPLACES = "decision (<person>), with the text in an **Ask:** section"
@@ -811,7 +814,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     add ``event-section``, ``event-check``, ``event-ungated`` and (v2.5) ``event-undated`` (``event_problems()``, given
     each entry's old text when ``old`` is given), scoped the same way, and
     ``gate-reassigned-often`` (info) for a decision reassigned more than twice to reach it (``reassigns()``).
-    ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
+    Also with ``old`` (v2.7): the retired ``Waits`` field is an error on an entry whose Waits line the edit added
+    or changed (SPEC *Retired words*), and stays information where the line is as it was. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
@@ -839,6 +843,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         return recs
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
+    waits_written = {e["id"] for e in entries(ledger)  # v2.7: a Waits line this edit added, or whose text it changed
+                     if "waits" in e["fields"] and before.get(e["id"], {}).get("waits") != e["fields"]["waits"]}
     rewritten = {t for t, x in texts.items() if old_texts.get(t) != x}  # a Log flag's scope: the whole entry
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
@@ -848,6 +854,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
             r["standing"], r["level"] = True, "info"
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
+        elif r["kind"] == "retired" and r["field"] == "waits" and r["id"] in waits_written:
+            r["level"], r["text"] = "error", f"ℹ {r['id']}: {WAITS_WRITTEN}"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
     return recs + _left_with_open_parts(old, ledger)
 

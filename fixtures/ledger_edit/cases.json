@@ -1564,6 +1564,17 @@
    "name": "host_log_no_old",
    "ledger": "check/hostlog_after.md",
    "archive": ""
+  },
+  {
+   "name": "waits_written_is_an_error",
+   "ledger": "check/waits_after.md",
+   "archive": "",
+   "old": "check/waits_before.md"
+  },
+  {
+   "name": "waits_no_old",
+   "ledger": "check/waits_after.md",
+   "archive": ""
   }
  ],
  "log": [
