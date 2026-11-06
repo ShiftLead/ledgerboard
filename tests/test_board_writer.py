@@ -304,7 +304,8 @@ class AddParts(unittest.TestCase):  # v2.6: add --parts, a decide's Parts: snaps
     def test_the_checks_run_in_order(self):
         before = Path(self.board).read_text()
         steps = [  # each refusal is the first failing step's; the board is never written
-            ((self.add("--parts", "TD-9,", "--decided", "Go", kind=None)), 1, "empty piece"),  # 1: the options
+            ((self.add("--parts", "TD-9,", "--decided", "Go", kind=None)), 1, "a decided item takes none"),  # 1
+            ((self.add("--parts", "TD-9,", kind=None)), 1, "empty piece"),  # 1: the options, then the pieces
             ((self.add("--parts", "TD-9", kind="act")), 1, "only a decide lists its parts"),  # 2: before the ledger
             ((self.add("--parts", "TD-9", "--ledger", os.path.join(self.tmp.name, "none"),
                        context="TD-4 decision (pat) — later")), 1, "context: not one entry"),  # 2: the helper

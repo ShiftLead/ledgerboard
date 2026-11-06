@@ -615,6 +615,8 @@ def _parts_given(values: Sequence[str]) -> list[str] | None:
 
 def build(a: argparse.Namespace) -> Plan:
     if a.action == "add":
+        if a.parts and a.decided is not None:  # step 1's order (SPEC *The board writer*): ahead of the pieces
+            raise Refused("--parts is a decide's snapshot, asked as a question: a decided item takes none")
         parts = _parts_given(a.parts)
         detail = None
         if a.detail is not None:
