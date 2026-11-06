@@ -287,8 +287,8 @@ its dates:
   stands.
 - **Two boards:** one entry's `decision (pat)` answered `Go` on `widgets.md` (2026-10-20) and on `alpha.md`
   (2026-10-27), both closed, never lifted: one act, on `alpha.md` (the newer answer's), Context
-  `acme/widgets#TD-n decision (pat) lift`; no `decide`. A variant with `alpha.md`'s act (dated 2026-10-28) closed
-  by hand: no act (the closed act's date guard, read on `alpha.md`) and no `decide` (both answers within the
+  `acme/widgets#TD-n decision (pat) lift`; no `decide`. A variant, on its own entry and its own items (the shared boards hold one state per run), with `alpha.md`'s act
+  (dated 2026-10-28) closed by hand: no act (the closed act's date guard, read on `alpha.md`) and no `decide` (both answers within the
   window). The rerun of the first files nothing.
 - **A non-lifting label closed:** `Decided: Not yet …`, closed: the existing window, nothing new.
 - **`reask_days` 0:** a run with `reask_days: 0` (as of `today`): TD-224 files its `decide`, no act.
@@ -296,7 +296,7 @@ its dates:
   its act open (dated 2026-10-29):
   TD-230 with parts TD-231 (carrying, no Log line) and TD-232 (lifted 2026-10-28, re-added 2026-10-31): the act
   stays open; TD-233 with parts TD-234 (lifted, free) and TD-235 (lifted 2026-10-28, re-added 2026-10-31): the act
-  closes while TD-235 still carries the gate (TD-235 gets its `decide`); the `rerun` closes nothing more and
+  closes while TD-235 still carries the gate (TD-232 and TD-235, re-added after their lifts, each get a `decide`); the `rerun` closes nothing more and
   files no act again. The host's `Lift of decision (pat) on TD-n was closed` act (Context `TD-n decision (pat)
   lift`), with no answer item, closes once the entry is free, as today, and holds no re-ask.
 
