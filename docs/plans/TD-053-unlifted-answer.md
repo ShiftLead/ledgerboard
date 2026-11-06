@@ -9,8 +9,10 @@ the boards read. Round 6's one build-changing finding (F55) was a fixture's word
 One more round (2026-11-05): its fact-check raised six minor findings (F60–F65); its design review found F55–F59
 and the cross-board grouping sound and raised one build-changing finding (F66: an answer dated in the future let a
 closed act refile each day; such an answer now owes nothing), reopening F50, and three minor (F67–F69, F69 the
-fixtures' id table). F66–F71 are applied and read by no design review (F70–F71, the closing fact-check's, SPEC wording). Waits on Paul's go again (the board's decide
-item); recommended: One more round.
+fixtures' id table). F66–F71 (F70–F71, the closing fact-check's, SPEC wording) were then read by round 8, bought by Paul's second One
+more round (2026-11-06): its design review read the whole plan, F66–F71 first, against the code and found nothing,
+so the rounds end by the stop rule; round 8 changed no text, so its closing fact-check had nothing to read. Every
+finding has been read by a design review. Waits on Paul's go (the board's decide item); recommended: Go.
 
 **Entry:** [TD-053](../ledger/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
 2026-11-05).
