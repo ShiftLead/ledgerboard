@@ -45,7 +45,8 @@ Fixtures, each an invented input and its expected JSON:
 - ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
   boards; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
   ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
-  and the ``decide_lift()`` cross-check of a ``Go``.
+  and the ``decide_lift()`` cross-check of a ``Go``. From v2.7, a lifting answer closed with no lift (TD-224 to
+  TD-269): the ``act`` that says its lift is owed, held entries, its close, and a run's own ``reask_days``.
 - ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
   two, read as bytes, or its refusal.
 - ``ledger/belowheader.md`` (TD-049): a ``decision`` gate below the header block — ``check()`` gives its ℹ and
@@ -700,6 +701,7 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
     results = {(r[0], r[1]): (r[2], r[3]) if len(r) > 3 else r[2] for r in spec["results"]}
 
     def run(c, bs=boards, **kw):
+        kw.update({"reask_days": c["reask_days"]} if "reask_days" in c else {})  # v2.7: a run's own window
         return L.sweep(ents, bs, results, c["today_utc"], c["today_local"], repo=spec["repo"], **kw)
     runs = {c["name"]: run(c) for c in spec["runs"]}
     first = next(c for c in spec["runs"] if c["name"] == spec["rerun"])

@@ -978,6 +978,53 @@ class GateSweep(unittest.TestCase):  # v2.4: odd inputs the fixtures do not carr
                          ["acme/own#TD-301 decision (pat)"])
 
 
+class UnliftedAnswer(unittest.TestCase):  # v2.7 (TD-056): a lifting answer closed with no lift; odd inputs
+    BOARD = "People: pat\n\n"
+    ANSWER = ("- [x] decide 2026-10-02 (n/a) — Go? Context: TD-{n} {gate}. Due: 2026-11-10. Answers: Go | Not yet. "
+              "Decided: Go (by pat) (2026-10-25). Closed: 2026-10-25 — lifted.\n")
+
+    def entry(self, n, gate="decision (pat)", log=""):
+        return (f"## TD-{n}: An entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n"
+                f"**Blocked by:** {gate}\n" + (f"\n**Log:**\n{log}" if log else ""))
+
+    def run_sweep(self, ledger, board):
+        got = L.sweep(["# Ledger\n\nLedgerboard: 2\n\n" + ledger], [("git@example.com:acme/own.git", "own", board, "")],
+                      {}, "2026-11-03", "2026-11-03", repo="acme/own")
+        return [(i["kind"], i["context"]) for i in got["to_file"].get("example.com/acme/own", [])], got["to_close"]
+
+    def test_a_log_date_that_is_no_day_is_not_counted(self):
+        log = "- 2026-02-30: gate lifted: decision (pat) — by pat; answer \"Go\"\n"
+        filed, _ = self.run_sweep(self.entry(1, log=log), self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)"))
+        self.assertEqual(filed, [("act", "TD-1 decision (pat) lift")])
+
+    def test_the_gate_in_another_case_is_one_question(self):
+        filed, _ = self.run_sweep(self.entry(1, gate="decision (PAT)"),
+                                  self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)"))
+        self.assertEqual(filed, [("act", "TD-1 decision (pat) lift")])
+
+    def test_an_act_whose_head_has_no_date_never_blocks_a_filing(self):
+        act = ("- [x] act (n/a) — decision (pat) on TD-1 was answered with a lift on 2026-10-25 but still stands on "
+               "TD-1: lift it. Context: TD-1 decision (pat) lift. Due: 2026-11-10. Closed: 2026-10-27 — left.\n")
+        filed, _ = self.run_sweep(self.entry(1), self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)") + act)
+        self.assertEqual(filed, [("act", "TD-1 decision (pat) lift")])
+
+    def test_an_answer_for_an_unknown_entry_owes_nothing(self):
+        filed, _ = self.run_sweep(self.entry(1), self.BOARD + self.ANSWER.format(n=9, gate="decision (pat)"))
+        self.assertEqual(filed, [("decide", "TD-1 decision (pat)")])
+
+    def test_the_act_carries_its_detail(self):
+        got = L.sweep(["# Ledger\n\nLedgerboard: 2\n\n" + self.entry(1)],
+                      [("git@example.com:acme/own.git", "own", self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)"),
+                        "")], {}, "2026-11-03", "2026-11-03", repo="acme/own")
+        act = got["to_file"]["example.com/acme/own"][0]
+        self.assertEqual(act["text"], "decision (pat) on TD-1 was answered with a lift on 2026-10-25 but still stands "
+                                      "on TD-1: lift it.")
+        self.assertEqual(act["detail"]["question"], "Lift the gate by hand, or ask the question again?")
+        line = L.item_line(act["text"], "2026-11-10", "2026-11-03", "sweep", None, act["context"], kind="act",
+                           detail=act["detail"])
+        self.assertEqual(L._sweep_head(line), "unlifted")
+
+
 class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not carry (ledgerboard TD-032)
     D = Path(__file__).resolve().parent.parent / "fixtures" / "verdict"
 
