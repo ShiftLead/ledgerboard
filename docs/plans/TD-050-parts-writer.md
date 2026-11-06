@@ -191,7 +191,7 @@ writing a line by other means calls the same check. It is stricter than `decide_
 - a Context with words after its gate (`TD-4 decision (pat) — design ready`) is refused, where `decide_lift()`
   reads no qualifier and lifts it: `covers()` reads such an item as naming no entry, so the writer refuses a
   snapshot the sweep would not count, though its answer would still lift;
-- an archived part is refused. `decide_lift()` (v2.6, TD-052) skips and logs a part named in `archived` whose
+- an archived part is refused. `decide_lift()` (v2.6, TD-052) skips (and, on a lifting answer, logs) a part named in `archived` whose
   text it is not given, and one whose text it is given and whose Status is an archived word; a part named in
   `archived` whose text it is also given is read from the text (open before archived), so one reading `Open` and
   carrying the gate is lifted. `board.py decide` passes the archive's ids in `archived` and no archived text, so
