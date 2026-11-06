@@ -15,8 +15,14 @@ F86–F96, which raised four build-changing findings (F97–F100: a SPEC rule te
 plan stale against TD-051's build, TD-052, already merged into v2.6; two fixture cases undefined or in the wrong
 runner) and four minor ones (F101–F104). Paul bought **one more round** again (round 9, 2026-11-05): a design
 review of F97–F104 found them applied as described and raised one build-changing finding (F105: an id in
-`archived` with no text was `missing` or `archived` by guess) and four minor ones (F106–F109). F105–F109 are applied
-and read by no design review. Waits on Paul's go (the board's decide item); recommended: One more round.
+`archived` with no text was `missing` or `archived` by guess) and four minor ones (F106–F109). Paul bought **one more round** again (round 10, 2026-11-05): its fact-check of F105–F109
+raised two minor findings (F110–F111: the archived-with-no-text case split in two, since one combined case never
+reaches the part, and a case for a key holding no entry whose number is in `archived`), applied. Its design review
+found F105–F111 applied and the archived model sound (one rule: a snapshot is judged by where the ledger keeps an
+entry, the lift by the text it is given), raised nothing build-changing and two minor fixture gaps (F112–F113),
+applied; the closing fact-check raised one minor (F114: `decide_lift()` raises on a value that is no string),
+applied. So the rounds end by the stop rule. Build-changing findings per round 1–10, design reviews only: 1, 2, 2,
+2, 1, 3, 1, 4, 1, 0. Waits on Paul's go (the board's decide item); recommended: Go.
 
 **Entry:** [TD-050](../ledger/TD-050.md). Asked for by agent-cadence TD-221; ShiftLead's TD-1378 shows the field.
 
@@ -137,8 +143,9 @@ file writer.
     or its Status's first word is an archived one (`ARCHIVED_WORDS`). A number in `archived` with no key in
     `entries` is `archived`, never `missing`, as `decide_lift()` reads it (the way `board.py decide` calls it). A
     number with a key in `entries` whose value is no string or holds no entry is no entry; with its number also in
-    `archived` it is `archived` here, where `decide_lift()`, which reads by key, says "not among the entries given":
-    a difference by design, since the snapshot is judged by where the ledger keeps the entry. A gate is carried as `decide_lift()` reads
+    `archived` it is `archived` here, where `decide_lift()`, which reads by key, says "not among the entries given"
+    of a text holding no entry (and raises `TypeError` on a value that is no string, which this design does not
+    change): a difference by design, since the snapshot is judged by where the ledger keeps the entry. A gate is carried as `decide_lift()` reads
     it (`_carried`: the person compared case-insensitively); an archived entry carries nothing. A part's `Part of`
     is the Context's entry only when `parse_part_of(…)[0]` is a bare `TD-[0-9]{1,18}` of its number: none, a second
     parent, another repo's or an unreadable value is not. The parent may carry the gate or not.
@@ -368,13 +375,18 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   `Part of` is `other#TD-4`, a 5000-digit id or `TD-١٢`; a part not carrying the gate; a part archived by its
   Status; a part named in `archived` whose Status reads `Open`; a part missing; the Context entry archived by its
   Status (`<ref>: archived`); the Context entry named in `archived` whose Status reads `Open`, its text given
-  (`<ref>: archived`); the Context entry missing; a part, and the Context entry, each named in `archived` with no
-  key in `entries` (`<id>: archived`, `<ref>: archived`, never `missing`);
+  (`<ref>: archived`); the Context entry missing; two cases named in `archived` with no key in `entries`, never `missing`: a part
+  (the Context entry given, `<id>: archived`) and, in a case of its own, the Context entry (`<ref>: archived`);
+  a part whose key in `entries` holds a text with no entry, its number also in `archived` (`<id>: archived`), and
+  the same for the Context entry, in a case of its own (`<ref>: archived`);
 - order: two faulty parts, listed in the line's order; one part both not `Part of` the parent and not carrying the
   gate, giving `not Part of` alone; the Context entry missing with a faulty part, giving both;
 - inputs: `entries` holding `TD-9` and `TD-009` (the first wins); keys that are no id (`x`, a 19-digit and a
   5000-digit id, `TD-١٢`, `other#TD-9`: each ignored, no exception); a text holding no entry and a value that is no
   string (missing); `archived` holding `other#TD-9`, the string `"5"` and the int `5`, and `entries` an int key (each ignored);
+  `archived` given as the bare string `"TD-9"` (iterated by character, so nothing archived: the part judged from
+  its text); `entries` holding `TD-9` as `None` and then `TD-009` with a valid text (the first key of the number
+  wins, so `TD-9: missing`);
 - `line:`, alone, the helper's string (each pinned, e.g. `line: TD-009: twice`): a Context naming `TD-4 event (build-green)`;
   naming `other#TD-4`; naming a 19-digit entry; hand-written `Parts: TD-9, TD-009.`, `Parts: TD-١٢.`, a 19-digit
   part, `Parts: other#TD-9, TD-9.` (no exception in any);
@@ -407,12 +419,15 @@ Fixture names are invented (`pat`), never a person's (AGENTS.md).
   cross-checked: the 5000-digit and `TD-١٢` cases (`decide_lift()` reads any `\d+` run as a number, and raises
   `ValueError` on 5000 digits, `int()`'s limit, which this design does not change), and the `line:` cases for
   `twice` (`Parts: TD-9, TD-009.`, which `decide_lift()` accepts, lifting the one entry) and a 19-digit part,
-  each a hand-written form the writer never writes; the order and inputs cases and the read-as-`parse_parts()`
+  each a hand-written form the writer never writes; the order and inputs cases (among them `TD-9` as `None` before a valid `TD-009`, on which `decide_lift()` raises
+  `TypeError`) and the read-as-`parse_parts()`
   cases, which test `parts_problems()`'s own reading and say nothing of the lift; and the `line:` case naming a
   19-digit Context entry, which `decide_lift()` refuses as not among the entries given. The words-after-the-gate
-  cases carry a matching ledger, both parts `Part of: TD-4` carrying `decision (pat)`. The cases named in
-  `archived` with no text are cross-checked with that `archived`: `decide_lift()` refuses the Context entry as
-  archived, and skips the part, logging `gate lift skipped`.
+  cases carry a matching ledger, both parts `Part of: TD-4` carrying `decision (pat)`. The two cases named in
+  `archived` with no text are cross-checked with that `archived`, each on its own: in the part's, `decide_lift()`
+  accepts, skips the part and logs `gate lift skipped`; in the Context entry's, it refuses the Context entry as
+  archived. They differ by design in the cases of a part, and of the Context entry, whose key holds no entry
+  and whose number is in `archived`: `decide_lift()` refuses each as not among the entries given.
 
 These sit in `fixtures/sweep`, not `fixtures/lift`, because the `covers()` check needs a board, its `People:` and
 a `repo`, which the sweep's runner already reads; the `decide_lift()` cross-check rides with them.
