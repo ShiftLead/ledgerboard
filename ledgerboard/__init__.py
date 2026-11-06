@@ -220,7 +220,7 @@ RETIRED_FIELDS = {"waits": "a gate in Blocked by — until YYYY-MM-DD or event (
 WAITS_WRITTEN = ("a new or changed Waits line — the field is retired and no reader takes it as a gate; write the "
                  "wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section "
                  "(SPEC *Retired words*)")  # check()'s error on a Waits line an edit wrote (v2.7)
-RETIRED_GATES = {"hold":"decision (<person>), with an **Ask:**"}
+RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
 RETIRED_STATUS = {"designed": "Open, with Kind build", "built": "Open, with Kind live-check", "partly": "Open",
                   "live": "Open", "in": "Open"}  # an open entry's; the archived ones are migrate's to map
 OLD_FORM_REPLACES = "decision (<person>), with the text in an **Ask:** section"
