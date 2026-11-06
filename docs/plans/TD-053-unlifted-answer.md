@@ -9,7 +9,7 @@ the boards read. Round 6's one build-changing finding (F55) was a fixture's word
 One more round (2026-11-05): its fact-check raised six minor findings (F60–F65); its design review found F55–F59
 and the cross-board grouping sound and raised one build-changing finding (F66: an answer dated in the future let a
 closed act refile each day; such an answer now owes nothing), reopening F50, and three minor (F67–F69, F69 the
-fixtures' id table). F66–F69 are applied and read by no design review. Waits on Paul's go again (the board's decide
+fixtures' id table). F66–F71 are applied and read by no design review (F70–F71, the closing fact-check's, SPEC wording). Waits on Paul's go again (the board's decide
 item); recommended: One more round.
 
 **Entry:** [TD-053](../ledger/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
@@ -207,7 +207,7 @@ held by an answer owing a lift (below)" before its colon; and after the bullet's
 `<p>`: … on this repo's own board;"), replacing its `;` with `.`, add:
 
 > An **answer owing a lift** (v2.6) is an item `covers()` would find for an entry's `decision (<p>)`, closed, whose
-> `Decided:` label lifts, dated `D` no later than today, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
+> `Decided:` label lifts, dated `D` no later than `today_local`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
 > `People:`). It owes the lift to each entry it covers (its Context entry, in the ledger or the
 > archive, and each `Parts:` id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
 > or after `D − 1` and no `gate added:` line for it dated on or after `D + 2` (a board's date is local, a Log's UTC).
@@ -219,7 +219,7 @@ held by an answer owing a lift (below)" before its colon; and after the bullet's
 > is open, nor when one, open or closed, on any board read or its archive is dated on or after the newest answer's
 > `D − 1`. An entry
 > owed is held: it is not asked again while an answer owing it is within `reask_days`, or while an act
-> for the answers owing for its Context entry and gate is open on a board read or filed in the same sweep;
+> for the Context entry and gate of an answer owing it is open on a board read or filed in the same sweep;
 
 **2. *One filing rule*.** "holds for every item but the decision's own (whose rule is *covered*, above)" becomes
 "holds for every item but the decision's own (whose rule is *covered*, above) and the `was answered with a lift`
