@@ -2243,11 +2243,11 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     waits = [x for x in lifted if waiting_only(x)]
     if waits:
         raise Refused(f"{waits[0]!r} only keeps the gate waiting — it never lifts (v2.4)")
+    label = offered[default][0] if offered and default is not None else None
+    lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
     if parts is not None and not any(_lifting(lbl, lifted or None) for lbl, _ in offered):
         raise Refused("a decide with parts offers an answer that lifts (Go, or one named in lifts): "
                       "a snapshot no answer lifts is a question no press can act on")
-    label = offered[default][0] if offered and default is not None else None
-    lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
 
     def written(lbl: str, cons: str, marked: bool) -> str:
         return (lbl.replace("|", "\\|") + (" (default)" if marked else "")
