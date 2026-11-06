@@ -1,16 +1,18 @@
 # TD-053: a lifting answer closed with no lift
 
 **Status:** Draft 1, 2026-11-05 (session lb-designer). Class: **wide** (a vendored, published format: what
-`sweep()` files and closes, which both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended at the
-cap**, 2026-11-05 (the record: [docs/reviews/TD-053.md](../reviews/TD-053.md)). Build-changing findings per round
+`sweep()` files and closes, which both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the
+stop rule** at round 8, 2026-11-06, after ending at the cap (6) on 2026-11-05 and two rounds Paul bought (the record: [docs/reviews/TD-053.md](../reviews/TD-053.md)). Build-changing findings per round
 1–6: the fact-check 4 (round 1), design reviews 5, 1, 3, 1, 1, 1. Recurring topic: which answers, boards and
 entries one act speaks for (F1, F12, F13, F34, F42, F47), settled as one group per Context entry and gate across
 the boards read. Round 6's one build-changing finding (F55) was a fixture's wording. Round 7, bought by Paul's
 One more round (2026-11-05): its fact-check raised six minor findings (F60–F65); its design review found F55–F59
 and the cross-board grouping sound and raised one build-changing finding (F66: an answer dated in the future let a
 closed act refile each day; such an answer now owes nothing), reopening F50, and three minor (F67–F69, F69 the
-fixtures' id table). F66–F71 are applied and read by no design review (F70–F71, the closing fact-check's, SPEC wording). Waits on Paul's go again (the board's decide
-item); recommended: One more round.
+fixtures' id table). F66–F71 (F70–F71, the closing fact-check's, SPEC wording) were then read by round 8, bought by Paul's second One
+more round (2026-11-06): its design review read the whole plan, F66–F71 first, against the code and found nothing,
+so the rounds end by the stop rule; round 8 changed no text, so its closing fact-check had nothing to read. Every
+finding has been read by a design review. Waits on Paul's go (the board's decide item); recommended: Go.
 
 **Entry:** [TD-053](../ledger/TD-053.md). Reported by ShiftLead (its TD-1425, after TD-1392's live re-ask of
 2026-11-05).
