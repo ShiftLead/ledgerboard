@@ -916,11 +916,25 @@ and the archive's texts; an entry is open unless its Status is an archived one, 
 `detail`, `lifts`); the host adds today, its `Due:`, session and host. It refuses boards holding no board of `repo`,
 a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per gate of an open entry:
 - **`decision (<p>)`**, not covered and with no `kept waiting` Log line for it newer than `reask_days`, and no item
-  `covers()` finds answered without a lift within `reask_days`: a `decide` whose text is the entry's Ask (else its
+  `covers()` finds answered without a lift within `reask_days`, and not held by an answer owing a lift (below): a `decide` whose text is the entry's Ask (else its
   title), `Answers: Go | Not yet.`, on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
   listing board with the lowest pick key (`origin_key`, bytewise; boards with no readable origin after, by lowercased
   basename). Its Context is `TD-n decision (<p>)`, written `<repo>#TD-n …` on another repo's board. When no board
-  lists `<p>`: an `act`, `decision (<p>) on TD-n has no board: …`, on this repo's own board;
+  lists `<p>`: an `act`, `decision (<p>) on TD-n has no board: …`, on this repo's own board.
+  An **answer owing a lift** (v2.7) is an item `covers()` would find for an entry's `decision (<p>)`, closed, whose
+  `Decided:` label lifts, dated `D` no later than `today_local`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
+  `People:`). It owes the lift to each entry it covers (its Context entry, in the ledger or the
+  archive, and each `Parts:` id `Part of` it) that is open and carries the gate, and whose Log has no `gate lifted:` line for the gate dated on
+  or after `D − 1` and no `gate added:` line for it dated on or after `D + 2` (a board's date is local, a Log's UTC).
+  The answers owing for one Context entry and gate, on any board read, file one `act` on the newest one's board
+  (between boards whose newest answer shares that date, the first by pick key), when one of them is within
+  `reask_days` and an entry they owe is not covered: Context the Context entry with the gate and ` lift`, its text
+  `<gate> on TD-n was answered with a lift on <D> but still stands on <ids>: lift it.`, `<D>` the newest answer's
+  date and `<gate>` as its Context spells it, `<ids>` every entry they owe that nothing covers, in number order; not while one of its identity
+  is open, nor when one, open or closed, on any board read or its archive is dated on or after the newest answer's
+  `D − 1`. An entry
+  owed is held: it is not asked again while an answer owing it is within `reask_days`, or while an act
+  for the Context entry and gate of an answer owing it is open on a board read or filed in the same sweep;
 - **`until D`**, D reached: a lift, `kind: until`, evidence `date reached`. Nothing is filed;
 - **`event (<name>)`**, by its outcome, on this repo's own board: `passed`, a lift (`kind: event`, the result's
   evidence); `error`, an `act` `Event check broken on TD-n: …`; `impossible`, a `decide` `… can no longer happen.`
@@ -931,18 +945,22 @@ a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per g
   `Decided:` whose Context names `<this repo>#TD-n` (a board not read holds none): an `act` on this repo's own board,
   `… holds no decided item …`, its Context `TD-n <gate> board <repo>`.
 
-**One filing rule** holds for every item but the decision's own (whose rule is *covered*, above): an item's identity
+**One filing rule** holds for every item but the decision's own (whose rule is *covered*, above) and the `was answered with a lift`
+`act` (whose rule is the same bullet's): an item's identity
 is its Context's entry, gate and what follows the gate, its kind, and its fixed words (`has no board`, `Event check
 broken`, `can no longer happen`, `Still waiting on`, `holds no decided item`). It is filed only when no item of that
 identity is open on any board read, none was answered within `reask_days` with a label that does not lift (dated by
 its `Decided:`, not its `Closed:`), and the entry's Log has no `kept waiting` line for the gate within it. An item
-closed `— lifted.`, or closed with no answer, opens no window.
+closed `— lifted.`, or closed with no answer, opens no window. One whose lift never happened owes it, and is the `decision (<p>)` bullet's (above).
 
 **The close rule.** Of the open items about this repo's entries on any board read, the sweep closes (by item key):
 - never one decided with a work order (an answer that neither lifts nor only waits); nor one whose Context entry is
   in neither the ledger nor the archive, which is left for a person;
 - the gate is **gone** when neither the Context entry (open) nor any `Parts:` id carries it. Any `decide` keyed to
-  the entry and gate, and the `lift was closed` item (Context `TD-n <gate> lift`), close once it is gone;
+  the entry and gate, and the host's `lift was closed` item (Context `TD-n <gate> lift`, without `was answered with a lift`),
+  close once it is gone;
+- the `was answered with a lift` `act` once no answer on any board read for its Context entry and gate owes the lift
+  (v2.7);
 - `has no board` once it is gone or covered; `Event check broken` once it is gone or the check's outcome is not
   `error` (no outcome changes nothing); `Still waiting on` once it is gone or the check says `impossible`;
 - the `; board <repo>` audit's `act` once that board holds the answer, or the Log line is gone.
@@ -1399,6 +1417,10 @@ v2.3, v2.4 and v2.5 read every line it writes, and no key moves.
 **v2.7 makes a new `Waits` line an error** (*Retired words*): `check()` with the ledger before an edit grades
 the retired field ⚠ on an entry whose `Waits` line the edit added or changed, where v2.4 to v2.6 noted it ℹ.
 Nothing read changes, and a ledger whose `Waits` lines no edit touches checks as before.
+
+**v2.7 stops the sweep re-asking a lifting answer closed with no lift** (*The gate sweep*): within `reask_days`,
+once per answer, an `act` says the lift is owed, in place of `Go | Not yet`, and closes once nothing is owed. A
+gate lifted and re-added (its Log says so) is asked at once, as before.
 
 ## Appendix: grammar
 

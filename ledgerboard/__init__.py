@@ -5089,9 +5089,10 @@ SWEEP_EVENT_AGE_DAYS = 30
 # `uncovered`.
 SWEEP_HEADS = (("no-board", "has no board"), ("broken", "Event check broken"),
                ("impossible", "can no longer happen"), ("still", "Still waiting on"),
-               ("audit", "holds no decided item"))
+               ("audit", "holds no decided item"), ("unlifted", "was answered with a lift"))
 SWEEP_KINDS = {"no-board": "act", "broken": "act", "impossible": "decide", "still": "decide", "audit": "act",
-               "uncovered": "decide"}
+               "uncovered": "decide", "unlifted": "act"}
+ITEM_DATE_RE = re.compile(r"^(?:[A-Za-z]+\s+)?(\d{4}-\d{2}-\d{2})\b")  # an item's date, read from its head (v2.7)
 SWEEP_DECISION_ANSWERS = ("Go", "Not yet")
 SWEEP_IMPOSSIBLE_ANSWERS = ("Drop the gate", "Rewrite the check", "Drop the entry")
 SWEEP_STILL_ANSWERS = ("Keep waiting", "Drop the gate", "Rewrite the check")
@@ -5160,7 +5161,7 @@ def _read_boards(boards: Sequence[Sequence], repo: str) -> list[dict]:
         for it, line, state in reads:
             out.append({"board": name, "own": own, "item": it, "line": line, "state": state,
                         "ctx": _sweep_context(it.text, own, repo), "head": _sweep_head(it.text),
-                        "people": board_people(text)})
+                        "people": board_people(text), "answered_by": answered_by(text), "pick": _board_pick_key(b)})
     return out
 
 
@@ -5231,6 +5232,86 @@ def _log(text: str) -> list[dict]:
         return log_lines(text) if text else []
     except Refused:
         return []
+
+
+def _item_date(it: BoardItem) -> date | None:
+    """An item's date, read from its head (v2.7): an optional kind word, then the date; None when it does not
+    read."""
+    m = ITEM_DATE_RE.match(it.text)
+    try:
+        return date.fromisoformat(m.group(1)) if m else None
+    except ValueError:
+        return None
+
+
+def _log_dates(text: str, kind: str, gate_key: str) -> list[date]:
+    """The dates of one entry's Log lines of ``kind`` for the gate, each line on its own: a line whose date does
+    not read is left out, and a Log that does not read has no line."""
+    out = []
+    for rec in _log(text):
+        if rec["kind"] == kind and rec.get("gate") and _gate_key(rec["gate"]) == gate_key and rec["date"]:
+            try:
+                out.append(date.fromisoformat(rec["date"]))
+            except ValueError:
+                continue
+    return out
+
+
+def _answers_owing(reads: list[dict], open_texts: Mapping[int, str], known: set[int], today: date,
+                   repo: str) -> dict[tuple[int, str], list[dict]]:
+    """Each answer owing a lift (v2.7, SPEC *The gate sweep*), grouped by its Context entry and gate key:
+    ``{(num, gate key): [{read, date, gate, owed}]}``. An answer is a closed ``decide`` whose Context names this
+    repo's known entry and a ``decision (<p>)`` gate with no qualifier, on a board whose ``People:`` lists
+    ``<p>``, its ``Decided:`` label lifting, dated no later than ``today``, and given by ``<p>``, by no one
+    named, or under ``Answered by: any`` by a name on ``People:``. It owes the lift to each entry it covers (its
+    Context entry and each ``Parts:`` id whose open entry is ``Part of`` it) that is open, carries the gate,
+    and has no ``gate lifted`` Log line for it dated on or after ``D - 1`` and no ``gate added`` line dated on
+    or after ``D + 2``."""
+    groups: dict[tuple[int, str], list[dict]] = {}
+    for r in reads:
+        it, ctx = r["item"], r["ctx"]
+        if r["state"] != "closed-decided" or it.kind != "decide" or ctx is None or ctx[2]:
+            continue
+        num, key = ctx[0], ctx[1]
+        d = GATE_DECISION_RE.match(key)
+        if d is None or num not in known:
+            continue
+        who = d.group("who").strip().lower()
+        people = {p.lower() for p in (r["people"] or [])}
+        label, day = it.decided
+        if who not in people or not _lifting(label, it.lifts) or day > today:
+            continue
+        by = (it.decided_by or "").strip().lower()
+        if it.decided_by is not None and by != who and not (
+                (r["answered_by"] or "").lower() == "any" and by in people):
+            continue
+        covered = [num]
+        for p in it.parts:
+            n = _ours(p, r["own"], repo)
+            if n is None or n == num or n not in open_texts:
+                continue
+            par, _ = parse_part_of(_entries(open_texts[n])[0]["part_of_raw"])
+            if par and _num(par) == num and n not in covered:
+                covered.append(n)
+        owed = []
+        for n in covered:
+            text = open_texts.get(n)
+            if not _carried(text, key):
+                continue
+            if any(x >= day - timedelta(days=1) for x in _log_dates(text, "gate-lifted", key)):
+                continue
+            if any(x >= day + timedelta(days=2) for x in _log_dates(text, "gate-added", key)):
+                continue
+            owed.append(n)
+        if owed:
+            _, gate = _item_gate(it.text)
+            groups.setdefault((num, key), []).append({"read": r, "date": day, "gate": gate, "owed": owed})
+    return groups
+
+
+def _unlifted_act(r: dict, num: int, key: str) -> bool:
+    """Whether a read item is the sweep's ``was answered with a lift`` act for the entry and gate (v2.7)."""
+    return r["ctx"] == (num, key, "lift") and r["head"] == "unlifted" and r["item"].kind == "act"
 
 
 def _kept_waiting_within(text: str, gate: str, today: date, days: int) -> bool:
@@ -5366,6 +5447,47 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
             return False
         return not _kept_waiting_within(text, gate, today_u, reask_days)
 
+    owing = _answers_owing(reads, open_texts, known, today_l, repo)
+    held: set[tuple[int, str]] = set()  # (entry, gate key): not asked again while an answer owes it its lift
+    by_name = {_board_name(b): b for b in boards}
+
+    def ref_of(n: int, on_own: bool) -> str:
+        tid = _entries(texts[n])[0]["id"] if n in texts else _tid(n)
+        return tid if on_own else f"{repo.lower()}#{tid}"
+
+    for (cnum, key), answers in sorted(owing.items()):  # the answers owing a lift, before the entries (v2.7)
+        def covered(n: int) -> bool:
+            t = texts.get(n, "")
+            par, _ = parse_part_of(_entries(t)[0]["part_of_raw"]) if t else (None, None)
+            return any(x["state"] in ("open", "decided") for x in _covers(
+                reads, n, key, _num(par) if par else None, repo))
+        within = [a for a in answers if (today_l - a["date"]).days < reask_days]
+        newest = max(a["date"] for a in answers)
+        acts = [r for r in reads if _unlifted_act(r, cnum, key)]
+        is_open = any(r["state"] in ("open", "decided") for r in acts)
+        owed = sorted({n for a in answers for n in a["owed"]})
+        todo = [n for n in owed if not covered(n)]
+        filing = False
+        if within and todo and not is_open and not any(
+                (d := _item_date(r["item"])) is not None and d >= newest - timedelta(days=1) for r in acts):
+            last = min((a for a in answers if a["date"] == newest), key=lambda a: a["read"]["pick"])
+            b = by_name[last["read"]["board"]]
+            on_own = b is own
+            ref, gate = ref_of(cnum, on_own), last["gate"]
+            ids = ", ".join(ref_of(n, on_own) for n in todo)
+            day = newest.isoformat()
+            add(last["read"]["board"], cnum, gate, "unlifted", {
+                "text": f"{gate} on {ref} was answered with a lift on {day} but still stands on {ids}: lift it.",
+                "context": f"{ref} {gate} lift", "kind": "act", "answers": None, "default": None, "lifts": None,
+                "detail": {"context": f"{ref}'s {gate} was answered with a lift on {day}, and the item was closed "
+                                      f"as lifted, but the gate was never lifted on {ids}",
+                           "question": "Lift the gate by hand, or ask the question again?",
+                           "recommended": "Lift it by hand (an `override:` naming the answer); to ask again "
+                                          "instead, close this and add the question"}}, "lift")
+            filing = True
+        for a in (answers if is_open or filing else within):
+            held.update((n, key) for n in a["owed"])
+
     for num in sorted(open_texts):
         text = open_texts[num]
         e = _entries(text)[0]
@@ -5386,6 +5508,8 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                 if any(_answered_within(r, today_l, reask_days) for r in found):
                     continue
                 if _kept_waiting_within(text, gate, today_u, reask_days):
+                    continue
+                if (num, _gate_key(gate)) in held:  # an answer owes its lift (v2.7)
                     continue
                 who = gate[gate.index("(") + 1: -1].lower()
                 fit = [b for b in boards if who in {p.lower() for p in (board_people(str(b[2] or "")) or [])}]
@@ -5429,7 +5553,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     for r in reads:
         if r["state"] not in ("open", "decided") or r["ctx"] is None:
             continue
-        if _sweep_closes(r, reads, boards, results, open_texts, texts, known, repo):
+        if _sweep_closes(r, reads, boards, results, open_texts, texts, known, repo, set(owing)):
             keys = to_close.setdefault(r["board"], [])
             k = item_key(r["line"])
             if k not in keys:
@@ -5455,8 +5579,10 @@ def _audit_satisfied(reads: list[dict], boards: Sequence[Sequence], there: str, 
 
 
 def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], results: Mapping,
-                  open_texts: Mapping[int, str], texts: Mapping[int, str], known: set[int], repo: str) -> bool:
-    """The close rule (SPEC *The gate sweep*): whether the sweep closes one open item about this repo's entry."""
+                  open_texts: Mapping[int, str], texts: Mapping[int, str], known: set[int], repo: str,
+                  owing: set[tuple[int, str]] = frozenset()) -> bool:
+    """The close rule (SPEC *The gate sweep*): whether the sweep closes one open item about this repo's entry.
+    ``owing`` holds each (entry, gate key) an answer still owes a lift (v2.7)."""
     it, (num, gate_key, qual) = r["item"], r["ctx"]
     _, gate = _item_gate(it.text)
     if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts):
@@ -5477,6 +5603,8 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
     if gone is None:
         return False
     head = r["head"]
+    if head == "unlifted" and it.kind == "act" and qual == "lift":
+        return (num, gate_key) not in owing  # the answer's act closes once nothing is owed (v2.7)
     if qual == "lift":
         return gone
     if head == "no-board" and it.kind == "act":
