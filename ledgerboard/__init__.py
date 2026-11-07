@@ -1998,9 +1998,9 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         words, by = " ".join((reply or "").split()), " ".join((by or "").split())
         if not words:
             raise Refused("the reply is empty — a reply needs its words")
-        if FIELD_NAME_RE.search(words):
-            raise Refused("a reply may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the reader "
-                          "would read it as the field; say it in other words")
+        if (f := FIELD_NAME_RE.search(words)):
+            raise Refused(f"a reply carries a field's name ({f.group(0)}) — the reader would read it as the field; "
+                          "say it in other words")
         if (DUE_RE.search(words) or DUE_ATTEMPT_RE.search(words)) and not DUE_RE.search(body):
             raise Refused("this item has no Due: date, so a reply may not carry one — the "
                           "reader would take it for the item's; snooze sets its date")
@@ -2041,16 +2041,16 @@ HEAD_NAME_BAD_RE = re.compile(r"[\s`,;)]")  # what would end a head's name early
 
 def _item_words(value: object, what: str) -> str:
     """`value` with its whitespace collapsed; refused when empty, more than one line, or carrying
-    a field's name (the reader would read it as the field)."""
+    a field's name (the reader would read it as the field; the refusal names the first one, as written)."""
     raw = str(value if value is not None else "").strip()
     if len(raw.splitlines()) > 1:
         raise Refused(f"{what} is one line: put the rest on that line")
     words = " ".join(raw.split())
     if not words:
         raise Refused(f"{what} is empty")
-    if WRITER_FIELD_RE.search(words):
-        raise Refused(f"{what} may not carry Context:, Parts:, Due:, Hide until:, Answers:, Lifts:, Decided: or Closed: — the "
-                      "reader would read it as the field; say it in other words")
+    if (f := WRITER_FIELD_RE.search(words)):
+        raise Refused(f"{what} carries a field's name ({f.group(0)}) — the reader would read it as the field; "
+                      "say it in other words")
     return words
 
 
@@ -2301,8 +2301,8 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
     said = " ".join(str(words or "").split())
     if not said:
         raise Refused("a decision needs its words: one of the entry's answers, or what you typed")
-    if FIELD_NAME_RE.search(said):
-        raise Refused("an answer may not carry Context:, Parts:, Hide until:, Answers:, Lifts:, Decided: or Closed: — say it in other words")
+    if (f := FIELD_NAME_RE.search(said)):
+        raise Refused(f"an answer carries a field's name ({f.group(0)}) — say it in other words")
     if DECIDED_BY_RE.match(said):
         raise Refused("an answer may not end in `(by <name>)` — the reader would read it as who answered; "
                       "say it in other words")

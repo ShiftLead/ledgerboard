@@ -1731,6 +1731,32 @@
         "question": "Go on its builds?",
         "recommended": "Go: the rounds ended."
       }
+    },
+    {
+      "fn": "item_line",
+      "text": "Pick the cache store?",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7",
+      "kind": "decide",
+      "answers": [
+        "On disk",
+        "Not now, see Context: TD-9"
+      ],
+      "detail": {
+        "context": "The cache is rebuilt on every run.",
+        "question": "Where should it live?",
+        "recommended": "only you know."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Check the mirror, due: friday",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": "box-1",
+      "context": "TD-7"
     }
   ],
   "predicates": [
