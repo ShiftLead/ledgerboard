@@ -672,6 +672,145 @@ Moving a file into `archive/` or back, and the relative links that move with it,
 **A change to the canonical form is a minor release**: each consumer reformats its entries once,
 when it takes that release.
 
+## Migrating to v2.7
+
+`migrate_entry(text, *, archived, today, closed_date=None, kinds=None, decided=None)` takes one entry's text (as
+`canonical()` takes it), whether the entry is in the archive, the UTC day (`today`, as `edit_entry()` takes it), the
+entry's archiving date if the caller has one (`closed_date`), a caller's map from a stage word to a `Kind` value
+(`kinds`, its keys compared in lower case), and the caller's decision for a Status the rules below stop on
+(`decided`: `resolved`, `dropped` or `superseded <id>` for an archived entry, `open` for an open one). It reads
+nothing else and returns `{text, changes, listed, stops}`. `status_problem(text, *, archived)` gives the problem of
+one entry's Status against the four forms, or None: `Open` in the ledger; `Resolved YYYY-MM-DD`, `Superseded
+YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD` in the archive, exactly as the writers write
+them — nothing before or after, one space between parts, a real date. It reads the Status `entries()` reads, from
+the header block.
+
+- **Every difference is a change.** Each text difference it makes has at least one `changes` word, except the
+  canonical reorder of an entry it changed, so an entry with `changes` empty is one it left alone.
+- **Unchanged is byte for byte.** An entry that needs no change is returned as given, even where `canonical()`
+  would reorder it: a reorder is `fmt`'s. A changed entry is returned in canonical form. With a stop, the input is
+  returned as given.
+- **The post-condition**, on an entry with `changes`: the migrated Status passes `status_problem()` for the
+  entry's place, and the migrated entry's Log holds no problem the input's does not (*The Log*); any problem is a
+  stop. So it never writes a Status or a Log line `check()` rejects that was not there before it.
+- **An entry `canonical()` refuses** (a duplicate field, a non-field line in the header block, a Priority, Type,
+  Blocked by or Part of line below the header block) is read as `entries()` reads it, leniently, and the rules
+  applied to that reading: when none would change it, it is returned as given and listed (`canonical() refuses it:
+  left alone`); when one would, it is the stop `refused: <why>`. Stops are collected first, and a stop always wins.
+  Text that is not one entry is always the stop `refused: <why>`.
+- Run on its own output, without `decided`, it changes nothing.
+
+**Terms.**
+- *A real date* is a `YYYY-MM-DD` that is a calendar day (`2026-02-30` is not). Every rule that looks for a date
+  passes over one that is not real to its next source, except *Lifting*.
+- *The head reads* when the Status head grammar of *The Log* matches the value and any date it holds is real: *the
+  head* is the text it matched (word, date, `by <id>`), *the tail* what follows up to the first ` — was: `, and *the
+  segments* each ` — was: ` part.
+- *The first part* is the value before its first ` — was: `. Every search for an id or a date in the text is a
+  search of the first part only.
+- *An id* is `TD-n` or `<repo>#TD-n` standing alone: the character before it is none of a letter, a digit, `_`,
+  `-`, `/` or `#`, and the character after it none of those, nor a `.` followed by a letter. Ids are matched longest
+  first (`acme#TD-5` is one id), and an id named twice counts once.
+- *The word* is the value's first word as written, with `*`, `_` and backquotes stripped from its ends and a trailing
+  `.` or `:` dropped (`Resolved` from `**Resolved**`, `Resolved**` from `**Resolved**.`); rules compare it in lower case.
+- *Lifting* moves the tail into one Log line, dated by the head's date, else the `**Resolved:**` line's, else
+  `Added`'s, and each segment into one `was:` line, dated by its own head's date, else the same fallbacks; each goes
+  in among the Log by date, after any line of an equal date (before the first line dated later). It lifts only when
+  every date the lift would use is a real date; otherwise it lifts nothing from the whole value, and the value is
+  treated as **a head that does not read**.
+- *Its new form takes only its head* when the date and any `by <id>` the new Status keeps come from the head. A
+  value whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case, a date found only
+  in the text) is treated as a head that does not read.
+- *No duplicates:* a Log line it would write whose date and words equal a line already in the Log is not written
+  again.
+
+The rules apply in this order, the Status (1 or 2), then `Added` (3), then `Location` (4), each to the entry the
+one before it left.
+
+**1. The Status, an open entry**, the first branch that applies:
+
+1. The value is exactly `Open` → unchanged.
+2. No Status, or an empty one → `Open`, no Log line; listed.
+3. The word is a stage word (`designed`, `built`, `partly`, `live`, `in`) → when the head reads, the tail and
+   segments are lifted, then the head is written as one `was: <head>` line; when it does not (`In progress`), the
+   whole value is one `was: <value>` line. That line is dated by the head's date; when the head does not read, by the
+   first real date in the first part (listed), then the `**Resolved:**` line's, else `Added`'s, else `today`. The
+   Status becomes `Open`. When the word is a key of `kinds`, `Kind` is set to its value; when `Kind` held another
+   value, compared whole as written, a Log line `Kind <old> → <new> (migrate)` is written, dated `today`, after any
+   line of an equal date. With no key for it, `Kind` is left as it is and the entry is listed.
+4. The head reads and its word is `Open` (`Open 2026-10-01: noted`, `Open.`) → the tail and segments are lifted and
+   the Status becomes `Open`. The head is also written as one `was: <head>` line, dated as in branch 3, unless the
+   head is `Open` or `Open D` and a tail was lifted.
+5. The word, with its `*`s stripped, is an archived one (`resolved`, `superseded`, `dropped`, `done`, `moved`,
+   `obe`) → **stop**: the entry may be finished work the ledger forgot to archive. `decided` `open` answers it:
+   `Open`, the whole value one `was: <value>` line dated as in branch 3.
+6. Anything else (prose, a bold lead, `Open, held`) → the whole value is one `was: <value>` line dated as in branch
+   3, and the Status becomes `Open`; listed.
+
+**2. The Status, an archived entry.** A Status that passes `status_problem()` is unchanged. Otherwise, first the
+closing date `D`: the head's date, else the `**Resolved:**` line's (or an older `Resolved` header field's), else
+`closed_date`, else the first real date in the first part (listed); with none, **stop**. Then the word (every stop
+that applies is returned, the date's first):
+
+| The Status | Becomes |
+|---|---|
+| word `resolved`, `done`, `built` or `designed` | `Resolved D` |
+| word `superseded`, its first part naming `by <id>` (`by` in any case) | `Superseded D by <the first such id>`; **stop** when that id is the entry's own. A `Superseded D by <own id>` already in the set is unchanged |
+| word `superseded`, naming no `by <id>` | **stop** |
+| word `moved`, its first part naming exactly one id once the entry's own is set aside (a bare `TD-n` of its number) | `Superseded D by <that id, as written>`, listed |
+| word `moved`, naming no id once its own is set aside | `Dropped D`, listed |
+| word `moved`, naming two ids or more | **stop** |
+| word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
+| anything else (`Open`, `Partly`, prose, a bold lead whose word is none of the above, no Status) | **stop** |
+
+**A stop on the word is a decision for a person**, given back as `decided`: `resolved`, `dropped` or `superseded
+<id>` sets that form, dated `D`, and the whole old value is kept as one `was: <value>` line (none when it is empty
+or absent). `decided` does not answer a missing date: that is `closed_date`'s. A `decided` `superseded <own id>` is
+the stop `refused: superseded by its own id`. A `decided` given for an entry that does not stop on its word, or of
+the other place's shapes, is the stop `decided: nothing to answer`, so a stale decision never passes silently; one
+outside the four shapes, or a `kinds` key or value that is not one line of text, is the stop `refused: <why>`.
+
+Then the text: when the head reads and the new form takes only its head, the head is rewritten to the new form, the
+tail lifted dated `D` and each segment as *Lifting* says, and the old head, when it differs from the new Status,
+written as one `was: <old head>` line dated `D` after the lifted lines. Otherwise nothing is lifted: the whole value
+is one `was: <value>` line dated `D`.
+
+So `Done 2026-10-03: shipped — was: Designed 2026-09-30` becomes `Resolved 2026-10-03`, with the Log lines, in order,
+`2026-09-30: was: Designed 2026-09-30`, `2026-10-03: shipped` and `2026-10-03: was: Done 2026-10-03`; `Resolved
+2026-10-12.` with no `**Resolved:**` line and no `closed_date` becomes `Resolved 2026-10-12` with `2026-10-12: was:
+Resolved 2026-10-12.` and the listing `date 2026-10-12 read from the Status's text`; and `Superseded 2026-01-10 BY
+TD-302.` becomes `Superseded 2026-01-10 by TD-302` with `2026-01-10: was: Superseded 2026-01-10 BY TD-302.`.
+
+**3. `Added`.** A value that is a real date, whitespace, then a comment becomes the bare date, and the comment one
+plain Log line, verbatim, dated by that date and placed before the first line dated on or after it. Its surrounding
+parentheses, when it is wholly wrapped in one pair (its first `(` closes at its last `)`: `(a (b))` is wrapped, `(a)
+(b)` is not), are dropped, then its surrounding whitespace; a comment left empty writes no line. A comment that would
+begin with a Log writer's prefix is written `note: <comment>`. It is never a `filed by` line. A bare real date is
+unchanged; any other value (no real date first, or a date with no whitespace after it) is left alone and listed. A
+line written first in the Log moves the date `gate_age()` falls back to.
+
+**4. `Location`.** A header `Location` is removed from the header and written as the body section `**Location:**
+<value>`, placed as `edit --section` places a section the body lacks: after the first `**Why:**`, else before the
+first `**Done when:**`, `**Related:**` or Log, else at the end. An empty header `Location` is removed and nothing
+written. A non-empty header `Location` meeting a body `**Location:**` section is a **stop**.
+
+**5. What it leaves.** A `Waits` line, a `Taken by`, an old-form decision, every other field and section, and every
+Log line already there are left as they are. A Log is made at the end of the body when the entry has none and a line
+is written; a Log that is not last, or two Logs, is a stop on an entry with `changes`; an entry with none is
+returned as given. A `Status` line below the header block is no Status: the header gets `Open`, and the line is
+left and listed.
+
+**The words it returns.** `<Word>` is the word as written.
+- `changes`: `Status <old value> → <new Status>` (`(none)` for no or an empty Status); `Kind <old, or none> →
+  <new>`; `Added comment → Log`; `Added comment (empty) removed`; `Location → body`; `Location (empty) removed`.
+- `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved:
+  Superseded by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`;
+  `decided: <form>`; `canonical() refuses it: left alone`; `Status line below the header: left`.
+- `stops`: `refused: <why>`; `Superseded: by its own id`; `decided: nothing to answer`; `no date for the Status`;
+  `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>: no archived form`; `Status <Word> on an open entry`;
+  `Location in the header and the body`; `Log not last`; `migrated Status <value> still outside the set`;
+  `migrated Log: <problem>`.
+
 ## The rank
 
 The rank is the order a ledger's people set for its entries; it is the pick order.

@@ -440,6 +440,24 @@ class Lifts(unittest.TestCase):
         self.assertEqual([r for r in L.check("# Ledger\n\n" + got, "", today=TODAY) if r["level"] == "error"], [])
 
 
+class Migrate(unittest.TestCase):
+    """v2.7 (TD-058 B1): migrate_entry() is pure and never raises for an entry's text; its output is stable."""
+
+    def test_never_raises_and_a_second_run_changes_nothing(self):
+        spec = json.loads((ROOT / "fixtures" / "migrate" / "cases.json").read_text(encoding="utf-8"))
+        for c in spec["migrate_entry"]:
+            for cut in range(0, len(c["text"]) + 1, 7):  # every prefix of every fixture entry, both places
+                for archived in (False, True):
+                    got = L.migrate_entry(c["text"][:cut], archived=archived, today="2026-11-11",
+                                          closed_date="2026-10-20", kinds={"designed": "stage-a"})
+                    self.assertEqual(sorted(got), ["changes", "listed", "stops", "text"])
+                    if got["changes"]:
+                        again = L.migrate_entry(got["text"], archived=archived, today="2026-11-11",
+                                                closed_date="2026-10-20", kinds={"designed": "stage-a"})
+                        self.assertEqual((again["text"], again["changes"], again["stops"]), (got["text"], [], []))
+                        self.assertIsNone(L.status_problem(got["text"], archived=archived))
+
+
 class DetailRecommended(unittest.TestCase):
     """TD-069: the writer opens a decide's Recommended with its default's label; words that already do are refused."""
 
