@@ -388,6 +388,12 @@
    "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: On disk — the next run reads it back | In memory (default) | Not now.\n  - **Context:** The cache is rebuilt on every run, which takes a minute.\n    - disk: 40 MB\n    - memory: none\n  - **Question:** Where should the cache live?\n  - **Caveats:** Nobody has measured a cold start yet.\n  - **Recommended:** In memory — nothing to clean up. **Otherwise:** On disk, if cold starts hurt; Not now, if neither.\n"
   },
   {
+   "refused": "the detail block's recommended opens with In memory —, which the writer adds itself from the default answer's label — give the words after it"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: On disk — the next run reads it back | In memory (default) | Not now.\n  - **Context:** The cache is rebuilt on every run, which takes a minute.\n    - disk: 40 MB\n    - memory: none\n  - **Question:** Where should the cache live?\n  - **Caveats:** Nobody has measured a cold start yet.\n  - **Recommended:** In memory — In memory, since there is nothing to clean up. **Otherwise:** On disk, if cold starts hurt; Not now, if neither.\n"
+  },
+  {
    "ok": "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: On disk | In memory — every run starts cold | Not now.\n  - **Context:** The cache is rebuilt on every run.\n  - **Question:** Where should it live?\n  - **Recommended:** only you know how often runs restart.\n"
   },
   {
