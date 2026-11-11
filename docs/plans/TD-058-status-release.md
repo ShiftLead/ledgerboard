@@ -53,8 +53,11 @@ by`), flagged only as ℹ.
 - **S7.** `migrate` ships in v2.7, stays through every v2.x and is removed in v3.0 with the reading of the old
   forms; v3.0's precondition is that `migrate --plan` shows no entry with `changes` in every roster repo
   (exit 0; an entry only listed does not block), and that no entry there, open or archived, holds an old form
-  `migrate` leaves (`check()`'s retired records read open entries only, so this is read off the files): the old forms `migrate` leaves (S6, D2 5: `Waits`, `Taken by`, `decision (who) — text`, a header
-  `Resolved`) are each repo's to rewrite through the writers before v3.0, as the v2.4 remodel's were. This PR adds it to
+  `migrate` leaves (S6, D2 5: `Waits`, `Taken by`, `decision (who) — text`, a header `Resolved`), read off the
+  files, since `check()`'s retired records read open entries only. An open entry's are each repo's to rewrite
+  through the writers (`set`, `edit`), as the v2.4 remodel's were; an archived entry's have no writer route (the
+  writers refuse an archived entry, and `reopen` then `archive` re-dates it), so v3.0's design gives them one before
+  that release, and this release does not. This PR adds it to
   the target design's §7.1 v3.0 row.
 - **S8.** The grammar appendix adds the header block and the Log's fixed line shapes.
 
@@ -143,7 +146,8 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   is a stop (`migrated Status <value> still outside the set`, or `migrated Log: <problem>`). So `migrate` never
   writes a Status or a Log line `check()` rejects that was not there before it.
 - Text `canonical()` refuses is a stop, not an exception, on every entry, changed or not: `migrate_entry()` first
-  reads the entry as `canonical()` reads it, and cannot tell what a text it cannot read needs. Run on its own output, it changes nothing.
+  reads the entry as `canonical()` reads it, and cannot tell what a text it cannot read needs.
+- `migrate_entry()` run on its own output changes nothing.
 
 **Terms.**
 - *A real date* is a `YYYY-MM-DD` that is a calendar day (`date.fromisoformat` accepts it); a date that is not one
@@ -254,9 +258,9 @@ dropped, and then its surrounding whitespace; a comment left empty (`()`) writes
 for a lifted Status note. **Never a `filed by` line** (a departure from §2.2, which wrote one "only when the comment
 parses into that shape": `filed by` needs a `who` and a session token, which no old comment carries in a form a
 parser can trust; a plain line loses nothing). A bare real date is unchanged and not listed. Any other value (no real date first, or a date with no whitespace
-after it: `2026-01-01.`, `2026-01-01T10:00`) is left alone and **listed**. The comment's line goes first in the
-Log's order. So `gate_age()`'s fallback for a gate with no `gate added` line, the first Log line's date, moves
-earlier wherever `migrate` writes a line dated before the Log's first (this comment's, a lifted line, a `was:`
+after it: `2026-01-01.`, `2026-01-01T10:00`) is left alone and **listed**. The comment's line goes before any line of its date. So `gate_age()`'s fallback for a gate with no `gate added`
+line, the first Log line's date, moves earlier wherever `migrate` writes a line dated strictly before the Log's
+first (this comment's, a lifted line, a `was:`
 line), as `note`'s lift already does: an older age, and a true one, since each such line's date is an event of
 the entry. A fixture shows it for an `Added` comment and for a lifted line.
 
@@ -436,7 +440,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
     the same date (the comment goes first), with prose and no date;
   - `Location` in the header, with a Why, with two Why sections (after the first), with no Why but a Fix and a
     Done when (before the Done when), with none of them (at the end); in the header and the body (a stop);
-  - a text `canonical()` refuses (a stop), one with nothing else to change among them;
+  - a text `canonical()` refuses (a stop), and one that is otherwise unchanged (still a stop);
   - **twice gives no diff** (§7.4): every case's output run again, without `decided`, is unchanged;
   - **unknown text survives** (§7.4): an entry with an unknown header field, an unknown gate, an unknown body
     section and an unknown Log prefix, whose content comes out unchanged;
@@ -461,7 +465,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
     over); an open stage word whose head is undated and has a tail, with an unreal
     `**Resolved:**` date and a real `Added` (still no lift); a segment whose own head date is unreal (no
     lift); `Added: 2026-01-01 ()`, `( x )` and `(a) (b)` (kept whole); `Added: 2026-01-01.`; a gate's age before and after an `Added`
-    comment moves; an open `Resolved 2026-10-03: x` (a stop) and with
+    comment moves it, and after a lifted Status note dated before the Log's first line moves it; an open `Resolved 2026-10-03: x` (a stop) and with
     `decided` `open`.
 - **`fixtures/ledger_writer/migrate_*`** (B2): a ledger whose one archived entry stops, so nothing is written and
   exit 1 (§7.4: *an unmapped Status word stops it with a list and writes nothing*); `--dry-run`; `--closed-dates`;
