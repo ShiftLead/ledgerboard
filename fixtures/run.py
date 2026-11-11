@@ -598,7 +598,7 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                                      today=spec["today"])
                                   if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
                                                    "log-not-last", "log-line", "event-undated")
-                                  or (r["kind"], r["field"]) == ("retired", "waits")]  # v2.7
+                                  or (r["kind"], r["field"]) in (("retired", "waits"), ("retired", "location"))]  # v2.7
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],

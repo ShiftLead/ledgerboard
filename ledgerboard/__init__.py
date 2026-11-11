@@ -216,10 +216,14 @@ RETIRED_ROLES = ("designer",)  # a role in `decision (…)`, reserved by name (S
 # The retired words (SPEC *Retired words*): each with what replaces it. The list grows only.
 RETIRED_FIELDS = {"waits": "a gate in Blocked by — until YYYY-MM-DD or event (<name>)",
                   "taken by": "Id take, the counter take's nonce",
-                  "resolved": "the **Resolved:** body line of an archived entry"}
+                  "resolved": "the **Resolved:** body line of an archived entry",
+                  "location": "the **Location:** body section — run migrate, which moves it"}  # a header Location (v2.7)
 WAITS_WRITTEN = ("a new or changed Waits line — the field is retired and no reader takes it as a gate; write the "
                  "wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section "
                  "(SPEC *Retired words*)")  # check()'s error on a Waits line an edit wrote (v2.7)
+LOCATION_WRITTEN = ("a new or changed Location line — the header field is retired; write the **Location:** body "
+                    "section, or run migrate, which moves it (SPEC *Retired words*)")  # the same, for a header Location (v2.7)
+WRITTEN_RETIRED = {"waits": WAITS_WRITTEN, "location": LOCATION_WRITTEN}  # check()'s error on a retired line an edit wrote
 RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
 RETIRED_STATUS = {"designed": "Open, with Kind build", "built": "Open, with Kind live-check", "partly": "Open",
                   "live": "Open", "in": "Open"}  # an open entry's; the archived ones are migrate's to map
@@ -843,8 +847,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         return recs
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
-    waits_written = {e["id"] for e in entries(ledger)  # v2.7: a Waits line this edit added, or whose text it changed
-                     if "waits" in e["fields"] and before.get(e["id"], {}).get("waits") != e["fields"]["waits"]}
+    written = {(e["id"], k) for e in entries(ledger) for k in WRITTEN_RETIRED  # v2.7: a Waits or header Location
+               if k in e["fields"] and before.get(e["id"], {}).get(k) != e["fields"][k]}  # line this edit added or changed
     rewritten = {t for t, x in texts.items() if old_texts.get(t) != x}  # a Log flag's scope: the whole entry
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
@@ -854,8 +858,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
             r["standing"], r["level"] = True, "info"
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
-        elif r["kind"] == "retired" and r["field"] == "waits" and r["id"] in waits_written:
-            r["level"], r["text"] = "error", f"ℹ {r['id']}: {WAITS_WRITTEN}"
+        elif r["kind"] == "retired" and (r["id"], r["field"]) in written:
+            r["level"], r["text"] = "error", f"ℹ {r['id']}: {WRITTEN_RETIRED[r['field']]}"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
     return recs + _left_with_open_parts(old, ledger)
 
@@ -3188,10 +3192,10 @@ def _dict_ls(files: Mapping[str, str]) -> Ls:
 # ---------------------------------------------------------------------------------------------
 
 # The canonical header order (SPEC *Ledger entries and their edits*), spelled as written there; any
-# other field follows in the file's order. A place here is a rendering rule, not a declaration:
-# Owner, Kind, Taken by and Waits are not CADENCE_FIELDS.
+# other field follows in the file's order — a Waits or a header Location among them (v2.7). A place
+# here is a rendering rule, not a declaration: Owner, Kind and Taken by are not CADENCE_FIELDS.
 ENTRY_ORDER = ("Priority", "Type", "Added", "Owner", "Kind", "Status", "Taken by", "Id take",
-               "Blocked by", "Waits", "Part of", "Location")
+               "Blocked by", "Part of")
 LEAD_RE = re.compile(r"^\*\*(?P<lead>[^*\n]+?)\*\*")  # a section's lead: its first paragraph's bold opening
 FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}(?=[^`]*$)|~{3,})(?P<info>.*)$")  # a code fence's line: no lead inside one
 

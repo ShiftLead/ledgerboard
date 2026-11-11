@@ -16,6 +16,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+import ledgerboard as L  # noqa: E402
 from ledgerboard import Refused  # noqa: E402
 from ledgerboard import ledger as W  # noqa: E402
 
@@ -113,6 +114,38 @@ class InProcess(unittest.TestCase):
             led = W.Ledger.open(ledger(tmp))
             with self.assertRaises(Refused):
                 W.plan_edit(led, "set", "TD-001", fields={"Type": "chore"}, today="2026-01-15")
+
+
+class Location(unittest.TestCase):  # v2.7 (TD-058 D4): the Location is a body section, a header one retired
+    def test_plan_new_writes_the_body_section_after_the_why(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            led = W.Ledger.open(ledger(tmp))
+            plan = W.plan_new(led, "TD-2", "A title", [("Priority", "Low"), ("Location", "`src/x.py`")],
+                              [("Why", "a reason."), ("Fix", "a fix.")], today="2026-01-15")
+            text = next(iter(plan.changes.values()))
+            self.assertNotIn("**Location:** `src/x.py`\n\n**Why:**", text)
+            self.assertIn("**Why:** a reason.\n\n**Location:** `src/x.py`\n\n**Fix:** a fix.\n", text)
+
+    def test_a_non_empty_set_location_is_a_usage_error_and_an_empty_one_removes_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp, **{"TD-001.md": E1.replace("**Status:** Open\n", "**Status:** Open\n**Location:** x\n")})
+            for flags in (("--location", "y"), ("--field", "Location=y"), ("--field", "location= y")):
+                code, _, err = run("set", "TD-1", *flags, "--ledger", d, "--today", "2026-01-15")
+                self.assertEqual(code, 2, flags)
+                self.assertIn("edit TD-1 --section Location", err)
+            code, _, _ = run("set", "TD-1", "--location", "", "--ledger", d, "--today", "2026-01-15")
+            self.assertEqual(code, 0)
+            self.assertNotIn("Location", Path(d, "TD-001.md").read_text())
+
+    def test_check_grades_a_header_location_as_waits(self):
+        old = "# Ledger\n\nLedgerboard: 2\n\n## TD-001: x\n\n**Priority:** Low\n**Location:** a\n\n**Why:** w.\n"
+        new = old + "\n## TD-002: y\n\n**Priority:** Low\n**Location:** b\n\n**Why:** w.\n"
+        recs = {r["id"]: r for r in L.check(new, "", old=old, today="2026-01-15") if r["kind"] == "retired"}
+        self.assertEqual((recs["TD-001"]["level"], recs["TD-001"]["standing"]), ("info", True))
+        self.assertEqual(recs["TD-002"]["level"], "error")
+        self.assertIn(L.LOCATION_WRITTEN, recs["TD-002"]["text"])
+        self.assertTrue(all(r["level"] == "info" for r in L.check(new, "", today="2026-01-15")
+                            if r["kind"] == "retired"))
 
 
 class Write(unittest.TestCase):

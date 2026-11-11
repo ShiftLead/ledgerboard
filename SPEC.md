@@ -21,7 +21,7 @@ next blank line. Each `**Name:** value` line there is one field, on one line; a 
 first wins. Names compare case- and separator-insensitively (`Blocked by`, `blocked-by`,
 `BLOCKED_BY`). **A field's value is its first word**, lower-cased; the rest of the line is a free
 comment. The format's own fields: `Priority` (High, Medium, Low), `Type` (debt — the default — or
-feature), `Added`, `Status`, `Blocked by`, `Location`, `Part of` (v2.1), `Escaped from` and `Id take` (v2.2). A
+feature), `Added`, `Status`, `Blocked by`, `Location` (a body section from v2.7: *Retired words*), `Part of` (v2.1), `Escaped from` and `Id take` (v2.2). A
 `Priority`, `Type`, `Blocked by` or `Part of` written below the header block is still read, and flagged
 (ℹ `below-header`), and `check()` reads on past it: it never raises on an entry `entries()` reads (TD-049).
 A `Priority` other than High, Medium or Low (v2.4) is read after Low and flagged (`priority`): an error on
@@ -79,8 +79,9 @@ to `decision (<person>)` with its text in `**Ask:**`. v3.0 stops reading it.
 **Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. Where
 v2.x still reads one, `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than
 unknown:
-- the fields `Waits` (a gate: `until` or `event`), `Taken by` (`Id take`) and `Resolved` as a header
-  field (the `**Resolved:**` body line of an archived entry);
+- the fields `Waits` (a gate: `until` or `event`), `Taken by` (`Id take`), `Resolved` as a header field
+  (the `**Resolved:**` body line of an archived entry) and, from v2.7, `Location` as a header field (the
+  `**Location:**` body section);
 - in `Blocked by`, the gate `hold` (`decision (<person>)` with an Ask), the old form above, and a role in
   `decision (…)`, reserved by name — today `designer`. A retired gate keeps the block, and a retired
   decision is still a decision by its holder;
@@ -93,6 +94,7 @@ line an edit writes is a mistake. Given the ledger before the edit, `check()` gr
 an error (kind `retired`, field `waits`) on an entry whose `Waits` line the edit added or whose text it
 changed, naming the gate form to write. A `Waits` line the edit left as it was keeps its ℹ, on a changed
 entry as on an untouched one, and with no ledger before the edit every `Waits` line is ℹ.
+A header `Location` line is graded the same way from v2.7, naming the `**Location:**` body section.
 
 **Events** (v2.4). An `event (<name>)` gate pairs with an **Event section** in the entry's body, which
 says what is waited for and how a host tells it happened:
@@ -480,11 +482,11 @@ tell an entry it would have written from one it would not. A reader reads either
 **Canonical form** (`canonical(text)`): line endings normalised to `\n` first, then
 - the heading (its title stripped);
 - one blank line;
-- the header block in this order: `Priority, Type, Added, Owner, Kind, Status, Taken by, Id take,
-  Blocked by, Waits, Part of, Location`, each spelled so. Then any other field, spelled as the file
-  spells it, in the file's order. A place in the order is a rendering rule, not a declaration:
-  `Owner`, `Kind`, `Taken by` and `Waits` are not the format's own fields. A header `Resolved` is not
-  in the order and is kept where the other fields put it;
+- the header block in this order: `Priority, Type, Added, Owner, Kind, Status, Taken by, Id take, Blocked by,
+  Part of`, each spelled so. Then any other field, spelled as the file spells it, in the file's order — a
+  `Waits` or a header `Location` among them (v2.7). A place in the order is a rendering rule, not a declaration:
+  `Owner`, `Kind` and `Taken by` are not the format's own fields. A header `Resolved` is not in the order and is
+  kept where the other fields put it;
 - one blank line;
 - the body byte for byte, with its leading and trailing blank lines dropped and one trailing
   newline.
@@ -1197,12 +1199,14 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
 - **`new`** — one entry (`entry_text()`) at `<ledger>/TD-NNN.md`, its id `--id`'s, taken by the caller and written
   at three digits or more (`TD-3` as `TD-003`), refused when the ledger or its archive holds it. A flag per field
   (`--priority`, required, `--type`, `--added` (default today), `--owner`, `--kind`, `--status` (default `Open`),
-  `--blocked-by`, `--part-of`, `--location`, `--field NAME=VALUE` for a repo's own), `--take` (the counter take's
+  `--blocked-by`, `--part-of`, `--location` (the `**Location:**` body section, v2.7), `--field NAME=VALUE` for a
+  repo's own (not `--field Location=…`, from v2.7: `--location`)), `--take` (the counter take's
   nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
   stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
 - **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
-  empty value removes the field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
+  empty value removes the field; not a non-empty `--location` or `--field Location=…`, from v2.7: `edit
+  --section Location`; an empty one still removes the header field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section. An archived entry is edited only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
   section `edit` makes a new `host-log` wait;
