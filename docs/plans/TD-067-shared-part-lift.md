@@ -156,8 +156,9 @@ The writer writes less (D1), and one verdict changes: the tripwire flags one mor
 passed. The SPEC text tags each change `(v2.8)`; if Paul folds TD-067 into v2.7 instead, the build tags it
 `(v2.7)` and the *Versions* paragraph joins v2.7's. It is not a version event under SPEC
 *Versions* (no item key, no canonical form). It ships as its own minor after v2.7, whose builds (TD-058's
-B0–B4) are under way, so their release is not reopened; Paul may fold it into v2.7 instead, since nothing in it
-depends on v2.7's work.
+B0–B4) are under way, so their release is not reopened (the team's techlead agreed this default on
+2026-11-11, mail m-d2589c428b9f: v2.7's scope is Paul's agreed one); Paul may fold it into v2.7 instead, since
+nothing in it depends on v2.7's work.
 
 ## Consumers
 
