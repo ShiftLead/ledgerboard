@@ -836,10 +836,25 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
-    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4)."""
+    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4),
+    and (v2.7) a Status value's ``status_problem()``, a Log line's ``log_line()``, a header block's ``canonical()``
+    and an ``Added`` value's ``migrate_entry()``."""
     if not hasattr(L, "parse_gates"):  # a module older than v2.4: this case fails, the others still run
         return {"missing": "the module has no parse_gates — older than v2.4"}
+    if not hasattr(L, "status_problem") or not hasattr(L, "migrate_entry"):  # older than v2.7: the same
+        return {"missing": "the module has no status_problem or migrate_entry — older than v2.7"}
+
+    def status(archived: bool):  # v2.7: a Status value on a minimal entry
+        return lambda s: _why(L.status_problem(f"## TD-1: x\n\n**Status:** {s}\n", archived=archived))
     judge = {
+        "status-open": status(False),
+        "status-resolved": status(True),
+        "status-superseded": status(True),
+        "status-dropped": status(True),
+        "log-line": lambda s: _log_verdict(L.log_line(s)),
+        "header-block": lambda s: _why(_refused(lambda: L.canonical(f"## TD-1: x\n\n{s}\n")).get("refused")),
+        "added": lambda s: _added_verdict(L.migrate_entry(f"## TD-1: x\n\n**Added:** {s}\n**Status:** Open\n",
+                                                          archived=False, today=TODAY)),
         "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
@@ -848,6 +863,24 @@ def grammar_cases(L, spec: dict) -> dict:
     return {start: {prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
                     for prod, g in groups.items()}
             for start, groups in spec.items()}
+
+
+def _why(problem) -> tuple[bool, object]:
+    """A judge's verdict from a problem, None when there is none."""
+    return problem is None, problem
+
+
+def _log_verdict(r: dict | None) -> tuple[bool, str | None]:
+    """A Log line's verdict (v2.7): read, and not ``malformed`` (a writer's prefix out of its shape)."""
+    if r is None:
+        return False, "not a Log line"
+    return r["kind"] != "malformed", r["kind"] if r["kind"] == "malformed" else None
+
+
+def _added_verdict(got: dict) -> tuple[bool, list[str] | None]:
+    """An ``Added`` value's verdict (v2.7): ``migrate_entry()`` changes nothing and lists nothing."""
+    left = got["changes"] + got["listed"]
+    return not left, left or None
 
 
 def _gates_verdict(g: dict) -> tuple[bool, list[str] | None]:

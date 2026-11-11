@@ -1623,7 +1623,7 @@ v3.0, whose precondition is that `migrate --plan` shows no entry with changes in
 
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -1781,3 +1781,56 @@ line-char      ::= [^#xA-#xD#x1C-#x1E#x85#x2028#x2029]
 What the productions leave to prose: the lines are sorted by key (`key_order()`), no id stands twice, and no key
 is longer than 64 characters (`KEY_NOTE_AT`). The last line may end without its `eol`, as `comment` and
 `rank-entry` show.
+
+### The entry header and the Log (v2.7)
+
+What an entry's writers write, each start symbol with its own judge (*Ledger entries and their edits*, *The
+closed Status set*, *The Log*):
+- `status-open`, `status-resolved`, `status-superseded` and `status-dropped`: a Status value in the closed set,
+  one form each, `status_problem()` giving None for an entry `## TD-1: x`, a blank line and `**Status:** <value>`
+  (`archived` false for `status-open`, true for the other three);
+- `log-line`: a Log line `log_line()` reads as one of the writers' fixed shapes, never `malformed` nor None;
+- `header-block`: an entry's header block, `canonical()` refusing nothing in `## TD-1: x`, a blank line and the
+  block;
+- `added`: an `Added` value `migrate_entry()` leaves alone, with no `changes` and nothing `listed`, on an open
+  entry carrying it beside `**Status:** Open`.
+
+```ebnf
+status-open       ::= "Open"
+status-resolved   ::= "Resolved " date
+status-superseded ::= "Superseded " date " by " entry-id
+status-dropped    ::= "Dropped " date
+added             ::= date
+header-block      ::= field-line ( #xA field-line )*
+field-line        ::= "**" [A-Za-z] [^*:#xA]* ":**" char*
+log-line          ::= "- " date ": " log-words
+log-words         ::= log-filed | log-gate-added | log-lift-answer | log-lift-override | log-lift-check
+                    | log-lift-date | log-lift-skipped | log-kept-waiting | log-reassigned | log-archived
+                    | log-reopened | log-was
+log-filed         ::= "filed by " log-token ", session " log-token ( ", while " entry-id )? ': "' char* '"'
+log-gate-added    ::= "gate added: " gate
+log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token '; answer "' char* '"' lift-suffix?
+lift-gate         ::= "decision (" person ")" | "event (" event-name ")"
+lift-suffix       ::= "; board " repo | "; no board item" | "; shared board item left open"
+log-lift-override ::= "gate lifted: decision (" person ") — by " log-token "; override: " nonspace char*
+log-lift-check    ::= "gate lifted: event (" event-name ") — by " log-token "; " [a-z0-9-]+ " passed; " nonspace+
+log-lift-date     ::= "gate lifted: until " date " — by " log-token "; date reached"
+log-lift-skipped  ::= "gate lift skipped: " entry-id " no longer carries " lift-gate
+log-kept-waiting  ::= "kept waiting: " gate " — by " log-token '; answer "' char* '"'
+log-reassigned    ::= "gate reassigned: decision (" person ") → decision (" person ") — by " log-token "; "
+                      nonspace char*
+log-archived      ::= "archived: " [A-Za-z]+ " — " nonspace char*
+log-reopened      ::= "reopened — " nonspace char*
+log-was           ::= "was: " nonspace char*
+log-token         ::= [A-Za-z0-9_.@/-]+
+nonspace          ::= [^#x9-#xD#x1C-#x20#x85#xA0#x1680#x2000-#x200A#x2028#x2029#x202F#x205F#x3000]
+```
+
+What the productions leave to prose: a Status's and an `Added` value's `date` is a real day of the calendar (a Log
+line's date is read as written); the reader drops the spaces and tabs that end a field's value, and a Log line's
+`\r` before its end. A header block names each field once, and a Priority, Type, Blocked by or Part of line below
+it is one `canonical()` refuses, since `entries()` would lift it; the order of the fields is a rendering rule, not a
+grammar one (*the canonical form*). Their cases are in `fixtures/migrate/` and `ledger_edit/check/status_*`. A
+`log-line` fixture is a writer's shape only: any other words after the date are a note, which the judge accepts
+and no production does, so the refusing side is a line `log_line()` reads as `malformed` (a writer's prefix out of
+its shape) or does not read (no `- `, a bad date). A quoted label or words run to the line's last `"`.
