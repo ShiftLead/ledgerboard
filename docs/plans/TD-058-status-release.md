@@ -135,7 +135,7 @@ the table below stops on (`decided`: `resolved`, `dropped` or `superseded <id>`)
   before it is none of a letter, a digit, `_`, `-`, `/` or `#`; the character after it is none of those, nor a `.`
   followed by a letter. Ids are matched longest first, so
   `acme#TD-5` is one id and does not also count as `TD-5`; an id named twice counts once.
-- *The word* is the value's first word as written, `_status_word()`'s (`Designed`, `**Resolved**`); rules compare
+- *The word* is the value's first word as written, `_status_word()`'s (`Designed`; `Resolved` from `**Resolved**`, `Resolved**` from `**Resolved**.`); rules compare
   it as `first_word()` does, in lower case and stripped.
 - *Lifting* is `status_notes_to_log()`'s, with its own dating: the tail as one line dated by the head's date, else
   the `**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the
@@ -372,7 +372,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - each row of D2's archived table, one case each (`Done`, `Built`, `Designed`, `Superseded … by`, `Superseded …
     BY` in upper case, `Superseded` with no `by`, `Moved` with one id, with `acme#TD-5` (one id), with none, with
     two, `OBE`, `Won't fix`, `Dropped` with a tail, archived `Open` stopping, prose stopping);
-  - D2's two examples, the Log's order included; `**Resolved**.` (a head that does not read);
+  - D2's two examples, the Log's order included; `**Resolved**.` (a stop, then answered by `decided`);
   - an archived entry with no date anywhere and no `closed_date` stopping; the same with `closed_date` given;
   - an open entry, one case per branch: `Open` unchanged; `Open 2026-10-01`; `Open 2026-10-01: noted`; `Open
     2026-10-01: note — was: Designed 2026-09-30`; each stage word with and without a `kinds` key; `In progress`
