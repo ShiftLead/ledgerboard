@@ -401,7 +401,8 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
     """A new entry, ``<ledger>/TD-NNN.md`` (``entry_text()``): ``fields`` as (name, value) pairs, ``take`` the
     counter take's nonce (``Id take``), ``filed`` the Log's first line ({who, session, words, while}). The
     id is the caller's, from its counter, and is refused when the ledger or its archive holds it. Added
-    defaults to today, Status to Open."""
+    defaults to today, Status to Open. A ``Location`` among ``fields`` is written as the ``**Location:**``
+    body section after the Why (v2.7), never as a header field."""
     _writable(led)
     tid = tid_of(tid)
     text, arch = led.texts()
@@ -409,6 +410,10 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
     if int(tid[3:]) in heading_nums(text) | heading_nums(arch) | files:
         raise Unusable(f"{tid} is in the ledger or its archive already")
     day = _today(today)
+    if sum(field_key(n) == "location" for n, _ in fields) > 1:
+        raise Unusable("a field is given twice: location")
+    loc = [v for n, v in fields if field_key(n) == "location" and str(v or "").strip()]
+    fields = [(n, v) for n, v in fields if field_key(n) != "location"]  # v2.7: a body section, not a header field
     given = {field_key(n) for n, _ in fields}
     out = list(fields)
     if "added" not in given:
@@ -425,6 +430,8 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
         raise Unusable(f"a field is given twice: {', '.join(dup)}")
     if not sections or sections[0][0] != "Why" or not str(sections[0][1]).strip():
         raise Refused("an entry needs its Why: the Why is the point of an entry")
+    if loc:  # after the Why and before every other section, where edit --section puts it
+        sections = [sections[0], ("Location", str(loc[0]).strip()), *sections[1:]]
     entry = entry_text(tid, title, out, sections, filed=dict(filed, today=day) if filed is not None else None)
     path = _join(led.path, f"{tid}.md")
     notes = gate(led, {path: entry}, base=base, resolve=resolve, today=day)
@@ -971,7 +978,8 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
     elif cmd == "new":
         ap.add_argument("--id", required=True, metavar="TD-n", help="the entry's id, taken by the caller")
         ap.add_argument("--title", required=True)
-        _field_flags(ap, {"added": "default: today", "status": "default: Open"})
+        _field_flags(ap, {"added": "default: today", "status": "default: Open",
+                          "location": "the **Location:** body section, after the Why (v2.7: not a header field)"})
         for s in ("why", "fix", "done-when"):
             ap.add_argument(f"--{s}", metavar="FILE", help=f"the {s.replace('-', ' ').capitalize()} section from a "
                                                            "file, or - for stdin")
@@ -983,7 +991,8 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
     else:
         ap.add_argument("id", metavar="TD-n")
         if cmd == "set":
-            _field_flags(ap, {})
+            _field_flags(ap, {"location": "empty only: removes a header Location (v2.7: write the body section with "
+                                          "edit --section Location)"})
             ap.add_argument("--by", help="who lifts or reassigns a decision the new Blocked by drops (the caller has "
                                          "checked who ran it)")
             ap.add_argument("--answer", help="the lifting answer's label (default Go)")
@@ -1055,6 +1064,14 @@ def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
     if cmd == "fmt":
         return plan_fmt(led, a.ids)
     base = Ledger.open(a.base) if a.base else None
+    if cmd in ("new", "set"):
+        loc = [f for f in a.field if field_key(f.partition("=")[0]) == "location"]
+        if cmd == "new" and loc:
+            raise Unusable("--field Location=… is not a header field from v2.7: give --location, which writes "
+                           "the **Location:** body section")
+        if cmd == "set" and ((a.location or "").strip() or any(f.partition("=")[2].strip() for f in loc)):
+            raise Unusable(f"Location is not a header field from v2.7: write the body section with edit {a.id} "
+                           "--section Location (an empty --location still removes the header field)")
     if cmd == "new":
         if not a.priority:
             raise Unusable("--priority is required (High, Medium or Low)")

@@ -79,7 +79,7 @@
  "canonical": {
   "already": {
    "idempotent": true,
-   "ok": "## TD-041: An entry already in canonical form\n\n**Priority:** Low\n**Type:** debt\n**Added:** 2026-01-11\n**Owner:** designer\n**Kind:** design-first\n**Status:** Open\n**Taken by:** a-session\n**Id take:** 0123456789abcdef0123456789abcdef\n**Blocked by:** TD-012, decision (the owner)\n**Waits:** the next run\n**Part of:** TD-030\n**Location:** `docs/x.md`\n**Escaped from:** other-repo#TD-007\n**Resolved:** kept where the file has it\n\n**Why:** a reason.\n"
+   "ok": "## TD-041: An entry already in canonical form\n\n**Priority:** Low\n**Type:** debt\n**Added:** 2026-01-11\n**Owner:** designer\n**Kind:** design-first\n**Status:** Open\n**Taken by:** a-session\n**Id take:** 0123456789abcdef0123456789abcdef\n**Blocked by:** TD-012, decision (the owner)\n**Part of:** TD-030\n**Waits:** the next run\n**Location:** `docs/x.md`\n**Escaped from:** other-repo#TD-007\n**Resolved:** kept where the file has it\n\n**Why:** a reason.\n"
   },
   "crlf": {
    "idempotent": true,
@@ -110,6 +110,10 @@
   "reordered": {
    "idempotent": true,
    "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Pickable:** no\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+  },
+  "retired_after_part_of": {
+   "idempotent": true,
+   "ok": "## TD-041: A Waits and a header Location, placed after Part of in the file's order\n\n**Priority:** Low\n**Status:** Open\n**Part of:** TD-012\n**location:** `src/thing.py`\n**Waits:** the vendor's next release\n**Tracker:** ABC-123\n\n**Why:** a reason.\n"
   }
  },
  "check": {
@@ -227,6 +231,90 @@
     "level": "error",
     "standing": false,
     "text": "⚠ TD-304: its event (apply) gate's host-log check has no gate added: event (apply) Log line to count from (none, or a gate lifted after the last)"
+   }
+  ],
+  "location_no_old": [
+   {
+    "field": "location",
+    "id": "TD-411",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-411: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-412",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-412: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-413",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-413: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-414",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-414: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-416",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-416: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   }
+  ],
+  "location_written_is_an_error": [
+   {
+    "field": "location",
+    "id": "TD-411",
+    "kind": "retired",
+    "level": "info",
+    "standing": true,
+    "text": "ℹ TD-411: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-412",
+    "kind": "retired",
+    "level": "info",
+    "standing": false,
+    "text": "ℹ TD-412: the Location field is retired — write the **Location:** body section — run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-413",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-413: a new or changed Location line — the header field is retired; write the **Location:** body section, or run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-414",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-414: a new or changed Location line — the header field is retired; write the **Location:** body section, or run migrate, which moves it (SPEC *Retired words*)"
+   },
+   {
+    "field": "location",
+    "id": "TD-416",
+    "kind": "retired",
+    "level": "error",
+    "standing": false,
+    "text": "⚠ TD-416: a new or changed Location line — the header field is retired; write the **Location:** body section, or run migrate, which moves it (SPEC *Retired words*)"
    }
   ],
   "log_flags_no_old": [
@@ -610,7 +698,7 @@
    "ok": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** TD-3\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n"
   },
   "set_fields": {
-   "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** High\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Waits:** the next run\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
+   "ok": "## TD-040: An entry written by hand, its fields out of order\n\n**Priority:** High\n**Type:** feature\n**Added:** 2026-01-10\n**Owner:** builder\n**Status:** Open 2026-01-12: half built\n**Blocked by:** TD-012\n**Location:** `src/thing.py`\n**Tracker:** ABC-123\n**Waits:** the next run\n\nSome words before the first lead, kept as they are.\n\n**Why:** the reason, in two paragraphs.\n\nThe second paragraph of the Why.\n\n**Fix (to design):** a qualified lead is its own section.\n\n**Fix:** the steps:\n- one\n- two\n\n**Location:** a body lead named like a field is a body section.\n\n```\n**Done when:** inside a fence, not a lead\n```\n\n**Done when** the steps are done.\n\n**Related:** TD-012.\n"
   },
   "set_keeps_a_gate_without_today": {
    "ok": "## TD-121: An entry with a gate\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** decision (Kim)\n\n**Why:** w\n\n**Log:**\n- 2026-01-02: gate added: decision (kim)\n"
