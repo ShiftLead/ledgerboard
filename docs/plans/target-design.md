@@ -1245,24 +1245,26 @@ Paul's go, 2026-11-02 ("Lets commit and start implementing"), covers this design
 - **v2.4 and v2.5 wait for v2.3.** TD-010 and TD-011 lose their `decision (Paul)` gates and are blocked by TD-008 instead; their builds are filed from §7.1 once v2.3 is released.
 - **Consumer work is filed on each consumer's own ledger**, never from here: the ADR amendment (ShiftLead, step 0), and each consumer's step-0 vendor PR.
 
-### 7.1 Releases **[proposed]**
+### 7.1 Releases **[agreed 2026-11-11]**
 
 | Release | Contents |
 |---|---|
 | **v2.3** | TD-008: the board writers, shipped as ledgerboard's `board.py` (§1.1); `Hide until`, with `snooze` writing it, the new `due` action, `edit_action(subject)`; the board's `People:` preamble line, `board_people`, `board_problems` and `Decided: … (by <person>)` (§6.2); `Lifts:` (its field, order and key; the lift semantics come in v2.4); `Parts:` (its field, order and key; the writer that fills it and checks the parts' gates comes in v2.4), the module's `hidden(today)` and `needs_you` (§1.2), and the one-time item-key exception (§6); the rank-key note and `respace`; SPEC's grammar appendix starts (the board item line, the rank file) |
 | **v2.4** | ledgerboard's `ledger.py` (§1.1); `ids_held`, `next_id`, `parse_take`, `judge_takes` and the counter in SPEC, `lift_gate`, `origin_path`, `parse_closed_items`, `waiting_only`, `closes`, `board.py decide --board-only`, `sweep()` and `covers()`, `lift_pr_verdict`, `tripwire` and `uncovered_decisions` (§1.2); TD-010, TD-011, the events entry: the gates (decision, until, event); `Answered by:` and `answered_by` (§6.2); `origin_key` and the multi-component `<repo>` grammar (§3.2, §4.1); **the Log** (the section, its fixed shapes, "Log last", writers appending to it, and creating `**Log:**` when an entry lacks one), because lifts, the sweep and `decide_lift` need it. **From v2.4, `new`, `note`, `archive` and `reopen` write the Log line only:** Status becomes `<word> <date>` with no note (`Open` bare), and `Added` a bare date. **Before writing, `archive`, `reopen` and `note` lift any existing Status note into a dated Log line** (migrate's own step, applied to that entry), so no note is lost before v2.7. Both are forms v2.2 readers read. `decide_lift`, and the lift semantics of `Lifts:`; the tightened repo grammar (§4.1); the ledger writers refusing a naive datetime, with callers fixed in the same vendor PR (§3); with `Waits` kept in canonical order (the module never reads it as a gate; ShiftLead reads it until v2.7); the decide lift's module half (lifting answers); the supersede/drop rule; event sections and the three check types; `pickable(…, today)`; the Priority check; `parts_gates`; reassign and override lift; the grammar appendix adds `Blocked by` and Event sections |
+| **v2.5** | TD-044 (`fixtures/MANIFEST`), TD-045's builds (TD-047, TD-048) and TD-049's `check()` fix, tagged ahead of the Status release |
+| **v2.6** | TD-050's `Parts:` writer (TD-054, TD-055: `item_line(parts=)`, `parts_problems()`, `board.py add --parts`; the v2.3 row placed it in v2.4, which did not ship it) and TD-051's archived-part decide lift (TD-052) |
 | **v2.7** | the closed Status set; the Log's migration (old Status notes and `Added` comments into Log lines, in date order, for any entry whose Status still has a tail or whose `Added` still holds a comment); `Location` to the body; `Waits` out of the canonical order and flagged by `check()`; `Kind` per §2.3's decision; the grammar appendix adds the header and the Log lines (including `while TD-m`) |
-| **v3.0** (later, a major) | stops reading what v2 kept only for old files: `Waits`, `Taken by`, the old `decision (who) — text` form, a `Resolved` header field. Planned once every repo is on v2.7 and has no such lines. |
+| **v3.0** (later, a major) | stops reading what v2 kept only for old files: `Waits`, `Taken by`, the old `decision (who) — text` form, a `Resolved` header field, and `migrate` with them (*amended 2026-11-11, TD-058's S7*: `migrate` ships in v2.7 and stays through every v2.x, since roster repos still migrate and a stale branch can bring old forms back). Planned once every repo is on v2.7 and has no such lines: its precondition is that `migrate --plan` shows no entry with changes in every roster repo, which covers archived entries (`check()`'s retired findings read open entries only), and that no entry, open or archived, still holds an old form `migrate` leaves (`Waits`, `Taken by`, the old decision form, a header `Resolved`), an open entry's are each repo's to rewrite through the writers; an archived entry's have no writer route yet, and v3.0's design gives them one. |
 
-*(Amended 2026-11-04, TD-050: `docs/plans/TD-050-parts-writer.md`)* `Parts:`'s writer, which the v2.3 row places in v2.4 and v2.4 did not ship, is `item_line(parts=)`, `parts_problems()` and `board.py add --parts`, in a release after v2.5 (see the note below).
+The Status release was called v2.5, then v2.6, before those two were tagged ahead of it; it is **v2.7**, and
+wherever this document says v2.5 or v2.6 for that work, read v2.7.
 
 *(Amended 2026-11-04, TD-045: `docs/plans/TD-045-host-log.md`)* `host-log`, *Host-log checks*, `gate_added()`, `event-undated` and `set`'s `gate added` lines ship in the release that ships TD-045 (the next tagged after B2 lands); the reader is agent-cadence's. §7.3's *for a host-witnessed event, `until` plus a re-check entry* stands under v2.4; the re-check entry becomes a `host-log` gate once the release is live on a host that declares the repo.
 
-*(Amended 2026-11-05, the v2.5 release)* **v2.5 was tagged ahead of the Status release:** it ships TD-044 (`fixtures/MANIFEST`), TD-045's builds (TD-047, TD-048) and TD-049's `check()` fix. The release this table and §7.2 step 6 called v2.5 (the closed Status set, the Log's migration, `migrate`, `Waits` flagged) is **v2.6**; wherever this document elsewhere says v2.5 for that work, read v2.6. `Parts:`'s writer (TD-050) and TD-051 ship in a release after v2.5.
-
-*(Amended 2026-11-06, the v2.6 release)* **v2.6 was tagged ahead of the Status release too:** it ships TD-050's `Parts:` writer (its builds TD-054 and TD-055: `item_line(parts=)`, `parts_problems()`, `board.py add --parts`) and TD-051's archived-part decide lift (built as TD-052). The Status release is now **v2.7**; wherever this document says v2.6 for that work (including the amendment above), read v2.7.
-
-Each release changes the canonical form, so **each consumer's vendor PR carries its own reformat** (`fmt` / `migrate`). Otherwise every changed entry fails that repo's merge gate. v2.7 waits until every repo has moved its `Waits` lines to gates under v2.4.
+Each release changes the canonical form, so **each consumer's vendor PR carries its own reformat** (`fmt` / `migrate`). Otherwise every changed entry fails that repo's merge gate. A repo on an older pin is untouched by v2.7 until it
+bumps; its one remodel converts its `Waits` lines then (§7.2 step 6). *(Amended 2026-11-11, TD-058: the line
+"v2.7 waits until every repo has moved its `Waits` lines to gates under v2.4" is dropped; read literally it held
+v2.7 on the roster repos whose ledgers still hold `Waits` lines.)*
 
 ### 7.2 Order of moves
 
@@ -1296,8 +1298,8 @@ Each release changes the canonical form, so **each consumer's vendor PR carries 
    - the event runner, and the gate sweep's I/O around the module's `sweep()` (§1.2);
    - the same merge-gate check;
    - the clock keeps only settling.
-5. **Each repo's remodel under v2.4:** one session per repo, started there. **[agreed]** agent-cadence and ShiftLead go first and are run and tested in use; the roster repos follow only after that (§7.3).
-6. **ledgerboard v2.7**, then both vendors with `migrate` (the Status words, the Log), and ShiftLead removes `Waits = until | event` from its `Fields:` line in the same PR. **Then each roster repo** bumps its agent-cadence pin to the v2.7 release in one PR, with `migrate` and the §7.3 v2.7 judgment, in step 5's order.
+5. **Each consumer's remodel under v2.4:** one session per repo, started there. **[agreed]** agent-cadence and ShiftLead go first and are run and tested in use (done: as of 2026-11-10 both vendor v2.6, hold no open `Waits` lines, and have run remodelled since about 2026-11-02). The roster repos take no v2.4 remodel of their own (step 6).
+6. **ledgerboard v2.7**, then both vendors with `migrate` (the Status words, the Log), and ShiftLead removes `Waits = until | event` from its `Fields:` line in the same PR. **Then each roster repo** gets **one remodel, on its v2.7 bump**: one session and one PR that bumps its agent-cadence pin to the v2.7 release and does both §7.3's v2.4 steps (its `Waits` lines to gates, the old decision form to an Ask) and its v2.7 steps (`migrate` and the v2.7 judgment). The bump is also a long agent-cadence jump (as of 2026-11-10 the roster repos pin an agent-cadence from 2026-10-29, before the vendored package, about 179 commits behind), so each team meets new cadence behaviour in the same PR. **Order: quiet first** — of the four roster repos, the two whose ledgers hold no `Waits` lines go before the two that do (as of 2026-11-10), one at a time. *(Amended 2026-11-11, TD-058, on Paul's note.)*
 
 ### 7.3 What each remodel session does
 
@@ -1325,7 +1327,7 @@ Each release changes the canonical form, so **each consumer's vendor PR carries 
 
 **The PR includes** the before/after list, the dry-run output, and a passing `check()`.
 
-**Order** **[agreed 2026-11-02]**: agent-cadence and ShiftLead first, as the first consumers. Both run on the new releases and are tested in use before any roster repo's remodel starts; what that use turns up is fixed in ledgerboard and both consumers first. Then the roster repos, one at a time. **Who merges** **[agreed 2026-11-02]**: each team's techlead merges its repo's remodel PRs. A team does no other work until its rewrite has merged.
+**Order** **[agreed 2026-11-02]**: agent-cadence and ShiftLead first, as the first consumers. Both run on the new releases and are tested in use before any roster repo's remodel starts; what that use turns up is fixed in ledgerboard and both consumers first. Then the roster repos, one at a time, each in one remodel on its v2.7 bump, in §7.2 step 6's order. **Who merges** **[agreed 2026-11-02]**: each team's techlead merges its repo's remodel PRs. A team does no other work until its rewrite has merged.
 
 ### 7.4 Fixtures each release adds **[agreed 2026-11-01]**
 
