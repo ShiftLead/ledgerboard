@@ -2,7 +2,7 @@
 
 **Status:** Draft 1, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: what
 `board.py decide --board-only` writes and what `tripwire()` flags, which both consumers vendor; cap 6 rounds,
-cadence.md §4.8). Rounds: round 1 ran 2026-11-11 (the record: [docs/reviews/TD-067.md](../reviews/TD-067.md)).
+cadence.md §4.8). Rounds: **ended by the stop rule** after round 2, 2026-11-11 (the record: [docs/reviews/TD-067.md](../reviews/TD-067.md)).
 
 **Entry:** [TD-067](../ledger/TD-067.md). Reported by ShiftLead (its TD-1551, PR #3447, 2026-11-11).
 
@@ -87,7 +87,9 @@ null, "changes": [], "board_only": true, "entries": [], "item_notes": [...], "le
 Without either, nothing on stdout. In every mode `left open: <ids> still carry <gate>` is printed on stderr, so a
 hand run or a wrapper that ran the board half first sees that nothing was written. In the code, `_decide_ledger()`
 returns the ids in its `info` as `left_open`, and `plan_edit()` then returns `Plan("decide", None, {}, info)`
-with no board change, as `plan_rank()` does for a rank line already so. When `closes()` is true (the last part, or a Context entry
+with no board change, as `plan_rank()` does for a rank line already so; `main()` prints the stderr line from
+`plan.info["left_open"]` before its `--plan` return and in its `--json` branch, where today it prints nothing on
+stderr. When `closes()` is true (the last part, or a Context entry
 that never had parts), the write is as today: `Decided:` and `Closed: D — lifted.` in one write.
 
 D1 covers a `--board-only` answer whose Context entry itself still carries the gate as well (a board half run
@@ -184,8 +186,9 @@ with
 > only when it closes the item; while a listed entry still carries the gate (a part of a shared item, or a
 > Context entry nothing has lifted) it writes nothing, exit 0, and reports `left_open`, those ids as the item
 > spells them, in its order (v2.8). The item stays open and unanswered, still asking the person for the entries
-> left, and the person's answer is the Log's `; shared board item left open` line. Any other answer writes as
-> without it.
+> left, and the person's answer is the Log's `; shared board item left open` line. In every mode, `--json` and
+> `--plan` among them, it prints `left open: <ids> still carry <gate>` on stderr, and `--plan`'s JSON carries
+> `left_open` beside its empty `changes`. Any other answer writes as without it.
 
 **2. *The board writer*, the report paragraph.** Replace
 
@@ -263,7 +266,8 @@ All invented, in the existing fixtures' names (`robin`, `pat`, `sam`).
   (2026-01-15).` on line 7, open; expects `[["tripwire-shared-decided", "TD-111 lifts decision (pat) leaving a
   shared board item open, but the item gains a Decided: that speaks for the entries left — leave it unanswered"]]`.
 - `the last part of a shared item lifted, undecided at the base` (new, a regression guard: today's code passes
-  it too; with its own `base/` overlay of board and ledger, as the "newly closed" case has): base line 7 open and undecided, TD-111
+  it too; with its own `base/docs/ledger/TD-111.md` overlay, TD-111 already lifted with its `; shared board item
+  left open` Log line, since the common base's line 7 is already open and undecided): base line 7 open and undecided, TD-111
   lifted already (no gate, its `; shared board item left open` line), TD-112 carrying; the head lifts TD-112 with
   no suffix and line 7 gains `Decided: Go (by pat) (2026-01-15). Closed: 2026-01-15 — lifted.`; expects `[]`.
 - `the last part of a shared item lifted, the item newly closed` unchanged (an older writer's decided item still
@@ -290,7 +294,9 @@ read at the existing runs' dates, 2026-11-03 and 2026-11-05, `reask_days` 30)
   TD-273, TD-275: lift it.`), proving the repair's new item is what holds the act back.
 - **The edge** (D4a's waiting-only answer): TD-276 to TD-278, as the repair, but the new item closed `Decided:
   Not yet (by pat) (2026-10-25). Closed: 2026-10-25 — kept waiting.` and TD-276 and TD-278 logging `kept
-  waiting` that day. Expected: the owed `act` for TD-276, as the control's.
+  waiting` that day (inert: `_answers_owing()` reads no `kept waiting` line; they are there because the answer
+  writes them). The new item has `Parts: TD-278` and is dated 2026-10-21. Expected: the owed `act` for TD-276
+  (`… still stands on TD-276, TD-278: lift it.`), proving a closed waiting-only item does not hold it back.
 
 **Unit tests** (`tests/`): `plan_edit(..., board_only=True)` on a shared item returns a plan with no file
 changes and `left_open`; `apply()` of it writes nothing; the command line exits 0 and prints the stderr line
@@ -305,8 +311,9 @@ landing together; it amends `docs/plans/target-design.md` §1.1 (*a shared paren
 decided* → left open and unanswered), §3.1 (the shared-snapshot exception's item left open, now undecided) and
 §6 (b) (*the item stays open and `decided`* → stays open, unanswered), each with a dated note naming TD-067.
 Location: `ledgerboard/board.py` (`_decide_ledger`, `plan_edit`, the report), `ledgerboard/__init__.py`
-(`tripwire`), `SPEC.md` (*The board*, *The board writer*, *Versions*), `fixtures/board_writer/`,
+(`tripwire` and its docstring, amended with SPEC text 4), `SPEC.md` (*The board*, *The board writer*, *Versions*), `fixtures/board_writer/`,
 `fixtures/verdict/`, `fixtures/board/`, `fixtures/sweep/`, `tests/`, `docs/plans/target-design.md`. Done when:
-the precheck is green and every fixture above passes, with SPEC text 1–5 landed in the same PR.
+the precheck is green and every fixture above passes (their expected JSON regenerated by the runner; the
+release, not the build, stamps `fixtures/MANIFEST`), with SPEC text 1–5 landed in the same PR.
 
 Then a release (Paul's), agent-cadence's vendor PR and ShiftLead's sync PR, each checking its wrapper (*Consumers*).
