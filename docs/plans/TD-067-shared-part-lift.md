@@ -2,7 +2,7 @@
 
 **Status:** Draft 1, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: what
 `board.py decide --board-only` writes and what `tripwire()` flags, which both consumers vendor; cap 6 rounds,
-cadence.md §4.8). Rounds: not yet run (the record: [docs/reviews/TD-067.md](../reviews/TD-067.md)).
+cadence.md §4.8). Rounds: round 1 ran 2026-11-11 (the record: [docs/reviews/TD-067.md](../reviews/TD-067.md)).
 
 **Entry:** [TD-067](../ledger/TD-067.md). Reported by ShiftLead (its TD-1551, PR #3447, 2026-11-11).
 
@@ -80,16 +80,29 @@ answers already. Rejected in favour of A's no-op, which every wrapper meets as "
 because a listed entry of this repo (the Context entry or a `Parts:` id, read from the open ledger as it stands)
 still carries the gate, the writer writes nothing: the board is left byte for byte, exit 0. It reports
 `left_open`, the listed ids still carrying the gate, in the item's order (Context entry, then the `Parts:` line's
-order), spelled as the item spells them. With `--json` or `--plan` the report is
-`{"action": "decide", "board_only": true, "entries": [], "left_open": [...], "line": n, "paths": [], "subject":
-null, "item_notes": [...]}`, `item_notes` being the unchanged line's notes. Without either, nothing on stdout,
-and `left open: <ids> still carry <gate>` on stderr. When `closes()` is true (the last part, or a Context entry
+order), spelled as the item spells them. With `--json` the report is `{"action": "decide", "board_only": true,
+"entries": [], "item_notes": [...], "left_open": [...], "line": n, "paths": [], "subject": null}`, `item_notes`
+being the unchanged line's notes. With `--plan` it is `Plan.as_json()`'s shape: `{"action": "decide", "subject":
+null, "changes": [], "board_only": true, "entries": [], "item_notes": [...], "left_open": [...], "line": n}`.
+Without either, nothing on stdout. In every mode `left open: <ids> still carry <gate>` is printed on stderr, so a
+hand run or a wrapper that ran the board half first sees that nothing was written. In the code, `_decide_ledger()`
+returns the ids in its `info` as `left_open`, and `plan_edit()` then returns `Plan("decide", None, {}, info)`
+with no board change, as `plan_rank()` does for a rank line already so. When `closes()` is true (the last part, or a Context entry
 that never had parts), the write is as today: `Decided:` and `Closed: D — lifted.` in one write.
 
 D1 covers a `--board-only` answer whose Context entry itself still carries the gate as well (a board half run
 before, or without, the `set`): today it writes a `Decided:` for a gate nothing has lifted, the same harm with
 nothing shared. One rule covers both: a `--board-only` lifting answer writes the board only when it closes the
 item.
+
+D1 reads the gate as `closes()` does, whatever its kind: an `event (<name>)` item answered with `--board-only`
+while a listed entry still carries the event is left open too. The `set` route lifts only decisions, so that is a
+hand run's case; `decide_event` (a full decide) is unchanged.
+
+A `Parts:` id of another repo (`<repo>#TD-n`) is never read by `closes()`, so the last local part's lift still
+writes `Decided:` and closes the item while the other repo's part may wait. That is the cross-repo lift's
+standing shape (its lift is a tool PR in that repo, and the sweep's `; board <repo>` audit is its backstop), and
+this design leaves it as it is.
 
 D1 holds only for `--board-only`. A full `board.py decide` (the decide lift) lifts every listed entry that
 carries the gate, so `closes()` is true after it and its write is unchanged. A waiting-only answer and a work
@@ -136,8 +149,10 @@ of the old answer, the new item closes, the entries are no longer covered, and t
 (*… was answered with a lift on <D> but still stands …*), which the person closes. The repair needs nothing new
 from the module; the sweep fixture below holds the covered case.
 
-**D5. A minor release, v2.8.** Nothing read changes and no key moves: v2.3 to v2.7 read every line it writes.
-The writer writes less (D1) and the tripwire flags one more shape (D3). It is not a version event under SPEC
+**D5. A minor release, v2.8.** No parse changes and no key moves: v2.3 to v2.7 read every line it writes.
+The writer writes less (D1), and one verdict changes: the tripwire flags one more shape (D3), which v2.4 to v2.7
+passed. The SPEC text tags each change `(v2.8)`; if Paul folds TD-067 into v2.7 instead, the build tags it
+`(v2.7)` and the *Versions* paragraph joins v2.7's. It is not a version event under SPEC
 *Versions* (no item key, no canonical form). It ships as its own minor after v2.7, whose builds (TD-058's
 B0–B4) are under way, so their release is not reopened; Paul may fold it into v2.7 instead, since nothing in it
 depends on v2.7's work.
@@ -145,7 +160,10 @@ depends on v2.7's work.
 ## Consumers
 
 Each consumer's vendor PR of the release checks one thing in its `set by=` wrapper: a board half that writes
-nothing (`paths: []`, `subject: null`, exit 0) is a success, and the commit then carries the ledger alone.
+nothing (`paths: []`, `subject: null`, exit 0) is a success, and the commit then carries the ledger alone under
+the ledger writer's `set` subject (`ledger: set TD-n …`), which is the subject a `set by=` commit has today;
+`tripwire()` reads it as it does now (the verdict fixtures' `set by=` cases use it). A wrapper should also show
+`left_open` to whoever ran it.
 
 - **agent-cadence**: its vendor PR of the release, with its wrapper checked as above.
 - **ShiftLead**: its sync PR, with its wrapper checked as above, and the repair of its known item (D4): the
@@ -198,16 +216,20 @@ with
 >   gains a new or changed `Decided:` at the head while it stays open, since that answer would speak for the
 >   entries left (`tripwire-shared-decided`);
 
-and in the flag list, replace "`tripwire-shared` and `tripwire-board`" with "`tripwire-shared`,
-`tripwire-shared-decided` (v2.8) and `tripwire-board`".
+in the no-suffix bullet, replace "(the last part of a shared item)" with "(the last part of a shared item an
+older writer decided; from v2.8 the last part's item is undecided at the base and gains its `Decided:` with its
+`Closed:`)"; and in the flag list, replace "`tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`,
+`tripwire-shared` and `tripwire-board`" with "`tripwire-unanswered` (no line accounts for it),
+`tripwire-no-decided`, `tripwire-no-board-item`, `tripwire-shared`, `tripwire-shared-decided` (v2.8) and
+`tripwire-board`".
 
 **5. *Versions*.** Append
 
 > **v2.8 leaves a shared item unanswered by a lift of one part** (*The board writer*, *The merge gate's
 > verdicts*): `board.py decide --board-only` writes nothing while a listed entry still carries the gate, where
 > v2.4 to v2.7 wrote a `Decided:` that spoke for entries the person had not answered, and `tripwire()` flags such
-> a `Decided:` (`tripwire-shared-decided`). Nothing read changes: v2.3 to v2.7 read every line it writes, and no
-> key moves. An item an older writer decided reads as before, a `decided` work order; the consumer closes it and
+> a `Decided:` (`tripwire-shared-decided`), a diff v2.4 to v2.7 passed. No parse changes: v2.3 to v2.7 read every
+> line it writes, and no key moves. An item an older writer decided reads as before, a `decided` work order; the consumer closes it and
 > asks again for the entries left.
 
 ## Fixtures
@@ -218,16 +240,19 @@ All invented, in the existing fixtures' names (`robin`, `pat`, `sam`).
 - `decide_board_only_still_carried` (changed): its `after/board.md` equals `before/board.md` (TD-1 still carries
   `decision (robin)`); `expected.json` `{"exit": 0, "out": {"action": "decide", "board_only": true, "entries": [],
   "item_notes": [], "left_open": ["TD-1"], "line": 7, "paths": [], "subject": null}}`.
-- `decide_board_only_shared_part` (new): the board's line 7 is `- [ ] decide 2026-01-12 (n/a) — Go on the report
+- `decide_board_only_shared_part` (new): its own `before/board.md`, `People: robin, sam`, whose line 7 is `- [ ] decide 2026-01-12 (n/a) — Go on the report
   suite? Context: TD-8 decision (robin). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go (default) | Not yet.`;
   the ledger holds TD-008 and TD-010 carrying `decision (robin)` (TD-010 `Part of: TD-008`), and TD-009 `Part of:
   TD-008` with no `Blocked by` and the Log line `2026-01-15: gate lifted: decision (robin) — by robin; answer "Go";
   shared board item left open`. `decide --line 7 --answer Go --by robin --board-only --ledger ledger --today
   2026-01-15 --json`: the board unchanged, `left_open: ["TD-8", "TD-10"]`, `paths: []`, `subject: null`.
-- `decide_board_only_shared_last` (new): the same board; the ledger with TD-008 and TD-009 lifted (each with its
+- `decide_board_only_shared_last` (new): the same custom board; the ledger with TD-008 and TD-009 lifted (each with its
   `gate lifted` line) and TD-010 carrying none after its `set`. The answer closes the item: `Decided: Go (by robin)
   (2026-01-15). Closed: 2026-01-15 — lifted.`, `paths: ["board.md"]`, no `left_open` key.
-- `decide_board_only` and `decide_parent_snapshot_part_archived_board_only` unchanged (each closes the item).
+- `decide_board_only_shared_part_plan` (new): the `_shared_part` case with `--plan` in place of `--json`; its
+  output is the `--plan` shape in D1 (`changes: []`, `subject: null`, `left_open: ["TD-8", "TD-10"]`).
+- `decide_board_only`, `decide_parent_snapshot_part_archived_board_only` and `decide_event` unchanged (each
+  closes the item, or is a full decide).
 - The JSON of a write that writes (every other `decide` fixture) gains no `left_open` key: the key is present
   only on a write D1 leaves open.
 
@@ -237,30 +262,41 @@ All invented, in the existing fixtures' names (`robin`, `pat`, `sam`).
 - `set by= on one part of a shared item, decided` (new): the same diff with the head's `Decided: Go (by pat)
   (2026-01-15).` on line 7, open; expects `[["tripwire-shared-decided", "TD-111 lifts decision (pat) leaving a
   shared board item open, but the item gains a Decided: that speaks for the entries left — leave it unanswered"]]`.
-- `the last part of a shared item lifted, undecided at the base` (new): base line 7 open and undecided, TD-111
+- `the last part of a shared item lifted, undecided at the base` (new, a regression guard: today's code passes
+  it too; with its own `base/` overlay of board and ledger, as the "newly closed" case has): base line 7 open and undecided, TD-111
   lifted already (no gate, its `; shared board item left open` line), TD-112 carrying; the head lifts TD-112 with
   no suffix and line 7 gains `Decided: Go (by pat) (2026-01-15). Closed: 2026-01-15 — lifted.`; expects `[]`.
 - `the last part of a shared item lifted, the item newly closed` unchanged (an older writer's decided item still
   passes).
 
 **`fixtures/board/`**
-- `shared_part_left_open.md` (new): `People: pat`; line 7 a shared `decide` (Context `TD-12 decision (pat)`,
+- `shared_part_left_open.md` (new, a regression guard: the `board_writer` fixtures prove D1, and this one holds
+  how a reader classes what D1 leaves): `People: pat`; line 7 a shared `decide` (Context `TD-12 decision (pat)`,
   Parts TD-15, TD-16, Due 2026-01-20) with no `Decided:`; line 8 the same question an older writer decided
   (Context `TD-20 decision (pat)`, Parts TD-21, TD-22, `Decided: Go (by pat) (2026-01-08)`). Its `needs_you` at
   the runner's `TODAY` puts line 8 first as `decided` and line 7 among the person's to-do with its `due` class:
   the item a v2.8 writer left open stays asked, and the old one reads as it did (D4).
 
-**`fixtures/sweep/`**
-- `the repair of an older writer's shared item` (new, D4a): an open entry TD-30 carrying `decision (pat)` with
-  parts TD-31 (lifted 2026-01-08, `; shared board item left open`) and TD-32 (carrying); the board holds the old
-  item, closed `Closed: 2026-01-10 — asked again for TD-32.` with `Decided: Go (by pat) (2026-01-08)`, and the new
-  open `decide` with Context `TD-30 decision (pat)` and `Parts: TD-32`. The sweep at 2026-01-12 files nothing and
-  closes nothing (TD-30's and TD-32's gate covered by the new item; TD-31's lifted on 2026-01-08).
+**`fixtures/sweep/`** (one shared set of files; new ids appended to `ledger.md` and `widgets.md`, `People: pat`,
+read at the existing runs' dates, 2026-11-03 and 2026-11-05, `reask_days` 30)
+- **The repair** (D4a): TD-270, open, `decision (pat)`, with parts TD-271 (`Part of: TD-270`, no gate, its Log
+  `2026-10-20: gate lifted: decision (pat) — by pat; answer "Go"; shared board item left open`) and TD-272 (`Part
+  of: TD-270`, carrying). `widgets.md` holds the old item closed by the repair, `[x] decide … Context: TD-270
+  decision (pat). Parts: TD-271, TD-272. … Decided: Go (by pat) (2026-10-20). Closed: 2026-10-21 — asked again
+  for TD-272.`, and the new open `decide` with Context `TD-270 decision (pat)` and `Parts: TD-272`. Expected:
+  nothing filed or closed for TD-270 or TD-272.
+- **The control:** TD-273 to TD-275, the same shape with only the old closed item (no new one). Expected: the
+  owed `act` for TD-273 (`decision (pat) on TD-273 was answered with a lift on 2026-10-20 but still stands on
+  TD-273, TD-275: lift it.`), proving the repair's new item is what holds the act back.
+- **The edge** (D4a's waiting-only answer): TD-276 to TD-278, as the repair, but the new item closed `Decided:
+  Not yet (by pat) (2026-10-25). Closed: 2026-10-25 — kept waiting.` and TD-276 and TD-278 logging `kept
+  waiting` that day. Expected: the owed `act` for TD-276, as the control's.
 
 **Unit tests** (`tests/`): `plan_edit(..., board_only=True)` on a shared item returns a plan with no file
 changes and `left_open`; `apply()` of it writes nothing; the command line exits 0 and prints the stderr line
-without `--json`; `tripwire()` returns `tripwire-shared-decided` for the decided head and nothing for the
-undecided one.
+without `--json`; the Context-entry-only case (no `Parts:`, the Context entry still carrying) leaves the board and
+reports `left_open: ["TD-n"]`; `tripwire()` returns `tripwire-shared-decided` for the decided head and nothing
+for the undecided one.
 
 ## The builds
 
