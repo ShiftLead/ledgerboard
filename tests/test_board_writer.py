@@ -187,6 +187,60 @@ class DecideLift(unittest.TestCase):
         self.assertIn("done does not take --board-only", err)
 
 
+SHARED_BOARD = ("# Board\n\nPeople: robin\n\n## Needs the user\n\n- [ ] decide 2026-01-12 (n/a) — Go on the parts? "
+                "Context: TD-8 decision (robin). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go (default) | Not yet.\n")
+
+
+def _part(n: int, carrying: bool, parent: bool = False) -> str:
+    return (f"## TD-{n:03d}: Part {n}\n\n**Priority:** Medium\n**Added:** 2026-01-02\n**Status:** Open\n"
+            + ("**Blocked by:** decision (robin)\n" if carrying else "") + ("" if parent else "**Part of:** TD-008\n")
+            + "\n**Why:** it is wanted.\n")
+
+
+class BoardOnlyLeftOpen(unittest.TestCase):  # v2.8: a --board-only lift that does not close writes nothing (TD-067 D1)
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.board = os.path.join(self.tmp.name, "board.md")
+        self.led = os.path.join(self.tmp.name, "ledger")
+        os.makedirs(self.led)
+        Path(self.board).write_text(SHARED_BOARD)
+        Path(self.led, "README.md").write_text("# Ledger\n\nLedgerboard: 2\n")
+        Path(self.led, "TD-008.md").write_text(_part(8, True, parent=True))
+        Path(self.led, "TD-009.md").write_text(_part(9, False))
+        Path(self.led, "TD-010.md").write_text(_part(10, True))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_the_plan_changes_nothing_and_names_the_entries_left(self):
+        plan = B.plan_edit(self.board, "decide", 7, "decide", answer="Go", by="robin", today="2026-01-15",
+                           ledger=self.led, board_only=True)
+        self.assertEqual((plan.changes, plan.subject, plan.info["left_open"]), ({}, None, ["TD-8", "TD-10"]))
+        self.assertEqual(plan.warn, ["left open: TD-8, TD-10 still carry decision (robin)"])
+        self.assertEqual(B.apply(plan), [])
+        self.assertEqual(Path(self.board).read_text(), SHARED_BOARD)
+
+    def test_the_command_line_exits_0_and_says_so_on_stderr(self):
+        code, out, err = run("decide", "--board", self.board, "--line", "7", "--expect", "decide", "--answer", "Go",
+                             "--by", "robin", "--board-only", "--ledger", self.led, "--today", "2026-01-15")
+        self.assertEqual((code, out), (0, ""))
+        self.assertIn("left open: TD-8, TD-10 still carry decision (robin)", err)
+        self.assertEqual(Path(self.board).read_text(), SHARED_BOARD)
+
+    def test_a_context_entry_nothing_has_lifted_is_left_open(self):
+        Path(self.board).write_text(DECIDE_BOARD)
+        Path(self.led, "TD-001.md").write_text(DECIDE_ENTRY)
+        plan = B.plan_edit(self.board, "decide", 7, "decide", answer="Go", by="robin", today="2026-01-15",
+                           ledger=self.led, board_only=True)
+        self.assertEqual((plan.changes, plan.info["left_open"]), ({}, ["TD-1"]))
+
+    def test_a_waiting_only_answer_still_writes(self):
+        plan = B.plan_edit(self.board, "decide", 7, "decide", answer="Not yet", by="robin", today="2026-01-15",
+                           ledger=self.led, board_only=True)
+        self.assertIn("Closed: 2026-01-15 — kept waiting.", plan.changes[self.board])
+        self.assertNotIn("left_open", plan.info)
+
+
 class Review(unittest.TestCase):
     def test_a_new_file_takes_the_umask_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
