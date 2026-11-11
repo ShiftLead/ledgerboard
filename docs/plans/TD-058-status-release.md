@@ -3,7 +3,7 @@
 **Status:** Draft 5, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
-rounds, cadence.md §4.8). Rounds: round 1 running (draft 5 holds its fact-checks' fixes, F1–F42) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+rounds, cadence.md §4.8). Rounds: round 1 ran its fact-checks and design review; round 2 next (draft 5 holds its fact-checks' fixes, F1–F59) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
@@ -51,8 +51,8 @@ by`), flagged only as ℹ.
 - **S5.** `Location` moves to the body (a canonical-form change).
 - **S6.** `Waits` leaves the canonical order; `migrate` does not touch a `Waits` line.
 - **S7.** `migrate` ships in v2.7, stays through every v2.x and is removed in v3.0 with the reading of the old
-  forms; v3.0's precondition is that `migrate --dry-run` gives no diff in every roster repo (no entry with
-  `changes`; an entry only listed does not block). This PR adds it to
+  forms; v3.0's precondition is that `migrate --plan` shows no entry with `changes` in every roster repo
+  (exit 0; an entry only listed does not block). This PR adds it to
   the target design's §7.1 v3.0 row.
 - **S8.** The grammar appendix adds the header block and the Log's fixed line shapes.
 
@@ -84,11 +84,15 @@ An entry's Status is one of four forms, and its form agrees with where the entry
   leaves the flag's text as it was, and the writer, which refuses a write only for an error the ledger before it did
   not have, still writes it. The text is 
   `⚠ TD-n: Status <Word> is not <the form the place takes> — run migrate, which maps it or lists it for a person`,
-  `<Word>` being the value's first word as `first_word()` reads it (or *no Status*), and, for a word *Retired words*
-  lists, ` (retired: <what replaces it>)` before the dash, by the entry's place: on an open entry `RETIRED_STATUS`'s
-  text for the five open words, and `Open` for an archived word; on an archived entry `Resolved` for `done`, `built`
+  `<Word>` being the value's first word as written, `_status_word()`'s (or *no Status*), and, for a word *Retired words*
+  lists, ` (retired: <what replaces it>)` before the dash, by the entry's place: on an open entry `Open, the stage in Kind` for
+  the five open words (`RETIRED_STATUS`'s text loses its `Kind build` and `Kind live-check`, which are consumer
+  vocabulary, S3), and `Open` for an archived word; on an archived entry `Resolved` for `done`, `built`
   and `designed`, `Superseded or Dropped` for `moved`, `Dropped` for `obe`, and `Resolved, Superseded or Dropped`
   for `partly`, `live` and `in` (a second map beside `RETIRED_STATUS`).
+- **The id is in the text**, and the writer matches a record by it, so `renumber` of an entry whose Status is
+  outside the set meets a `status` error under its new id that the ledger before did not have, and is refused:
+  *migrate it first*. A fixture shows it.
 - **It replaces v2.4's ℹ `retired` on an open entry's Status word**: `pickable()`'s flags no longer carry that
   record (the word is still reserved, and the error names it retired). A caller that reads only `pickable()`'s flags
   so loses that notice; every consumer's merge gate runs `check()`, which carries the error. `pickable()`'s `unknown-status` and
@@ -103,118 +107,152 @@ release exists to end (S1).
 
 ### D2. `migrate_entry()`: one entry, pure
 
-`migrate_entry(text, *, archived, today, closed_date=None, kinds=None) -> dict` takes one entry's text (as
-`canonical()` takes it), whether the entry is in the archive, the UTC day (`today`, as `edit_entry()` takes it),
-the entry's archiving date if the caller has one (`closed_date`), and the caller's map from an open stage word to
-a `Kind` value (`kinds`, e.g. `{"designed": "build", "built": "live-check"}`). It reads nothing else and returns
-`{text, changes, listed, stops}`: the migrated text (the input unchanged when `stops` is not empty), one line per
-change made, the changes a person should review (`listed`), and why it could not migrate (`stops`). Run on its own
-output it changes nothing. Text `canonical()` refuses is a stop (`refused: <why>`), not an exception.
+`migrate_entry(text, *, archived, today, closed_date=None, kinds=None, decided=None) -> dict` takes one entry's
+text (as `canonical()` takes it), whether the entry is in the archive, the UTC day (`today`, as `edit_entry()`
+takes it), the entry's archiving date if the caller has one (`closed_date`), the caller's map from an open stage
+word to a `Kind` value (`kinds`, its keys compared in lower case), and the caller's decision for an archived Status
+the table below stops on (`decided`: `resolved`, `dropped` or `superseded <id>`). It reads nothing else and returns
+`{text, changes, listed, stops}`.
 
-**Terms.** *The head reads* when `status_notes_to_log()`'s head grammar (*The Log*, `STATUS_HEAD_RE`) matches the
-value: then *the head* is the text it matched (word, date, `by <id>`), *the tail* what follows up to the first ` —
-was: `, and *the segments* each ` — was: ` part. *The value's date* is the head's date when the head has one, else (whether
-or not the head reads) the first `YYYY-MM-DD` in the value before its first ` — was: `, else none. *The first word* is `first_word()`'s.
-*Lifting* is `status_notes_to_log()`'s, with its own dating: the tail as one line dated by the head's date, else the
-`**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the same
-fallbacks; each in among the Log by date, after any line of an equal date (its `_log_insert`). Where a tail or segment would
-have no date (no head date, no `**Resolved:**` line, no `Added`), `status_notes_to_log()` lifts nothing from the whole value, dated
-segments included; `migrate` then treats the value as **a head that does not read**. *Its new form takes
-only its head* when the date and any `by <id>` the new Status keeps come from the head (its word is mapped); a value
-whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case, which the head grammar
-does not read, a date found only by the scan) is treated as **a head that does not read**.
+- **Unchanged is byte for byte.** An entry that needs no change (its `changes` empty) is returned as given, even
+  where `canonical()` would reorder it: a reorder is `fmt`'s, never a migrate change. A changed entry is returned
+  in canonical form (D4). With a stop, the input is returned as given.
+- **The post-condition:** the migrated Status passes `status_problem()` (D1) for the entry's place; if it does not,
+  that is a stop. So `migrate` never writes a Status `check()` rejects.
+- Text `canonical()` refuses is a stop, not an exception. Run on its own output, it changes nothing.
+
+**Terms.**
+- *A real date* is a `YYYY-MM-DD` that is a calendar day (`date.fromisoformat` accepts it); a date that is not one
+  (`2026-02-30`) is no date, and every rule below that looks for a date passes over it to its next source.
+- *The head reads* when `status_notes_to_log()`'s head grammar (*The Log*, `STATUS_HEAD_RE`) matches the value and
+  any date it holds is a real date: then *the head* is the text it matched (word, date, `by <id>`), *the tail* what
+  follows up to the first ` — was: `, and *the segments* each ` — was: ` part.
+- *The first part* is the value before its first ` — was: `. Every search below for an id or a date in the text
+  (not the head) is a search of the first part only.
+- *An id* is `LOG_ID` (`TD-n` or `<repo>#TD-n`) standing alone: the character before it and after it, if any, is
+  none of a letter, a digit, `_`, `-`, `/`, `#` or `.` followed by a letter. Ids are matched longest first, so
+  `acme#TD-5` is one id and does not also count as `TD-5`; an id named twice counts once.
+- *The word* is the value's first word as written, `_status_word()`'s (`Designed`, `**Resolved**`); rules compare
+  it as `first_word()` does, in lower case and stripped.
+- *Lifting* is `status_notes_to_log()`'s, with its own dating: the tail as one line dated by the head's date, else
+  the `**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the
+  same fallbacks; each in among the Log by date, after any line of an equal date. If any line it would lift has no
+  date, it lifts nothing from the whole value, dated segments included; the value is then treated as **a head that
+  does not read**.
+- *Its new form takes only its head* when the date and any `by <id>` the new Status keeps come from the head (its
+  word is mapped). A value whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case,
+  which the head grammar does not read, a date found only in the text) is treated as **a head that does not read**.
+- *No duplicates:* a Log line `migrate` would write (lifted, `was:`, an `Added` comment, a `Kind` line) whose date
+  and words, after the `note:` escape, equal a line already in the Log is not written again.
 
 **1. The Status, an open entry** (`archived=False`), the first branch that applies:
 
 1. The value is exactly `Open` → unchanged.
-2. The first word is a stage word (`designed`, `built`, `partly`, `live`, `in`) → when the head reads, the tail and
-   segments are lifted (dated as *Lifting* says), then the head is written as one `was: <head>` line; when it does
-   not (`In progress`, `Partly done`), the whole value is one `was: <value>` line, nothing lifted. The `was:` line is
-   dated by the value's date, else the `**Resolved:**` line's, else `Added`'s, else `today`. The Status is set to `Open`. When the first
-   word is a key of `kinds`, `Kind` is set to its value, and when `Kind` held another value, a Log line `Kind <old>
-   → <new> (migrate)` is written, dated `today`. With no key for it, `Kind` is left as it is and the entry is
-   **listed** (`stage word <Word>, Kind not set`).
-3. The head reads and its word is `Open` (`Open 2026-10-01: noted`, `Open 2026-10-01`) → the tail and segments are
-   lifted and the Status set to `Open`. With no tail and no segment, the head is written as one `was: <head>` line,
-   so the date is kept; with a tail, the lifted line carries the date and no `was:` line is written.
-4. Anything else (prose, a bold lead, `Open, held`, an archived word such as `Resolved 2026-10-03: x` on an open
-   entry) → the whole value is one `was: <value>` line, dated as in 2, nothing lifted, and the Status set to `Open`;
-   **listed** (`Status <first word> set to Open`).
+2. No Status, or an empty one → the Status is set to `Open`, no Log line; **listed**.
+3. The word is a stage word (`designed`, `built`, `partly`, `live`, `in`) → when the head reads, the tail and
+   segments are lifted, then the head is written as one `was: <head>` line; when it does not (`In progress`,
+   `Partly done`), the whole value is one `was: <value>` line, nothing lifted. The `was:` line is dated by the
+   head's date, else the `**Resolved:**` line's, else `Added`'s, else `today`. The Status is set to `Open`. When the
+   word is a key of `kinds`, `Kind` is set to its value; when `Kind` held another value, compared whole as written,
+   a Log line `Kind <old> → <new> (migrate)` is written, dated `today`, and when it held the same value nothing about
+   `Kind` changes. With no key for it, `Kind` is left as it is and the entry is **listed**.
+4. The head reads and its word is `Open` (`Open 2026-10-01: noted`, `Open 2026-10-01 — was: Designed 2026-09-30`,
+   `Open.`) → the tail and segments are lifted and the Status set to `Open`. The head is also written as one `was:
+   <head>` line, dated as in 3, **unless** the head is `Open` or `Open D` and a tail was lifted (that line carries the
+   date). So a head's `by <id>`, a date with only segments, and `Open.` are kept.
+5. Anything else (prose, a bold lead, `Open, held`, an archived word such as `Resolved 2026-10-03: x` on an open
+   entry) → the whole value is one `was: <value>` line, dated as in 3, nothing lifted, and the Status set to `Open`;
+   **listed**.
 
-**2. The Status, an archived entry** (`archived=True`). First the closing date `D`: the value's date, else the
-`**Resolved:**` line's date (or an older `Resolved` header field's), else `closed_date`; with none, **stop** (`no date
-for TD-n's Status`). Then the first word:
+**2. The Status, an archived entry** (`archived=True`). An entry whose Status already passes `status_problem()` is
+unchanged here. Otherwise, first the closing date `D`: the head's date, else the `**Resolved:**` line's date (or an
+older `Resolved` header field's), else `closed_date`, else the first real date in the first part, which is then
+**listed** (`date … read from the Status's text`); with none, **stop**. Then the word:
 
 | The Status | Becomes |
 |---|---|
-| already one of the three archived forms | unchanged |
-| first word `resolved`, `done`, `built` or `designed` | `Resolved D` |
-| first word `superseded`, naming `by <id>` (`LOG_ID`, any case of `by`) | `Superseded D by <id>` |
-| first word `superseded`, naming no `by <id>` | **stop** |
-| first word `moved`, naming exactly one distinct id | `Superseded D by <that id, as written>`, **listed** |
-| first word `moved`, naming no id | `Dropped D`, **listed** |
-| first word `moved`, naming two distinct ids or more | **stop** |
-| first word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
+| word `resolved`, `done`, `built` or `designed` | `Resolved D` |
+| word `superseded`, its first part naming `by <id>` (`by` in any case) | `Superseded D by <the first such id>` |
+| word `superseded`, naming no `by <id>` | **stop** |
+| word `moved`, its first part naming exactly one id | `Superseded D by <that id, as written>`, **listed** |
+| word `moved`, naming no id | `Dropped D`, **listed** |
+| word `moved`, naming two ids or more | **stop** |
+| word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
 | anything else (`Open`, `Partly`, `Live`, `In`, prose, a bold lead, no Status) | **stop** |
 
-The ids a `Moved` value names are found by `LOG_ID`, longest match first, so `acme#TD-5` is one id and does not
-also count as `TD-5`; an id named twice counts once.
+**A stop on the word is a decision for a person**, given back as `decided`: `resolved`, `dropped` or `superseded
+<id>` sets that form, dated `D`, in place of the table's row, and the whole old value is kept as one `was: <value>`
+line. `decided` does not answer a missing date: that is `closed_date`'s.
 
 Then the text: **when the head reads and the new form takes only its head**, the old head is kept aside and the head
 rewritten to the new form, so the tail is lifted dated `D` and each segment dated as *Lifting* says; when the old
-head differs from the new Status, it is written as one `was: <old head>` line dated `D`, inserted after the lifted lines (by date, after any line of an equal date). **Otherwise** (`Resolved 2026-10-12.`,
-`**Resolved**.`, `Moved to TD-5 (PR #2)`, `Superseded 2026-01-10 BY TD-302.`), nothing is lifted: the whole
-value is one `was: <value>` line dated `D`, and the Status set to its new form.
+head differs from the new Status, it is written as one `was: <old head>` line dated `D`, inserted after the lifted
+lines (by date, after any line of an equal date). **Otherwise** (`Resolved 2026-10-12.`, `**Resolved**.`, `Moved to
+TD-5 (PR #2)`, `Superseded 2026-01-10 BY TD-302.`, a value `decided` answers), nothing is lifted: the whole value is
+one `was: <value>` line dated `D`, and the Status set to its new form.
 
 So `Done 2026-10-03: shipped — was: Designed 2026-09-30` becomes `Resolved 2026-10-03`, with the Log lines, in
-order, `2026-09-30: was: Designed 2026-09-30`, `2026-10-03: shipped` and `2026-10-03: was: Done 2026-10-03`; 
+order, `2026-09-30: was: Designed 2026-09-30`, `2026-10-03: shipped` and `2026-10-03: was: Done 2026-10-03`;
 `Resolved 2026-10-12.` becomes `Resolved 2026-10-12` with `2026-10-12: was: Resolved 2026-10-12.`; and
 `Superseded 2026-01-10 BY TD-302.` becomes `Superseded 2026-01-10 by TD-302` with `2026-01-10: was: Superseded
 2026-01-10 BY TD-302.`.
 
-**3. `Added`.** A value `YYYY-MM-DD <comment>` becomes the bare date, and the comment one plain Log line, verbatim,
-dated by that date and placed **before** any line of its date (it is the entry's first event; a new insert mode
-beside `_log_insert`'s after-equal one). Its surrounding parentheses, if it is wholly wrapped in one pair, are
-dropped. A comment that would begin with a reserved prefix is written `note: <comment>`, as for a lifted Status
-note. **Never a `filed by` line** (a departure from §2.2, which wrote one "only when the comment parses into that
-shape": `filed by` needs a `who` and a session token, which no old comment carries in a form a parser can trust; a
-plain line loses nothing). A value that does not begin with a date is left alone and **listed**.
+**3. `Added`.** A value `YYYY-MM-DD <comment>` (a real date) becomes the bare date, and the comment one plain Log
+line, verbatim, dated by that date and placed **before** any line of its date (it is the entry's first event; an
+insert mode beside lifting's after-equal one). Its surrounding parentheses, if it is wholly wrapped in one pair, are
+dropped. A comment that would begin with a reserved prefix (`filed by ` among them) is written `note: <comment>`, as
+for a lifted Status note. **Never a `filed by` line** (a departure from §2.2, which wrote one "only when the comment
+parses into that shape": `filed by` needs a `who` and a session token, which no old comment carries in a form a
+parser can trust; a plain line loses nothing). A value that does not begin with a real date is left alone and
+**listed**.
 
 **4. `Location`.** A header `Location` is removed from the header and written as a body section, `**Location:**
-<value>`, after the `**Why:**` section, or first in the body when there is none. When the body already has a
-`**Location:**` section, **stop** (`Location in the header and the body`).
+<value>`, after the `**Why:**` section; when there is none, before the body's first lead section (after any text
+before it). An empty header `Location` is removed and nothing written. When the body already has a `**Location:**`
+section, **stop**.
 
 **5. What it leaves.** A `Waits` line, a `Taken by`, an old-form `decision (who) — text`, every other field and
 section, and every Log line already there are left as they are: turning a wait into a gate or an old decision into
 an Ask was the v2.4 remodel's (§7.3). A Log is made at the end of the body when the entry has none and a line is
-written; a Log that is not last is a stop (`log-not-last`), as `note` refuses one.
+written; a Log that is not last is a stop, as `note` refuses one.
 
-The result is in canonical form (D4).
+**The words it returns**, each a string, which the fixtures pin. `<Word>` is the word as written; `<id>` the entry's.
+- `changes`: `Status <old value> → <new Status>`; `Kind <old, or none> → <new>`; `Added comment → Log`;
+  `Location → body`; `Location (empty) removed`.
+- `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved: Superseded
+  by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`; `decided: <form>`.
+- `stops`: `refused: <why>`; `no date for the Status`; `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>:
+  no archived form`; `Location in the header and the body`; `Log not last`; `migrated Status <value> still outside
+  the set`.
 
 ### D3. `ledger.py migrate`
 
-`migrate [TD-n …] --release <x.y> [--closed-dates FILE] [--stage-kind WORD=KIND …] [--plan | --dry-run] [--today D]
-[--json]` runs `migrate_entry()` over each entry named, else every entry, open and archived, of a v2 directory, the
-archived ones with `archived=True`. A v1 file is unusable, exit 2 (*split first*), as for every write.
+`migrate [TD-n …] --release <x.y> [--closed-dates FILE] [--stage-kind WORD=KIND …] [--as TD-n=FORM …] [--plan |
+--dry-run] [--ledger DIR] [--today D] [--json]` runs `migrate_entry()` over each entry named, else every entry, open
+and archived, of a v2 directory, the archived ones with `archived=True`. It joins the writer's writes; it takes no
+`--base` (it is not refused for new errors, below) and no `--resolved` (it reads no other repo). A v1 file is
+unusable, exit 2 (*split first*), as for every write.
 
-- `--closed-dates FILE`: a JSON object from `TD-n` to `YYYY-MM-DD`, the caller's archiving dates (agent-cadence's
-  wrapper reads them from git: the commit that moved the file into `archive/`). The writer reads no git.
+- `--release`: `<major>.<minor>`, as `migrate_subject()` takes it; any other is exit 2.
+- `--closed-dates FILE`: a JSON object from `TD-n` to a real `YYYY-MM-DD`, the caller's archiving dates; a key or a
+  value outside that shape is exit 2. The writer reads no git.
 - `--stage-kind WORD=KIND` (repeat): the `kinds` map (named apart from `new`'s and `set`'s `--kind`, which writes
-  the field); a word outside *Retired words*' open Status words is a usage error, exit 2.
+  the field); a word outside *Retired words*' open Status words is exit 2.
+- `--as TD-n=FORM` (repeat): `decided` for that entry, `resolved`, `dropped` or `superseded <id>`; any other is
+  exit 2.
 - **Any stop anywhere stops the run**, a refused entry's included: exit 1, nothing written, each entry's stops
   printed. Otherwise every changed file is written as one write (all or none; exit 4 on a failed write, every file
   restored).
-- `--plan` writes nothing and prints one JSON object: the writers' plan (each path and its new text) and
-  `entries`, an object from each entry id `migrate_entry()` changed, listed or stopped to its `{changes, listed,
-  stops}`. With a stop, the plan is empty and the exit is 1, as for the write; otherwise 0. `--dry-run` is the same
-  printed as text, entry by entry (the listing a remodel PR carries; the name target design §7.3 and S7 use), or
-  `nothing to migrate` when no entry has `changes` (its `listed` still printed). S7's v3.0 precondition,
-  *`migrate --dry-run` gives no diff*, is read off `--plan`: exit 0 and no entry with `changes`; an entry
-  only listed (an `Added` that does not begin with a date) is a person's to judge and does not block it.
+- `--plan` writes nothing and prints one JSON object: the writers' plan (each path and its new text) and `entries`,
+  an object from each entry id `migrate_entry()` changed, listed or stopped to its `{changes, listed, stops}`. With a
+  stop, the plan is empty and the exit is 1, as for the write; otherwise 0. `--dry-run` is the same printed as text,
+  entry by entry (the listing a remodel PR carries), or `nothing to migrate` when no entry has `changes` (its
+  `listed` still printed). S7's v3.0 precondition is read off `--plan`: exit 0 and no entry with `changes`; an entry
+  only listed is a person's to judge and does not block it.
 - A write prints the paths it changed, or with `--json` the writers' one object with `entries` added.
-- It names `subject`, `migrate_subject(<--release>, <the count of entries it changed>)`, for the caller's one commit: the only ledger
-  write whose `subject` is not null (the tripwire knows the migrate commit by it). Nothing changed: exit 0, `subject`
-  null.
+- It names `subject`, `migrate_subject(<--release>, <the count of entries it changed>)`, for the caller's one
+  commit: the only ledger write whose `subject` is not null (the tripwire knows the migrate commit by it). Nothing
+  changed: exit 0, `subject` null.
 - Unlike the other writes, it is not refused for a `check()` error the ledger before it did not have: it writes the
   ledger `check()` will grade, and the caller runs `--check` on the result.
 
@@ -290,15 +328,18 @@ same way from v2.7, naming the `**Location:**` body section."
 >   `Owner`, `Kind` and `Taken by` are not the format's own fields. A header `Resolved` is not in the order and is
 >   kept where the other fields put it;
 
-**T5. A new section, *Migrating to v2.7*, after *Ledger entries and their edits*:** D2's text, as written above
-from "`migrate_entry(text, *, archived, today, closed_date=None, kinds=None) -> dict`" through "The result is in
-canonical form", in present tense, with its table and its two examples.
+**T5. A new section, *Migrating to v2.7*, after *Ledger entries and their edits*:** D2's rules, terms and returned
+words, with its table and its examples, in present tense, **without the plan's history or examples of consumer
+vocabulary**: no "a departure from §2.2", no target design names, no private helper names (`_log_insert`,
+`_status_word`; SPEC names what they do), and no sample `kinds` values (*a caller's map from a stage word to a
+`Kind` value*).
 
-**T6. *The ledger writer*:** a new bullet after `fmt`, D3's text as written above; the `new` bullet's
-"`--location`" becomes "`--location` (the `**Location:**` body section, v2.7)", and the `set` bullet gains "(not
-`--location`, from v2.7: `edit --section Location`)"; and the sentence "a ledger edit has no commit subject of its
-own, so the caller names its commit" (SPEC *The ledger writer*, the output paragraph) gains "— except `migrate`'s,
-which names `migrate_subject()`", as does `ledger.py`'s module docstring.
+**T6. *The ledger writer*:** a new bullet after `fmt`, D3's text on the same terms (no consumer's name, no git
+remark: *the caller's archiving dates*); the `new` bullet's "`--location`" becomes "`--location` (the
+`**Location:**` body section, v2.7)", and the `set` bullet gains "(not `--location`, from v2.7: `edit --section
+Location`)"; and the sentence "a ledger edit has no commit subject of its own, so the caller names its commit"
+(SPEC *The ledger writer*, the output paragraph) gains "— except `migrate`'s, which names `migrate_subject()`", as
+does `ledger.py`'s module docstring.
 
 **T7. *Versions*, after v2.7's two paragraphs:**
 
@@ -308,8 +349,8 @@ which names `migrate_subject()`", as does `ledger.py`'s module docstring.
 > `ledger.py migrate` map the old forms. The header order loses `Waits` and `Location`, a header `Location` is
 > retired, and `new` writes `Location` in the body. A v2.6 reader reads every entry v2.7 writes (the four forms
 > were already its own; a body `**Location:**` was already a section). A repo takes v2.7 in one PR that vendors it
-> and runs `migrate`. `migrate` stays through v2.x and goes in v3.0, whose precondition is that `migrate --dry-run`
-> changes nothing in every repo.
+> and runs `migrate`. `migrate` stays through v2.x and goes in v3.0, whose precondition is that `migrate --plan`
+> shows no entry with changes in every repo.
 
 **T8. *Appendix: grammar*:** the opening line's list gains "v2.7: the entry header and the Log", and D5's
 subsection.
@@ -337,10 +378,23 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - **unknown text survives** (§7.4): an entry with an unknown header field, an unknown gate, an unknown body
     section and an unknown Log prefix, whose content comes out unchanged;
   - an entry with a `Waits` line, a `Taken by` and an old-form decision, each left as written;
-  - a Log not last (a stop).
+  - a Log not last (a stop);
+  - an unreal date (`Done 2026-02-30`, passed over to the next source; an archived `Resolved 2026-02-30`, not
+    already in the set); an open entry with no Status and with an empty one;
+  - branch 4's `Open 2026-10-01 — was: Designed 2026-09-30`, `Open 2026-10-01 by TD-5: x` and `Open.`;
+  - a head date that differs from the `**Resolved:**` line's (the head's wins); a date read only from the text
+    (listed); a `Superseded` whose head and tail name different ids; `Superseded … replaced by TD-5, not TD-6`
+    (the first); `Moved to TD-5 — was: Moved to TD-4` (one id: the first part only); `xTD-5` (no id);
+  - nested segments (a `Done` with two `— was:`);
+  - an `Added` comment equal to a Log line already there (not written twice), and one beginning `filed by`;
+  - `Kind` already the mapped value; a `kinds` key in another case;
+  - `decided` answering each stop on the word; `decided` on a missing date (still a stop);
+  - an entry needing no change but not in canonical order (returned byte for byte);
+  - the returned words, each template at least once.
 - **`fixtures/ledger_writer/migrate_*`** (B2): a ledger whose one archived entry stops, so nothing is written and
   exit 1 (§7.4: *an unmapped Status word stops it with a list and writes nothing*); `--dry-run`; `--closed-dates`;
-  `--stage-kind`, and a word outside the stage words (exit 2); a v1 file (exit 2); a ledger already migrated (exit
+  `--stage-kind`, and a word outside the stage words (exit 2); `--as`; a bad `--release` and a bad `--closed-dates`
+  (exit 2); `archive`, `reopen` and `renumber` on an un-migrated ledger (`renumber` refused, D1); a v1 file (exit 2); a ledger already migrated (exit
   0, `subject` null); the subject's count.
 - **`fixtures/ledger_edit/check/status_*`** (B3): each of the four forms passing in its place; each in the wrong
   place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; no Status; a retired word, whose text names its
@@ -365,15 +419,21 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
 
 ## The builds (filed on Paul's go after the rounds)
 
-In series: each edits `SPEC.md`, the module and `fixtures/run.py`. Each lands its `SPEC.md` text with its code.
+In series, B0 to B4: each edits `SPEC.md`, the module and `fixtures/run.py`. Each lands its `SPEC.md` text with its code.
 
-- **B1.** `migrate_entry()` (D2), with T5 and `fixtures/migrate/`.
+- **B0.** The canonical form, `new` and `set` (D4): the header order, the retired header `Location` graded as
+  `Waits` is, `new --location` writing the body section, `set --location` and `--field Location=` refused, with T1,
+  T4, T2's `Location` parts and T6's `new` and `set` parts. Every fixture whose `canonical()` output moves (a `Waits`
+  or header `Location` before another field) is regenerated and listed in its PR. First, so B1's and B2's expected
+  texts are written in the order that stands.
+- **B1.** `migrate_entry()` (D2) and `status_problem()` (D1's function, which its post-condition calls; `check()`
+  does not run it yet), with T5 and `fixtures/migrate/`.
 - **B2.** `ledger.py migrate` (D3), with T6's `migrate` parts and `fixtures/ledger_writer/migrate_*`.
-- **B3.** The closed Status set in `check()` (D1), the header order, the retired header `Location`, `new
-  --location` and `set --location` (D4), with T1–T4, the rest of T6, T7 and its fixtures; **and this repo's own
-  ledger migrated in the same PR**, by B2's command, its `--dry-run` listing in the PR body: the archive holds
-  Status tails (TD-053's `Resolved 2026-11-06: designed and built …`) and heads that do not read (TD-001's
-  `Resolved 2026-10-12.`, TD-002's `Resolved 2026-10-14.`), 11 archived entries hold `Added` comments, and 54 entries (53 archived, one open) a header `Location`.
+- **B3.** `check()` runs `status_problem()` (D1), with T2's Status parts, T3 and T7, the `RETIRED_STATUS` text, the
+  regenerated fixtures and tests; **and this repo's own ledger migrated in the same PR**, by B2's command, its
+  `--dry-run` listing in the PR body: the archive holds Status tails (TD-053's `Resolved 2026-11-06: designed and
+  built …`) and heads that do not read (TD-001's `Resolved 2026-10-12.`, TD-002's `Resolved 2026-10-14.`), 11
+  archived entries hold `Added` comments, and 54 entries (53 archived, one open) a header `Location`.
 - **B4.** The grammar appendix (D5, T8) and `fixtures/grammar/`.
 
 Then the release (Paul's), and the hand-off: once v2.7 is tagged, an entry on agent-cadence's ledger, then
