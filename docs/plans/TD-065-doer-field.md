@@ -72,7 +72,9 @@ value, a period. `<repo>` is *The ledger*'s repo grammar; `<team>` is a person's
 case) and one space. A repo named `team` is `Doer: team.`: a team value always has a second word. The value runs
 to the field's final period, and a repo that ends in `.` (which the repo grammar allows) is not a doer: `Doer:
 acme..` does not read, and `item_line(doer="acme.")` is refused, so the period that ends the field is never part
-of the name. Each name is kept as written and compared case-insensitively.
+of the name. Each name is kept as written. The module compares no doers (the item key keeps `Doer: Acme` and
+`Doer: acme` apart, as it keeps any two spellings); a consumer that resolves one compares case-insensitively, as
+repos and people's names compare.
 
 **D2. Its place.** On an item line, right after the `Context:` (after a `Parts:`, where one stands there) and
 ahead of the `Due:`: the line's order is `Context:`, `Parts:`, `Doer:`, `Due:`, `Hide until:`. `Parts:` stands only
@@ -90,10 +92,12 @@ spaces or tabs, and a person's name; else as a **repo** when it is in the repo g
 else it does not read. So `Doer:acme.`, `Doer: acme` (no period) and `Doer: team  ops.` read (and `item_problem()`
 faults their spelling, D5), while `Doer: acme..`, `Doer: two words.` and `Doer: Team ops.` do not.
 `parse_doer(text)` gives `("repo" | "team", name, text)`, the name and the value as they stand on the line (no
-whitespace collapsed), or None: no `Doer:` in its place, or a value that does not read. `BoardItem.doer` holds it;
+whitespace collapsed), or None: no `Doer:` in its place, or a value that does not read. `BoardItem.doer` holds that
+tuple, and `item_record()` turns it into its dict;
 `item_record()` gains `doer`, `{"kind", "name", "text"}` or None (`text` the value: `acme/widgets`, `team ops`).
 Nothing else reads it: `needs_you()`'s classes, `item_notes()`, the gate sweep and the merge gate's verdicts are
-unchanged, and the sweep files its `act` items with no doer. `board.py list` gains it through `item_record()`.
+unchanged, and the sweep files its `act` items with no doer. (The sweep hands an entry's Ask or title to the
+host's `item_line()` as text, so one holding `Doer:` is refused there, as one holding `Parts:` is today; D4.) `board.py list` gains it through `item_record()`.
 
 **D4. A field name everywhere `Parts:` is one.** `Doer:` joins every set of field names the module keeps, as
 `Parts:` stands in each: the fields that end a `Context:` (`CONTEXT_RE`) and a `Parts:` (`PARTS_RE`), and
@@ -131,12 +135,13 @@ no other whitespace (so `" team ops"`, `"team "`, `"team  ops"` and `"team a b"`
 gets the repo `team` by dropping a name). It is refused on any kind but `act`, and, as every input is, unless the
 reader reads back exactly what was meant (`parse_doer()` among the read-back). `decided_line()` takes no doer: it writes a `decide`.
 
-`board.py add --doer <value>` passes it to `item_line(doer=)`; the line's own refusals come first. With
-`--decided` it is refused (a decided line is a `decide`).
+`board.py add --doer <value>` passes it to `item_line(doer=)`. A `--doer` given with `--decided` (any value, `""`
+among them: the check is that it was given) is refused first, at the step `--parts` with `--decided` is (a decided
+line is a `decide`); then the line's own refusals.
 
 The five edits keep the `Doer:` byte for byte. `snooze`, `due`, `decide` and `reply` read the line back and compare
-its fields (`answers`, …, `lifts`, `parts`); `doer` joins every such tuple in `edit_line()` (`snooze`'s, `due`'s,
-`reply`'s, and `decide`'s with `close` and without), so an edit that changed it is refused.
+its fields (`answers`, …, `lifts`, `parts`); `doer` joins every read-back comparison in `edit_line()` (`snooze`'s,
+`due`'s, `reply`'s, and `decide`'s with `close` and without, tuples or chains of `!=` alike), so an edit that changed it is refused.
 `done` checks the item key alone, which holds the `Doer:`. No edit changes the doer: a step for another doer is
 a new item, the old one closed. `due` on an item with no `Due:` inserts it where it does today (ahead
 of a `Hide until:`, a reply or a trailing field, else at the line's end), so always after the `Doer:`, with no
@@ -149,13 +154,15 @@ fault, and `fmt` reports it. The same holds for a `Doer:` missing its period or 
 **D7. The grammar.** *The open item line* gives `act` its own production, with `doer?` after `context`, and its
 decided form too; `field-name` gains `"Doer:"`; `doer` reuses `repo` and *A person's name*'s `person`.
 
-**D8. The release.** A minor, **v2.8**, the release TD-067 (already on main, its *Versions* paragraph written)
-and TD-068 are in; if a release cuts without this build, its build tags the release it lands in. It changes what
-is read in one way: a `Context:` (or a `Parts:`) now ends at a ` Doer:`, so a line written before v2.8 whose
-Context held those words reads a shorter Context and fewer refs, and, where the words after it read as a doer
-(`… Context: TD-4. Doer: acme.`), a `doer` its writer never meant. A consumer that acts on `doer` (ShiftLead's
-press) acts only on a line `item_problem()` passes, or written after every reader ran v2.8. No key moves: the key strips nothing new. Its verdicts change: such a line
-is now faulted by `item_problem()` (its text or Context names a field), but `board_problems()` judges a line only
+**D8. The release.** A minor, **v2.8**, the release TD-067 is in (already on main, its *Versions* paragraph
+written); if a release cuts without this build, its build tags the release it lands in. It changes what is read in
+one way: a `Context:` (or a `Parts:`) now ends at a ` Doer:`, so a line written before v2.8 whose Context held
+those words reads a shorter Context and fewer refs, and, where the words after it read as a doer (`… Context:
+TD-4. Doer: acme. Due: …`), a `doer` its writer never meant. Such a line cannot be told from a v2.8 one:
+`item_problem()` passes it. So, as for v2.3's `Parts:`, each consumer's v2.8 vendor PR shows that none of its
+boards holds ` Doer:` in a Context or a `Parts:`, and a consumer acts on `doer` only on a board whose writers all
+run v2.8. No key moves: the key strips nothing new. Its verdicts change: `item_problem()` now faults a `Doer:` in
+an item's text, one whose value does not read, and one on any kind but `act`; `board_problems()` judges a line only
 when it is added, so no board has a flag day. The writers now refuse inputs that hold `Doer:`, which v2.7 wrote.
 A v2.7 reader reads a `Doer:` as part of the Context, so a consumer writes one only once every reader of its board
 runs v2.8.
@@ -176,8 +183,8 @@ Both consumers vendor the release; neither writes a `Doer:` before every reader 
 
 > **`Doer:`** (v2.8) — `Doer: <repo>.` or `Doer: team <team>.`, right after the Context (after a `Parts:`, where
 > one stands there), ahead of the `Due:`, and only on an `act`: who should do the item's step, a repo (*The ledger*'s
-> `<repo>`) or a team (a person's name, below, after the word `team`), each name kept as written and compared
-> case-insensitively. A repo named `team` is `Doer: team.`, and a doer's repo never ends in `.` (`parse_doer()`, `BoardItem.doer`, `item_record()`'s
+> `<repo>`) or a team (a person's name, below, after the word `team`), each name kept as written (the
+> module compares no doers; a consumer that resolves one compares case-insensitively). A repo named `team` is `Doer: team.`, and a doer's repo never ends in `.` (`parse_doer()`, `BoardItem.doer`, `item_record()`'s
 > `doer`: `{"kind": "repo" | "team", "name", "text"}`, `text` the value as it stands on the line without its ends'
 > whitespace and its final period, or None for none or a value that does not read). It is read only in that place, on any kind, and never inside a reply's words; `item_problem()`
 > faults it on any kind but `act`. The reader reads it as it reads `Parts:`, any spacing and an absent period
@@ -215,9 +222,10 @@ add:
 > **v2.8 adds `Doer:`** (*The board*, *Edits*, *The board writer*): an act's doer, `parse_doer()`, `BoardItem.doer`,
 > `item_record()`'s `doer`, `item_line(doer=)` and `board.py add --doer`. It reads one thing differently: a
 > `Context:`, and a `Parts:`, now end at a ` Doer:`, so a line that held those words in its Context before v2.8
-> reads a shorter Context and fewer refs, and where the words after it read as a doer, a `doer`; a consumer acts on
-> `doer` only on a line `item_problem()` passes. No key moves. `item_problem()` now faults such a line (its Context names
-> a field), and a `Doer:` on any kind but `act`; `board_problems()` judges only a line it adds, so no board has a
+> reads a shorter Context and fewer refs, and where the words after it read as a doer, a `doer` no writer meant,
+> which `item_problem()` cannot tell from a v2.8 one: a consumer's v2.8 vendor PR shows that none of its boards holds
+> such a line. No key moves. `item_problem()` now faults a `Doer:` in an item's text, one whose value does not read,
+> and one on any kind but `act`; `board_problems()` judges only a line it adds, so no board has a
 > flag day. The writers now refuse a text, context, answer, detail value, reply or `--said` holding `Doer:`, which
 > v2.7 wrote. v2.7 reads a `Doer:` as part of the Context, so a consumer writes one only once every reader of its
 > board runs v2.8.
@@ -230,13 +238,17 @@ item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | act-item | ot
 act-item       ::= "act " date " " head " — " text context doer? due hide? reply*
 other-item     ::= ( "watch" " " )? date " " head " — " text context due hide? reply*
 doer           ::= " Doer: " ( doer-repo | "team " person ) "."
-doer-repo      ::= repo - ( char* "." )
+doer-repo      ::= ( repo-part "/" )* doer-part
+doer-part      ::= [A-Za-z0-9_] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | "." [A-Za-z0-9_-] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | ".." [A-Za-z0-9_.-]* [A-Za-z0-9_-]
 ```
 
 `decided-item`'s second choice splits the same way (`"act " … context doer? due hide? reply* answers?`, then
 `( ( "look" | "watch" ) " " )? …` as now), `field-name` gains `| "Doer:"`, and `person` is *A person's name*'s
 production. Under the block: "A `Doer:` names a team only after the word `team` and one space; `Doer: team.` names
-the repo `team`. A doer's repo does not end in `.` (`doer-repo`), so the period that ends the field is never the
+the repo `team`. A doer's repo is a `repo` whose last component does not end in `.` (`doer-repo`, its last part `doer-part`, which
+is `repo-part` without a final `.`), so the period that ends the field is never the
 name's."
 
 ## Fixtures
@@ -277,12 +289,14 @@ All invented names (`acme/widgets`, `ops`, `web.grind`).
   production it now reaches anew, each with an accepting and a refusing fixture (`tests/test_grammar.py` holds a
   start's groups to exactly the productions it uses): `act-item` and `doer` accept each form and refuse
   `Doer: Team ops.`, `Doer: acme..`, `Doer:` with no value and a `Doer:` before the Context; `doer-repo` accepts
-  `acme/widgets` and refuses `acme.`; `person` (now reached from `item-line`) accepts `web.grind` and refuses
+  `acme/widgets` and refuses `acme.`; `doer-part` accepts `widgets` and `.x` and refuses `x.` and `..`; `person` (now reached from `item-line`) accepts `web.grind` and refuses
   `web..grind`; `person-part` (reached through `person`) accepts `ops` and refuses `web.` and `a b`; `field-name`
-  accepts `Doer:`. The test's parser already reads `-` (`words` uses it).
+  accepts `Doer:`; the `other-item` group's accepting `act` fixture moves to `act-item`, and `other-item` keeps
+  `watch` and kindless lines. Both new productions are positive (no `-`), the shapes `tests/test_grammar.py` already reads.
 
-**Unit tests** (`tests/`): every field-name set holds `Doer:` wherever it holds `Parts:` (one test over the module's
-sets, so a later field cannot miss one).
+**Unit tests** (`tests/`): one behaviour probe per set: `CONTEXT_RE` on `Context: TD-4. Doer: acme.` ends the
+Context before ` Doer:`; `PARTS_RE` on ` Parts: TD-4. Doer: acme.` ends the ids before it; `FIELDS_RE`,
+`FIELD_NAME_RE`, `ANY_FIELD_RE`, `WRITER_FIELD_RE` and `GATE_FIELD_RE` each find `Doer:` in `x Doer: y`.
 
 ## The builds
 
@@ -296,8 +310,8 @@ of the line's own refusals), `fixtures/run.py` (`compose`'s
 accepted `item_line` arguments gain `doer`; `board_case` records gain it through `item_record()` with no change,
 and the hand-built `closed_items` records stay as they are), `SPEC.md` (*The board*, *Edits*, *The board
 writer*, *Versions*, *Appendix: grammar*), `fixtures/board/` (the new pair, and every existing record JSON, which
-gains `"doer": null`: `basic`, `answers`, `hidden`, `people`, `lifts_parts`), `fixtures/board_writer/` (the new
-cases, and `list/expected.json`'s records), `fixtures/edit/` and `fixtures/grammar/` (`cases.json` and
+gains `"doer": null`: `basic`, `answers`, `hidden`, `people`, `lifts_parts`, `shared_part_left_open`), `fixtures/board_writer/` (the new
+cases, and `list/expected.json`'s records), `fixtures/archive/` (the closed act), `fixtures/edit/` and `fixtures/grammar/` (`cases.json` and
 `expected.json`), `tests/`. Done when: the precheck is green and every fixture above passes, with SPEC text 1–8
 landed in the same PR; the release restamps `fixtures/MANIFEST`.
 
