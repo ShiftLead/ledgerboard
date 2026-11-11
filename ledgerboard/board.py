@@ -714,7 +714,9 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--context", help="add: what the item refers to (TD-n, PR #n)")
     ap.add_argument("--kind", help="add: decide, act, look, watch or fyi")
     ap.add_argument("--default", type=int, help="add: the 0-based index of the default answer")
-    ap.add_argument("--detail", help="add: the detail block's parts, a JSON object")
+    ap.add_argument("--detail", help="add: the detail block's parts, a JSON object (context, question, "
+                                         "caveats, recommended, otherwise); on a decide with a default the writer opens "
+                                         "Recommended with '<label> — ' itself, so recommended gives only the words after it")
     ap.add_argument("--host", help="add: the host the item's session runs on")
     ap.add_argument("--decided", help="add: the person's words, for an item already decided")
     ap.add_argument("--under", default=NEEDS, help=f"add: the heading whose section takes the item ({NEEDS!r})")

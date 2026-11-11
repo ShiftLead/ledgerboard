@@ -2092,8 +2092,13 @@ def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
         values = [value] if isinstance(value, str) else list(value)
         if not values:
             raise Refused(f"the detail block's {part} is empty")
-        words = _sentence(_item_words(values[0], f"the detail block's {part}"))
+        said = _item_words(values[0], f"the detail block's {part}")
+        words = _sentence(said)
         if part == "recommended":
+            lead = f"{label}{CONSEQUENCE_SEP.rstrip()}".casefold() if label is not None else None
+            if lead and (said.casefold() == lead or said.casefold().startswith(lead + " ")):
+                raise Refused(f"the detail block's recommended opens with {label}{CONSEQUENCE_SEP.rstrip()}, which the "
+                              "writer adds itself from the default answer's label — give the words after it")
             if label is not None:
                 words = f"{label}{CONSEQUENCE_SEP}{words}"
             if "otherwise" in detail:

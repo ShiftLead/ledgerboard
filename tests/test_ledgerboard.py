@@ -440,6 +440,26 @@ class Lifts(unittest.TestCase):
         self.assertEqual([r for r in L.check("# Ledger\n\n" + got, "", today=TODAY) if r["level"] == "error"], [])
 
 
+class DetailRecommended(unittest.TestCase):
+    """TD-069: the writer opens a decide's Recommended with its default's label; words that already do are refused."""
+
+    def line(self, recommended):
+        return L.item_line("Go on?", "2026-01-20", "2026-01-15", "w-1", None, "TD-4", kind="decide",
+                           answers=["Go — it ships", "Not yet"], default=0,
+                           detail={"context": "c.", "question": "q?", "recommended": recommended})
+
+    def test_a_recommended_opening_with_the_label_and_its_dash_is_refused(self):
+        for words in ("Go — it is ready", "go  —  it is ready", "GO —"):
+            with self.assertRaises(L.Refused) as r:
+                self.line(words)
+            self.assertIn("Go —", str(r.exception))
+
+    def test_the_label_once_is_written(self):
+        self.assertIn("**Recommended:** Go — it is ready.", self.line("it is ready"))
+        self.assertIn("**Recommended:** Go — Going now is safe.", self.line("Going now is safe"))
+        self.assertIn("**Recommended:** Go — Go, since it is ready.", self.line("Go, since it is ready"))
+
+
 class Parts(unittest.TestCase):
     """v2.6: the writer of a decide's `Parts:` (ledgerboard TD-050 B1) — what the fixtures' JSON cannot carry."""
 
