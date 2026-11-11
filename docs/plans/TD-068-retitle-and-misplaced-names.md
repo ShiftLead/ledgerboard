@@ -2,7 +2,7 @@
 
 **Status:** Draft 1, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
 writer argument, a new Log line shape and reserved prefix, and new refusals in `edit_entry()`, which both
-consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: rounds 1–5 ran 2026-11-11; recurring topic: which copy of a name is the stray (F2, F28, F48, F56) (the record:
+consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule** at round 6, the cap's last, 2026-11-11 (its design review SHIP); recurring topic: which copy of a name is the stray (F2, F28, F48, F56) (the record:
 [docs/reviews/TD-068.md](../reviews/TD-068.md)).
 
 **Entry:** [TD-068](../ledger/TD-068.md). Reported by ShiftLead (its TD-1551, 2026-11-11).
@@ -74,8 +74,10 @@ that looks like a field.
 
 **Which names `edit` refuses.**
 - **The header's names** (chosen): `Title`, the format's own fields but `Location`, and the ledger's `Fields:`
-  names. The retired header fields `Waits` and `Taken by` are left out (round 5): no writer may set them, so a
-  body copy could never be cured by `set` then `--remove`, and a body paragraph of either is read as nothing. `Location` and `Resolved` are body sections, so they
+  names. The retired header fields `Waits` and `Taken by` are left out (round 5): a body paragraph of either is read
+  as nothing, `check()` already flags the retired header field, and the cure `set` then `--remove` would write a
+  retired field (a written `Waits` is an error from v2.7). A stray body `Taken by` paragraph is then never flagged;
+  that is accepted. `Location` and `Resolved` are body sections, so they
   are not on the list. `Owner` and `Kind` are refused only where a repo declares them: hard-coding them would put a
   repo's vocabulary into the package. Refusing any field this entry's header carries was weighed and rejected
   (round 4): it refused a body Location beside a retired header one, and made the stray depend on the repo.
@@ -99,7 +101,8 @@ that looks like a field.
 - A **header name** is one of `Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`,
   `Id take` (the format's own fields but `Location`), or a key of
   `declared()` on the ledger's text (the `Fields:` line's names, as `field_key`s), passed to `edit_entry()` as
-  `declared_fields` (a caller with no ledger passes none).
+  `declared_fields` (a caller with no ledger passes none). `edit_entry()` takes `declared_fields` for `edit` alone;
+any other action refuses it as an argument it does not take.
 - A **misplaced section** is a body section named `Title` or a header name. (A lifted copy, a body `Priority`,
   `Type`, `Blocked by` or `Part of` whose header lacks it, is not reached: `canonical()` refuses that entry, so
   every edit refuses it and `check()` skips it, leaving its `below-header`.)
@@ -121,6 +124,8 @@ comes back in canonical form); that is checked before `today` is required. Other
 - the Log is made at the end of the body if there is none, and a Log that is not last is refused, as for `set`'s
   `gate added` lines;
 - with both `title` and a gate-adding `Blocked by`, the `retitled` line comes first, then the `gate added` lines;
+  on the `set` route, a `gate lifted` or `gate reassigned` line the writer appends before `edit_entry()` runs comes
+  before the `retitled` line;
 - `today` is required whenever a `retitled` line is written;
 - an HTML comment the old heading held is dropped with the old title (the Log's `was` gives `title_read`, without
   it).
@@ -139,10 +144,12 @@ subject is `set`'s. An unchanged title on a file already in canonical form write
 `set_unchanged`.
 
 **D2. The Log line.** `log_line()` reads one more shape, `retitled: was "<title>"`, appended last to
-`LOG_SHAPES`, its group named `title`. The quoted words run from the opening `"` to the line's last `"`, so a
+`LOG_SHAPES`, its group named `title` and matching `.*`, so `was ""` (an old heading that held only a comment)
+reads as `retitled`. The quoted words run from the opening `"` to the line's last `"`, so a
 title may hold quotes. `retitled:` joins `LOG_PREFIXES`, so `note` refuses words that begin with it, and `check()`
 flags `log-line` on a line that begins `retitled:` and is not in the shape. Its kind is not in `LOG_AGE_KINDS`,
-so it never resets a gate's age.
+so it is never one of the lines a gate's age is read from; D1's fallback (a gate with no
+`gate added` line aging from the Log's first line) is accepted, as for `note`.
 
 **D3. `edit` refuses to add a section that belongs in the header, and removes a misplaced one.**
 `edit_entry(text, "edit", section=…, declared_fields=…)`:
@@ -180,9 +187,14 @@ and a section named `Title` or a header name, so a new entry is never filed with
 
 **D5. `check()` notes what is misplaced.** A new ℹ flag, `misplaced-name`, once for each misplaced section and
 each misplaced field of an entry, with `declared_fields` the keys of `declared()` on the ledger. It is raised in
-`check()`'s per-entry text loop, beside `log_problems()`, never in `pickable()`, whose output is unchanged. It reads
+`check()`'s per-entry text loop, beside `log_problems()`, never in `pickable()`. It reads
 the entry through `entries()` (its fields) and its body's section leads (`_entry_parts()`), and an entry
-`_entry_parts()` refuses (`except Refused`: a lifted copy, which `below-header` already flags) is skipped. It joins `TEXT_KINDS`, so it is scoped by the
+`_entry_parts()` refuses (`except Refused`: a lifted copy, which `below-header` already flags) is skipped. Its
+record's `field` is the name's `field_key` (`title`, `status`), and its text names the cure: `edit --section
+<name> --remove` for a section (with *set <name> first* when the header lacks it), an empty `set` value for a
+field, and `set --title` for a header `Title`. On a ledger with a `Fields:` line, `pickable()`'s
+`undeclared-field` skips a header `Title` or `Log`, which `misplaced-name` names instead, so the one stray is
+never told to be declared. That is `pickable()`'s one change. It joins `TEXT_KINDS`, so it is scoped by the
 entry's whole text, as `log-line` is. It is ℹ in every case, on a standing ledger and on an entry an edit changed
 alike: the cure is a writer (D3's `--remove` for a section, an empty `set` value for a field), and an error would
 block the unrelated edit that touched the entry. Two body sections with one misplaced name are flagged once, its
@@ -241,7 +253,8 @@ writers write." add
 **2a. The *Edits* paragraph.** Replace "and from v2.5 by `set` and `edit`, which require it only to date a gate"
 with "and from v2.5 by `set` and `edit`, which require it only to date a gate or (v2.8) a retitle".
 
-**2b. *A new entry*.** After "(a section's paragraph that opens in bold would start a section of its own)." add
+**2b. *A new entry*.** In its signature, `entry_text(id, title, fields, sections, *, filed=None)` becomes
+`entry_text(id, title, fields, sections, *, filed=None, declared_fields=())`. After "(a section's paragraph that opens in bold would start a section of its own)." add
 "From v2.8 it also refuses a field named `Title` or `Log`, and a section named `Title` or a header name (*edit*,
 below), the ledger's `Fields:` names given as `declared_fields`."
 
@@ -250,7 +263,7 @@ and `was: <Status>`." add
 
 > - `retitled: was "<title>"` (v2.8), the title the heading held before `set` changed it.
 
-and in the reserved prefixes, after `` `reopened —` `` add `` and (v2.8) `retitled:` ``.
+and in the reserved prefixes, after `` `reopened —` `` add `` , `retitled:` (v2.8)``, the list's last item.
 
 **4. `check()`.** After "information on a standing one." (the sentence after `log-line`) add
 
@@ -284,6 +297,8 @@ All invented, in the existing fixtures' style.
 - `set_title_same`: the entry's own title with extra outer spaces, and no `today`: the canonical form of the text,
   no refusal.
 - `set_title_refused_empty`, `set_title_refused_two_lines`, `set_title_refused_comment` (`a <!-- b`).
+- `set_title_from_comment_only`: a heading `## TD-n: <!-- x -->`, retitled: the Log's `was ""`, read back as
+  `retitled`.
 - `set_title_comment_dropped`: a heading `## TD-n: Old <!-- x --> title`, retitled: the comment gone, the Log's
   `was "Old  title"` as `title_read` gives it.
 - `set_title_quotes`: an old title holding `"`, retitled (read back by the `log` case below).
@@ -322,7 +337,9 @@ literal `text` (an entry whose Log holds `retitled: was "An "old" title"`, the l
 - `reordered.md`'s header and body Location: none (its `retired` flag as today);
 - two body `**Title:**` sections: one, its words naming both;
 - an entry whose body `**Priority:**` is a lifted copy (no header Priority): none, its `below-header` as today;
-- an entry with a `retitled` line the writer wrote: no `log-line`.
+- an entry with a `retitled` line the writer wrote: no `log-line`;
+- a ledger with a `Fields:` line and an entry with a header `**Title:**` field: one `misplaced-name`, no
+  `undeclared-field` for it.
 
 `fixtures/run.py`'s list of the `check` kinds a case reports gains `misplaced-name`.
 
@@ -347,7 +364,7 @@ literal `text` (an entry whose Log holds `retitled: was "An "old" title"`, the l
 **B1** (one build, `Part of: TD-068`): D1–D6 with SPEC text 1–6, the fixtures and the unit tests, landing
 together. Location: `ledgerboard/__init__.py` (`edit_entry` and its accepted arguments: `_ENTRY_ARGS["set"]` and `["edit"]`, the
 `given` set, for `title`, `remove` and `declared_fields`; `entry_text` and its `declared_fields`, `LOG_SHAPES`, `LOG_PREFIXES`,
-`TEXT_KINDS`, `check`), `ledgerboard/ledger.py` (`plan_edit`, `plan_new`'s `declared_fields`, `set --title`, `edit --remove` (`--from` no longer required) and
+`TEXT_KINDS`, `check`, `pickable`'s `undeclared-field`), `ledgerboard/ledger.py` (`plan_edit`, `plan_new`'s `declared_fields`, `set --title`, `edit --remove` (`--from` no longer required) and
 `declared_fields`, the "at least one field" check), `fixtures/run.py` (the `check` kinds), `SPEC.md` (*The ledger*, *Ledger entries and their
 edits*, *The ledger writer*, *Versions*), `fixtures/ledger_edit/`, `fixtures/ledger_writer/`, `tests/`. Done
 when: the precheck is green and every fixture above passes (their expected JSON regenerated by the runner; the
