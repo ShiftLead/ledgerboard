@@ -878,8 +878,9 @@ def _log_verdict(r: dict | None) -> tuple[bool, str | None]:
 
 
 def _added_verdict(got: dict) -> tuple[bool, list[str] | None]:
-    """An ``Added`` value's verdict (v2.7): ``migrate_entry()`` changes nothing and lists nothing."""
-    left = got["changes"] + got["listed"]
+    """An ``Added`` value's verdict (v2.7): ``migrate_entry()`` changes nothing, lists nothing and stops on nothing
+    (an entry it stops on is not one it leaves alone)."""
+    left = got["changes"] + got["listed"] + got["stops"]
     return not left, left or None
 
 

@@ -1827,8 +1827,10 @@ nonspace          ::= [^#x9-#xD#x1C-#x20#x85#xA0#x1680#x2000-#x200A#x2028#x2029#
 ```
 
 What the productions leave to prose: a Status's and an `Added` value's `date` is a real day of the calendar (a Log
-line's date is read as written); the reader drops the spaces and tabs that end a field's value, and a Log line's
-`\r` before its end. A header block names each field once, and a Priority, Type, Blocked by or Part of line below
+line's date is read as written), and the module's digits are any the regular expression `\d` takes, where the
+grammar's `digit` is ASCII alone (the writers write ASCII). The reader drops the spaces and tabs before and after
+a field's value, and a `\r` that ends a line; a lone `\r` inside a header line ends that line, and an HTML
+comment left open there is refused, so neither is a field line `canonical()` takes. A header block names each field once, and a Priority, Type, Blocked by or Part of line below
 it is one `canonical()` refuses, since `entries()` would lift it; the order of the fields is a rendering rule, not a
 grammar one (*the canonical form*). Their cases are in `fixtures/migrate/` and `ledger_edit/check/status_*`. A
 `log-line` fixture is a writer's shape only: any other words after the date are a note, which the judge accepts
