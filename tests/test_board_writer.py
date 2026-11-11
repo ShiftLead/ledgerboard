@@ -197,7 +197,7 @@ def _part(n: int, carrying: bool, parent: bool = False) -> str:
             + "\n**Why:** it is wanted.\n")
 
 
-class BoardOnlyLeftOpen(unittest.TestCase):  # v2.8: a --board-only lift that does not close writes nothing (TD-067 D1)
+class BoardOnlyLeftOpen(unittest.TestCase):  # v2.7: a --board-only lift that does not close writes nothing (TD-067 D1)
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.board = os.path.join(self.tmp.name, "board.md")

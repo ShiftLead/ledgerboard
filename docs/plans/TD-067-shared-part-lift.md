@@ -151,7 +151,7 @@ of the old answer, the new item closes, the entries are no longer covered, and t
 (*… was answered with a lift on <D> but still stands …*), which the person closes. The repair needs nothing new
 from the module; the sweep fixture below holds the covered case.
 
-**D5. A minor release, v2.8.** No parse changes and no key moves: v2.3 to v2.7 read every line it writes.
+**D5. A minor release, v2.8.** *(Amended 2026-11-11: Paul folded TD-067 into v2.7, since its build, TD-073, merged before v2.7 was cut; SPEC, the code and the tests tag it `(v2.7)`, and the text quoted below keeps the design's `v2.8`.)* No parse changes and no key moves: v2.3 to v2.7 read every line it writes.
 The writer writes less (D1), and one verdict changes: the tripwire flags one more shape (D3), which v2.4 to v2.7
 passed. The SPEC text tags each change `(v2.8)`; if Paul folds TD-067 into v2.7 instead, the build tags it
 `(v2.7)` and the *Versions* paragraph joins v2.7's. It is not a version event under SPEC
