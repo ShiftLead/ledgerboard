@@ -130,7 +130,8 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   canonical reorder of an entry it changed (which follows from the change), so an entry with `changes` empty is one
   it left alone.
 - **Unchanged is byte for byte.** An entry that needs no change (its `changes` empty) is returned as given, even
-  where `canonical()` would reorder it: a reorder is `fmt`'s, never a migrate change. A changed entry is returned
+  where `canonical()` would reorder it: a reorder is `fmt`'s, never a migrate change. The one stop an unchanged
+  entry can meet is a Log not last, or two Logs (*What it leaves*). A changed entry is returned
   in canonical form (D4). With a stop, the input is returned as given.
 - **The post-condition**, on an entry with `changes` (an unchanged one is returned as given and not tested): the
   migrated Status passes `status_problem()` (D1) for the entry's place, and the migrated entry's `log_problems()`
@@ -163,7 +164,8 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   as it is: each line takes its own head's date when its head has one, real or not, else the first fallback the
   entry has, real or not. The dates the lift uses are the lines' dates as D2 gives them: on an open entry, the
   tail the head's date else that fallback, and each segment its own head's date else that fallback; on an
-  archived entry, whose head is rewritten to the new form first, the tail `D` (always real) and each segment its
+  archived entry, whose head is rewritten to the new form first, the tail `D` (always real: an unreal
+  `closed_date` is passed over as every other source is) and each segment its
   own head's date else that fallback. So `migrate` lifts only when **every date the lift would use is a real
   date**: a segment's own head date, and the one fallback reached where a line has no head date of its own (an
   unreal `**Resolved:**` date stops the lift even where `Added` is real, since the lift would use the
@@ -269,7 +271,7 @@ whether or not a line would be written.
 - `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved: Superseded
   by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`; `decided: <form>`.
 - `stops`: `refused: <why>`; `decided: nothing to answer`; `no date for the Status`; `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>:
-  no archived form`; `Status <Word> on an open entry`; `Location in the header and the body`; `Log not last`; `migrated Status <value> still outside
+  no archived form`; `Status <Word> on an open entry`; `Location in the header and the body`; `Log not last` (a Log not last, or two Logs); `migrated Status <value> still outside
   the set`; `migrated Log: <problem>`.
 
 ### D3. `ledger.py migrate`
@@ -443,8 +445,9 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - an entry needing no change but not in canonical order (returned byte for byte);
   - the returned words, each template at least once;
   - a stop on both the date and the word (both returned, the date's first); an archived entry whose head and one segment
-    are undated and whose `**Resolved:**` date is unreal (no lift); an open stage word whose head is undated, with
-    an unreal `**Resolved:**` date and a real `Added` (still no lift); a segment whose own head date is unreal (no
+    are undated, whose `**Resolved:**` date is unreal and whose `D` is `closed_date` (no lift); an unreal
+    `closed_date` (passed over); an open stage word whose head is undated and has a tail, with an unreal
+    `**Resolved:**` date and a real `Added` (still no lift); a segment whose own head date is unreal (no
     lift); `Added: 2026-01-01 ()`, `( x )` and `(a) (b)` (kept whole); `Added: 2026-01-01.`; a gate's age before and after an `Added`
     comment moves; `Location` in a body with no lead section; an open `Resolved 2026-10-03: x` (a stop) and with
     `decided` `open`.
@@ -455,7 +458,8 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   0, `subject` null); the subject's count.
 - **`fixtures/ledger_edit/check/status_*`** (B3): each of the four forms passing in its place; each in the wrong
   place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; a bare `Resolved`; `Superseded D` with no `by`; no Status; a retired word, whose text names its
-  replacement (`Done` on an open entry: `archive it, or Open`); standing with `old` given (still an error); a v1
+  replacement (`Done` on an open entry: `archive it, or Open`); an open `Resolved 2026-10-03`, and
+  `resolved 2026-10-03` in lower case (each `archived: archive it, or Open`); standing with `old` given (still an error); a v1
   ledger (ℹ). And a header `Location` added by an edit (an error) and standing (ℹ).
 - **`fixtures/ledger_writer/status_*`** (B3), the writes on an un-migrated ledger: `archive` of an open entry
   whose Status is a stage word, and `reopen` of an archived entry whose Status is `Done D`, each written (the entry
