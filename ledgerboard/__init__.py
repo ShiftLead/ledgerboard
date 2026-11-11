@@ -3893,8 +3893,9 @@ def status_problem(text: str, *, archived: bool) -> str | None:
     """The problem of one entry's Status against the four forms (v2.7, SPEC *Migrating to v2.7*), or None:
     ``Open`` in the ledger; ``Resolved D``, ``Superseded D by <id>`` or ``Dropped D`` in the archive, exactly as
     the writers write them. The Status is the one ``entries()`` reads, from the header block. The sentence names
-    the form the entry's place takes and the value's first word, never the whole value."""
-    found = entries(text)
+    the form the entry's place takes and the value's first word, never the whole value. A CRLF line end is
+    read as LF, as ``_lenient_parts()`` reads it."""
+    found = entries(text.replace("\r\n", "\n").replace("\r", "\n"))
     if not found:
         return None
     value = found[0]["fields"].get("status")

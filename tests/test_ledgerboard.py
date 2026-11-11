@@ -735,6 +735,15 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
         self.assertIn(("TD-001", "legacy-part", "info"),
                       self.kinds(led, old=led.replace("**Part of:** TD-002", "**Status:** Open")))
 
+    def test_a_crlf_status_in_the_set_is_no_status_error(self):  # v2.7: the line end is not part of the value
+        led = "# Ledger\n\nLedgerboard: 2\n\n" + _entry(1, "Low", "**Status:** Open")
+        arc = _entry(2, "Low", "**Status:** Resolved 2026-01-01")
+        crlf = lambda t: t.replace("\n", "\r\n")  # noqa: E731
+        self.assertEqual([r for r in L.check(crlf(led), crlf(arc), today=TODAY) if r["kind"] == "status"], [])
+        bad = [r["id"] for r in L.check(crlf(led.replace("Open", "Built")), crlf(arc), today=TODAY)
+               if r["kind"] == "status"]
+        self.assertEqual(bad, ["TD-001"])
+
     def test_what_a_part_of_line_cannot_name(self):
         led = (_entry(1, "Low", "**Part of:** far#TD-005") + _entry(2, "Low", "**Part of:** TD-099")
                + _entry(3, "Low", "**Part of:** TD-008") + _entry(4, "Low", "**Part of:** TD-005, TD-006")
