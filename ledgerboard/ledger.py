@@ -26,13 +26,15 @@
                                           [--superseded-by ID | --dropped] [--also FILE...]
     python3 -m ledgerboard.ledger reopen TD-n --why W [--also FILE...]
     python3 -m ledgerboard.ledger renumber TD-n --id TD-m [--take NONCE] [--also FILE...]
+    python3 -m ledgerboard.ledger migrate [TD-n ...] --release X.Y [--closed-dates FILE] [--stage-kind WORD=KIND]...
+                                          [--as TD-n=FORM]... [--plan | --dry-run] [--ledger DIR] [--today D] [--json]
         every command: [--ledger PATH] [--resolved FILE] [--today D] [--json]; a write: [--base PATH] [--plan]
 
 A report reads a v1 ledger file or a v2 directory through ``load()``; a write takes a v2 directory and
 refuses a v1 file (*split first*). Every write reads the files, applies the module's edit
 (``entry_text()``, ``edit_entry()``, ``canonical()``) and writes the files back, both or neither, then
 prints the paths it changed (``--json``: one object; a ledger edit has no commit subject of its own, so
-``subject`` is null). ``--plan`` prints the changes as JSON (a removed file's text null) and writes nothing.
+``subject`` is null — except ``migrate``'s, which names ``migrate_subject()``). ``--plan`` prints the changes as JSON (a removed file's text null) and writes nothing.
 A move (``archive``, ``reopen``, ``renumber``) writes the new file and removes the old, its relative links
 rewritten for its new directory and every link to it, in the ledger and in ``--also``'s files, repointed.
 
@@ -40,6 +42,8 @@ A write is refused when the ledger after it has a ``check()`` error the ledger b
 checked against one base: ``--base`` (the ledger where the change started, a v1 file or a v2 directory,
 as the caller reads it from its default branch), else the ledger as it stands. So a fault already there
 never blocks an unrelated write. ``cross-repo`` and every ℹ the write brings are notes, never refusals.
+``migrate`` (v2.7) is the exception: it writes the ledger ``check()`` will grade, is refused only by a stop of
+``migrate_entry()``, takes neither ``--base`` nor ``--resolved``, and the caller runs ``--check`` on the result.
 
 It never runs git, the network or anything of a consumer's. The caller passes what lies outside the
 files: the entry's id (``new --id``, taken from its counter), who filed it (``--by``, ``--session``), the
@@ -69,10 +73,16 @@ from . import (
     ENTRY_FILE_RE,
     ID_ITEM_RE,
     LEDGER_ARCHIVE,
+    MIGRATE_DECIDED_RE,
+    STAGE_WORDS,
     XREPO_ITEM_RE,
     Refused,
     Resolve,
+    _archived_status,
+    _chain,
     _left_with_open_parts,
+    _num,
+    _real_day,
     archive_path,
     archive_plan,
     canonical,
@@ -86,6 +96,8 @@ from . import (
     heading_nums,
     lift_gate,
     load,
+    migrate_entry,
+    migrate_subject,
     parse_gates,
     pickable,
     rank,
@@ -101,7 +113,8 @@ from .board import Plan, write
 
 LEDGER_DIR, LEDGER_FILE = "docs/ledger", "docs/technical_debt.md"  # the defaults, relative to the working directory
 ALIASES = ("type", "owner", "kind")  # --type X is --where type=X, and so on
-WRITES = ("fmt", "new", "set", "note", "edit", "archive", "reopen", "renumber", "lift", "split", "relink")
+WRITES = ("fmt", "new", "set", "note", "edit", "archive", "reopen", "renumber", "lift", "split", "relink", "migrate")
+RELEASE_RE = re.compile(r"[0-9]{1,9}\.[0-9]{1,9}")  # migrate's --release: migrate_subject()'s major.minor
 # `new`'s and `set`'s header flags, in the canonical order: (option dest, field name)
 FIELDS = (("priority", "Priority"), ("type", "Type"), ("added", "Added"), ("owner", "Owner"), ("kind", "Kind"),
           ("status", "Status"), ("blocked_by", "Blocked by"), ("part_of", "Part of"), ("location", "Location"))
@@ -799,6 +812,77 @@ def plan_fmt(led: Ledger, ids: Sequence[str] = ()) -> Plan:
     return Plan("fmt", None, changes, {"entries": len(paths), "formatted": list(changes), "refused": refused})
 
 
+def _entry_paths(led: Ledger) -> list[tuple[str, bool]]:
+    """Every entry file, open then archived, each in number order: (path, archived)."""
+    return [(p, d != led.path) for d in (led.path, _join(led.path, LEDGER_ARCHIVE)) for p in sorted(
+        (p for p in led.files if os.path.normpath(os.path.dirname(p)) == os.path.normpath(d)
+         and ENTRY_FILE_RE.match(os.path.basename(p))),
+        key=lambda p: int(ENTRY_FILE_RE.match(os.path.basename(p)).group(1)))]
+
+
+def _released(texts: tuple[str, str]) -> dict[str, dict[str, str]]:
+    """Each open entry's blockers' chain end states (``_chain()``, no other repo resolved), by entry id."""
+    ledger_text, arch = texts
+    live = entries(ledger_text)
+    live_nums, gone = {_num(e["id"]) for e in live}, _archived_status(arch)
+    return {e["id"]: {b: _chain(b, live_nums, gone, None)[1] for b in parse_gates(e["blocked_raw"])["ids"]}
+            for e in live if e["blocked_raw"]}
+
+
+def plan_migrate(led: Ledger, release: str, ids: Sequence[str] = (), *, closed_dates: Mapping[str, str] | None = None,
+                 kinds: Mapping[str, str] | None = None, decided: Mapping[str, str] | None = None,
+                 today: str | None = None) -> Plan:
+    """``migrate_entry()`` over each entry named, else every entry, open and archived (v2.7, SPEC *Migrating to
+    v2.7*). ``closed_dates`` and ``decided`` are keyed by id, matched by number; ``kinds`` is the stage words' map.
+    Any stop stops the run: the plan is empty and ``info["stopped"]`` true. ``info["entries"]`` maps each entry
+    changed, listed or stopped to its ``{changes, listed, stops}``; ``info["reblocked"]`` each open entry a
+    blocker of which flips between released and not, to ``[{blocker, before, after}]``. The subject is
+    ``migrate_subject(release, <entries changed>)``, None when nothing changed. Not gated on ``check()``."""
+    _writable(led)
+    if not RELEASE_RE.fullmatch(release or ""):
+        raise Unusable(f"--release is <major>.<minor>, not {release!r}")
+    day = _today(today)
+    every = _entry_paths(led)
+    if ids:
+        want = {int(tid_of(t)[3:]) for t in ids}
+        held = {int(ENTRY_FILE_RE.match(os.path.basename(p)).group(1)) for p, _ in every}
+        missing = sorted(want - held)
+        if missing:
+            raise Unusable(f"not in the ledger or its archive: {', '.join(f'TD-{n:03d}' for n in missing)}")
+        every = [(p, a) for p, a in every if int(ENTRY_FILE_RE.match(os.path.basename(p)).group(1)) in want]
+    by_num = {int(ENTRY_FILE_RE.match(os.path.basename(p)).group(1)): (p, a) for p, a in every}
+    for k in decided or {}:
+        if int(tid_of(k)[3:]) not in by_num:
+            raise Unusable(f"--as names {k}, which is not among the entries the run reads")
+    dates = {int(tid_of(k)[3:]): v for k, v in (closed_dates or {}).items()}
+    answers = {int(tid_of(k)[3:]): v for k, v in (decided or {}).items()}
+    changes: dict[str, str] = {}
+    report: dict[str, dict] = {}
+    stopped = False
+    for n, (p, archived) in sorted(by_num.items(), key=lambda x: (x[1][1], x[0])):
+        text = led.files[p]
+        got = migrate_entry(text, archived=archived, today=day, closed_date=dates.get(n), kinds=kinds,
+                            decided=answers.get(n))
+        if got["changes"] or got["listed"] or got["stops"]:
+            found = entries(text)
+            report[found[0]["id"] if found else f"TD-{n:03d}"] = {k: got[k] for k in ("changes", "listed", "stops")}
+        stopped = stopped or bool(got["stops"])
+        if got["changes"] and got["text"] != text:
+            changes[p] = got["text"]
+    if stopped:
+        return Plan("migrate", None, {}, {"stopped": True, "entries": report, "reblocked": {}})
+    before, after = _released(led.texts()), _released(led.overlay(changes).texts())
+    reblocked: dict[str, list[dict]] = {}
+    for tid, states in after.items():
+        for b, now in states.items():
+            was = before.get(tid, {}).get(b, now)
+            if (was == "resolved") != (now == "resolved"):
+                reblocked.setdefault(tid, []).append({"blocker": b, "before": was, "after": now})
+    count = sum(1 for r in report.values() if r["changes"])
+    return Plan("migrate", migrate_subject(release, count) if count else None, changes,
+                {"stopped": False, "entries": report, "reblocked": reblocked})
+
+
 def apply(plan: Plan) -> list[str]:
     """Make the plan's writes, both or neither; the paths written."""
     return write(plan.changes) if plan.changes else []
@@ -1182,6 +1266,121 @@ def run_write(cmd: str, argv: list[str]) -> int:
     return 1 if cmd == "fmt" and plan.info["refused"] else 0
 
 
+def migrate_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="ledgerboard.ledger migrate", description=(
+        "migrate each entry named, else every entry, open and archived, to v2.7's forms (migrate_entry()); "
+        "any stop stops the run and writes nothing"))
+    ap.add_argument("ids", nargs="*", metavar="TD-n", help="the entries to migrate; default: every entry")
+    ap.add_argument("--release", required=True, metavar="X.Y", help="the release migrated to: the commit subject's")
+    ap.add_argument("--closed-dates", metavar="FILE", help="the caller's archiving dates: a JSON object from TD-n to "
+                                                           "YYYY-MM-DD")
+    ap.add_argument("--stage-kind", action="append", default=[], metavar="WORD=KIND",
+                    help="the Kind an open entry's retired stage word becomes; repeatable")
+    ap.add_argument("--as", dest="as_", action="append", default=[], metavar="TD-n=FORM",
+                    help="a person's decision for a stopped Status: resolved, dropped, superseded <id> or open; repeatable")
+    ap.add_argument("--plan", action="store_true", help="print the changes and the entries as JSON and write nothing")
+    ap.add_argument("--dry-run", action="store_true", help="print the entries as text and write nothing")
+    ap.add_argument("--ledger", help=f"the v2 directory; default: {LEDGER_DIR}")
+    ap.add_argument("--today", help="the date the Log lines record, YYYY-MM-DD (default: the UTC clock)")
+    ap.add_argument("--json", action="store_true", help="print one JSON object")
+    return ap
+
+
+def _migrate_args(a: argparse.Namespace) -> dict:
+    """migrate's flags checked and read: Unusable (exit 2) for any outside its shape."""
+    if a.plan and a.dry_run:
+        raise Unusable("--plan and --dry-run are one or the other")
+    if not RELEASE_RE.fullmatch(a.release):
+        raise Unusable(f"--release is <major>.<minor>, each one to nine digits, not {a.release!r}")
+    dates: dict[str, str] = {}
+    if a.closed_dates is not None:
+        try:
+            raw = json.loads(_read_src("--closed-dates", a.closed_dates))
+        except ValueError as e:
+            raise Unusable(f"--closed-dates is a JSON object: {e}") from None
+        if not isinstance(raw, dict):
+            raise Unusable("--closed-dates is a JSON object from TD-n to YYYY-MM-DD")
+        for k, v in raw.items():
+            if not ID_ITEM_RE.fullmatch(k) or not isinstance(v, str) or not _real_day(v):
+                raise Unusable(f"--closed-dates maps TD-n to a real YYYY-MM-DD, not {k!r}: {v!r}")
+            if tid_of(k) in dates:
+                raise Unusable(f"--closed-dates names {tid_of(k)} twice")
+            dates[tid_of(k)] = v
+    kinds: dict[str, str] = {}
+    for x in a.stage_kind:
+        w, eq, k = x.partition("=")
+        w = w.strip().lower()
+        if not eq or w not in STAGE_WORDS:
+            raise Unusable(f"--stage-kind takes WORD=KIND, WORD one of {', '.join(STAGE_WORDS)}, not {x!r}")
+        if w in kinds:
+            raise Unusable(f"--stage-kind names {w} twice")
+        if not k.strip() or "\n" in k or "\r" in k:
+            raise Unusable(f"--stage-kind {w}: KIND is one line of text")
+        kinds[w] = k.strip()
+    decided: dict[str, str] = {}
+    for x in a.as_:
+        t, eq, form = x.partition("=")
+        if not eq or not ID_ITEM_RE.fullmatch(t.strip()) or not MIGRATE_DECIDED_RE.fullmatch(form.strip()):
+            raise Unusable(f"--as takes TD-n=FORM, FORM resolved, dropped, superseded <id> or open, not {x!r}")
+        if tid_of(t.strip()) in decided:
+            raise Unusable(f"--as names {tid_of(t.strip())} twice")
+        decided[tid_of(t.strip())] = form.strip()
+    return {"closed_dates": dates, "kinds": kinds or None, "decided": decided}
+
+
+def _dry_run_text(plan: Plan) -> str:
+    out = []
+    for tid, r in plan.info["entries"].items():
+        out.append(tid)
+        out += [f"  {w}: {x}" for w, k in (("change", "changes"), ("listed", "listed"), ("stop", "stops"))
+                for x in r[k]]
+    if not any(r["changes"] for r in plan.info["entries"].values()):
+        out.append("nothing to migrate")
+    if plan.info["reblocked"]:
+        out.append("reblocked:")
+        out += [f"  {tid}: {r['blocker']} {r['before']} → {r['after']}"
+                for tid, rs in plan.info["reblocked"].items() for r in rs]
+    return "\n".join(out)
+
+
+def run_migrate(argv: list[str]) -> int:
+    ap = migrate_parser()
+    a = ap.parse_args(argv)
+    try:
+        kw = _migrate_args(a)
+        plan = plan_migrate(Ledger.open(a.ledger or LEDGER_DIR), a.release, a.ids, today=a.today, **kw)
+    except Unusable as e:
+        return _say(a, "migrate", {"unusable": str(e)}, f"migrate: {e}", 2)
+    except Refused as e:
+        return _say(a, "migrate", {"unusable": str(e)}, f"migrate: {e}", 2)
+    info = {"entries": plan.info["entries"], "reblocked": plan.info["reblocked"]}
+    if plan.info["stopped"]:
+        if a.json or a.plan:
+            print(json.dumps({"action": "migrate", "plan": {}, **info}, ensure_ascii=False))
+        else:
+            for tid, r in info["entries"].items():
+                if r["stops"]:
+                    print(f"{tid}: {'; '.join(r['stops'])}", file=sys.stderr)
+        return 1
+    if a.plan or (a.dry_run and a.json):
+        print(json.dumps({"action": "migrate", "subject": plan.subject, "plan": plan.changes, **info},
+                         ensure_ascii=False))
+        return 0
+    if a.dry_run:
+        print(_dry_run_text(plan))
+        return 0
+    try:
+        paths = apply(plan)
+    except OSError as e:
+        return _say(a, "migrate", {"failed": str(e)}, f"migrate: the write failed, every file restored: {e}", 4)
+    if a.json:
+        print(json.dumps({"action": "migrate", "subject": plan.subject, "paths": paths, **info}, ensure_ascii=False))
+    else:
+        for p in paths:
+            print(p)
+    return 0
+
+
 def report_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="ledgerboard.ledger", description=__doc__.split("\n", 1)[0])
     ap.add_argument("--pickable", nargs="?", const=True, default=None, metavar="yes|no",
@@ -1314,6 +1513,8 @@ def run_report(argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["migrate"]:
+        return run_migrate(argv[1:])
     if argv[:1] and argv[0] in WRITES:
         return run_write(argv[0], argv[1:])
     return run_report(argv)
