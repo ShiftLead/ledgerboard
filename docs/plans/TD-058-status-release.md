@@ -1,13 +1,14 @@
 # TD-058: v2.7, the Status release, and `migrate`
 
-**Status:** Draft 7, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
+**Status:** Draft 8, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
 rounds, cadence.md §4.8). Rounds: six ran and ended at the cap (build-changing per design review: 9, 6, 2, 1 (F120
 rejected), 2, 2; the fact-checks' apart), then a closing fact-check (F166–F173); Paul answered `One more round`
 (2026-11-11), and round 7's design review read the whole plan and every fix through F173 and raised 2
-build-changing findings (F174–F182); its closing fact-check raised 7 more (F183–F192, applied, read by no design
-review). Draft 7 holds every finding's
+build-changing findings (F174–F182); its closing fact-check raised 7 more (F183–F192, applied). Paul answered `One more
+round` again (2026-11-11): round 8's design review read the whole plan and F183–F192 and raised nothing
+build-changing (SHIP; two minor, F193–F194, applied), so the rounds end. Draft 7 holds every finding's
 fix. Target design §7.1–§7.3's roster path was amended in PR #200 on Paul's note of 2026-11-11 (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
@@ -436,8 +437,11 @@ which has no production and no fixture. Its start symbols, each with its own jud
 What no regular production can refuse is written in prose under the block, as the appendix already leaves *a
 real day* to prose: a duplicate field, a Priority, Type, Blocked by or Part of line below the header block, a
 field name finer than `canonical()`'s test reads, and an unreal date; their cases are in `fixtures/migrate/` and
-`ledger_edit/check/status_*`. B4 changes `run.py`'s `grammar_cases` for these judges and nothing in
-`tests/test_grammar.py`.
+`ledger_edit/check/status_*`. B4 changes `run.py`'s `grammar_cases` for these judges, with a `hasattr` guard
+for `status_problem` and `migrate_entry` beside the existing `parse_gates` one (a module without them reports
+`missing`), and nothing in `tests/test_grammar.py`, which needs no change as long as the appendix defines no union
+production over the four `status-*` symbols. The appendix's prose says `log-line` fixtures are writer shapes only:
+a `note` is never one, since the judge accepts it and no production does.
 
 ## The `SPEC.md` text
 
