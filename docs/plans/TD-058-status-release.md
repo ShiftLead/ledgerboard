@@ -87,16 +87,20 @@ An entry's Status is one of four forms, and its form agrees with where the entry
     person`;
   - archived: `⚠ TD-n: an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — <detail> — run
     migrate, which maps it or lists it for a person`;
-  - `<detail>`, the first that applies: `it has none` (no or an empty Status); `this one has more after <Word>`
-    (the word is one of the place's own words but the value is not its form: `Open 2026-10-01`, `Resolved
-    2026-10-03.`, an unreal date); `this one is <Word> (retired: <what replaces it>)` (a word *Retired words* lists);
-    `this one is <Word>` (any other).
+  - `<detail>`, the first that applies: `it has none` (no or an empty Status); `this one is <Word>, not in that
+    form` (the word, compared in lower case as `first_word()` compares it, is one of the place's own words, `open`
+    in the ledger and `resolved`, `superseded` or `dropped` in the archive, but the value is not its form: `Open
+    2026-10-01`, `Resolved 2026-10-03.`, a bare `Resolved`, `Superseded 2026-10-03` with no `by`, `resolved
+    2026-10-03` in lower case, an unreal date); `this one is <Word> (retired: <what replaces it>)` (a word *Retired
+    words* lists); `this one is <Word>` (any other, an archived word on an open entry among them: `Resolved
+    2026-10-03` in the ledger).
   - `<Word>` is the value's first word as written, `_status_word()`'s. *What replaces it*, by place: on an open
     entry `Open, the stage in Kind` for the five open words (`Kind build` and `Kind live-check` are consumer
-    vocabulary, S3) and `Open` for an archived word; on an archived entry `Resolved` for `done`, `built` and
+    vocabulary, S3) and `archive it, or Open` for `Done`, `Moved` and `OBE` (`migrate` stops on them, D2 branch 5:
+    finished work the ledger forgot to archive is archived, not reopened); on an archived entry `Resolved` for `done`, `built` and
     `designed`, `Superseded or Dropped` for `moved`, `Dropped` for `obe`, and `Resolved, Superseded or Dropped` for
     `partly`, `live` and `in`. `status_problem()` holds these two maps itself (B1); B3, which removes the ℹ record
-    that reads `RETIRED_STATUS`, gives `RETIRED_STATUS` the open map's values.
+    that reads `RETIRED_STATUS`, gives `RETIRED_STATUS` the open map's values for the five open words.
 - **The id is in the text**, and the writer matches a record by it, so `renumber` of an entry whose Status is
   outside the set meets a `status` error under its new id that the ledger before did not have, and is refused:
   *migrate it first*. A fixture shows it.
@@ -127,14 +131,18 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
 - **Unchanged is byte for byte.** An entry that needs no change (its `changes` empty) is returned as given, even
   where `canonical()` would reorder it: a reorder is `fmt`'s, never a migrate change. A changed entry is returned
   in canonical form (D4). With a stop, the input is returned as given.
-- **The post-condition:** the migrated Status passes `status_problem()` (D1) for the entry's place, and the migrated
-  entry's Log passes `log_problems()`; any problem is a stop (`migrated Status <value> still outside the set`, or
-  `migrated Log: <problem>`). So `migrate` never writes a Status or a Log line `check()` rejects.
+- **The post-condition**, on an entry with `changes` (an unchanged one is returned as given and not tested): the
+  migrated Status passes `status_problem()` (D1) for the entry's place, and the migrated entry's `log_problems()`
+  holds no problem the input's does not (each compared as its kind and sentence, so a malformed line already in the
+  input, which `migrate` leaves, is not one, and a Log not last has stopped already, *What it leaves*); any problem
+  is a stop (`migrated Status <value> still outside the set`, or `migrated Log: <problem>`). So `migrate` never
+  writes a Status or a Log line `check()` rejects that was not there before it.
 - Text `canonical()` refuses is a stop, not an exception. Run on its own output, it changes nothing.
 
 **Terms.**
 - *A real date* is a `YYYY-MM-DD` that is a calendar day (`date.fromisoformat` accepts it); a date that is not one
-  (`2026-02-30`) is no date, and every rule below that looks for a date passes over it to its next source.
+  (`2026-02-30`) is no date, and every rule below that looks for a date passes over it to its next source, except
+  *Lifting*, which cannot (below).
 - *The head reads* when `status_notes_to_log()`'s head grammar (*The Log*, `STATUS_HEAD_RE`) matches the value and
   any date it holds is a real date: then *the head* is the text it matched (word, date, `by <id>`), *the tail* what
   follows up to the first ` — was: `, and *the segments* each ` — was: ` part.
@@ -150,9 +158,13 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   the `**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the
   same fallbacks; each in among the Log by date, after any line of an equal date. If any line it would lift has no
   date, it lifts nothing from the whole value, dated segments included; the value is then treated as **a head that
-  does not read**. `status_notes_to_log()`'s fallbacks do not test a date's reality, and it stays as it is; so when
-  the `**Resolved:**` line's or `Added`'s date is not a real date, `migrate` does not lift either: the value is
-  treated as a head that does not read, and every date `migrate` itself picks passes over an unreal one.
+  does not read**. `status_notes_to_log()` does not test a date's reality and does not pass over one, and it stays
+  as it is: each line takes its own head's date when its head has one, real or not, else the first fallback the
+  entry has, real or not. So `migrate` lifts only when **every date the lift would use is a real date**, a
+  segment's own head date and the one fallback reached among them (an unreal `**Resolved:**` date stops the lift
+  even where `Added` is real, since the lift would use the `**Resolved:**` one); otherwise it lifts nothing and the
+  value is treated as a head that does not read. This is the one place an unreal date is not passed over (*A real
+  date*): every date `migrate` itself picks, outside the lift, passes over an unreal one.
 - *Its new form takes only its head* when the date and any `by <id>` the new Status keeps come from the head (its
   word is mapped). A value whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case,
   which the head grammar does not read, a date found only in the text) is treated as **a head that does not read**.
@@ -223,7 +235,8 @@ does leaves `**` before a `.`), which is no word in the table: it stops, and `de
 
 **3. `Added`.** A value that is a real date, whitespace, then a comment becomes the bare date, and the comment one
 plain Log line, verbatim, dated by that date and placed **before** any line of its date (it is the entry's first event; an
-insert mode beside lifting's after-equal one). Its surrounding parentheses, if it is wholly wrapped in one pair, are
+insert mode beside lifting's after-equal one). Its surrounding parentheses, if it is wholly wrapped in one pair (it begins with `(`, ends with `)`, and that
+first `(` closes at that last `)`, counting nesting: `(a (b))` is wrapped, `(a) (b)` is not and is kept whole), are
 dropped, and then its surrounding whitespace; a comment left empty (`()`) writes no line (`changes`: `Added comment
 (empty) removed`). A comment that would begin with a reserved prefix (`filed by ` among them) is written `note: <comment>`, as
 for a lifted Status note. **Never a `filed by` line** (a departure from §2.2, which wrote one "only when the comment
@@ -379,7 +392,7 @@ does `ledger.py`'s module docstring.
 > `ledger.py migrate` map the old forms. The header order loses `Waits` and `Location`, a header `Location` is
 > retired, and `new` writes `Location` in the body. A v2.6 reader reads every entry v2.7 writes (the four forms
 > were already its own; a body `**Location:**` was already a section), though its `canonical()` would place a
-> `Waits` before `Part of` again, so a consumer vendors v2.7 before it formats a ledger v2.7 wrote. A repo takes v2.7 in one PR that vendors it
+> `Waits` or a header `Location` back in its own order, so a consumer vendors v2.7 before it formats a ledger v2.7 wrote. A repo takes v2.7 in one PR that vendors it
 > and runs `migrate`. `migrate` stays through v2.x and goes in v3.0, whose precondition is that `migrate --plan`
 > shows no entry with changes in every repo.
 
@@ -400,7 +413,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - an open entry, one case per branch: `Open` unchanged; `Open 2026-10-01`; `Open 2026-10-01: noted`; `Open
     2026-10-01: note — was: Designed 2026-09-30`; each stage word with and without a `kinds` key; `In progress`
     (a stage word whose head does not read); a stage word replacing an existing `Kind`; a prose Status; a bold lead;
-    `Open, held`; `Resolved 2026-10-03: x` on an open entry (listed);
+    `Open, held`;
   - `Added` with a comment, with a parenthesised comment, with a comment beginning `gate added:`, with a Log line of
     the same date (the comment goes first), with prose and no date;
   - `Location` in the header, with a Why, with no Why; in the header and the body (a stop);
@@ -424,7 +437,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - an entry needing no change but not in canonical order (returned byte for byte);
   - the returned words, each template at least once;
   - a stop on both the date and the word (both returned, the date's first); an unreal `**Resolved:**` date (no
-    lift); `Added: 2026-01-01 ()` and `( x )`; `Added: 2026-01-01.`; a gate's age before and after an `Added`
+    lift), with a real `Added` (still no lift); a segment whose own head date is unreal (no lift); `Added: 2026-01-01 ()`, `( x )` and `(a) (b)` (kept whole); `Added: 2026-01-01.`; a gate's age before and after an `Added`
     comment moves; `Location` in a body with no lead section; an open `Resolved 2026-10-03: x` (a stop) and with
     `decided` `open`.
 - **`fixtures/ledger_writer/migrate_*`** (B2): a ledger whose one archived entry stops, so nothing is written and
@@ -433,11 +446,14 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   (exit 2); a v1 file (exit 2); a ledger already migrated (exit
   0, `subject` null); the subject's count.
 - **`fixtures/ledger_edit/check/status_*`** (B3): each of the four forms passing in its place; each in the wrong
-  place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; no Status; a retired word, whose text names its
-  replacement; standing with `old` given (still an error); `archive`, `reopen` and `renumber` on an un-migrated
-  ledger (`renumber` refused, D1); a `note` on an entry whose Status is outside the set,
-  which the writer still writes (the flag's text unchanged); a v1 ledger (ℹ). And a header `Location` added by an
-  edit (an error) and standing (ℹ).
+  place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; a bare `Resolved`; `Superseded D` with no `by`; no Status; a retired word, whose text names its
+  replacement (`Done` on an open entry: `archive it, or Open`); standing with `old` given (still an error); a v1
+  ledger (ℹ). And a header `Location` added by an edit (an error) and standing (ℹ).
+- **`fixtures/ledger_writer/status_*`** (B3), the writes on an un-migrated ledger: `archive` of an open entry
+  whose Status is a stage word, and `reopen` of an archived entry whose Status is `Done D`, each written (the entry
+  it moves leaves with a Status in the set, and every other entry's `status` error stands as before, so none is
+  new); `renumber` of an entry whose Status is outside the set, refused (D1: *migrate it first*); a `note` on such
+  an entry, written (the flag's text unchanged).
 - **`fixtures/edit/`** (B3): `canonical()` placing a `Waits` and a header `Location` after `Part of`, in file order;
   `new --location` writing the body section; a non-empty `set --location` and `new --field Location=…` refused.
 - **Existing fixtures B3 regenerates.** `fixtures/run.py` records the whole of `check()` for each
