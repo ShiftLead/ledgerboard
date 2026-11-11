@@ -154,7 +154,10 @@ class Rank(unittest.TestCase):
 
     def test_rank_flags_reach_check(self):
         recs = L.check(RANKED, "", old=RANKED, rank_text="TD-1 0h\n", today=TODAY)
-        self.assertEqual([(r["kind"], r["level"], r["standing"]) for r in recs], [("rank", "error", False)])
+        self.assertEqual([(r["kind"], r["level"], r["standing"]) for r in recs if r["kind"] != "status"],
+                         [("rank", "error", False)])
+        # v2.7: RANKED is a v1 ledger whose entries have no Status, so each carries a status record, ℹ, never standing
+        self.assertEqual({(r["level"], r["standing"]) for r in recs if r["kind"] == "status"}, {("info", False)})
 
     def test_set_rank_round_trips_and_keeps_other_lines(self):
         text = "# head\n# two\nTD-1: 0h\nTD-7: 1|0|000007\nTD-2: 3a\n"
@@ -736,7 +739,7 @@ class PartOf(unittest.TestCase):  # v2.1: a part names its parent (ShiftLead ADR
         led = (_entry(1, "Low", "**Part of:** far#TD-005") + _entry(2, "Low", "**Part of:** TD-099")
                + _entry(3, "Low", "**Part of:** TD-008") + _entry(4, "Low", "**Part of:** TD-005, TD-006")
                + _entry(5) + _entry(6) + _entry(7, "Low", "**Part of:** soon"))
-        self.assertEqual([(t, k, lv) for t, k, lv in self.kinds(led, _entry(8)) if t != "TD-005"],
+        self.assertEqual([(t, k, lv) for t, k, lv in self.kinds(led, _entry(8)) if t != "TD-005" and k != "status"],
                          [("TD-001", "part-of-item", "error"), ("TD-002", "part-of-unknown", "error"),
                           ("TD-003", "part-of-archived", "info"), ("TD-004", "part-of-item", "error"),
                           ("TD-007", "part-of-item", "error")])

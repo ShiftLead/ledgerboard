@@ -16,6 +16,14 @@
    "level": "info",
    "standing": false,
    "text": "ℹ TD-004: field 'area' has no vocabulary on the preamble's Fields: line — not validated; declare it (cadence.md §2.12)"
+  },
+  {
+   "field": "status",
+   "id": "TD-001",
+   "kind": "status",
+   "level": "info",
+   "standing": false,
+   "text": "ℹ TD-001: an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
   }
  ],
  "check_since_empty": [
@@ -34,6 +42,14 @@
    "level": "error",
    "standing": false,
    "text": "⚠ TD-004: field 'area' has no vocabulary on the preamble's Fields: line — not validated; declare it (cadence.md §2.12)"
+  },
+  {
+   "field": "status",
+   "id": "TD-001",
+   "kind": "status",
+   "level": "info",
+   "standing": false,
+   "text": "ℹ TD-001: an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
   }
  ],
  "declared": {

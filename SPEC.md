@@ -78,15 +78,17 @@ to `decision (<person>)` with its text in `**Ask:**`. v3.0 stops reading it.
 
 **Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. Where
 v2.x still reads one, `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than
-unknown:
+unknown — except a Status word, which from v2.7 is an error (*The closed Status set*):
 - the fields `Waits` (a gate: `until` or `event`), `Taken by` (`Id take`), `Resolved` as a header field
   (the `**Resolved:**` body line of an archived entry) and, from v2.7, `Location` as a header field (the
   `**Location:**` body section);
 - in `Blocked by`, the gate `hold` (`decision (<person>)` with an Ask), the old form above, and a role in
   `decision (…)`, reserved by name — today `designer`. A retired gate keeps the block, and a retired
   decision is still a decision by its holder;
-- the Status words of an open entry `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in
-  `Kind`); `Done`, `Moved` and `OBE`, an archived entry's, are v2.7's `migrate`'s to map.
+- the Status words `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in `Kind`), and `Done`,
+  `Moved` and `OBE` (`Resolved`, `Superseded` or `Dropped`; on an open entry, archive it or `Open`). From v2.7 a
+  Status outside the closed set is an error (*The closed Status set*), whose text still names a retired word with
+  what replaces it; `migrate` maps each (*Migrating to v2.7*).
 
 **A new `Waits` line is an error** (v2.7). Every wait now has a gate form — a date as `until YYYY-MM-DD`,
 an event as `event (<name>)` with its Event section, a `host-log` check among them (*Events*) — so a `Waits`
@@ -582,6 +584,16 @@ the Status `Superseded YYYY-MM-DD by TD-n` (`… by TD-n: why` before v2.4), and
 header field is the older form of the line: readers still read it, and the writers move it into
 the body.
 
+**The closed Status set** (v2.7). An entry's Status is `Open` in the ledger, and in the archive `Resolved
+YYYY-MM-DD`, `Superseded YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD`, exactly as the
+writers write them: nothing before or after, one space between parts, a real date. Any other value, or none, is
+an error on every entry, open or archived, of a ledger that declares major 2 (`status`, `status_problem()`), never
+standing, with or without `old`; on a v1 ledger it is ℹ. Its text names the form the entry's place takes and
+the value's first word when it has one, with what replaces a retired or misplaced word, never the whole value, and
+ends *run migrate, which maps it, lists it, or names what a person decides*. It replaces v2.4's ℹ `retired` on an
+open entry's Status word. What a reader reads of an archived blocker's Status (*Superseded and dropped*) is
+unchanged, so another repo that has not migrated still reads as before.
+
 **Edits** (`edit_entry(text, action, *, today, …)`, one of `ENTRY_ACTIONS`) take one entry's text
 and return it in canonical form. Each is refused for an entry `canonical()` refuses (a v1 ledger:
 *split first*). It is also refused unless the result reads back exactly the change meant, and
@@ -680,7 +692,7 @@ entry's archiving date if the caller has one (`closed_date`), a caller's map fro
 (`kinds`, its keys compared in lower case), and the caller's decision for a Status the rules below stop on
 (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived entry, `open` for an open one). It reads
 nothing else and returns `{text, changes, listed, stops}`. `status_problem(text, *, archived)` gives the problem of
-one entry's Status against the four forms, or None: `Open` in the ledger; `Resolved YYYY-MM-DD`, `Superseded
+one entry's Status against the four forms (*The closed Status set*), or None: `Open` in the ledger; `Resolved YYYY-MM-DD`, `Superseded
 YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD` in the archive, exactly as the writers write
 them — nothing before or after, one space between parts, a real date. It reads the Status `entries()` reads, from
 the header block.
@@ -1598,6 +1610,16 @@ Nothing read changes, and a ledger whose `Waits` lines no edit touches checks as
 **v2.7 stops the sweep re-asking a lifting answer closed with no lift** (*The gate sweep*): within `reask_days`,
 once per answer, an `act` says the lift is owed, in place of `Go | Not yet`, and closes once nothing is owed. A
 gate lifted and re-added (its Log says so) is asked at once, as before.
+
+**v2.7 closes the Status set and ships `migrate`** (*The closed Status set*, *Migrating to v2.7*): a Status
+outside `Open`, `Resolved D`, `Superseded D by <id>` and `Dropped D`, or in the wrong place, is an error on every
+entry of a v2 ledger, where v2.4 to v2.6 noted a retired open word ℹ and read the rest; `migrate_entry()` and
+`ledger.py migrate` map the old forms. The header order loses `Waits` and `Location`, a header `Location` is
+retired, and `new` writes `Location` in the body. A v2.6 reader reads every entry v2.7 writes (the four forms
+were already its own; a body `**Location:**` was already a section), though its `canonical()` would place a
+`Waits` or a header `Location` back in its own order, so a consumer vendors v2.7 before it formats a ledger v2.7
+wrote. A repo takes v2.7 in one PR that vendors it and runs `migrate`. `migrate` stays through v2.x and goes in
+v3.0, whose precondition is that `migrate --plan` shows no entry with changes in every repo.
 
 ## Appendix: grammar
 
