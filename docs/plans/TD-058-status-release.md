@@ -6,7 +6,8 @@ format: the closed Status set, the canonical entry form and `migrate`, which bot
 rounds, cadence.md §4.8). Rounds: six ran and ended at the cap (build-changing per design review: 9, 6, 2, 1 (F120
 rejected), 2, 2; the fact-checks' apart), then a closing fact-check (F166–F173); Paul answered `One more round`
 (2026-11-11), and round 7's design review read the whole plan and every fix through F173 and raised 2
-build-changing findings (F174–F182, fixed and read by its closing fact-check only). Draft 7 holds every finding's
+build-changing findings (F174–F182); its closing fact-check raised 7 more (F183–F192, applied, read by no design
+review). Draft 7 holds every finding's
 fix. Target design §7.1–§7.3's roster path was amended in PR #200 on Paul's note of 2026-11-11 (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
@@ -146,8 +147,8 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   it left alone.
 - **Unchanged is byte for byte.** An entry that needs no change (its `changes` empty) is returned as given, even
   where `canonical()` would reorder it: a reorder is `fmt`'s, never a migrate change. Neither a `canonical()` refusal
-  nor a Log stop meets an entry that needs no change (*canonical() refusal*, below); a stale or malformed
-  `decided` or `kinds` still stops one. A Log not last, or two Logs, stops only an
+  nor a Log stop meets an entry that needs no change (*canonical() refusal*, below); a `decided` the entry
+  cannot take, or a malformed `decided` or `kinds`, still stops one. A Log not last, or two Logs, stops only an
   entry with `changes` (*What it leaves*): one left alone is returned as given, as `check()` and the writers
   already meet it. A changed entry is returned
   in canonical form (D4). With a stop, the input is returned as given.
@@ -244,17 +245,17 @@ returned, the date's first, then the word's):
 | The Status | Becomes |
 |---|---|
 | word `resolved`, `done`, `built` or `designed` | `Resolved D` |
-| word `superseded`, its first part naming `by <id>` (`by` in any case) | `Superseded D by <the first such id>`; **stop** when that id is the entry's own (`Superseded: by its own id`) |
+| word `superseded`, its first part naming `by <id>` (`by` in any case) | `Superseded D by <the first such id>`; **stop** when that id is the entry's own, compared as for `moved` (`Superseded: by its own id`). A `Superseded D by <own id>` already in the set is unchanged here: a canonical self-supersede is `check()`'s and `_chain()`'s concern (`cycle`), not `migrate`'s |
 | word `superseded`, naming no `by <id>` | **stop** |
-| word `moved`, its first part naming exactly one id other than the entry's own | `Superseded D by <that id, as written>`, **listed** |
-| word `moved`, naming no id, or only the entry's own | `Dropped D`, **listed** |
+| word `moved`, its first part naming exactly one id once the entry's own is set aside (a bare `TD-n` of its number; a `<repo>#TD-n` is never its own) | `Superseded D by <that id, as written>`, **listed** |
+| word `moved`, naming no id once its own is set aside | `Dropped D`, **listed** |
 | word `moved`, naming two ids or more | **stop** |
 | word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
 | anything else (`Open`, `Partly`, `Live`, `In`, prose, a bold lead whose word is none of the above such as `**Resolved**.` or `**Note** …`, no Status) | **stop** |
 
 **A stop on the word is a decision for a person**, given back as `decided`: `resolved`, `dropped` or `superseded
 <id>` sets that form, dated `D`, in place of the table's row, and the whole old value is kept as one `was: <value>`
-line (none when the old value is empty or absent). `decided` does not answer a missing date: that is `closed_date`'s. A `decided` given for an entry that does not
+line (none when the old value is empty or absent). `decided` does not answer a missing date: that is `closed_date`'s. A `decided` `superseded <own id>` is the stop `refused: superseded by its own id`. A `decided` given for an entry that does not
 stop on its word, or of the other place's shapes, is a stop (`decided: nothing to answer`), so a stale decision
 never passes silently; one outside the four shapes, or a `kinds` key or value that is not one line of text (empty, or holding a
 newline), is the stop `refused: <why>`, never an exception (the command checks both shapes first, exit 2, D3). So a second run with the same `decided` stops: a
@@ -357,12 +358,17 @@ unusable, exit 2 (*split first*), as for every write.
   open dependents are pickable; after `migrate` the same blocker is `Dropped` (the block stays) or `Superseded`
   (released only when its successor chain ends resolved). The reverse happens too: a prose Status that read as
   `unknown-status` and a `decided` `resolved` releases its dependents. `migrate_entry()` sees one entry and cannot
-  tell, so the command compares, for each archived entry it changes, how `pickable()` reads it as a blocker before
-  and after (`_archived_status()`'s reading), and lists each open entry of the ledger `Blocked by` one whose reading
-  changes: `--plan` and `--json` carry `reblocked`, an object from each such open entry's id to `[{blocker,
-  before, after}]`, and `--dry-run` prints it after the entries. It is a listing, never a stop: the person sees
-  which work the closed set re-blocks or releases. Another repo that reads this archive through its resolver sees
-  the same change once this one migrates; that is the consumer's to read off its own `pickable()`.
+  tell, so the command compares, for every blocker id of every open entry of the ledger, its `_chain()` end state
+  (`open`, `resolved`, `dropped`, `unknown-status`, `unknown`, `unresolved`, `cycle`) over the ledger before and
+  after the migration, chains through unchanged archived entries included, and lists each open entry for which a
+  blocker's **released-ness** flips (released is the state `resolved`, as `pickable()` reads it): `reblocked`, an
+  object from each such open entry's id to `[{blocker, before, after}]`, `before` and `after` the end states. A
+  state change that keeps the block (`Won't fix`: `unknown-status` to `dropped`) is not listed. `reblocked` is
+  always a key of `--plan`'s and `--json`'s object (`{}` when empty, and `{}` on a stop, since no migrated text
+  exists there); `--dry-run` prints it after the entries only when it is not empty. It is a listing, never a stop:
+  the person sees which work the closed set re-blocks or releases. Another repo that reads this archive through
+  its resolver sees the same change once this one migrates, and this repo's listing cannot show it; that is the
+  consumer's to read off its own `pickable()`.
 - A write prints the paths it changed, or with `--json` the writers' one object with `entries` added.
 - It names `subject`, `migrate_subject(<--release>, <the count of entries it changed>)`, for the caller's one
   commit: the only ledger write whose `subject` is not null (the tripwire knows the migrate commit by it). Nothing
@@ -409,18 +415,29 @@ Status forms, an `Added` value, and each fixed Log line shape SPEC *The Log* lis
 `while`, `gate added`, the `gate lifted` shapes with their tails, `gate lift skipped`, `kept waiting`, `gate
 reassigned`, `archived`, `reopened`, `was`). Each production gets an accepting and a refusing fixture in
 `fixtures/grammar/`, as §7.4 *Grammar* requires. `tests/test_grammar.py` matches each fixture against the
-production's regular translation and requires its verdict to equal the module's, so a refusing fixture is one the
-regular production itself refuses (a missing date, a wrong word, a missing `by <id>`). What no regular production
-can refuse is written in prose under the block, as the appendix already leaves *a real day* to prose: a duplicate
-field, a Priority, Type, Blocked by or Part of line below the header block, a Log line whose words begin a writer
-prefix without its shape (`malformed`), and an unreal date; those have no grammar fixture (their cases are in
-`fixtures/migrate/` and `ledger_edit/check/status_*`). Each fixture is judged in `run.py`'s `grammar_cases` by a start symbol each: a
-Status by `status_problem()` on a minimal entry wrapping it (`## TD-1: x`, a blank line,
-`**Status:** <value>`; `archived` per production: `Open` false, the three archived forms true), a Log line by `log_line()` (accepted when it returns a record whose kind is
-not `malformed`; None refuses), a header block by `canonical()` reading it, wrapped as `## TD-1: x`, a blank line, the block (its refusing
-fixture a non-field line; the order is a rendering rule, not a grammar one), and an `Added`
-value by `migrate_entry()` on a minimal open entry (`Status: Open`, `archived=False`) carrying it (accepted when
-it returns no `changes` and no `listed`).
+production's regular translation and requires its verdict to equal the module's, so a refusing fixture is one both refuse.
+The grammar covers the writers' fixed Log shapes only: a line whose words begin no writer prefix is a `note`,
+which has no production and no fixture. Its start symbols, each with its own judge entry in `run.py`'s
+`grammar_cases`:
+- `status-open`, `status-resolved`, `status-superseded`, `status-dropped`: one per form, each judged by
+  `status_problem()` on a minimal entry (`## TD-1: x`, a blank line, `**Status:** <value>`), `archived` false for
+  `status-open` and true for the other three. Refusing fixtures: a missing date, `by` with no id, a tail.
+- `log-line`: judged by `log_line()`, accepted when it returns a record whose kind is not `malformed`; None
+  (a bad date, no `- `) and `malformed` (a writer prefix out of its shape: `- 2026-01-01: was: `, `- 2026-01-01:
+  gate added:`, a `gate lifted` with a bad tail, a `filed by` with a bad `while`) refuse. Each fixed shape's
+  production gets a refusing fixture of the second kind.
+- `header-block`: judged by `canonical()` on `## TD-1: x`, a blank line, the block; its production is exactly as
+  strict as `canonical()`'s field-line test (a line opening `**<name>:**`), so its refusing fixtures are
+  `Priority: High` and `**Priority** High`. The order is a rendering rule, not a grammar one.
+- `added`: judged by `migrate_entry()` on a minimal open entry (`Status: Open`, `archived=False`) carrying the
+  value, accepted when it returns no `changes` and no `listed`; refusing fixtures `2026-01-01 (x)` and
+  `2026-01-01.`.
+
+What no regular production can refuse is written in prose under the block, as the appendix already leaves *a
+real day* to prose: a duplicate field, a Priority, Type, Blocked by or Part of line below the header block, a
+field name finer than `canonical()`'s test reads, and an unreal date; their cases are in `fixtures/migrate/` and
+`ledger_edit/check/status_*`. B4 changes `run.py`'s `grammar_cases` for these judges and nothing in
+`tests/test_grammar.py`.
 
 ## The `SPEC.md` text
 
@@ -559,7 +576,10 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   exit 1 (§7.4: *an unmapped Status word stops it with a list and writes nothing*); `--dry-run`; `--closed-dates`;
   `reblocked`: an archived `OBE` blocker an open entry waits on (re-blocked once `Dropped`) and a prose one answered
   `--as …=resolved` (released); `--closed-dates` keys padded and unpadded (one number); `Moved to <own id>`
-  (`Dropped`, listed) and `Superseded D by <own id>` (a stop) in `fixtures/migrate/`;
+  (`Dropped`, listed), `Moved to <own id> and TD-9` (`Superseded … by TD-9`), `Superseded 2026-01-10 BY <own
+  id>.` (a stop), a canonical `Superseded D by <own id>` (unchanged) and `--as …=superseded <own id>` (refused) in
+  `fixtures/migrate/`; a `reblocked` through an unchanged archived entry's chain, a `Won't fix` blocker (not
+  listed), and `reblocked` as `{}` with nothing to list and on a stop;
   `--stage-kind`, and a word outside the stage words, a word given twice and an empty `KIND` (exit 2); an `--as`
   id given twice, an unknown named `TD-n`, a bad `--closed-dates` key, and `--plan` with `--dry-run` (exit 2); a
   stop printed plain and with `--json`; `--base` and `--resolved` (exit 2); `--as`; a bad `--release` and a bad `--closed-dates`
