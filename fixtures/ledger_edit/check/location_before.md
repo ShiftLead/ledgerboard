@@ -6,6 +6,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** an old place.
@@ -14,6 +15,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** an old place.
@@ -22,6 +24,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 
 **Why:** a new place.
 
@@ -29,6 +32,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** an old place, rewritten.
@@ -37,6 +41,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** the wait became a gate.

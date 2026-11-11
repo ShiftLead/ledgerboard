@@ -410,6 +410,8 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
     if int(tid[3:]) in heading_nums(text) | heading_nums(arch) | files:
         raise Unusable(f"{tid} is in the ledger or its archive already")
     day = _today(today)
+    if sum(field_key(n) == "location" for n, _ in fields) > 1:
+        raise Unusable("a field is given twice: location")
     loc = [v for n, v in fields if field_key(n) == "location" and str(v or "").strip()]
     fields = [(n, v) for n, v in fields if field_key(n) != "location"]  # v2.7: a body section, not a header field
     given = {field_key(n) for n, _ in fields}

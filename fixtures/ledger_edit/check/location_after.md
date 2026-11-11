@@ -6,6 +6,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** an old place.
@@ -14,6 +15,7 @@ Ledgerboard: 2
 
 **Priority:** Medium
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor.py`
 
 **Why:** an old place.
@@ -22,6 +24,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/tool.py`
 
 **Why:** a new place.
@@ -30,6 +33,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 **Location:** `src/vendor/`
 
 **Why:** an old place, rewritten.
@@ -38,6 +42,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-02
+**Status:** Open
 
 **Why:** the place became a body section.
 
@@ -47,6 +52,7 @@ Ledgerboard: 2
 
 **Priority:** Low
 **Added:** 2026-01-14
+**Status:** Open
 **Location:** `src/ships.py`
 
 **Why:** a new place.
