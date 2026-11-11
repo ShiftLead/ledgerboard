@@ -85,6 +85,9 @@ Fixtures, each an invented input and its expected JSON:
 - ``ledger_writer/<case>/`` (v2.4): the ledger writer, ``ledger.py`` — laid out as ``board_writer/``'s cases, each
   ``argv`` carrying ``--json`` so what it prints is one object: a report, the paths written, the plan, why it
   refused, or the ids it ``needs``.
+- ``migrate/cases.json`` → ``migrate/expected.json`` (v2.7): ``migrate_entry()`` of one entry's invented text,
+  open or archived, with its ``closed_date``, ``kinds`` and ``decided``; its output run again, which changes
+  nothing; and ``status_problem()`` of each form, in its place and out of it.
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
   ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
@@ -865,6 +868,31 @@ def origin_cases(L, spec: dict) -> dict:
             "item_problem": {x: L.item_problem(x) for x in spec.get("item_problem", [])}}
 
 
+def migrate_cases(L, spec: dict) -> dict:
+    """``migrate_entry()`` of one entry (v2.7), each case's text with ``archived`` and its own ``closed_date``,
+    ``kinds`` and ``decided`` at the file's ``today``; ``again`` is its output run once more without ``decided``
+    (null after a stop), which must change nothing; ``gate_age`` (a case naming a ``gate``) that gate's age before
+    and after; and ``status_problem()`` of each ``status_problem`` case."""
+    if not hasattr(L, "migrate_entry"):  # a module older than v2.7
+        return {"missing": "the module has no migrate_entry — older than v2.7"}
+
+    def run(c: dict) -> dict:
+        kw = {k: c[k] for k in ("closed_date", "kinds", "decided") if k in c}
+        got = L.migrate_entry(c["text"], archived=c["archived"], today=c.get("today", spec["today"]), **kw)
+        if "gate" in c:  # a gate's age before and after: a line migrate writes first in the Log moves it
+            got = dict(got, gate_age=[str(L.gate_age(t, c["gate"])) for t in (c["text"], got["text"])])
+        if got["stops"]:
+            return dict(got, again=None)
+        kw.pop("decided", None)
+        again = L.migrate_entry(got["text"], archived=c["archived"], today=c.get("today", spec["today"]), **kw)
+        return dict(got, again={"same_text": again["text"] == got["text"], "changes": again["changes"],
+                                "stops": again["stops"]})
+
+    return {"migrate_entry": {c["name"]: run(c) for c in spec["migrate_entry"]},
+            "status_problem": {c["name"]: L.status_problem(c["text"], archived=c["archived"])
+                               for c in spec["status_problem"]}}
+
+
 def event_cases(L, spec: dict) -> dict:
     """Events (v2.4): ``parse_check()`` of each check's value (each confinement refusal among them) and
     ``parse_event_section()`` of each section's text."""
@@ -953,6 +981,8 @@ def cases(L, root: Path):
     yield root / "host-log-pure" / "expected.json", host_log_cases(L, spec)
     spec = json.loads((root / "verdict" / "cases.json").read_text(encoding="utf-8"))
     yield root / "verdict" / "expected.json", verdict_cases(L, spec, root)
+    spec = json.loads((root / "migrate" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "migrate" / "expected.json", migrate_cases(L, spec)
 
 
 def main(argv: list[str] | None = None) -> int:

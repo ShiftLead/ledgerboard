@@ -278,9 +278,10 @@ def parse_gates(raw: str | None) -> dict:
     return out
 
 
-def _real_day(text: str) -> bool:
+def _real_day(text: str | None) -> bool:
+    """``text`` is ``YYYY-MM-DD`` and a calendar day (``2026-02-30`` is not)."""
     try:
-        return bool(ISO_DAY_RE.fullmatch(text)) and date.fromisoformat(text).isoformat() == text
+        return bool(text) and bool(ISO_DAY_RE.fullmatch(text)) and date.fromisoformat(text).isoformat() == text
     except ValueError:
         return False
 
@@ -3845,6 +3846,399 @@ def status_notes_to_log(text: str) -> str:
     return canonical(_render(m.group(1), m.group(3), new_header, "\n\n".join(t for _, t in new_sections)))
 
 
+# ---------------------------------------------------------------------------------------------
+# v2.7: the closed Status set and migrate (SPEC *Migrating to v2.7*)
+# ---------------------------------------------------------------------------------------------
+
+STAGE_WORDS = ("designed", "built", "partly", "live", "in")  # an open entry's retired stage words
+STATUS_FORM_RE = re.compile(rf"(?P<word>Resolved|Superseded|Dropped) (?P<date>\d{{4}}-\d{{2}}-\d{{2}})"
+                            rf"(?: by (?P<by>{LOG_ID}))?")
+# What replaces a retired Status word, by the entry's place: status_problem()'s detail.
+STATUS_REPLACES = {False: {**{w: "Open, the stage in Kind" for w in STAGE_WORDS},
+                           **{w: "archive it, or Open" for w in ("done", "moved", "obe")}},
+                   True: {"done": "Resolved", "built": "Resolved", "designed": "Resolved",
+                          "moved": "Superseded or Dropped", "obe": "Dropped",
+                          **{w: "Resolved, Superseded or Dropped" for w in ("partly", "live", "in")}}}
+STATUS_FORMS = {False: "an open entry's Status is Open alone",
+                True: "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D"}
+STATUS_REMEDY = "run migrate, which maps it, lists it, or names what a person decides"
+# An id standing alone in a Status's text (v2.7): not inside a longer token, not followed by `.<letter>`.
+ID_ALONE = rf"(?<![A-Za-z0-9_/#-])(?:{REPO}#)?TD-\d+(?![A-Za-z0-9_/#-])(?!\.[A-Za-z])"
+ID_ALONE_RE = re.compile(ID_ALONE)
+BY_ID_RE = re.compile(rf"(?<![A-Za-z0-9_])(?i:by)[ \t]+(?P<id>{ID_ALONE})")
+DAY_IN_TEXT_RE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
+MIGRATE_DECIDED_RE = re.compile(rf"(?P<form>resolved|dropped|open|superseded (?P<id>(?:{REPO}#)?TD-\d+))")
+WONT_FIX_RE = re.compile(r"wo(?:n'|n)t fix", re.IGNORECASE)
+
+
+def _status_in_set(value: str | None, archived: bool) -> bool:
+    if not archived:
+        return value == "Open"
+    m = STATUS_FORM_RE.fullmatch(value or "")
+    return bool(m and _real_day(m.group("date")) and (m.group("by") is not None) == (m.group("word") == "Superseded"))
+
+
+def status_problem(text: str, *, archived: bool) -> str | None:
+    """The problem of one entry's Status against the four forms (v2.7, SPEC *Migrating to v2.7*), or None:
+    ``Open`` in the ledger; ``Resolved D``, ``Superseded D by <id>`` or ``Dropped D`` in the archive, exactly as
+    the writers write them. The Status is the one ``entries()`` reads, from the header block. The sentence names
+    the form the entry's place takes and the value's first word, never the whole value."""
+    found = entries(text)
+    if not found:
+        return None
+    value = found[0]["fields"].get("status")
+    if _status_in_set(value, archived):
+        return None
+    said = (value or "").strip()
+    if not said:
+        detail = "it has none"
+    else:
+        word, key = _status_word(said), first_word(said).replace("*", "")
+        own = ("resolved", "superseded", "dropped") if archived else ("open",)
+        if key in own:
+            detail = f"this one is {word}, not in that form"
+        elif key in STATUS_REPLACES[archived]:
+            detail = f"this one is {word} (retired: {STATUS_REPLACES[archived][key]})"
+        elif not archived and key in ("resolved", "superseded", "dropped"):
+            detail = f"this one is {word} (archived: archive it, or Open)"
+        else:
+            detail = f"this one is {word}"
+    return f"{STATUS_FORMS[archived]} — {detail} — {STATUS_REMEDY}"
+
+
+def _lenient_parts(text: str) -> tuple[re.Match, list[tuple[str, str]], str]:
+    """``_entry_parts()``'s reading of an entry ``canonical()`` refuses, as ``entries()`` reads it: a header line
+    that is not a field passed over, a repeated field's first kept. ``text`` is one entry (``_entry_problem()``)."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = text.split("\n")
+    i = 1
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    header, seen = [], set()
+    while i < len(lines) and lines[i].strip():
+        m = FIELD_RE.match(lines[i])
+        if m and field_key(m.group(1)) not in seen:
+            seen.add(field_key(m.group(1)))
+            header.append((m.group(1), m.group(2)))
+        i += 1
+    j = len(lines)
+    while j > i and not lines[j - 1].strip():
+        j -= 1
+    while i < j and not lines[i].strip():
+        i += 1
+    return HEADING_RE.match(text), header, "\n".join(lines[i:j])
+
+
+def _first_real_day(text: str | None) -> str | None:
+    """The first date in ``text`` that is a calendar day."""
+    return next((d for d in DAY_IN_TEXT_RE.findall(text or "") if _real_day(d)), None)
+
+
+def _closing_source(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]) -> str | None:
+    """The ``**Resolved:**`` line's date (or an older ``Resolved`` header field's), when it is a real day."""
+    for text in [sections[i][1] for i in _keyed(sections, "resolved")] + [_value(header, "resolved") or ""]:
+        m = ISO_DAY_RE.search(text)
+        if m:
+            return m.group(0) if _real_day(m.group(0)) else None
+    return None
+
+
+def _added_day(header: list[tuple[str, str]]) -> str | None:
+    m = ISO_DAY_RE.search(_value(header, "added") or "")
+    return m.group(0) if m and _real_day(m.group(0)) else None
+
+
+def _migrate_lift(value: str, header: list[tuple[str, str]], sections: list[tuple[str | None, str]]
+                  ) -> tuple[re.Match, str, list[tuple[str, str]], bool] | None:
+    """(the head's match, the head, the lines the lift writes, whether a tail is among them) when the head reads and every date the lift
+    would use is a real day; else None, and the value is read as a head that does not read."""
+    m = STATUS_HEAD_RE.match(value)
+    if not m or m.group("word").lower() not in STATUS_WORDS or (m.group("date") and not _real_day(m.group("date"))):
+        return None
+    tail, *was = value[m.end():].split(WAS_CUT)
+    tail = tail.strip()
+    if tail.startswith(":"):
+        tail = tail[1:].strip()
+    fallback = _fallback_day(header, sections)
+    lines = [(m.group("date") or fallback, _log_text(tail))] if tail else []
+    for w in (w.strip() for w in was):
+        if w:
+            inner = STATUS_HEAD_RE.match(w)
+            lines.append(((inner and inner.group("date")) or fallback, f"was: {w}"))
+    if any(not _real_day(d) for d, _ in lines):
+        return None
+    return m, value[:m.end()].rstrip(), lines, bool(tail)
+
+
+def _ids_alone(text: str) -> list[str]:
+    """The ids standing alone in ``text``, in order, each once (a local id by its number)."""
+    out, seen = [], set()
+    for x in ID_ALONE_RE.findall(text):
+        key = ref_key(x) if "#" in x else f"#{_num(x)}"
+        if key not in seen:
+            seen.add(key)
+            out.append(x)
+    return out
+
+
+def _is_own(x: str, tid: str) -> bool:
+    return "#" not in x and _num(x) == _num(tid)
+
+
+def _wrapped(comment: str) -> bool:
+    """``comment`` is wholly wrapped in one pair of parentheses: its first ``(`` closes at its last ``)``."""
+    if not (comment.startswith("(") and comment.endswith(")")):
+        return False
+    depth = 0
+    for k, ch in enumerate(comment):
+        depth += (ch == "(") - (ch == ")")
+        if depth == 0:
+            return k == len(comment) - 1
+    return False
+
+
+def _migrate_log(sections: list[tuple[str | None, str]], lines: list[tuple[str, str, bool]]
+                 ) -> list[tuple[str | None, str]]:
+    """``sections`` with ``lines`` ([(date, words, first)]) in the Log, made at the end when there is none: each
+    by date, after any line of an equal date, or (``first``) before the first line dated on or after its own.
+    A line whose date and words are already in the Log is not written again."""
+    sections = list(sections)
+    at = _log_section(sections)
+    if at is None:
+        sections.append((LOG_LEAD, f"**{LOG_LEAD}**"))
+        at = len(sections) - 1
+    lead, _, rest = sections[at][1].partition("\n")
+    have = [ln for ln in rest.split("\n") if ln.strip()]
+    there = {ln.rstrip() for ln in _log_body_lines(sections[at][1])}
+    for day, words, first in lines:
+        new = f"- {day}: {words}"
+        if new in there:
+            continue
+        there.add(new)
+        pos, last = len(have), None
+        for i, ln in enumerate(have):
+            m = LOG_LINE_RE.match(ln)
+            last = m.group("date") if m else last
+            if last is not None and (last >= day if first else last > day):
+                pos = i
+                break
+        have.insert(pos, new)
+    sections[at] = (sections[at][0], "\n".join([lead, *have]))
+    return sections
+
+
+def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: str | None = None,
+                  kinds: Mapping[str, str] | None = None, decided: str | None = None) -> dict:
+    """One entry migrated to v2.7's forms (SPEC *Migrating to v2.7*): its Status into the closed set, its Status
+    notes and an ``Added`` comment into its Log, a header ``Location`` into the body. Pure: ``archived`` says
+    where the entry is, ``today`` is the UTC day, ``closed_date`` the caller's archiving date for it, ``kinds``
+    the caller's map from an open stage word to a ``Kind`` value, ``decided`` the caller's answer to a Status
+    the rules stop on (``resolved``, ``dropped``, ``superseded <id>``; ``open``). Returns ``{text, changes,
+    listed, stops}``: an entry with no change is returned byte for byte, a changed one in canonical form, and
+    with a stop the input is returned as given. Never raises for the entry's text."""
+    changes: list[str] = []
+    listed: list[str] = []
+    stops: list[str] = []
+
+    def stopped(*why: str) -> dict:
+        return {"text": text, "changes": [], "listed": listed, "stops": [*stops, *why]}
+
+    why = _entry_problem(text.replace("\r\n", "\n").replace("\r", "\n"))
+    if why:
+        return stopped(f"refused: {why}")
+    try:
+        day = utc_day(today, "today")
+    except Refused as e:
+        return stopped(f"refused: {e}")
+    if decided is not None and not (isinstance(decided, str) and MIGRATE_DECIDED_RE.fullmatch(decided)):
+        return stopped(f"refused: decided is resolved, dropped, superseded <id> or open, not {decided!r}")
+    if kinds is not None:
+        if not isinstance(kinds, Mapping):
+            return stopped("refused: kinds is a map from a stage word to a Kind value")
+        for k, v in kinds.items():
+            for what, x in (("key", k), ("value", v)):
+                if not isinstance(x, str) or not x.strip() or "\n" in x or "\r" in x:
+                    return stopped(f"refused: a kinds {what} is one line of text, not {x!r}")
+    kinds = {k.strip().lower(): v.strip() for k, v in (kinds or {}).items()}
+    try:
+        canonical(text)
+        refused = None
+    except Refused as e:
+        refused = str(e)
+    m, header, body = _lenient_parts(text)
+    tid = m.group(1)
+    sections = _entry_sections(body)
+    if any((f := FIELD_RE.match(ln)) and field_key(f.group(1)) == "status" for ln in body.split("\n")):
+        listed.append("Status line below the header: left")
+    log: list[tuple[str, str, bool]] = []
+    value = _value(header, "status")
+    said = (value or "").strip()
+    word = _status_word(said)
+    key = first_word(said)
+    first_part = said.split(WAS_CUT)[0]
+    answered = False
+
+    def text_day() -> str | None:
+        found = _first_real_day(first_part)
+        if found:
+            listed.append(f"date {found} read from the Status's text")
+        return found
+
+    if not archived:
+        lift = _migrate_lift(said, header, sections) if said else None
+
+        def was_day() -> str:
+            head_day = lift[0].group("date") if lift else None
+            return head_day or (None if lift else text_day()) or _closing_source(header, sections) \
+                or _added_day(header) or day
+
+        new = "Open"
+        if said == "Open":
+            new = None
+        elif not said:
+            listed.append("no Status: set to Open")
+        elif key in STAGE_WORDS:
+            if lift:
+                log += [(d, w, False) for d, w in lift[2]]
+                log.append((was_day(), f"was: {lift[1]}", False))
+            else:
+                log.append((was_day(), f"was: {said}", False))
+            if key in kinds:
+                old_kind = _value(header, "kind")
+                if old_kind != kinds[key]:
+                    changes.append(f"Kind {old_kind if old_kind else 'none'} → {kinds[key]}")
+                    if old_kind:
+                        log.append((day, f"Kind {old_kind} → {kinds[key]} (migrate)", False))
+                    header = _with(header, "Kind", kinds[key])
+            else:
+                listed.append(f"stage word {word}: Kind not set")
+        elif lift and lift[0].group("word").lower() == "open":
+            log += [(d, w, False) for d, w in lift[2]]
+            bare = lift[0].group("by") is None and not lift[1].endswith(".")  # `Open` or `Open D`
+            if not (bare and lift[3]):  # a lifted tail carries the date; anything else of the head is kept
+                log.append((was_day(), f"was: {lift[1]}", False))
+        elif key.replace("*", "") in ARCHIVED_WORDS:
+            if decided != "open":
+                stops.append(f"Status {word} on an open entry")
+            else:
+                answered = True
+                listed.append("decided: open")
+                log.append((was_day(), f"was: {said}", False))
+        else:
+            listed.append(f"Status {word} set to Open")
+            log.append((was_day(), f"was: {said}", False))
+        if decided is not None and not answered:
+            stops.append("decided: nothing to answer")
+        if new is not None and not stops:
+            changes.insert(0, f"Status {said or '(none)'} → Open")
+            header = _with(header, "Status", "Open")
+    elif _status_in_set(said, True):
+        if decided is not None:
+            stops.append("decided: nothing to answer")
+    else:
+        head_m = STATUS_HEAD_RE.match(said)
+        head_day = head_m.group("date") if head_m and _real_day(head_m.group("date")) else None
+        real_closed = closed_date if isinstance(closed_date, str) and _real_day(closed_date) else None
+        closing = head_day or _closing_source(header, sections) or real_closed or text_day()
+        if not closing:
+            stops.append("no date for the Status")
+        new_word, new_by, word_stop = None, None, None
+        if key in ("resolved", "done", "built", "designed"):
+            new_word = "Resolved"
+        elif key == "superseded":
+            by = BY_ID_RE.search(first_part)
+            if not by:
+                word_stop = "Superseded: no by <id>"
+            elif _is_own(by.group("id"), tid):
+                word_stop = "Superseded: by its own id"
+            else:
+                new_word, new_by = "Superseded", by.group("id")
+        elif key == "moved":
+            ids = [x for x in _ids_alone(first_part) if not _is_own(x, tid)]
+            if len(ids) > 1:
+                word_stop = f"Moved: {len(ids)} ids"
+            elif ids:
+                new_word, new_by = "Superseded", ids[0]
+                listed.append(f"Moved: Superseded by {ids[0]}")
+            else:
+                new_word = "Dropped"
+                listed.append("Moved: Dropped")
+        elif key in ("obe", "dropped") or WONT_FIX_RE.match(said):
+            new_word = "Dropped"
+        else:
+            word_stop = f"Status {word or '(none)'}: no archived form"
+        if decided is not None:
+            got = MIGRATE_DECIDED_RE.fullmatch(decided)
+            if word_stop is None or got.group("form") == "open":
+                stops.append("decided: nothing to answer")
+            elif got.group("id") and _is_own(got.group("id"), tid):
+                stops.append("refused: superseded by its own id")
+            else:
+                answered, word_stop = True, None
+                new_word, new_by = got.group("form").split(" ")[0].capitalize(), got.group("id")
+                listed.append(f"decided: {decided}")
+        if word_stop:
+            stops.append(word_stop)
+        if not stops:
+            new = f"{new_word} {closing}" + (f" by {new_by}" if new_by else "")
+            lift = None if answered else _migrate_lift(said, header, sections) if said else None
+            if lift and closing == head_day and (new_by is None or new_by == lift[0].group("by")):
+                log += [(d, w, False) for d, w in lift[2]]
+                if lift[1] != new:
+                    log.append((closing, f"was: {lift[1]}", False))
+            elif said:
+                log.append((closing, f"was: {said}", False))
+            changes.insert(0, f"Status {said or '(none)'} → {new}")
+            header = _with(header, "Status", new)
+    added = _value(header, "added")
+    if added is not None:
+        a = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(\s+(.*))?", added.strip(), re.DOTALL)
+        if a and _real_day(a.group(1)) and a.group(2):
+            comment = a.group(3).strip()
+            if _wrapped(comment):
+                comment = comment[1:-1].strip()
+            if comment:
+                log.append((a.group(1), _log_text(comment), True))
+                changes.append("Added comment → Log")
+            else:
+                changes.append("Added comment (empty) removed")
+            header = _with(header, "Added", a.group(1))
+        elif not (a and _real_day(a.group(1))):
+            listed.append(f"Added {added.strip()}: not a date")
+    location = _value(header, "location")
+    if location is not None:
+        if not location.strip():
+            header = _with(header, "Location", None)
+            changes.append("Location (empty) removed")
+        elif _keyed(sections, "location"):
+            stops.append("Location in the header and the body")
+        else:
+            header = _with(header, "Location", None)
+            sections.insert(_section_place(sections), ("Location:", f"**Location:** {location.strip()}"))
+            changes.append("Location → body")
+    if stops:
+        return stopped()
+    if not changes:
+        if refused:
+            listed.append("canonical() refuses it: left alone")
+        return {"text": text, "changes": [], "listed": listed, "stops": []}
+    if refused:
+        return stopped(f"refused: {refused}")
+    before = log_problems(text)
+    if any(k == "log-not-last" for k, _ in before):
+        return stopped("Log not last")
+    if log:
+        sections = _migrate_log(sections, log)
+    out = canonical(_render(tid, m.group(3), header, "\n\n".join(t for _, t in sections)))
+    after_status = entries(out)[0]["fields"].get("status")
+    if status_problem(out, archived=archived):
+        return stopped(f"migrated Status {after_status} still outside the set")
+    new_problems = [p for p in log_problems(out) if p not in before]
+    if new_problems:
+        return stopped(f"migrated Log: {new_problems[0][1]}")
+    return {"text": out, "changes": changes, "listed": listed, "stops": []}
+
+
 def _filed_line(filed: Mapping, what: str = "filed") -> str:
     """``filed by <who>, session <s>[, while <id>]: "<words>"`` from {who, session, words, while}."""
     who, session, w = (str(filed.get(k) or "") for k in ("who", "session", "while"))
@@ -3862,6 +4256,13 @@ def _before_log(sections: list[tuple[str | None, str]]) -> int:
     at = _log_section(sections)
     return len(sections) if at is None else at
 
+
+def _section_place(sections: list[tuple[str | None, str]]) -> int:
+    """Where a section the body lacks goes (``edit``'s rule, and ``migrate``'s for a Location): after the first
+    Why, else before the first Done when, Related or Log, else at the end."""
+    why_at = _keyed(sections, "why")
+    ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related") + _keyed(sections, "log"))
+    return why_at[0] + 1 if why_at else ends[0] if ends else len(sections)
 
 def _status_to_log(header: list[tuple[str, str]], sections: list[tuple[str | None, str]], day: str
                    ) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]]]:
@@ -3991,9 +4392,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         if at:
             sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")
         else:
-            why_at = _keyed(sections, "why")
-            ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related") + _keyed(sections, "log"))
-            pos = why_at[0] + 1 if why_at else ends[0] if ends else len(sections)
+            pos = _section_place(sections)
             sections.insert(pos, (f"{name}:", f"**{name}:** {said}"))
         after = parse_event_section(sections[at[0] if at else pos][1])
         carried = parse_gates(_value(header, "blocked by"))["events"]
