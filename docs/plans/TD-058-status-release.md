@@ -3,7 +3,7 @@
 **Status:** Draft 5, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
-rounds, cadence.md §4.8). Rounds: round 1 running (draft 5 holds its fact-checks' fixes, F1–F39) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+rounds, cadence.md §4.8). Rounds: round 1 running (draft 5 holds its fact-checks' fixes, F1–F42) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
@@ -51,7 +51,8 @@ by`), flagged only as ℹ.
 - **S5.** `Location` moves to the body (a canonical-form change).
 - **S6.** `Waits` leaves the canonical order; `migrate` does not touch a `Waits` line.
 - **S7.** `migrate` ships in v2.7, stays through every v2.x and is removed in v3.0 with the reading of the old
-  forms; v3.0's precondition is that `migrate --dry-run` gives no diff in every roster repo. This PR adds it to
+  forms; v3.0's precondition is that `migrate --dry-run` gives no diff in every roster repo (no entry with
+  `changes`; an entry only listed does not block). This PR adds it to
   the target design's §7.1 v3.0 row.
 - **S8.** The grammar appendix adds the header block and the Log's fixed line shapes.
 
@@ -208,7 +209,7 @@ archived ones with `archived=True`. A v1 file is unusable, exit 2 (*split first*
   stops}`. With a stop, the plan is empty and the exit is 1, as for the write; otherwise 0. `--dry-run` is the same
   printed as text, entry by entry (the listing a remodel PR carries; the name target design §7.3 and S7 use), or
   `nothing to migrate` when no entry has `changes` (its `listed` still printed). S7's v3.0 precondition,
-  *`migrate --dry-run` gives no diff*, is read off `--plan`: exit 0 and no entry with `changes` or `stops`; an entry
+  *`migrate --dry-run` gives no diff*, is read off `--plan`: exit 0 and no entry with `changes`; an entry
   only listed (an `Added` that does not begin with a date) is a person's to judge and does not block it.
 - A write prints the paths it changed, or with `--json` the writers' one object with `entries` added.
 - It names `subject`, `migrate_subject(<--release>, <the count of entries it changed>)`, for the caller's one commit: the only ledger
@@ -353,7 +354,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   error where the ledger declares major 2, ℹ where not), and the ℹ `retired` Status records go. A fact-check found
   these among them: `ledger/{gates,belowheader,crossversion,events,supersede,unknownstatus,escaped}.md` and their
   archives, and `ledger/parts.archive.md`. And `ledger_edit`'s `check` cases (`fixtures/ledger_edit/cases.json`)
-  filter `check()`'s output to the kinds at `run.py:597-601`; B3 adds `status` to that filter for every `check`
+  filter `check()`'s output to the kinds at `run.py:599-601`; B3 adds `status` to that filter for every `check`
   case, so the nine existing ones gain records where their inputs, `ledger_edit/check/*.md`, hold a Status outside
   the set (`check/after.archive.md`'s `Resolved 2026-01-20: done` among them), and the new `status_*` cases use it.
   Their inputs carry old forms on purpose, to prove the readers still read them, so **the inputs stay** and only the
