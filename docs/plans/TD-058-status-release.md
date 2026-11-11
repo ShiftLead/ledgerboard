@@ -3,7 +3,7 @@
 **Status:** Draft 1, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
-rounds, cadence.md §4.8). Rounds: round 1 running (draft 3 holds its fact-checks' fixes, F1–F27) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+rounds, cadence.md §4.8). Rounds: round 1 running (draft 4 holds its fact-checks' fixes, F1–F33) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
@@ -73,19 +73,21 @@ An entry's Status is one of four forms, and its form agrees with where the entry
   2026-10-03` and `Resolved 2026-10-03: shipped` are all outside the set. So is an entry with no `Status`.
 - **Where it lives:** a new pure function, `status_problem(text, *, archived) -> str | None`, gives the one problem of
   one entry's Status, or None. `check()` runs it over every entry of the ledger (`archived=False`) and of the archive
-  (`archived=True`), and appends its records **after** the loop that grades records standing under `old` (as
-  `archive-open-parts` is appended), so no `status` record is ever made standing or ℹ by it.
+  (`archived=True`), and appends its records on both of `check()`'s exits: before its early return when `old` is
+  None, and **after** the loop that grades records standing under `old` (where `archive-open-parts` is appended), so
+  no `status` record is ever made standing or ℹ by it.
 - **Its flag:** kind `status`, field `status`, an **error on every entry, never standing**, whether or not `check()`
   is given `old`, on a ledger that declares major 2 (*Versions*). On a v1 ledger it is ℹ: `migrate` takes a v2
   directory, so a v1 ledger splits first (*The ledger as a directory*).
 - **Its text names the form, never the whole value**, so an edit that changes only a tail (a `note` lifting it)
   leaves the flag's text as it was, and the writer, which refuses a write only for an error the ledger before it did
-  not have, still writes it. The text is `⚠ TD-n: Status <Word> is not <the form the place takes> — migrate maps it`,
+  not have, still writes it. The text is `⚠ TD-n: Status <Word> is not <the form the place takes> — run migrate, which maps it or lists it
+  for a person`,
   `<Word>` being the value's first word as `first_word()` reads it (or *no Status*), and, for a word *Retired words*
   lists, ` (retired: <what replaces it>)` before the dash, by the entry's place: on an open entry `RETIRED_STATUS`'s
   text for the five open words, and `Open` for an archived word; on an archived entry `Resolved` for `done`, `built`
   and `designed`, `Superseded or Dropped` for `moved`, `Dropped` for `obe`, and `Resolved, Superseded or Dropped`
-  for an open word (a second map beside `RETIRED_STATUS`).
+  for `partly`, `live` and `in` (a second map beside `RETIRED_STATUS`).
 - **It replaces v2.4's ℹ `retired` on an open entry's Status word**: `pickable()`'s flags no longer carry that
   record (the word is still reserved, and the error names it retired). A caller that reads only `pickable()`'s flags
   so loses that notice; every consumer's merge gate runs `check()`, which carries the error. `pickable()`'s `unknown-status` and
@@ -114,7 +116,9 @@ was: `, and *the segments* each ` — was: ` part. *The value's date* is the hea
 or not the head reads) the first `YYYY-MM-DD` in the value before its first ` — was: `, else none. *The first word* is `first_word()`'s.
 *Lifting* is `status_notes_to_log()`'s, with its own dating: the tail as one line dated by the head's date, else the
 `**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the same
-fallbacks; each in among the Log by date, after any line of an equal date (its `_log_insert`). *Its new form takes
+fallbacks; each in among the Log by date, after any line of an equal date (its `_log_insert`). Where a tail or segment would
+have no date (no head date, no `**Resolved:**` line, no `Added`), `status_notes_to_log()` lifts nothing; `migrate`
+then treats the value as **a head that does not read**. *Its new form takes
 only its head* when the date and any `by <id>` the new Status keeps come from the head (its word is mapped); a value
 whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case, which the head grammar
 does not read, a date found only by the scan) is treated as **a head that does not read**.
@@ -202,7 +206,9 @@ archived ones with `archived=True`. A v1 file is unusable, exit 2 (*split first*
 - `--plan` writes nothing and prints one JSON object: the writers' plan (each path and its new text) and
   `entries`, an object from each entry id `migrate_entry()` changed, listed or stopped to its `{changes, listed,
   stops}`. With a stop, the plan is empty and the exit is 1, as for the write; otherwise 0. `--dry-run` is the same
-  printed as text, entry by entry (the listing a remodel PR carries; the name target design §7.3 and S7 use).
+  printed as text, entry by entry (the listing a remodel PR carries; the name target design §7.3 and S7 use), or
+  `nothing to migrate`. S7's v3.0 precondition, *`migrate --dry-run` gives no diff*, is read off `--plan`: exit 0
+  with `entries` empty.
 - A write prints the paths it changed, or with `--json` the writers' one object with `entries` added.
 - It names `subject`, `migrate_subject(<--release>, <the count of entries it changed>)`, for the caller's one commit: the only ledger
   write whose `subject` is not null (the tripwire knows the migrate commit by it). Nothing changed: exit 0, `subject`
@@ -344,13 +350,14 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   `fixtures/ledger/*` case, so every entry there with no Status or one outside the set gains a `status` record (an
   error where the ledger declares major 2, ℹ where not), and the ℹ `retired` Status records go. A fact-check found
   these among them: `ledger/{gates,belowheader,crossversion,events,supersede,unknownstatus,escaped}.md` and their
-  archives, `ledger/parts.archive.md`, and in `ledger_edit/` `{archived,both_resolved,header_resolved,heading_only,
-  no_status,open_comment,two_entries}.md`. Their inputs carry old forms on purpose, to prove the readers still read
-  them, so **the inputs stay** and only the expected JSON changes. B3 regenerates from a real run and lists, in its
-  PR, each file that differs and why its change is only those records; a case whose own assertion breaks is changed
-  and said. `ledger_edit`'s check output is filtered to the kinds at `run.py:596-601`, so B3 adds `status` there for
-  its `status_*` cases. `tests/test_ledgerboard.py`'s `check()` calls on ledgers whose entries have no Status
-  (about 34) are updated in B3: a Status added, or the new error asserted.
+  archives, and `ledger/parts.archive.md`. And `ledger_edit`'s `check` cases (`fixtures/ledger_edit/cases.json`)
+  filter `check()`'s output to the kinds at `run.py:596-601`; B3 adds `status` to that filter for every `check`
+  case, so the nine existing ones gain records where their inputs, `ledger_edit/check/*.md`, hold a Status outside
+  the set (`check/after.archive.md`'s `Resolved 2026-01-20: done` among them), and the new `status_*` cases use it.
+  Their inputs carry old forms on purpose, to prove the readers still read them, so **the inputs stay** and only the
+  expected JSON changes. B3 regenerates from a real run and lists, in its PR, each file that differs and why its
+  change is only those records; a case whose own assertion breaks is changed and said. `tests/test_ledgerboard.py`'s `check()` calls on ledgers whose entries have no Status
+  (about 30) are updated in B3, which lists each: a Status added, or the new error asserted.
 - **`fixtures/grammar/`** (B4): an accepting and a refusing case per D5 production.
 
 ## The builds (filed on Paul's go after the rounds)
