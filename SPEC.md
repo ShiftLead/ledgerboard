@@ -1045,7 +1045,9 @@ when the Context names this repo's entry (a bare `TD-n`) and nothing listed stil
 — neither that entry nor any `Parts:` id (an id `entries_after` lacks carries nothing). Its callers give it the
 open entries' texts alone, so an archived part, left out, carries nothing (v2.6). Every other answer is a
 work order, and the item stays open until whoever acts on it closes it; a lifting answer on another repo's entry
-stays open until that repo's lift merges.
+stays open until that repo's lift merges. A lifting answer that does not close the item is never written on it by
+the `set by=` route's board half (*The board writer*, v2.8): the item stays unanswered until the person answers it
+for the entries left.
 
 **The gate sweep** (v2.4) is what a host's periodic sweep of one repo's ledger does, decided here and nowhere else;
 the host gathers the inputs (the boards it reads, its event checks' outcomes) and writes the outputs. It keeps no
@@ -1136,17 +1138,22 @@ the same on every machine. The diff accounts for a removal by a new `gate reassi
 the gate, or by a new `gate lifted … answer` line whose suffix fits the board (`covers()`, states `open` and
 `decided`, being what covers):
 - **no suffix:** an item covering the gate at the base carries a new or changed `Decided:` at the head (open and
-  decided, or closed), or, decided already, is newly closed `— lifted.` (the last part of a shared item);
+  decided, or closed), or, decided already, is newly closed `— lifted.` (the last part of a shared item an older
+  writer decided; from v2.8 the last part's item is undecided at the base and gains its `Decided:` with its
+  `Closed:`);
 - **`; no board item`:** nothing covers the gate at the base, nor at the head, so closing a covering item with
   no answer and logging `no board item` is flagged (`tripwire-no-board-item`). A board with no `People:` covers
   nothing, so every lift there is written so;
 - **`; shared board item left open`:** an item covering it at the base still covers it at the head, and another
-  entry it lists (its Context entry or a `Parts:` id) still carries the gate;
+  entry it lists (its Context entry or a `Parts:` id) still carries the gate; and (v2.8) no such item gains a new
+  or changed `Decided:` at the head while it stays open, since that answer would speak for the entries left
+  (`tripwire-shared-decided`);
 - **`; board <repo>`:** `<repo>` names a repo other than this one; the sweep's audit is the backstop.
 
 A lift line whose `by` is not the gate's person is flagged (`tripwire-by`) unless it has no suffix, the base board
 says `Answered by: any` and lists `by`, and the covering item's head `Decided:` names `by`. The other flags are
-`tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`, `tripwire-shared` and `tripwire-board`.
+`tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`, `tripwire-no-board-item`, `tripwire-shared`,
+`tripwire-shared-decided` (v2.8) and `tripwire-board`.
 Exempt are an entry the diff archives and the one-time migrate commit, known by its subject alone, `ledger:
 migrate v<release> (<n> entries)` (`migrate_subject()`; `subject_kind()` names it `migrate`). The tripwire is
 forgeable, and says so: a well-formed hand edit passes it, and review is the backstop.
@@ -1295,8 +1302,14 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   by, today, close=closes(item, label, entries after))` — so a lifting answer closes the item when nothing listed
   still carries the gate, a waiting-only one closes it and logs `kept waiting`, and a work order leaves it open.
   The board's date is the local clock's and the ledger's the UTC clock's, unless `--today` gives both. Without a
-  ledger it is refused. **`--board-only`** writes the board half alone, the same line, `closes()` reading the
-  ledger as it stands: the `set by=` route, whose `set` has lifted the gate already, so nothing is lifted twice.
+  ledger it is refused. **`--board-only`** writes the board half alone, `closes()` reading the ledger as it
+  stands: the `set by=` route, whose `set` has lifted the gate already, so nothing is lifted twice. A lifting
+  answer writes the line only when it closes the item; while a listed entry still carries the gate (a part of a
+  shared item, or a Context entry nothing has lifted) it writes nothing, exit 0, and reports `left_open`, those ids
+  as the item spells them, in its order (v2.8). The item stays open and unanswered, still asking the person for the
+  entries left, and the person's answer is the Log's `; shared board item left open` line. In every mode, `--json`
+  and `--plan` among them, it prints `left open: <ids> still carry <gate>` on stderr, and `--plan`'s JSON carries
+  `left_open` beside its empty `changes`. Any other answer writes as without it.
   An item whose Context names another repo's entry (`<repo>#TD-n`) is answered on the board alone and stays
   decided but open, its lift being a tool PR in that repo (`--ledger` refused), after the same `People:` and
   `Answered by:` checks. An item whose Context names a gate but not one entry is answered on the board alone,
@@ -1312,7 +1325,8 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
 
 Each write prints the commit subject the module gives (`subject()` with `append` for an add, the edit's,
 `archive_subject()`, `queue_subject()`) and the paths it changed, or one JSON object with `--json`. `fmt` has no
-subject of its own, and a write that changes nothing (a rank line already so) prints none, writing nothing.
+subject of its own, and a write that changes nothing (a rank line already so, or a `--board-only` answer left
+open) prints none, writing nothing; with `--json` its `subject` is null and its `paths` empty.
 `--plan` prints the changes as JSON (each path and its new text) and writes nothing. A decide lift also reports
 `entries` (the ids whose files it changed) and `notes`. A write of several files is
 both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
@@ -1620,6 +1634,13 @@ were already its own; a body `**Location:**` was already a section), though its 
 `Waits` or a header `Location` back in its own order, so a consumer vendors v2.7 before it formats a ledger v2.7
 wrote. A repo takes v2.7 in one PR that vendors it and runs `migrate`. `migrate` stays through v2.x and goes in
 v3.0, whose precondition is that `migrate --plan` shows no entry with changes in every repo.
+
+**v2.8 leaves a shared item unanswered by a lift of one part** (*The board writer*, *The merge gate's
+verdicts*): `board.py decide --board-only` writes nothing while a listed entry still carries the gate, where
+v2.4 to v2.7 wrote a `Decided:` that spoke for entries the person had not answered, and `tripwire()` flags such
+a `Decided:` (`tripwire-shared-decided`), a diff v2.4 to v2.7 passed. No parse changes: v2.3 to v2.7 read every
+line it writes, and no key moves. An item an older writer decided reads as before, a `decided` work order; the
+consumer closes it and asks again for the entries left.
 
 ## Appendix: grammar
 

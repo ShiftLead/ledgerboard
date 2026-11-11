@@ -554,3 +554,84 @@ Ledgerboard: 2
 
 **Log:**
 - 2026-10-30: gate lifted: decision (pat) — by pat; answer "Go"
+
+## TD-270: A shared item's parent, its item repaired
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+
+## TD-271: Its part lifted by set, the item decided by an older writer
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Part of:** TD-270
+
+**Log:**
+- 2026-10-20: gate lifted: decision (pat) — by pat; answer "Go"; shared board item left open
+
+## TD-272: Its part never answered, asked again
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+**Part of:** TD-270
+
+## TD-273: A shared item's parent, its decided item closed and not asked again
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+
+## TD-274: Its part lifted by set
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Part of:** TD-273
+
+**Log:**
+- 2026-10-20: gate lifted: decision (pat) — by pat; answer "Go"; shared board item left open
+
+## TD-275: Its part never answered
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+**Part of:** TD-273
+
+## TD-276: A shared item's parent, asked again and answered Not yet
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+
+**Log:**
+- 2026-10-25: kept waiting: decision (pat) — by pat; answer "Not yet"
+
+## TD-277: Its part lifted by set
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Part of:** TD-276
+
+**Log:**
+- 2026-10-20: gate lifted: decision (pat) — by pat; answer "Go"; shared board item left open
+
+## TD-278: Its part never answered, kept waiting
+
+**Priority:** Low
+**Added:** 2026-09-01
+**Status:** Open
+**Blocked by:** decision (pat)
+**Part of:** TD-276
+
+**Log:**
+- 2026-10-25: kept waiting: decision (pat) — by pat; answer "Not yet"

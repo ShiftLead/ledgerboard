@@ -1092,6 +1092,13 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         alone = {**base, L.BOARD_PATH: head[L.BOARD_PATH]}
         self.assertEqual(L.tripwire(alone, head, "ledger: set TD-150 (session w-1)", "acme/widgets"), [])
 
+    def test_a_shared_lift_whose_item_gains_a_decided_is_flagged(self):  # v2.8 (TD-067 D3)
+        subj = "ledger: set TD-111 (session w-1)"
+        base, head = self.trees("set by= on one part of a shared item, decided")
+        self.assertEqual([k for k, _ in L.tripwire(base, head, subj, "acme/widgets")], ["tripwire-shared-decided"])
+        base, head = self.trees("set by= on one part of a shared item, left open")
+        self.assertEqual(L.tripwire(base, head, subj, "acme/widgets"), [])
+
     def test_aware_datetimes_are_their_utc_dates(self):
         base, head = self.trees("a lift, closed in the same write")
         files = sorted(set(head) - set(base) | {p for p in head if base.get(p) != head[p]})

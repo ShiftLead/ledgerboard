@@ -6158,10 +6158,14 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
     ``override:`` line for it, or by a new ``gate lifted … answer`` line whose suffix fits the board:
 
     - none: an item covering the gate at the base (covers(), state ``open`` or ``decided``) carries a new or
-      changed `Decided:` at the head, decided or closed, or, already decided, is newly closed ``— lifted.``;
+      changed `Decided:` at the head, decided or closed, or, already decided, is newly closed ``— lifted.`` (the
+      last part of a shared item an older writer decided; from v2.8 the last part's item is undecided at the base
+      and gains its `Decided:` with its `Closed:`);
     - ``; no board item``: nothing covers it at the base nor at the head;
     - ``; shared board item left open``: an item covering it at the base still covers it at the head, and
-      another entry it lists (its Context entry or a `Parts:` id) still carries the gate;
+      another entry it lists (its Context entry or a `Parts:` id) still carries the gate; and (v2.8) no such item
+      gains a new or changed `Decided:` at the head while it stays open, since that answer would speak for the
+      entries left (``tripwire-shared-decided``);
     - ``; board <repo>``: ``<repo>`` names a repo other than this one.
 
     A ``by`` other than the gate's person is flagged, unless the lift has no suffix, the base board says
@@ -6238,6 +6242,13 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                 if not shared:
                     flags.append(("tripwire-shared", f"{tid} lifts {gate} leaving a shared board item open, but no "
                                   "item it covers still asks another listed entry"))
+                base_dec = {item_key(b_lines[it.line - 1]): (it.decided, it.decided_by) for it, _ in cov_b}
+                if any(item_key(h_lines[it.line - 1]) in still and it.decided is not None
+                       and (it.decided, it.decided_by) != base_dec[item_key(h_lines[it.line - 1])]
+                       for it, _ in cov_h):  # v2.8: an answer for one part must not speak for the rest
+                    flags.append(("tripwire-shared-decided", f"{tid} lifts {gate} leaving a shared board item open, "
+                                  "but the item gains a Decided: that speaks for the entries left — leave it "
+                                  "unanswered"))
             elif not answered_here:
                 flags.append(("tripwire-no-decided", f"{tid} lifts {gate}, and no item covering it on this repo's "
                               "board gains a Decided: in the same diff"))
