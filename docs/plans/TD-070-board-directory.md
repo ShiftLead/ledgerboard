@@ -19,15 +19,15 @@ the rebase's hand edit, not the rebase.
 
 The conflicts are real but not the case for a major. Counted on 2026-11-11 from one machine's session transcripts
 since 2026-10-12: about 140 conflict events on v1 ledger files, 3 on v2 ledger directories, 7 on boards (a floor).
-The case is **the item's shape**. A `decide` item is a line of one to two kilobytes (this repo's board holds lines
-of 830 to 1,080 characters), with a detail block and a life of its own: open, decided, closed, archived. That is an
+The case is **the item's shape**. A `decide` item is a line of up to a kilobyte or more (this repo's board holds
+closed lines of up to 1,083 characters, open ones of 197 to 615), with a detail block and a life of its own: open, decided, closed, archived. That is an
 entry's shape, and the single line carries costs an entry does not:
 
 - **Its identity is its text.** The item key is the line with some fields cut out. Consumers persist it, so what
   the key is for a line is part of the format, and every new field has had to decide whether it is in the key
-  (`Hide until:` in v2.3, `Parts:`, `Lifts:`, `Doer:`).
+  (`Hide until:` in v2.3, `Parts:`, `Lifts:`, and TD-065's proposed `Doer:`).
 - **Fields live inside prose.** A Context ends where the next field name begins, so the writer refuses any text,
-  answer or detail value that holds a field name, and every new field (`Doer:` in TD-065) widens that refusal and
+  answer or detail value that holds a field name, and every new field (TD-065's proposed `Doer:`) widens that refusal and
   can re-read an old line.
 - **Two copies of one item are the merge rule.** An open and a closed line with one key mean "closed: a merge kept
   both sides", and `archive_closed()` carries twins, its refusals and the `ARCHIVE_AT` threshold. This repo's
@@ -102,8 +102,9 @@ docs/user_attention/
 - **Months under the archive** keep a forge read small: the gate sweep needs closed items only within its windows
   (`reask_days`, 30 by default), so it reads the last two months' directories, never the whole archive.
 - **No sections.** `## Needs the user` and `## In-flight` become nothing: what an item is for is its kind (`watch`
-  for a session's own re-check), and order is the reader's (`needs_you()` already sorts by class and date, not by
-  place). The alternative is a `**Section:**` field; the design would add it only if a consumer reads sections, which
+  for a session's own re-check), and order is the reader's: `needs_you()` sorts by class and date, and only its
+  ties (undated, unreadable-due and `fyi` items among them) fall back to the item's place in the file, which in a
+  directory becomes the id, so ties go oldest first. The alternative is a `**Section:**` field; the design would add it only if a consumer reads sections, which
   the design's read of both consumers settles.
 
 **S5. Reading: one call, either major.** `load_board(path, ls, read)`, the ledger's `load()` pattern with the
@@ -123,7 +124,7 @@ commit by its touching the board alone then read "only files under the board's d
 consumer's vendor entry (S10), never code here.
 
 **S8. What a person reads.** There is no single file to open. `board.py show` prints the board as one Markdown text,
-in `needs_you()`'s order, from the directory; a consumer's own view reads items through `load_board()`. No rendered
+in `needs_you()`'s order (its ties by id, S4), from the directory; a consumer's own view reads items through `load_board()`. No rendered
 file is stored: a stored view is one file every write touches, which is the conflict again.
 
 **S9. Migration and its place in v3.0.** `split_board(board, archive)` gives the v3 files of a v2 board and its
