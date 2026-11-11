@@ -3,7 +3,7 @@
 **Status:** Draft 5, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
-rounds, cadence.md §4.8). Rounds: rounds 1 and 2 ran (round 2's design review raised six build-changing findings); round 3 next (draft 5 holds its fact-checks' fixes, F1–F86) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+rounds, cadence.md §4.8). Rounds: rounds 1 and 2 ran (build-changing per design review: 9, 6); round 3's fact-check ran (R10) and its findings F87–F94 are open, then round 3's design review (draft 5 holds its fact-checks' fixes, F1–F86) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
