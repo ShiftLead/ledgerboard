@@ -3,7 +3,7 @@
 **Status:** Draft 5, 2026-11-11 (session lb-designer). The scope (S1–S8 below) is Paul's, agreed 2026-11-11 (his
 `Go` on the board's decide item, which lifted TD-058's `decision (paul)`). Class: **wide** (a vendored, published
 format: the closed Status set, the canonical entry form and `migrate`, which both consumers vendor and run; cap 6
-rounds, cadence.md §4.8). Rounds: round 1 ran its fact-checks and design review; round 2 next (draft 5 holds its fact-checks' fixes, F1–F68) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+rounds, cadence.md §4.8). Rounds: round 1 ran its fact-checks and design review; round 2 next (draft 5 holds its fact-checks' fixes, F1–F72) (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
@@ -156,8 +156,9 @@ the table below stops on (`decided`: `resolved`, `dropped` or `superseded <id>`)
 3. The word is a stage word (`designed`, `built`, `partly`, `live`, `in`) → when the head reads, the tail and
    segments are lifted, then the head is written as one `was: <head>` line; when it does not (`In progress`,
    `Partly done`), the whole value is one `was: <value>` line, nothing lifted. The `was:` line is dated by the
-   head's date, else the first real date in the first part, else the `**Resolved:**` line's, else `Added`'s, else
-   `today`. The Status is set to `Open`. When the
+   head's date; when the head does not read, the first real date in the first part, **listed** (`date <D> read from
+   the Status's text`); then the `**Resolved:**` line's, else `Added`'s, else `today`. (A head that reads with no
+   date takes the fallbacks, as its lifted tail does, so one entry never gets two dates for one Status.) The Status is set to `Open`. When the
    word is a key of `kinds`, `Kind` is set to its value; when `Kind` held another value, compared whole as written,
    a Log line `Kind <old> → <new> (migrate)` is written, dated `today`, and when it held the same value nothing about
    `Kind` changes. With no key for it, `Kind` is left as it is and the entry is **listed**.
@@ -183,7 +184,7 @@ older `Resolved` header field's), else `closed_date`, else the first real date i
 | word `moved`, naming no id | `Dropped D`, **listed** |
 | word `moved`, naming two ids or more | **stop** |
 | word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
-| anything else (`Open`, `Partly`, `Live`, `In`, prose, a bold lead, no Status) | **stop** |
+| anything else (`Open`, `Partly`, `Live`, `In`, prose, a bold lead whose word is none of the above such as `**Resolved**.` or `**Note** …`, no Status) | **stop** |
 
 **A stop on the word is a decision for a person**, given back as `decided`: `resolved`, `dropped` or `superseded
 <id>` sets that form, dated `D`, in place of the table's row, and the whole old value is kept as one `was: <value>`
@@ -194,7 +195,7 @@ silently; one outside the three shapes is `Refused`.
 Then the text: **when the head reads and the new form takes only its head**, the old head is kept aside and the head
 rewritten to the new form, so the tail is lifted dated `D` and each segment dated as *Lifting* says; when the old
 head differs from the new Status, it is written as one `was: <old head>` line dated `D`, inserted after the lifted
-lines (by date, after any line of an equal date). **Otherwise** (`Resolved 2026-10-12.`, `Moved to `Superseded 2026-01-10 BY TD-302.`, a value `decided` answers), nothing is lifted: the whole value is
+lines (by date, after any line of an equal date). **Otherwise** (`Resolved 2026-10-12.`, `Moved to TD-5 (PR #2)`, `Superseded 2026-01-10 BY TD-302.`, a value `decided` answers), nothing is lifted: the whole value is
 one `was: <value>` line dated `D`, and the Status set to its new form.
 
 So `Done 2026-10-03: shipped — was: Designed 2026-09-30` becomes `Resolved 2026-10-03`, with the Log lines, in
@@ -344,8 +345,8 @@ vocabulary**: no "a departure from §2.2", no target design names or section ref
 
 **T6. *The ledger writer*:** a new bullet after `fmt`, D3's text on the same terms (no consumer's name, no git
 remark: *the caller's archiving dates*); the `new` bullet's "`--location`" becomes "`--location` (the
-`**Location:**` body section, v2.7)", and the `set` bullet gains "(not `--location`, from v2.7: `edit --section
-Location`)"; and the sentence "a ledger edit has no commit subject of its own, so the caller names its commit"
+`**Location:**` body section, v2.7)", and the `set` bullet gains "(not a non-empty `--location`, from v2.7: `edit
+--section Location`; an empty one still removes the header field)"; and the sentence "a ledger edit has no commit subject of its own, so the caller names its commit"
 (SPEC *The ledger writer*, the output paragraph) gains "— except `migrate`'s, which names `migrate_subject()`", as
 does `ledger.py`'s module docstring.
 
@@ -372,7 +373,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - each row of D2's archived table, one case each (`Done`, `Built`, `Designed`, `Superseded … by`, `Superseded …
     BY` in upper case, `Superseded` with no `by`, `Moved` with one id, with `acme#TD-5` (one id), with none, with
     two, `OBE`, `Won't fix`, `Dropped` with a tail, archived `Open` stopping, prose stopping);
-  - D2's two examples, the Log's order included; `**Resolved**.` (a stop, then answered by `decided`);
+  - D2's two examples, the Log's order included; `**Resolved**` (mapped, its whole value one `was:` line); `**Resolved**.` (a stop, then answered by `decided`);
   - an archived entry with no date anywhere and no `closed_date` stopping; the same with `closed_date` given;
   - an open entry, one case per branch: `Open` unchanged; `Open 2026-10-01`; `Open 2026-10-01: noted`; `Open
     2026-10-01: note — was: Designed 2026-09-30`; each stage word with and without a `kinds` key; `In progress`
@@ -411,7 +412,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   which the writer still writes (the flag's text unchanged); a v1 ledger (ℹ). And a header `Location` added by an
   edit (an error) and standing (ℹ).
 - **`fixtures/edit/`** (B3): `canonical()` placing a `Waits` and a header `Location` after `Part of`, in file order;
-  `new --location` writing the body section; `set --location` and `new --field Location=…` refused.
+  `new --location` writing the body section; a non-empty `set --location` and `new --field Location=…` refused.
 - **Existing fixtures B3 regenerates.** `fixtures/run.py` records the whole of `check()` for each
   `fixtures/ledger/*` case, so every entry there with no Status or one outside the set gains a `status` record (an
   error where the ledger declares major 2, ℹ where not), and the ℹ `retired` Status records go. A fact-check found
@@ -431,7 +432,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
 In series, B0 to B4: each edits `SPEC.md`, the module and `fixtures/run.py`. Each lands its `SPEC.md` text with its code.
 
 - **B0.** The canonical form, `new` and `set` (D4): the header order, the retired header `Location` graded as
-  `Waits` is, `new --location` writing the body section, `set --location` and `--field Location=` refused, with T1,
+  `Waits` is, `new --location` writing the body section, a non-empty `set --location` or `--field Location=` refused, with T1,
   T4, T2's `Location` parts and T6's `new` and `set` parts. Every fixture whose `canonical()` output moves (a `Waits`
   or header `Location` before another field: a fact-check found `ledger_edit/expected.json`,
   `ledger_writer/unknown_text_edit` and `unknown_text_fmt`) and `ledger_writer/new_basic` (`new --location`) are
