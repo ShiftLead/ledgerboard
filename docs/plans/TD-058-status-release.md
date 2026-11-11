@@ -6,7 +6,8 @@ format: the closed Status set, the canonical entry form and `migrate`, which bot
 rounds, cadence.md §4.8). Rounds: all six ran, ending at the cap (build-changing per design review: 9, 6, 2, 1 (F120 rejected), 2, 2; the
 fact-checks' apart); draft 6 holds every finding's fix, F1–F165, and round 6's fixes (F148–F165) and the §7
 amendment are read by the closing fact-check only. Paul's note of 2026-11-11 (through a session he started)
-asked for target design §7.1–§7.3's roster path to be amended alongside the v3.0 row; this PR does it (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
+asked for target design §7.1–§7.3's roster path to be amended alongside the v3.0 row, the "v2.7 waits until every
+repo …" line dropped, §7.1 marked agreed and its renumbering amendments folded into the table; this PR does it (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
 **Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
@@ -83,7 +84,8 @@ An entry's Status is one of four forms, and its form agrees with where the entry
 - **Where it lives:** a new pure function, `status_problem(text, *, archived) -> str | None`, gives the one problem of
   one entry's Status, or None. It reads the Status `entries()` reads: a Status line below the header block
   is no Status there (`entries()` falls back below the header only for Priority, Type, Blocked by and Part of), so
-  it is `it has none`, as `pickable()` and `migrate_entry()` read it. `check()` runs it over every entry of the ledger (`archived=False`) and of the archive
+  it is `it has none`, as `pickable()` and `migrate_entry()` read it. `migrate` then writes `Open` in the header
+  and leaves the stray line where it is, **listed** (`Status line below the header: left`). `check()` runs it over every entry of the ledger (`archived=False`) and of the archive
   (`archived=True`), and appends its records on both of `check()`'s exits: before its early return when `old` is
   None, and **after** the loop that grades records standing under `old` (where `archive-open-parts` is appended), so
   no `status` record is ever made standing or ℹ by it. Their order in the list: after every other record,
@@ -99,7 +101,8 @@ An entry's Status is one of four forms, and its form agrees with where the entry
   - archived: `⚠ TD-n: an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — <detail> — run
     migrate, which maps it, lists it, or names what a person decides`;
   - `<detail>`, the first that applies: `it has none` (no or an empty Status); `this one is <Word>, not in that
-    form` (the word, compared in lower case as `first_word()` compares it, is one of the place's own words, `open`
+    form` (the word, compared in lower case as `first_word()` compares it and with any `*`s stripped, as D2 branch 5
+    compares it, is one of the place's own words, `open`
     in the ledger and `resolved`, `superseded` or `dropped` in the archive, but the value is not its form: `Open
     2026-10-01`, `Resolved 2026-10-03.`, a bare `Resolved`, `Superseded 2026-10-03` with no `by`, `resolved
     2026-10-03` in lower case, an unreal date); `this one is <Word> (retired: <what replaces it>)` (a word *Retired
@@ -152,11 +155,14 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   input, which `migrate` leaves, is not one, and a Log not last, or two Logs, has stopped already, *What it leaves*); any problem
   is a stop (`migrated Status <value> still outside the set`, or `migrated Log: <problem>`). So `migrate` never
   writes a Status or a Log line `check()` rejects that was not there before it.
-- **`canonical()` refusal.** Text `canonical()` refuses (a duplicate field, a non-field line in the header block)
+- **`canonical()` refusal.** Text `canonical()` refuses (a duplicate field, a non-field line in the header block, a
+  Priority, Type, Blocked by or Part of line below the header block; text that is not one entry is always the stop
+  `refused: <why>`)
   is never an exception. `migrate_entry()` reads such an entry's fields as `entries()` does, leniently, and applies
   the rules to that reading: when none would change it, it is returned as given and **listed** (`canonical()
   refuses it: left alone`), since a fault already there never blocks an unrelated write; when one would, it is a
-  stop (`refused: <why>`), since it cannot write a changed entry in canonical form.
+  stop (`refused: <why>`), since it cannot write a changed entry in canonical form. The stops are collected first,
+  and a stop always wins: *left alone* is only for an entry no rule would change or stop.
 - `migrate_entry()` run on its own output, without `decided`, changes nothing.
 
 **Terms.**
@@ -217,7 +223,7 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
    <head>` line, dated as in 3, **unless** the head is `Open` or `Open D` and a tail was lifted (that line carries the
    date). So a head's `by <id>`, a date with only segments, and `Open.` are kept.
 5. The word, or the word with its `*`s stripped (`**Resolved**.` gives `resolved`), is an archived one
-   (`resolved`, `superseded`, `dropped`, `done`, `moved`, `obe`) → **stop** (`Status
+   (`resolved`, `superseded`, `dropped`, `done`, `moved`, `obe`) → **stop** (`<Word>` as written, `Status
    <Word> on an open entry`): the entry may be finished work the ledger forgot to archive, and setting `Open` would
    offer it as work. `decided` answers it: `open` sets `Open`, the whole value one `was: <value>` line dated as in 3;
    to archive it, the person runs `archive` instead once the rest has migrated.
@@ -303,7 +309,7 @@ written; a Log that is not last, or two Logs (each `log_problems()`'s `log-not-l
   `Location → body`; `Location (empty) removed`.
 - `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved: Superseded
   by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`; `decided: <form>`;
-  `canonical() refuses it: left alone`.
+  `canonical() refuses it: left alone`; `Status line below the header: left`.
 - `stops`: `refused: <why>`; `decided: nothing to answer`; `no date for the Status`; `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>:
   no archived form`; `Status <Word> on an open entry`; `Location in the header and the body`; `Log not last` (a Log not last, or two Logs); `migrated Status <value> still outside
   the set`; `migrated Log: <problem>`.
@@ -390,7 +396,7 @@ reassigned`, `archived`, `reopened`, `was`). Each production gets an accepting a
 `fixtures/grammar/`, as §7.4 *Grammar* requires, judged in `run.py`'s `grammar_cases` by a start symbol each: a
 Status by `status_problem()` (open and archived), a Log line by `log_line()` (accepted when it returns a record whose kind is
 not `malformed`; None refuses), a header block by `canonical()` reading it without refusal (so its refusing cases
-are a duplicate field and a non-field line; the order is a rendering rule, not a grammar one), and an `Added`
+are a duplicate field, a non-field line and a Priority, Type, Blocked by or Part of line below the header; the order is a rendering rule, not a grammar one), and an `Added`
 value by `migrate_entry()` on a minimal open entry (`Status: Open`, `archived=False`) carrying it (accepted when
 it returns no `changes` and no `listed`).
 
@@ -487,7 +493,12 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - `Added` with a comment, with a parenthesised comment, with a comment beginning `gate added:`, with a Log line of
     the same date (the comment goes first), with prose and no date;
   - `Location` in the header, with a Why, with two Why sections (after the first), with no Why but a Fix and a
-    Done when (before the Done when), with none of them (at the end); in the header and the body (a stop);
+    Done when (before the Done when), with none of them (at the end); in the header and the body (a stop); an
+    empty header `Location` with a body section (removed, no stop);
+  - the rules' order and a `Kind` line after a `was:` line of the same day; an entry `canonical()` refuses that a
+    rule stops (the stop wins); a Priority line below the header on an entry needing a change (`refused:`); an
+    open `**Resolved**.` (a stop, its `<Word>` as written); a Status line below the header (`Open` written, the
+    line listed and left);
   - **twice gives no diff** (§7.4): every case's output run again, without `decided`, is unchanged;
   - **unknown text survives** (§7.4): an entry with an unknown header field, an unknown gate, an unknown body
     section and an unknown Log prefix, whose content comes out unchanged;
@@ -524,15 +535,16 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   exit 1 (§7.4: *an unmapped Status word stops it with a list and writes nothing*); `--dry-run`; `--closed-dates`;
   `--stage-kind`, and a word outside the stage words, a word given twice and an empty `KIND` (exit 2); an `--as`
   id given twice, an unknown named `TD-n`, a bad `--closed-dates` key, and `--plan` with `--dry-run` (exit 2); a
-  stop printed plain and with `--json`; `--as`; a bad `--release` and a bad `--closed-dates`
+  stop printed plain and with `--json`; `--base` and `--resolved` (exit 2); `--as`; a bad `--release` and a bad `--closed-dates`
   (exit 2); a v1 file (exit 2); a ledger already migrated (exit
   0, `subject` null); the subject's count.
 - **`fixtures/ledger_edit/check/status_*`** (B3): each of the four forms passing in its place; each in the wrong
   place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; a bare `Resolved`; `Superseded D` with no `by`; `Superseded D by` an id outside `Blocked by`'s
   grammar; an archived `Resolved 2026-02-30`; `Superseded D by TD-n` and `Dropped D` in the ledger; an archived
   `Open`; an open `Open, held`; no Status; a retired word, whose text names its
-  replacement (`Done` on an open entry: `archive it, or Open`); an open `Resolved 2026-10-03`, and
-  `resolved 2026-10-03` in lower case (each `archived: archive it, or Open`); standing with `old` given (still an error); a v1
+  replacement (`Done` on an open entry: `archive it, or Open`); an open `Resolved 2026-10-03`,
+  `resolved 2026-10-03` in lower case, and `**Resolved**.` (each `archived: archive it, or Open`); a ledger with an
+  `archive-open-parts` record and `status` records in both files (their order); standing with `old` given (still an error); a v1
   ledger (ℹ).
 - **`fixtures/ledger_edit/check/location_*`** (B0): a header `Location` added by an edit (an error) and standing
   (ℹ), with `("retired", "location")` added to `run.py`'s `check` filter beside `("retired", "waits")`; their
@@ -573,11 +585,11 @@ In series, B0 to B4: each edits `SPEC.md`, the module and `fixtures/run.py`. Eac
   and `unknown_text_fmt`), `ledger_writer/new_basic` (`new --location`), and those whose `flags` gain an open
   entry's ℹ `retired` record for a header `Location` (reviews found `ledger/basic.md`, `basic.v2/TD-001.md`,
   `escaped.md`, and `ledger_writer/report_pickable`, `report_counts`, `report_list_where`, `report_v1`,
-  `report_summary_needs` and `report_check_base`). The three `renumber` cases that renumber an entry with a header
-  `Location` (`renumber`, `renumber_held`, `renumber_also_in_ledger`) have it moved into the body of their inputs,
-  since their point is the renumber and a header `Location` now refuses it (`renumber_parent` and
-  `renumber_archived` renumber another entry, and only gain the ℹ record); the new refused case
-  is its own. With the `location_*` check cases and `run.py`'s filter entry for them. `set_field`'s `--location ""` still
+  `report_summary_needs` and `report_check_base`). Of the `renumber` cases, only `renumber` reaches the gate with a header
+  `Location` on the entry it renumbers: its input has the line moved into the body, since its point is the
+  renumber and a header `Location` now refuses it. `renumber_held` and `renumber_also_in_ledger` exit 2 before any
+  gate, and `renumber_parent` and `renumber_archived` gain no record, so their expected files do not move. The new
+  refused case is its own. With the `location_*` check cases and `run.py`'s filter entry for them. `set_field`'s `--location ""` still
   removes the field. First, so B1's and B2's expected
   texts are written in the order that stands.
 - **B1.** `migrate_entry()` (D2) and `status_problem()` (D1's function, which its post-condition calls; `check()`
