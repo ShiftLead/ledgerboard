@@ -4137,7 +4137,8 @@ def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: 
             stops.append("decided: nothing to answer")
     else:
         head_m = STATUS_HEAD_RE.match(said)
-        head_day = head_m.group("date") if head_m and _real_day(head_m.group("date")) else None
+        head_day = head_m.group("date") if (head_m and head_m.group("word").lower() in STATUS_WORDS
+                                            and _real_day(head_m.group("date"))) else None  # a head that reads
         real_closed = closed_date if isinstance(closed_date, str) and _real_day(closed_date) else None
         closing = head_day or _closing_source(header, sections) or real_closed or text_day()
         if not closing:
@@ -4172,7 +4173,7 @@ def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: 
             if word_stop is None or got.group("form") == "open":
                 stops.append("decided: nothing to answer")
             elif got.group("id") and _is_own(got.group("id"), tid):
-                stops.append("refused: superseded by its own id")
+                word_stop = "refused: superseded by its own id"  # in place of the stop it would answer
             else:
                 answered, word_stop = True, None
                 new_word, new_by = got.group("form").split(" ")[0].capitalize(), got.group("id")
@@ -4263,6 +4264,7 @@ def _section_place(sections: list[tuple[str | None, str]]) -> int:
     why_at = _keyed(sections, "why")
     ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related") + _keyed(sections, "log"))
     return why_at[0] + 1 if why_at else ends[0] if ends else len(sections)
+
 
 def _status_to_log(header: list[tuple[str, str]], sections: list[tuple[str | None, str]], day: str
                    ) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]]]:

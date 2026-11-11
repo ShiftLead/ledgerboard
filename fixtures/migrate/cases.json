@@ -775,6 +775,19 @@
    "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Designed 2026-10-01\n\n**Why:** a reason.\n",
    "archived": false,
    "today": "not a date"
+  },
+  {
+   "name": "date_unknown_word_head_is_no_head",
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Note 2026-10-03: put aside\n\n**Why:** a reason.\n",
+   "archived": true,
+   "closed_date": "2026-10-20",
+   "decided": "resolved"
+  },
+  {
+   "name": "date_unknown_word_head_read_from_text",
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Note 2026-10-03: put aside\n\n**Why:** a reason.\n",
+   "archived": true,
+   "decided": "resolved"
   }
  ],
  "status_problem": [

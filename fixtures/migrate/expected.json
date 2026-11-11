@@ -559,6 +559,37 @@
    "stops": [],
    "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Resolved 2026-10-09\n\n**Why:** a reason.\n\n**Resolved:** 2026-10-09 (PR #4)\n\n**Log:**\n- 2026-10-09: was: Done\n"
   },
+  "date_unknown_word_head_is_no_head": {
+   "again": {
+    "changes": [],
+    "same_text": true,
+    "stops": []
+   },
+   "changes": [
+    "Status Note 2026-10-03: put aside → Resolved 2026-10-20"
+   ],
+   "listed": [
+    "decided: resolved"
+   ],
+   "stops": [],
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Resolved 2026-10-20\n\n**Why:** a reason.\n\n**Log:**\n- 2026-10-20: was: Note 2026-10-03: put aside\n"
+  },
+  "date_unknown_word_head_read_from_text": {
+   "again": {
+    "changes": [],
+    "same_text": true,
+    "stops": []
+   },
+   "changes": [
+    "Status Note 2026-10-03: put aside → Resolved 2026-10-03"
+   ],
+   "listed": [
+    "date 2026-10-03 read from the Status's text",
+    "decided: resolved"
+   ],
+   "stops": [],
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Resolved 2026-10-03\n\n**Why:** a reason.\n\n**Log:**\n- 2026-10-03: was: Note 2026-10-03: put aside\n"
+  },
   "date_unreal_closed_date_passed_over": {
    "again": {
     "changes": [],
@@ -704,8 +735,7 @@
    "changes": [],
    "listed": [],
    "stops": [
-    "refused: superseded by its own id",
-    "Superseded: no by <id>"
+    "refused: superseded by its own id"
    ],
    "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Superseded 2026-10-03\n\n**Why:** a reason.\n"
   },
