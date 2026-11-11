@@ -105,8 +105,8 @@ An entry's Status is one of four forms, and its form agrees with where the entry
     vocabulary, S3) and `archive it, or Open` for `Done`, `Moved` and `OBE` (`migrate` stops on them, D2 branch 5:
     finished work the ledger forgot to archive is archived, not reopened); on an archived entry `Resolved` for `done`, `built` and
     `designed`, `Superseded or Dropped` for `moved`, `Dropped` for `obe`, and `Resolved, Superseded or Dropped` for
-    `partly`, `live` and `in`. `status_problem()` holds these two maps itself (B1); B3, which removes the ℹ record
-    that reads `RETIRED_STATUS`, gives `RETIRED_STATUS` the open map's values for the five open words.
+    `partly`, `live` and `in`. `status_problem()` holds these two maps itself (B1); B3 removes the ℹ record that
+    is `RETIRED_STATUS`'s one reader, and `RETIRED_STATUS` with it.
 - **The id is in the text**, and the writer matches a record by it, so `renumber` of an entry whose Status is
   outside the set meets a `status` error under its new id that the ledger before did not have, and is refused:
   *migrate it first*. A fixture shows it.
@@ -147,7 +147,7 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   writes a Status or a Log line `check()` rejects that was not there before it.
 - Text `canonical()` refuses is a stop, not an exception, on every entry, changed or not: `migrate_entry()` first
   reads the entry as `canonical()` reads it, and cannot tell what a text it cannot read needs.
-- `migrate_entry()` run on its own output changes nothing.
+- `migrate_entry()` run on its own output, without `decided`, changes nothing.
 
 **Terms.**
 - *A real date* is a `YYYY-MM-DD` that is a calendar day (`date.fromisoformat` accepts it); a date that is not one
@@ -166,7 +166,8 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   it as `first_word()` does, in lower case and stripped.
 - *Lifting* is `status_notes_to_log()`'s, with its own dating: the tail as one line dated by the head's date, else
   the `**Resolved:**` line's, else `Added`'s; each segment as a `was:` line dated by its own head's date, else the
-  same fallbacks; each in among the Log by date, after any line of an equal date. If any line it would lift has no
+  same fallbacks; each in among the Log by date, after any line of an equal date (`_log_insert()`'s rule: before the
+  first line dated later, which in a Log not in date order need not be where its date would sort). If any line it would lift has no
   date, it lifts nothing from the whole value, dated segments included; the value is then treated as **a head that
   does not read**. `status_notes_to_log()` does not test a date's reality and does not pass over one, and it stays
   as it is: each line takes its own head's date when its head has one, real or not, else the first fallback the
@@ -259,8 +260,8 @@ for a lifted Status note. **Never a `filed by` line** (a departure from §2.2, w
 parses into that shape": `filed by` needs a `who` and a session token, which no old comment carries in a form a
 parser can trust; a plain line loses nothing). A bare real date is unchanged and not listed. Any other value (no real date first, or a date with no whitespace
 after it: `2026-01-01.`, `2026-01-01T10:00`) is left alone and **listed**. The comment's line goes before any line of its date. So `gate_age()`'s fallback for a gate with no `gate added`
-line, the first Log line's date, moves earlier wherever `migrate` writes a line dated strictly before the Log's
-first (this comment's, a lifted line, a `was:`
+line, the first Log line's date, moves earlier wherever a line `migrate` writes lands first in the Log, which in a
+Log in date order is wherever it is dated strictly before the Log's first (this comment's, a lifted line, a `was:`
 line), as `note`'s lift already does: an older age, and a true one, since each such line's date is an event of
 the entry. A fixture shows it for an `Added` comment and for a lifted line.
 
@@ -299,7 +300,8 @@ unusable, exit 2 (*split first*), as for every write.
   value outside that shape is exit 2, and a key naming no entry the run reads is ignored (a caller may pass the
   whole repo's dates). A `TD-n` named on the command line that the ledger and archive do not hold is exit 2. The writer reads no git.
 - `--stage-kind WORD=KIND` (repeat): the `kinds` map (named apart from `new`'s and `set`'s `--kind`, which writes
-  the field); a word outside *Retired words*' open Status words is exit 2. A `KIND` outside a `Fields:` ledger's
+  the field); a word outside *Retired words*' open Status words, or one given twice (in any case), is exit 2;
+  `--as` naming one entry twice is exit 2; `--plan` and `--dry-run` together are exit 2. A `KIND` outside a `Fields:` ledger's
   declared `Kind` vocabulary is not refused: the caller's `--check` on the result names it, as for every write of
   this command (below).
 - `--as TD-n=FORM` (repeat): `decided` for that entry, `resolved`, `dropped`, `superseded <id>` or `open`; any other
@@ -330,14 +332,18 @@ unusable, exit 2 (*split first*), as for every write.
   a header `Location` joins *Retired words*, graded as `Waits` is (TD-046): with the ledger before an edit, an error
   on an entry whose header `Location` line the edit added or changed, naming the `**Location:**` body section; ℹ
   `retired` where the line is as it was, and with no ledger before the edit.
-- `new --location` writes the `**Location:**` body section, after `**Why:**` and before every other section (the
-  place `edit --section`'s rule gives it in the body `new` writes, D2 4):
+- `new --location` writes the `**Location:**` body section, after `**Why:**` and before every other section, which
+  is the place `edit --section`'s rule gives it (D2 4), since `plan_new` refuses a body whose first section is not
+  its Why:
   `plan_new` moves it from the fields into the sections it passes `entry_text()`, whose signature is unchanged. `new
   --field Location=…` is a usage error naming `--location`, and so is `--location` with a `Location` among the
   sections `new` is given.
 - `set --location <value>` and `set --field Location=<value>` are usage errors naming `edit TD-n --section
   Location`, which already writes a body section; an empty value still removes a header `Location`, as `set`
   removes any field.
+- `reopen` of an archived entry that still has a header `Location` is refused, as it is today for one with a
+  `Waits` line: `old` is the ledger's text, where the reopened entry's line is new. The remedy is the same,
+  *migrate it first*; a fixture shows it.
 - A body `**Location:**` was already a section, never a field (SPEC *Ledger entries and their edits*), so no reader
   changes.
 
@@ -379,8 +385,8 @@ same way from v2.7, naming the `**Location:**` body section."
 > YYYY-MM-DD`, `Superseded YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD`, exactly as the
 > writers write them: nothing before or after, one space between parts, a real date. Any other value, or none, is
 > an error on every entry, open or archived, of a ledger that declares major 2 (`status`, `status_problem()`), never
-> standing, with or without `old`; on a v1 ledger it is ℹ. Its text names the first word and the form the entry's
-> place takes, never the whole value, and ends *run migrate, which maps it or lists
+> standing, with or without `old`; on a v1 ledger it is ℹ. Its text names the form the entry's place takes and
+> the value's first word when it has one, with what replaces a retired or misplaced word, never the whole value, and ends *run migrate, which maps it or lists
 > it for a person*. It replaces v2.4's ℹ `retired` on an open
 > entry's Status word. What a reader reads of an archived blocker's Status (*Superseded and dropped*) is unchanged,
 > so another repo that has not migrated still reads as before.
@@ -473,17 +479,23 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   (exit 2); a v1 file (exit 2); a ledger already migrated (exit
   0, `subject` null); the subject's count.
 - **`fixtures/ledger_edit/check/status_*`** (B3): each of the four forms passing in its place; each in the wrong
-  place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; a bare `Resolved`; `Superseded D` with no `by`; no Status; a retired word, whose text names its
+  place; `Open 2026-10-01`; `Resolved 2026-10-03.`; lower case; a bare `Resolved`; `Superseded D` with no `by`; `Superseded D by` an id outside `Blocked by`'s
+  grammar; an archived `Resolved 2026-02-30`; `Superseded D by TD-n` and `Dropped D` in the ledger; an archived
+  `Open`; an open `Open, held`; no Status; a retired word, whose text names its
   replacement (`Done` on an open entry: `archive it, or Open`); an open `Resolved 2026-10-03`, and
   `resolved 2026-10-03` in lower case (each `archived: archive it, or Open`); standing with `old` given (still an error); a v1
-  ledger (ℹ). And a header `Location` added by an edit (an error) and standing (ℹ).
+  ledger (ℹ).
+- **`fixtures/ledger_edit/check/location_*`** (B0): a header `Location` added by an edit (an error) and standing
+  (ℹ), with `("retired", "location")` added to `run.py`'s `check` filter beside `("retired", "waits")`.
 - **`fixtures/ledger_writer/status_*`** (B3), the writes on an un-migrated ledger: `archive` of an open entry
   whose Status is a stage word, and `reopen` of an archived entry whose Status is `Done D`, each written (the entry
   it moves leaves with a Status in the set, and every other entry's `status` error stands as before, so none is
   new); `renumber` of an entry whose Status is outside the set, refused (D1: *migrate it first*); a `note` on such
   an entry, written (the flag's text unchanged).
-- **`fixtures/edit/`** (B3): `canonical()` placing a `Waits` and a header `Location` after `Part of`, in file order;
-  `new --location` writing the body section; a non-empty `set --location` and `new --field Location=…` refused.
+- **`fixtures/edit/`** and **`fixtures/ledger_writer/`** (B0): `canonical()` placing a `Waits` and a header
+  `Location` after `Part of`, in file order; `new --location` writing the body section; a non-empty `set
+  --location` and `new --field Location=…` refused; `reopen` of an archived entry with a header `Location` refused
+  (*migrate it first*).
 - **Existing fixtures B3 regenerates.** `fixtures/run.py` records the whole of `check()` for each
   `fixtures/ledger/*` case, so every entry there with no Status or one outside the set gains a `status` record (an
   error where the ledger declares major 2, ℹ where not), and the ℹ `retired` Status records go. A fact-check found
@@ -507,14 +519,18 @@ In series, B0 to B4: each edits `SPEC.md`, the module and `fixtures/run.py`. Eac
   T4, T2's `Location` parts and T6's `new` and `set` parts. Every fixture whose `canonical()` output moves (a `Waits`
   or header `Location` before another field: a fact-check found `ledger_edit/expected.json`,
   `ledger_writer/unknown_text_edit` and `unknown_text_fmt`) and `ledger_writer/new_basic` (`new --location`) are
-  regenerated and listed in its PR; `set_field`'s `--location ""` still removes the field. First, so B1's and B2's expected
+  regenerated and listed in its PR; so is every `fixtures/ledger/*` case whose open entry has a header `Location`
+  and so gains its ℹ `retired` record (a review found `ledger/basic.md`, `basic.v2/TD-001.md` and `escaped.md`);
+  with the `location_*` check cases and `run.py`'s filter entry for them. `set_field`'s `--location ""` still
+  removes the field. First, so B1's and B2's expected
   texts are written in the order that stands.
 - **B1.** `migrate_entry()` (D2) and `status_problem()` (D1's function, which its post-condition calls; `check()`
   does not run it yet), with T5 and `fixtures/migrate/`.
 - **B2.** `ledger.py migrate` (D3), with T6's `migrate` parts and `fixtures/ledger_writer/migrate_*`.
-- **B3.** `check()` runs `status_problem()` (D1), with T2's Status parts, T3 and T7, the `RETIRED_STATUS` text, the
+- **B3.** `check()` runs `status_problem()` (D1), with T2's Status parts, T3 and T7, `RETIRED_STATUS` removed, the
   regenerated fixtures and tests; **and this repo's own ledger migrated in the same PR**, by B2's command, its
-  `--dry-run` listing in the PR body: the archive holds Status tails (TD-053's `Resolved 2026-11-06: designed and
+  `--dry-run` listing in the PR body, and its `--closed-dates` a file the builder makes from git (each archived
+  entry's archiving commit's day), outside the package and not committed, its making said in the PR: the archive holds Status tails (TD-053's `Resolved 2026-11-06: designed and
   built …`) and heads that do not read (TD-001's `Resolved 2026-10-12.`, TD-002's `Resolved 2026-10-14.`), 11
   archived entries hold `Added` comments, and 54 entries (53 archived, one open) a header `Location`.
 - **B4.** The grammar appendix (D5, T8) and `fixtures/grammar/`.
