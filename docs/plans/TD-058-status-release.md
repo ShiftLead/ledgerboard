@@ -78,8 +78,10 @@ it from the v2.7 row.
 
 **S6. `Waits` leaves the canonical order.** `canonical()` no longer places it: a `Waits` line still in a file
 (today only on archived entries) is kept, placed with the other fields the order does not name, in the file's order (SPEC
-*Canonical form*; *unknown text survives*), and stays ℹ `retired`. `migrate` does not touch it: turning a wait into a gate was the v2.4 remodel's judgment
-(§7.3), and no open entry in the three ledgers carries one.
+*Canonical form*; *unknown text survives*). `check()` reads retired fields on open entries only, so an archived
+`Waits` line is not flagged; S7's `migrate --dry-run` precondition is what covers archived entries. `migrate` does
+not touch it: turning a wait into a gate was the v2.4 remodel's (§7.3: mechanical for `until`, judgment for an
+event), and no open entry in the three ledgers carries one.
 
 **S7. `migrate`'s lifecycle** (your note on the entry, 2026-11-07, adopted as you wrote it): it ships in
 v2.7, stays through every v2.x (roster repos still to migrate; a stale branch can bring old forms back; a
