@@ -207,7 +207,9 @@ so it is not a major. As v1.3 did, it reads one thing differently: a Log line an
 `retitled:` now reads as malformed, flagged `log-line`, which is an error on an entry an edit changed. No writer
 rewrites a Log line, so such an entry is left with the flag, and a person fixes it by hand; a consumer looks once
 with `grep -rn ': retitled:' docs/ledger` before taking the release (none is known). A consumer that switches on
-`log_line()`'s `kind` meets one new value, `retitled`. An older reader reads `retitled: was "…"` as a note. The
+`log_line()`'s `kind` meets one new value, `retitled`. On a ledger with a `Fields:` line, `pickable()`'s `undeclared-field` (an error on an
+entry an edit changed) no longer fires for a header `Title` or `Log`, which `check()` names `misplaced-name` (ℹ)
+instead. An older reader reads `retitled: was "…"` as a note. The
 writers refuse more, `set` takes `title`, `edit` takes `remove`, and `check()` gains one ℹ flag. It rides with
 TD-067 in v2.8 if both are built by then; nothing in either depends on the other.
 
