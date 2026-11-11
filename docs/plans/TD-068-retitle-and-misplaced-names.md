@@ -2,7 +2,7 @@
 
 **Status:** Draft 1, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
 writer argument, a new Log line shape and reserved prefix, and new refusals in `edit_entry()`, which both
-consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: round 1 ran 2026-11-11 (the record:
+consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: rounds 1–2 ran 2026-11-11 (the record:
 [docs/reviews/TD-068.md](../reviews/TD-068.md)).
 
 **Entry:** [TD-068](../ledger/TD-068.md). Reported by ShiftLead (its TD-1551, 2026-11-11).
@@ -21,8 +21,9 @@ The edits that come closest write the name somewhere else instead:
   is not one. It sits beside the header's own `**Status:**`.
 
 None of these is refused, and `check()` reports none of them. (A body `Priority`, `Type`, `Blocked by` or
-`Part of` is read as a field and flagged ℹ `below-header` only when the header lacks it; beside a header copy,
-`canonical()` refuses the entry, so `edit` refuses it already. Every other header name in the body is read as a
+`Part of` is lifted as a field and flagged ℹ `below-header` only when the header lacks it, and `canonical()` then
+refuses the entry, so every edit of it is refused. Beside a header copy it is an ordinary section: read as a
+section, accepted by `canonical()` and `edit`, and never flagged. Every other header name in the body is read as a
 section and never flagged.)
 
 **The harm.** When a split changes an entry's scope, its title can be fixed in only two ways:
@@ -45,9 +46,9 @@ that looks like a field.
 - **From v2.7, `Location` is a body section.** The writer (`ledger.py`, not `edit_entry()`) refuses a non-empty
   `--location` or `--field Location=…` as a usage error, and an empty one still removes a header `Location`.
 - **A body copy of a lifted field.** `entries()` lifts a body `Priority`, `Type`, `Blocked by` or `Part of`
-  and flags it ℹ `below-header` only when the header lacks that field (the entry's `below`). When the header has
-  it too, the body copy is neither read nor flagged, and `canonical()` refuses an entry with a lifted copy, so
-  every edit of such an entry is refused already.
+  and flags it ℹ `below-header` only when the header lacks that field (the entry's `below`), and `canonical()`
+  refuses an entry with such a lifted copy, so every edit of it is refused; curing that is out of this design's
+  scope (a person's, as today). When the header has the field too, the body copy is an ordinary section.
 - **The format's own fields** are `CADENCE_FIELDS` (`Priority`, `Type`, `Added`, `Status`, `Blocked by`,
   `Location`, `Part of`, `Escaped from`, `Id take`). `Owner`, `Kind` and `Taken by` have a place in the canonical
   order, which is "a rendering rule, not a declaration": a repo declares them on its `Fields:` line or not.
@@ -79,49 +80,54 @@ that looks like a field.
 - **Every name SPEC does not list.** Rejected: body sections are an open set (above).
 
 **Which names `set` refuses.**
-- **A non-empty `Title`, `Log`, or a name a section of this entry carries** (chosen). The last is symmetric
-  with `edit`'s: a header field that duplicates a body section (`set --field Why=…`) is the same stray. An empty
-  value still removes such a field, since that is how a stray header field is cleaned.
+- **`Title` and `Log`** (chosen): neither is ever a header field. Refusing every name a body section carries
+  was weighed and rejected (round 2): it blocks a legitimate `set --status` on an entry with a stray body Status,
+  and deadlocks a section such as `Owner` that `edit` may add. A header field that duplicates a body section is
+  `check()`'s ℹ, cured by an empty value.
 
 **How an existing stray is cleaned.** A session may not hand-edit the ledger, so each stray needs a writer:
 - a stray header field: `set --field <name>=` (an empty value), as today;
-- a stray body section: `edit --section <name> --remove` (chosen), a removal allowed only for a section `check()`
-  calls misplaced, so it never removes a Why or a Fix. The alternative, a `fmt` pass that drops strays, would
+- a stray body section: `edit --section <name> --remove` (chosen), a removal allowed only for a section named
+  `Title` or as a header name, so it never removes a Why, a Fix or a body Location. The alternative, a `fmt` pass that drops strays, would
   lose their words unseen. Rejected.
 
 ## Decisions
 
-**Misplaced** names a section or field throughout:
-- a **misplaced section** is a body section with an unqualified lead whose name, compared by `field_key` with the
-  colon optional (as leads match), is `Title`, a **header name**, or a field this entry's header carries, and
-  that did not raise `below-header` for this entry (its key is not in the entry's `below`);
-- a **header name** is one of `Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`,
-  `Id take` (the format's own fields but `Location`), `Waits` and `Taken by` (retired header fields), or a name
-  the ledger's `Fields:` line declares (`declared`: the field names as written on the line, compared by
-  `field_key`; a caller with no ledger passes none);
-- a **misplaced field** is a header field named `Title`, or named as a section of this entry's body.
-
-A qualified lead (`Status (old)`, `Note (2026-01-02)`) is matched only whole, as SPEC already says, so it is
-never misplaced.
+**Names.** Names compare by `field_key` with the colon optional, as leads match, and a qualified lead (`Status
+(old)`, `Note (2026-01-02)`) is matched only whole, so it is never one of these.
+- A **header name** is one of `Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`,
+  `Id take` (the format's own fields but `Location`), `Waits` and `Taken by` (retired header fields), or a key of
+  `declared()` on the ledger's text (the `Fields:` line's names, as `field_key`s), passed to `edit_entry()` as
+  `declared_fields` (a caller with no ledger passes none).
+- A **misplaced section** is a body section named `Title` or a header name, unless it raised `below-header` for
+  the entry (its key in the entry's `below`).
+- A **misplaced field** is a header field named `Title`, or a header field whose name a body section of the entry
+  also carries (a header `Why` beside a body Why; a retired header `Location` beside a body Location). The header
+  copy is the stray: a body Location is where v2.7 puts it.
 
 **D1. `set` retitles.** `edit_entry(text, "set", fields=…, title=…)`. `title`, when given, replaces the
 heading's title, and `fields` may then be empty. The entry's title is `title_read` (stripped, an HTML comment
-dropped), and the new title is stripped. The new title is refused when it is empty, is more than one line, holds
-`\r` or `<!--`, or opens `TD-<digits>:`, since the heading would not read back as that title. A new title equal to
-the entry's changes nothing and logs nothing; that is checked before `today` is required. Otherwise:
+dropped), and the new title is stripped of leading and trailing whitespace only (inner runs kept, unlike
+`_one_line`). It is refused when it is empty, is more than one line, or holds `\r` or `<!--`, since the heading
+would not read back as that title. A new title equal to the entry's changes nothing and logs nothing (the text
+comes back in canonical form); that is checked before `today` is required. Otherwise:
 - the heading becomes `## TD-n: <new title>`, its id as written;
 - `- <today>: retitled: was "<old title>"` is appended to the Log, `<old title>` being `title_read`;
 - the Log is made at the end of the body if there is none, and a Log that is not last is refused, as for `set`'s
   `gate added` lines;
 - with both `title` and a gate-adding `Blocked by`, the `retitled` line comes first, then the `gate added` lines;
-- `today` is required whenever a `retitled` line is written.
+- `today` is required whenever a `retitled` line is written;
+- an HTML comment the old heading held is dropped with the old title (the Log's `was` gives `title_read`, without
+  it).
 
 The file keeps its name. `title` joins `set`'s accepted arguments, so it is not "stray". As with `note`, a
 `retitled` line that makes a Log on an entry with none becomes the Log's first line, which a gate with no `gate
 added` line ages from.
 
 **The writer.** `ledger.py set TD-n --title "<new title>"` (`plan_edit`'s `title`), beside `set`'s other flags.
-`--title` alone is a `set`: the "give at least one field" usage check also accepts `--title`. `--title ""` is a
+`--title` alone is a `set`: the "give at least one field" usage check also accepts `--title`. `new` already has a
+required `--title`, so `set` adds its own `--title` beside the field flags it shares with `new`, never through the
+shared helper. `_ENTRY_ARGS`, the accepted-arguments tuple and `set`'s "needs the fields" guard all take `title`. `--title ""` is a
 usage error, exit 2 (`a.title is not None`, since `""` is falsy). A title the module refuses, two lines say, is
 exit 1. An archived entry is refused by the writer (`_open_entry`), as for every `set` (`set_archived`). The commit
 subject is `set`'s. An unchanged title writes nothing (`paths: []`, `subject: null`), as `set_unchanged`.
@@ -132,40 +138,52 @@ title may hold quotes. `retitled:` joins `LOG_PREFIXES`, so `note` refuses words
 flags `log-line` on a line that begins `retitled:` and is not in the shape. Its kind is not in `LOG_AGE_KINDS`,
 so it never resets a gate's age.
 
-**D3. `edit` refuses to add a misplaced section, and removes one.** `edit_entry(text, "edit", section=…,
-declared=…)`:
-- **adding** a section the body lacks is refused when it would be misplaced: `Title` (*the title is the heading:
-  use set --title*), a header name (*… is a header field: use set*), or a field this entry's header carries (*…
-  is a field of this entry's header: use set, or remove the field with an empty value first*);
+**D3. `edit` refuses to add a section that belongs in the header, and removes a misplaced one.**
+`edit_entry(text, "edit", section=…, declared_fields=…)`:
+- **adding** a section the body lacks is refused when it is named `Title` (*the title is the heading: use set
+  --title*), a header name (*… is a header field: use set*), or a field this entry's header carries (*… is a field
+  of this entry's header: remove it with an empty value first*), since each would make a misplaced section or
+  field;
 - **replacing** a section the body has is allowed whatever its name, so a stray's words can still be corrected;
-- **`remove=True`** (v2.8) removes the named section, lead and paragraphs, and is refused unless the section is
-  misplaced (*… is not misplaced: only a misplaced section is removed*), for the Log, and when two sections have
-  the name. `words` is then not taken.
+- **`remove=True`** (v2.8) removes the named section, lead and paragraphs. It is refused unless the section is a
+  misplaced section (*… is not misplaced: only a section named Title or as a header field is removed*), for the
+  Log, when two sections have the name, and with `words` (*remove takes no words*).
 
 So `edit --section Location` adds a body `Location` on an entry whose header has none, and is refused while the
-header still carries one (`set --location ""` removes it first). A reopened entry's `Resolved` section is
-replaced as today. The writer: `ledger.py edit TD-n --section NAME --remove`, `--remove` and `--from` exclusive
-(a usage error, exit 2); the writer passes the ledger's `Fields:` names as `declared`.
+header still carries one (`set --location ""` removes it first); a body Location is never removed by `--remove`.
+`edit --section Owner` adds an `Owner` section where the ledger declares no `Owner` and the header has none.
 
-**D4. `set` refuses a misplaced field.** `edit_entry(text, "set", fields=…)` refuses a non-empty value for a
-field named `Title` (*the title is the heading: use set --title*), `Log` (*the Log is a section its writers
-write*), or a name a section of this entry's body carries (*… is a section of this entry: use edit --section*).
-An empty value removes such a field if the header carries it, as today, and changes nothing otherwise. The
-module's one-line check on a value (`set_refused_two_lines`) runs first. The writer's v2.7 `Location` usage
-error stays in `ledger.py` and comes before the module is called.
+**The writer:** `ledger.py edit TD-n --section NAME --remove`. `--from` stops being required; `_build` refuses
+(`Unusable`, exit 2, with the JSON `_say` writes) both `--remove` and `--from`, and neither. The writer passes the
+keys of `declared()` on the ledger's README as `declared_fields`.
+
+**D4. `set` refuses `Title` and `Log`.** `edit_entry(text, "set", fields=…)` refuses a non-empty value for a
+field named `Title` (*the title is the heading: use set --title*) or `Log` (*the Log is a section its writers
+write*). An empty value removes such a field if the header carries it, as for any field. The module's one-line
+check on a value (`set_refused_two_lines`) runs first. The writer's v2.7 `Location` usage error stays in
+`ledger.py` and comes before the module is called. Every other name is set as today, a header field a body
+section shares among them; `check()` notes that pair (D5).
+
+**`new` follows the same rules.** `entry_text()` refuses a field named `Title` or `Log` and a section named
+`Title` or a header name (`declared_fields` as for `edit`), so a new entry is never filed with a stray.
 
 **D5. `check()` notes what is misplaced.** A new ℹ flag, `misplaced-name`, once for each misplaced section and
-each misplaced field of an entry, with `declared` the ledger's `Fields:` names. It is ℹ in every case, on a
-standing ledger and on an entry an edit changed alike: the cure is a writer (D3's `--remove`, D4's empty
-value), and an error would block the unrelated edit that touched the entry.
+each misplaced field of an entry, with `declared_fields` from the ledger's `Fields:` line. It reads the entry
+through `entries()` (its fields, its `below`) and its body's section leads, and skips an entry `canonical()`
+refuses (a lifted copy), which `below-header` already flags. It joins `TEXT_KINDS`, so it is scoped by the
+entry's whole text, as `log-line` is. It is ℹ in every case, on a standing ledger and on an entry an edit changed
+alike: the cure is a writer (D3's `--remove`, an empty `set` value), and an error would block the unrelated edit
+that touched the entry. A v2.7 entry with both a header and a body Location is noted once, its header field
+misplaced; `set --location ""` cures it.
 
-**D6. A minor release, v2.8.** No key moves and the canonical form is unchanged, so it is not a version event
-under SPEC *Versions*. One read changes: a Log line an older `note` allowed that begins `retitled:` now reads as
-malformed, flagged `log-line`, which is an error on an entry an edit changed. A consumer finds such lines once
-with `grep -rn ': retitled:' docs/ledger` before taking the release and rewrites them through `note`'s
-`note: <text>` form (none is known). An older reader reads `retitled: was "…"` as a note. The writers refuse
-more, `set` takes `title`, `edit` takes `remove`, and `check()` gains one ℹ flag. It rides with TD-067 in v2.8 if
-both are built by then; nothing in either depends on the other.
+**D6. A minor release, v2.8, that reads one thing differently.** No key moves and the canonical form is unchanged,
+so it is not a major. As v1.3 did, it reads one thing differently: a Log line an older `note` allowed that begins
+`retitled:` now reads as malformed, flagged `log-line`, which is an error on an entry an edit changed. No writer
+rewrites a Log line, so such an entry is left with the flag, and a person fixes it by hand; a consumer looks once
+with `grep -rn ': retitled:' docs/ledger` before taking the release (none is known). A consumer that switches on
+`log_line()`'s `kind` meets one new value, `retitled`. An older reader reads `retitled: was "…"` as a note. The
+writers refuse more, `set` takes `title`, `edit` takes `remove`, and `check()` gains one ℹ flag. It rides with
+TD-067 in v2.8 if both are built by then; nothing in either depends on the other.
 
 ## Consumers
 
@@ -190,20 +208,26 @@ All in *Ledger entries and their edits (v2.2)* unless named.
 of the bullet) add
 
 > From v2.8 `set` takes `title`, which replaces the heading's title, and `fields` may then be empty. The new title
-> is stripped and refused when empty, more than one line, holding `\r` or `<!--`, or opening `TD-<digits>:`. One
-> equal to the entry's title as read changes nothing. Any other is written `## TD-n: <title>` and logs `retitled:
+> is stripped and refused when empty, more than one line, or holding `\r` or `<!--`. One equal to the entry's title
+> as read changes nothing. Any other is written `## TD-n: <title>` and logs `retitled:
 > was "<old title>"`, dated `today`, which it then requires, ahead of any `gate added` line; the Log is made and
-> refused as above. The file keeps its name. `set` refuses a non-empty value for a field named `Title` or `Log`,
-> or named as a section of the entry's body; an empty one removes such a field, as for any field.
+> refused as above. The file keeps its name. `set` refuses a non-empty value for a field named `Title` or `Log`.
 
 **2. The `edit` bullet.** After "It is refused when two sections have the name, and for the Log, which only its
 writers write." add
 
-> From v2.8 it refuses to add a **misplaced section** (*The Log*, above), which belongs in the header: `Title` (the
-> heading's: `set` retitles), a header name (`Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`,
-> `Escaped from`, `Id take`, `Waits`, `Taken by`, and each name the ledger's `Fields:` line declares, given as
-> `declared`), or a field the entry's header carries. A section the body has is replaced whatever its name. With
-> `remove` (v2.8) it removes the named section, and is refused unless that section is misplaced.
+> From v2.8 it refuses to add a section named `Title` (the heading's: `set` retitles), a **header name**
+> (`Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`, `Id take`, `Waits`, `Taken
+> by`, and each name the ledger's `Fields:` line declares, given as `declared_fields`), or a field the entry's
+> header carries. A section the body has is replaced whatever its name. With `remove` (v2.8) it removes a
+> **misplaced section**: one named `Title` or a header name that did not raise `below-header`; any other is
+> refused. Names compare as leads do, so a qualified lead is never one.
+
+**2a. The *Edits* paragraph.** Replace "and from v2.5 by `set` and `edit`, which require it only to date a gate"
+with "and from v2.5 by `set` and `edit`, which require it only to date a gate or (v2.8) a retitle".
+
+**2b. *A new entry*.** After "and sections that would not read back as given" add "(and, v2.8, a field named
+`Title` or `Log`, and a section named `Title` or a header name, *edit* below)".
 
 **3. The Log's line shapes.** In the list of shapes, after "`archived: <Status word> — <why>`, `reopened — <why>`,
 and `was: <Status>`." add
@@ -212,12 +236,11 @@ and `was: <Status>`." add
 
 and in the reserved prefixes, after `` `reopened —` `` add `` and (v2.8) `retitled:` ``.
 
-**4. `check()`.** After the `log-line` sentence add
+**4. `check()`.** After "information on a standing one." (the sentence after `log-line`) add
 
-> `check()` notes (ℹ, `misplaced-name`, v2.8) each **misplaced section**, a body section with an unqualified lead
-> named `Title`, a header name (*edit*, below) or a field the entry's header carries, unless it raised
-> `below-header`, and each **misplaced field**, a header field named `Title` or as a section of the entry's body.
-> It is never an error: `edit`'s `remove` and `set`'s empty value clean them.
+> `check()` notes (ℹ, `misplaced-name`, v2.8) each misplaced section (*edit*, below) and each **misplaced field**:
+> a header field named `Title`, or one whose name a body section of the entry also carries (the header copy is
+> the stray). It is never an error: `edit`'s `remove` and `set`'s empty value clean them.
 
 **5. *The ledger writer*, the `set, note, edit` bullet.** After "`set TD-n` takes `new`'s field flags" add "and
 (v2.8) `--title "<title>"`, the heading's title (`--title ""` a usage error)". After "`edit TD-n --section NAME
@@ -227,48 +250,58 @@ one; the ledger's `Fields:` names are passed as `declared`)".
 **6. *Versions*.** Append
 
 > **v2.8 gives the title its writer** (*Ledger entries and their edits*): `set` takes `title` and logs `retitled:
-> was "<old title>"`, `edit` refuses to add a misplaced section and removes one, `set` refuses a misplaced field,
-> and `check()` notes `misplaced-name` (ℹ). `retitled:` joins the reserved prefixes, so a note an older `note`
-> wrote with that prefix now reads as a malformed line (`log-line`). No key moves, and an older reader reads the
-> new line as a note.
+> was "<old title>"`, `edit` refuses to add a section that belongs in the header and removes a misplaced one,
+> `set` and `new` refuse a `Title` or `Log` field, and `check()` notes `misplaced-name` (ℹ). It reads one thing
+> differently: `retitled:` joins the reserved prefixes, so a note an older `note` wrote with that prefix now reads
+> as a malformed line (`log-line`). No key moves, and an older reader reads the new line as a note.
 
 ## Fixtures
 
 All invented, in the existing fixtures' style.
 
 **`fixtures/ledger_edit/` (`edit_entry`)**, each with `"today": "2026-01-20"` where it writes a Log line:
-- `set_title`: `reordered.md`, `set` with `title: "A narrower scope"` and no fields: the heading rewritten, the Log
-  gaining `- 2026-01-20: retitled: was "<its old title>"`.
-- `set_title_no_log`: an entry with no Log: the Log made at the end of the body.
+- `set_title`: an entry with a Log (`gate_added.md`), `set` with `title: "A narrower scope"` and no fields: the
+  heading rewritten, the Log gaining `- 2026-01-20: retitled: was "<its old title>"` last.
+- `set_title_no_log`: `reordered.md` (no Log): the Log made at the end of the body.
 - `set_title_log_not_last`: refused, as for `gate added`.
 - `set_title_and_fields`: `title` and `fields: {"Priority": "High"}`: both changes, one Log line.
-- `set_title_same`: the entry's own title with extra spaces, and no `today`: the text unchanged, no refusal.
-- `set_title_refused_empty`, `set_title_refused_two_lines`, `set_title_refused_comment` (`a <!-- b`),
-  `set_title_refused_id` (`TD-9: x`).
-- `set_title_quotes`: a title holding `"`; the Log line read back by `log_line()` gives the old title whole.
+- `set_title_same`: the entry's own title with extra outer spaces, and no `today`: the canonical form of the text,
+  no refusal.
+- `set_title_refused_empty`, `set_title_refused_two_lines`, `set_title_refused_comment` (`a <!-- b`).
+- `set_title_comment_dropped`: a heading `## TD-n: Old <!-- x --> title`, retitled: the comment gone, the Log's
+  `was "Old  title"` as `title_read` gives it.
+- `set_title_quotes`: an old title holding `"`, retitled (read back by the `log` case below).
 - `set_title_and_gate`: `title` with a `Blocked by` adding `until 2026-02-01`: `retitled`, then `gate added`.
-- `set_refused_title_field`, `set_refused_log_field`, `set_refused_section_name` (`fields: {"Why": "x"}` on an
-  entry with a Why); `set_empty_removes_stray` (an entry with a header `Why` field and a body Why: `fields:
-  {"Why": ""}` removes the field).
-- `edit_refused_title`, `edit_refused_status`, `edit_refused_waits`, `edit_refused_declared` (`declared:
-  ["Tracker"]`), `edit_refused_entry_field` (a `Tracker` header field, no `declared`), `edit_owner_allowed`
-  (`section: "Owner"` with no `declared` and no header Owner: added, since `Owner` is not a header name).
+- `set_refused_title_field`, `set_refused_log_field`; `set_status_with_stray`: an entry with a body `**Status:**`
+  section, `fields: {"Status": "Open"}`: set as today.
+- `set_empty_removes_stray`: an entry with a header `Why` field and a body Why: `fields: {"Why": ""}` removes the
+  field, the body Why kept.
+- `edit_refused_title`, `edit_refused_status`, `edit_refused_waits`, `edit_refused_declared` (`declared_fields:
+  ["tracker"]`), `edit_refused_entry_field` (a `Tracker` header field, no `declared_fields`), `edit_owner_allowed`
+  (`section: "Owner"`, no `declared_fields`, no header Owner: added).
 - `edit_replaces_stray`: an entry with a body `**Status:**` section: `edit` replaces its words.
-- `edit_remove_stray`: the same entry, `remove: true`: the section gone. `edit_remove_refused_why`: `remove` on
-  `Why`, refused.
+- `edit_remove_stray`: the same entry, `remove: true`: the section gone. `edit_remove_refused_why` (`no_status.md`,
+  no header Why): refused. `edit_remove_refused_location` (`reordered.md`, header and body Location): refused.
+  `edit_remove_refused_words`: `remove` with `words`: refused.
 - `edit_qualified_status`: `section: "Status (old)"`: added as today.
-- `edit_location`: `section: "Location"` on `no_status.md` (no header Location): added. `edit_refused_header_location`:
-  its own inline text with a header `**Location:**` and no body one: refused.
+- `edit_location`: `section: "Location"` on `no_status.md`: added. `edit_refused_header_location`: its own inline
+  text with a header `**Location:**` and no body one: refused.
+- `new_refused_title_field`, `new_refused_status_section` (`entry_text`).
 
-**`fixtures/ledger_edit/` (`log`)**: `log_shapes.md` gains a `retitled: was "An "old" title"` line and a
-malformed `retitled: the old one` line; `every_shape` expects the first read as `retitled` with its `title`, and
-the second as malformed.
+**`fixtures/ledger_edit/` (`log`)**: `log_shapes.md` gains, as its last lines (so its first line is unchanged), a
+`retitled: was "An "old" title"` line and a malformed `retitled: the old one` line; `every_shape` expects the
+first read as `retitled` with its `title`, and the second as malformed. A `log` case on `set_title_quotes`'s
+output text (an old title holding `"`) reads the old title back whole.
 
-**`fixtures/ledger_edit/` (`check`)**: a case with `"archive": ""` whose ledger holds one entry with a body
-`**Status:**` section, a body `**Title:**` section and a header `**Title:**` field, expecting three
-`misplaced-name` ℹ; one whose body `**Priority:**` raised `below-header` (no header Priority), expecting none;
-and one with a `retitled` line written by the writer, expecting no `log-line`. `fixtures/run.py`'s list of the
-`check` kinds a case reports gains `misplaced-name`.
+**`fixtures/ledger_edit/` (`check`)**, each with `"archive": ""` and no `old` (so every flag is standing):
+- one entry with a body `**Status:**` section, a body `**Title:**` section and a header `**Title:**` field: three
+  `misplaced-name`;
+- one with a body `**Priority:**` beside a header Priority: one `misplaced-name`;
+- one whose body `**Priority:**` raised `below-header` (no header Priority): no `misplaced-name`;
+- `reordered.md`'s header and body Location: one `misplaced-name`, the header field;
+- one with a `retitled` line the writer wrote: no `log-line`.
+
+`fixtures/run.py`'s list of the `check` kinds a case reports gains `misplaced-name`.
 
 **`fixtures/ledger_writer/`**
 - `set_title`: `set TD-001 --title "A narrower scope" --today 2026-01-15 --json`: the heading and Log changed,
@@ -282,14 +315,14 @@ and one with a `retitled` line written by the writer, expecting no `log-line`. `
 - `note_reserved_retitled`: `note TD-001 "retitled: by hand"`: exit 1.
 
 **Unit tests** (`tests/`): the refusal messages name the verb to use; a `retitled` line's kind is not in
-`LOG_AGE_KINDS`; `--remove` with `--from` is a usage error.
+`LOG_AGE_KINDS`; `--remove` with `--from`, and neither, are usage errors with JSON.
 
 ## The builds
 
 **B1** (one build, `Part of: TD-068`): D1–D6 with SPEC text 1–6, the fixtures and the unit tests, landing
-together. Location: `ledgerboard/__init__.py` (`edit_entry` and its accepted arguments, `LOG_SHAPES`, `LOG_PREFIXES`,
-`check`), `ledgerboard/ledger.py` (`plan_edit`, `set --title`, `edit --remove` and `declared`, the "at least one
-field" check), `fixtures/run.py` (the `check` kinds), `SPEC.md` (*The ledger*, *Ledger entries and their
+together. Location: `ledgerboard/__init__.py` (`edit_entry` and its accepted arguments, `entry_text`, `LOG_SHAPES`, `LOG_PREFIXES`,
+`TEXT_KINDS`, `check`), `ledgerboard/ledger.py` (`plan_edit`, `set --title`, `edit --remove` (`--from` no longer required) and
+`declared_fields`, the "at least one field" check), `fixtures/run.py` (the `check` kinds), `SPEC.md` (*The ledger*, *Ledger entries and their
 edits*, *The ledger writer*, *Versions*), `fixtures/ledger_edit/`, `fixtures/ledger_writer/`, `tests/`. Done
 when: the precheck is green and every fixture above passes (their expected JSON regenerated by the runner; the
 release stamps `fixtures/MANIFEST`), with SPEC text 1–6 landed in the same PR.
