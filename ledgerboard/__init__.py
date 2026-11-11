@@ -225,8 +225,6 @@ LOCATION_WRITTEN = ("a new or changed Location line — the header field is reti
                     "section, or run migrate, which moves it (SPEC *Retired words*)")  # the same, for a header Location (v2.7)
 WRITTEN_RETIRED = {"waits": WAITS_WRITTEN, "location": LOCATION_WRITTEN}  # check()'s error on a retired line an edit wrote
 RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
-RETIRED_STATUS = {"designed": "Open, with Kind build", "built": "Open, with Kind live-check", "partly": "Open",
-                  "live": "Open", "in": "Open"}  # an open entry's; the archived ones are migrate's to map
 OLD_FORM_REPLACES = "decision (<person>), with the text in an **Ask:** section"
 
 
@@ -628,10 +626,6 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
             if key in RETIRED_FIELDS:
                 flags.add(f"ℹ {e['id']}: the {key.capitalize()} field is retired — write "
                           f"{RETIRED_FIELDS[key]} (SPEC *Retired words*)", e["id"], key, "retired")
-        status = first_word(e["fields"].get("status"))
-        if status in RETIRED_STATUS:
-            flags.add(f"ℹ {e['id']}: the Status word {status.capitalize()!r} is retired — write "
-                      f"{RETIRED_STATUS[status]} (SPEC *Retired words*)", e["id"], "status", "retired")
         etype = (e["type_raw"] or TYPES[0]).lower()
         for key in e["below"]:
             flags.add(f"ℹ {e['id']}: its {key.capitalize()} line is below the header block — "
@@ -820,7 +814,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     each entry's old text when ``old`` is given), scoped the same way, and
     ``gate-reassigned-often`` (info) for a decision reassigned more than twice to reach it (``reassigns()``).
     Also with ``old`` (v2.7): the retired ``Waits`` field is an error on an entry whose Waits line the edit added
-    or changed (SPEC *Retired words*), and stays information where the line is as it was. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
+    or changed (SPEC *Retired words*), and stays information where the line is as it was. Last (v2.7), each
+    entry's ``status`` (``_status_records()``): a Status outside the closed set, an error on every entry of a v2
+    ledger, open or archived, with or without ``old``, never standing. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
@@ -844,8 +840,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
                 recs.append({"level": "info", "id": tid, "field": "blocked by", "kind": "gate-reassigned-often",
                              "text": f"ℹ {tid}: {gate} was reassigned {n} times — is the decision stuck?",
                              "standing": False})
+    statuses = _status_records(ledger, archive)
     if old is None:
-        return recs
+        return recs + statuses
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
     written = {(e["id"], k) for e in entries(ledger) for k in WRITTEN_RETIRED  # v2.7: a Waits or header Location
@@ -862,7 +859,21 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         elif r["kind"] == "retired" and (r["id"], r["field"]) in written:
             r["level"], r["text"] = "error", f"ℹ {r['id']}: {WRITTEN_RETIRED[r['field']]}"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
-    return recs + _left_with_open_parts(old, ledger)
+    return recs + _left_with_open_parts(old, ledger) + statuses
+
+
+def _status_records(ledger: str, archive: str) -> list[dict]:
+    """``status`` (v2.7, SPEC *The closed Status set*): ``status_problem()`` over each entry of the ledger, then
+    of the archive, in file order — an error on a ledger that declares major 2, ℹ on a v1 ledger, never standing."""
+    level = "error" if format_major(ledger) >= 2 else "info"
+    out = []
+    for text, archived in ((ledger, False), (archive, True)):
+        for tid, one in _entry_texts(text).items():
+            why = status_problem(one, archived=archived)
+            if why:
+                out.append({"level": level, "id": tid, "field": "status", "kind": "status", "standing": False,
+                            "text": f"{'⚠' if level == 'error' else 'ℹ'} {tid}: {why}"})
+    return out
 
 
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
@@ -3882,8 +3893,9 @@ def status_problem(text: str, *, archived: bool) -> str | None:
     """The problem of one entry's Status against the four forms (v2.7, SPEC *Migrating to v2.7*), or None:
     ``Open`` in the ledger; ``Resolved D``, ``Superseded D by <id>`` or ``Dropped D`` in the archive, exactly as
     the writers write them. The Status is the one ``entries()`` reads, from the header block. The sentence names
-    the form the entry's place takes and the value's first word, never the whole value."""
-    found = entries(text)
+    the form the entry's place takes and the value's first word, never the whole value. A CRLF line end is
+    read as LF, as ``_lenient_parts()`` reads it."""
+    found = entries(text.replace("\r\n", "\n").replace("\r", "\n"))
     if not found:
         return None
     value = found[0]["fields"].get("status")

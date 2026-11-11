@@ -1590,6 +1590,28 @@
    "name": "location_no_old",
    "ledger": "check/location_after.md",
    "archive": ""
+  },
+  {
+   "name": "status_outside_the_set_no_old",
+   "ledger": "check/status_after.md",
+   "archive": "check/status_after.archive.md"
+  },
+  {
+   "name": "status_outside_the_set_standing_is_still_an_error",
+   "ledger": "check/status_after.md",
+   "archive": "check/status_after.archive.md",
+   "old": "check/status_after.md"
+  },
+  {
+   "name": "status_after_archive_open_parts",
+   "ledger": "check/status_parts_after.md",
+   "archive": "check/status_parts_after.archive.md",
+   "old": "check/status_parts_before.md"
+  },
+  {
+   "name": "status_v1_is_info",
+   "ledger": "check/status_v1.md",
+   "archive": "check/status_v1.archive.md"
   }
  ],
  "log": [
