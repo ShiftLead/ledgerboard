@@ -1,8 +1,10 @@
 # TD-065: `Doer:`, who should do an act item's step
 
-**Status:** Draft 1, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 5, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
 field on the board's item line, read by both consumers, with a change to what a `Context:` reads; cap 6 rounds,
-cadence.md §4.8). Rounds: not yet run (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
+cadence.md §4.8). Rounds: **ended by the stop rule** at round 4, 2026-11-11 (its design review SHIP); build-changing
+findings per round in the design reviews 1, 2, 2, 0 (fact-checks 0, 2, 2, 0); recurring topic: the doer's repo
+grammar and its final `.` (F5, F16, F23, F34, F36) (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
 
 **Entry:** [TD-065](../ledger/TD-065.md). Asked for by ShiftLead (its design TD-1543, builds TD-1660 and TD-1661).
 
@@ -85,8 +87,9 @@ it on any kind but `act`.
 
 **D3. The reader.** The reader is looser than the writers, as for `Parts:`. It finds the field as `PARTS_RE`
 finds `Parts:`: ` Doer:` (after whitespace) then any whitespace, its **value** running to the first of: the next
-field name after whitespace (any name `GATE_FIELD_RE` finds, ` Parts:` and ` Context:` among them, `Due:` in any
-case), the start of the line's first reply (`reply_span()`), or the line's end; with the whitespace at its ends taken off, then one final `.`, and nothing more (a value with whitespace before its
+field name as `GATE_FIELD_RE` finds it (at a word's start, `Parts:` and `Context:` among them, `Due:` in any case),
+the start of the line's first reply (`reply_span()`; it can stop the value only on a hand-written line with no
+`Due:`, since a reply follows the `Due:`), or the line's end; with the whitespace at its ends taken off, then one final `.`, and nothing more (a value with whitespace before its
 period, `Doer: acme .`, keeps that whitespace and so does not read). The value reads as a **team** when it is `team`, a run of
 spaces or tabs, and a person's name; else as a **repo** when it is in the repo grammar and does not end in `.`;
 else it does not read. So `Doer:acme.`, `Doer: acme` (no period) and `Doer: team  ops.` read (and `item_problem()`
@@ -115,8 +118,8 @@ A reply's words that hold `Doer:` on a line written by hand are the person's: th
 field.
 
 **D5. `item_problem()`.** A new rule, tagged `doer:`, beside `parts:`:
-- `doer: <a kind> carries no `Doer:`: only an act names who does its step` on any kind but `act` (a decided
-  `act` takes one);
+- `doer: <a kind> carries no `Doer:`: only an act names who does its step` on any kind but `act`, no kind included (a
+  decided `act` takes one);
 - `doer: `Doer:` stands more than once`;
 - `doer: `Doer:` names a repo, `<repo>`, or a team, `team <name>``, for a value that does not read (D3);
 - `doer: written `Doer: <value>.`, one space after `Doer:` and after `team``, for a value that reads but is
@@ -139,7 +142,9 @@ reader reads back exactly what was meant (`parse_doer()` among the read-back). `
 among them: the check is that it was given) is refused first, at the step `--parts` with `--decided` is (a decided
 line is a `decide`); then the line's own refusals.
 
-The five edits keep the `Doer:` byte for byte. `snooze`, `due`, `decide` and `reply` read the line back and compare
+The five edits keep the `Doer:`'s value and the item key (on a hand-written `Doer: acme` with no period and no
+`Due:`, `snooze`, `due` and `reply` add the period before what they insert, as they do after any text, and the
+inserted field leaves the key). `snooze`, `due`, `decide` and `reply` read the line back and compare
 its fields (`answers`, …, `lifts`, `parts`); `doer` joins every read-back comparison in `edit_line()` (`snooze`'s,
 `due`'s, `reply`'s, and `decide`'s with `close` and without, tuples or chains of `!=` alike), so an edit that changed it is refused.
 `done` checks the item key alone, which holds the `Doer:`. No edit changes the doer: a step for another doer is
@@ -163,7 +168,10 @@ TD-4. Doer: acme. Due: …`), a `doer` its writer never meant. Such a line canno
 boards holds ` Doer:` in a Context or a `Parts:`, and a consumer acts on `doer` only on a board whose writers all
 run v2.8. No key moves: the key strips nothing new. Its verdicts change: `item_problem()` now faults a `Doer:` in
 an item's text, one whose value does not read, and one on any kind but `act`; `board_problems()` judges a line only
-when it is added, so no board has a flag day. The writers now refuse inputs that hold `Doer:`, which v2.7 wrote.
+when it is added, so no board has a flag day. `item_line()` now refuses inputs that hold `Doer:`, which v2.7
+wrote, and `decided_line()` cuts the name from a title or an answer, so its line differs from v2.7's for one. Each
+consumer's vendor PR also looks for `Doer:` in what it files from (ledger titles, Asks, detail texts; this entry's
+own title holds it) and rephrases at file time.
 A v2.7 reader reads a `Doer:` as part of the Context, so a consumer writes one only once every reader of its board
 runs v2.8.
 
@@ -226,8 +234,8 @@ add:
 > which `item_problem()` cannot tell from a v2.8 one: a consumer's v2.8 vendor PR shows that none of its boards holds
 > such a line. No key moves. `item_problem()` now faults a `Doer:` in an item's text, one whose value does not read,
 > and one on any kind but `act`; `board_problems()` judges only a line it adds, so no board has a
-> flag day. The writers now refuse a text, context, answer, detail value, reply or `--said` holding `Doer:`, which
-> v2.7 wrote. v2.7 reads a `Doer:` as part of the Context, so a consumer writes one only once every reader of its
+> flag day. `item_line()` and the edits now refuse a text, context, answer, detail value, reply or `--said`
+> holding `Doer:`, which v2.7 wrote, and `decided_line()` cuts the name from a title or an answer. v2.7 reads a `Doer:` as part of the Context, so a consumer writes one only once every reader of its
 > board runs v2.8.
 
 **8. *Appendix: grammar*, *The open item line*.** `other-item` loses `act`, and an `act-item` joins `item-line`'s
@@ -269,8 +277,8 @@ All invented names (`acme/widgets`, `ops`, `web.grind`).
     `Doer:`;
   - `edits`: snooze, due, done, decide and reply on an `act` carrying a `Doer:` keep it and the key; `due` on a
     hand-written act with a `Doer:` and no `Due:` adds the `Due:` after the `Doer:`; a reply whose words hold
-    `Doer:` is refused;
-  - `item_problems`: a well-formed act with each form passes; `Doer:` on a `decide`; twice; `Doer: Team ops.`;
+    `Doer:` is refused; `decide` with `close` on an act carrying a `Doer:` whose Context names a gate keeps it;
+  - `item_problems`: a well-formed act with each form passes; `Doer:` on a `decide`, and on a line with no kind; twice; `Doer: Team ops.`;
     `Doer: acme..`; no period; `Due:` before `Doer:`; `Doer:` in the text; a hand-written act with a `Doer:`, a
     `Hide until:` and no `Due:`, whose only faults are the missing `Due:` (the hide follows the `Doer:`); a
     decided `act` with a `Doer:`, which passes; `Doer:acme.` and `Doer: team  ops.` (spelling); a `Doer:` before
@@ -278,7 +286,6 @@ All invented names (`acme/widgets`, `ops`, `web.grind`).
     `Doer:` then `Parts:` (the kind's and the order's);
   - `subjects`: an add's head stops before `Context:` as before (a `Doer:` never reaches it); a hand-written line
     whose text holds `Doer:` before its Context, whose head stops at the `Doer:`;
-  - `edits`: `decide` with `close` on an act carrying a `Doer:` whose Context names a gate keeps it;
   - `canonical_items`: a line whose `Doer:` follows its `Due:`, `Doer: acme` with no period, and `Doer:  acme.`,
     each reported, never rewritten;
 - **`fixtures/board_writer/add_doer`** (`--doer team ops` on an act, the board after), **`add_doer_repo`**,
@@ -312,7 +319,8 @@ and the hand-built `closed_items` records stay as they are), `SPEC.md` (*The boa
 writer*, *Versions*, *Appendix: grammar*), `fixtures/board/` (the new pair, and every existing record JSON, which
 gains `"doer": null`: `basic`, `answers`, `hidden`, `people`, `lifts_parts`, `shared_part_left_open`), `fixtures/board_writer/` (the new
 cases, and `list/expected.json`'s records), `fixtures/archive/` (the closed act), `fixtures/edit/` and `fixtures/grammar/` (`cases.json` and
-`expected.json`), `tests/`. Done when: the precheck is green and every fixture above passes, with SPEC text 1–8
+`expected.json`), `tests/` (the probes, and `tests/test_item_gate.py`'s `written()`, whose whitelist of compose
+arguments gains `doer`, so a doer case reaches the gate and edit property tests). Done when: the precheck is green and every fixture above passes, with SPEC text 1–8
 landed in the same PR; the release restamps `fixtures/MANIFEST`.
 
 Then a release (Paul's), agent-cadence's vendor PR (its `board_edit.py add --doer`), and ShiftLead's TD-1661 pin bump.
