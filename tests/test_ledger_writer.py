@@ -148,6 +148,54 @@ class Location(unittest.TestCase):  # v2.7 (TD-058 D4): the Location is a body s
                             if r["kind"] == "retired"))
 
 
+class Migrate(unittest.TestCase):  # v2.7 (TD-058 B2): ledger.py migrate's text output and its usage errors
+    ARCH = ("## TD-004: Gone\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** {}\n\n**Why:** a reason.\n")
+
+    def ledger(self, tmp: str, status: str) -> str:
+        d = ledger(tmp, **{"TD-001.md": E1.replace("**Status:** Open", "**Status:** Designed 2026-10-01")})
+        os.makedirs(os.path.join(d, "archive"))
+        Path(d, "archive", "TD-004.md").write_text(self.ARCH.format(status))
+        return d
+
+    def test_dry_run_prints_the_entries_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self.ledger(tmp, "OBE 2026-10-03")
+            code, out, _ = run("migrate", "--release", "2.7", "--dry-run", "--ledger", d, "--today", "2026-11-11")
+            self.assertEqual(code, 0)
+            self.assertEqual(out, "TD-001\n  change: Status Designed 2026-10-01 → Open\n"
+                                  "  listed: stage word Designed: Kind not set\n"
+                                  "TD-004\n  change: Status OBE 2026-10-03 → Dropped 2026-10-03\n")
+            self.assertIn("Designed", Path(d, "TD-001.md").read_text())
+
+    def test_dry_run_with_nothing_to_migrate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            code, out, _ = run("migrate", "--release", "2.7", "--dry-run", "--ledger", d, "--today", "2026-11-11")
+            self.assertEqual((code, out), (0, "nothing to migrate\n"))
+
+    def test_a_stop_prints_one_line_per_stopped_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self.ledger(tmp, "Gone quiet")
+            code, out, err = run("migrate", "--release", "2.7", "--ledger", d, "--today", "2026-11-11")
+            self.assertEqual((code, out), (1, ""))
+            self.assertEqual(err, "TD-004: no date for the Status; Status Gone: no archived form\n")
+            self.assertIn("Designed", Path(d, "TD-001.md").read_text())
+
+    def test_base_and_resolved_are_usage_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            for flag in ("--base", "--resolved"):
+                code, _, _ = run("migrate", "--release", "2.7", flag, d, "--ledger", d)
+                self.assertEqual(code, 2, flag)
+
+    def test_the_subject_counts_the_entries_changed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self.ledger(tmp, "OBE 2026-10-03")
+            code, out, _ = run("migrate", "--release", "2.7", "--ledger", d, "--today", "2026-11-11", "--json")
+            self.assertEqual(code, 0)
+            self.assertIn('"subject": "ledger: migrate v2.7 (2 entries)"', out)
+
+
 class Write(unittest.TestCase):
     def test_a_failed_write_exits_4_and_keeps_the_file(self):
         with tempfile.TemporaryDirectory() as tmp:

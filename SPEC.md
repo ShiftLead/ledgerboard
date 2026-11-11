@@ -1389,7 +1389,40 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   span or a fenced block are left (an indented code block is read as prose), and paths are compared as text: a
   link that named no file before names none after. `--why` is required and not empty;
 - **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
-  an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
+  an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing;
+- **`migrate [TD-n …] --release <x.y>`** (v2.7) — `migrate_entry()` (*Migrating to v2.7*) over each entry named,
+  else every entry, open and archived, of a v2 directory, the archived ones with `archived=True`; a v1 file is
+  unusable (*split first*). It takes `--ledger`, `--today` and `--json`, and neither `--base` nor `--resolved`
+  (it reads no other repo): either is a usage error.
+  - `--release`: `<major>.<minor>`, each one to nine digits, checked before the ledger is read.
+  - `--closed-dates FILE`: a JSON object from `TD-n` to a real `YYYY-MM-DD`, the caller's archiving dates; keys
+    are matched by number (`TD-58` and `TD-058` are one key; two keys for one number are a usage error), and a key
+    naming no entry the run reads is ignored. A `TD-n` named on the command line that the ledger and its archive
+    do not hold is a usage error.
+  - `--stage-kind WORD=KIND` (repeatable): the `kinds` map, `WORD` one of the open Status words *Retired words*
+    lists, each once in any case, `KIND` one line of text. A `KIND` outside a `Fields:` ledger's declared `Kind`
+    vocabulary is not refused: the caller's `--check` on the result names it.
+  - `--as TD-n=FORM` (repeatable, matched by number): `decided` for that entry — `resolved`, `dropped`,
+    `superseded <id>` or `open`; another form, an id not among the entries the run reads, or one id given twice,
+    is a usage error.
+  - **Any stop anywhere stops the run**, a refused entry's included: exit 1, nothing written, one line per stopped
+    entry, `TD-n: <stop>; <stop>`; with `--json` or `--plan`, the one object `{"plan": {}, "entries": …,
+    "reblocked": {}}`. Otherwise every changed file is written as one write.
+  - `--plan` writes nothing and prints one JSON object: `subject`, `plan` (each path and its new text), `entries`
+    (each entry changed, listed or stopped, to its `{changes, listed, stops}`) and `reblocked`; `--json` with
+    `--dry-run` prints the same. `--dry-run` prints the entries as text, entry by entry, or `nothing to migrate`
+    when no entry has `changes` (its `listed` still printed). `--plan` and `--dry-run` together are a usage error.
+  - **`reblocked`**: for every blocker id of every open entry, its chain's end state (`open`, `resolved`,
+    `dropped`, `unknown-status`, `unknown`, `unresolved`, `cycle`; *Superseded and dropped*) over the ledger before
+    and after the migration, chains through unchanged archived entries included; each open entry for which a
+    blocker's released-ness flips (released is `resolved`) maps to `[{blocker, before, after}]`. A change that keeps
+    the block is not listed. It is a listing, never a stop, `{}` when empty and on a stop; `--dry-run` prints it
+    after the entries when it is not empty. Another repo's blockers are not resolved here.
+  - A write prints the paths it changed, or with `--json` the one object with `entries` and `reblocked` added. Its
+    `subject` is `migrate_subject(<--release>, <the count of entries it changed>)`, the caller's one commit;
+    nothing changed is exit 0, `subject` null.
+  - Unlike the other writes it is not refused for a `check()` error the ledger before it did not have: it writes
+    the ledger `check()` will grade, and the caller runs `--check` on the result.
 
 **A write is refused** when the ledger after it has a `check()` error the ledger before it does not, both checked
 against one `old`: the ledger text of `--base`, else of the ledger as it stands. So a fault already there never
@@ -1398,7 +1431,8 @@ the consumer judges beside it (the id against its counter, a wait written in pro
 it judges on the `--plan`.
 
 A ledger write prints the paths it changed, or one JSON object with `--json` (`subject` is null: a ledger edit has
-no commit subject of its own, so the caller names its commit). `--plan` prints the changes as JSON (each path and
+no commit subject of its own, so the caller names its commit — except `migrate`'s, which names
+`migrate_subject()`). `--plan` prints the changes as JSON (each path and
 its new text, `null` for a file removed) and writes nothing. A write of several files is both or neither, as the board writer's is. The caller
 passes what lies outside the files: the id, who filed the entry, the date (`--today`, else the UTC clock: every
 ledger date is the UTC date) and the state of other repos' entries — in-process the `resolve` callback, on the
