@@ -92,8 +92,9 @@ An entry's Status is one of four forms, and its form agrees with where the entry
     in the ledger and `resolved`, `superseded` or `dropped` in the archive, but the value is not its form: `Open
     2026-10-01`, `Resolved 2026-10-03.`, a bare `Resolved`, `Superseded 2026-10-03` with no `by`, `resolved
     2026-10-03` in lower case, an unreal date); `this one is <Word> (retired: <what replaces it>)` (a word *Retired
-    words* lists); `this one is <Word>` (any other, an archived word on an open entry among them: `Resolved
-    2026-10-03` in the ledger).
+    words* lists); on an open entry, `this one is <Word> (archived: archive it, or Open)` for `Resolved`,
+    `Superseded` and `Dropped` (`Resolved 2026-10-03` in the ledger; `migrate` stops on them as on `Done`);
+    `this one is <Word>` (any other).
   - `<Word>` is the value's first word as written, `_status_word()`'s. *What replaces it*, by place: on an open
     entry `Open, the stage in Kind` for the five open words (`Kind build` and `Kind live-check` are consumer
     vocabulary, S3) and `archive it, or Open` for `Done`, `Moved` and `OBE` (`migrate` stops on them, D2 branch 5:
@@ -134,7 +135,7 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
 - **The post-condition**, on an entry with `changes` (an unchanged one is returned as given and not tested): the
   migrated Status passes `status_problem()` (D1) for the entry's place, and the migrated entry's `log_problems()`
   holds no problem the input's does not (each compared as its kind and sentence, so a malformed line already in the
-  input, which `migrate` leaves, is not one, and a Log not last has stopped already, *What it leaves*); any problem
+  input, which `migrate` leaves, is not one, and a Log not last, or two Logs, has stopped already, *What it leaves*); any problem
   is a stop (`migrated Status <value> still outside the set`, or `migrated Log: <problem>`). So `migrate` never
   writes a Status or a Log line `check()` rejects that was not there before it.
 - Text `canonical()` refuses is a stop, not an exception. Run on its own output, it changes nothing.
@@ -160,9 +161,13 @@ stop on (`decided`: `resolved`, `dropped` or `superseded <id>` for an archived e
   date, it lifts nothing from the whole value, dated segments included; the value is then treated as **a head that
   does not read**. `status_notes_to_log()` does not test a date's reality and does not pass over one, and it stays
   as it is: each line takes its own head's date when its head has one, real or not, else the first fallback the
-  entry has, real or not. So `migrate` lifts only when **every date the lift would use is a real date**, a
-  segment's own head date and the one fallback reached among them (an unreal `**Resolved:**` date stops the lift
-  even where `Added` is real, since the lift would use the `**Resolved:**` one); otherwise it lifts nothing and the
+  entry has, real or not. The dates the lift uses are the lines' dates as D2 gives them: on an open entry, the
+  tail the head's date else that fallback, and each segment its own head's date else that fallback; on an
+  archived entry, whose head is rewritten to the new form first, the tail `D` (always real) and each segment its
+  own head's date else that fallback. So `migrate` lifts only when **every date the lift would use is a real
+  date**: a segment's own head date, and the one fallback reached where a line has no head date of its own (an
+  unreal `**Resolved:**` date stops the lift even where `Added` is real, since the lift would use the
+  `**Resolved:**` one; on an archived entry it does so only when an undated segment reaches it); otherwise it lifts nothing and the
   value is treated as a head that does not read. This is the one place an unreal date is not passed over (*A real
   date*): every date `migrate` itself picks, outside the lift, passes over an unreal one.
 - *Its new form takes only its head* when the date and any `by <id>` the new Status keeps come from the head (its
@@ -255,7 +260,8 @@ section, **stop**.
 **5. What it leaves.** A `Waits` line, a `Taken by`, an old-form `decision (who) — text`, every other field and
 section, and every Log line already there are left as they are: turning a wait into a gate or an old decision into
 an Ask was the v2.4 remodel's (§7.3). A Log is made at the end of the body when the entry has none and a line is
-written; a Log that is not last is a stop, as `note` refuses one.
+written; a Log that is not last, or two Logs (each `log_problems()`'s `log-not-last`), is a stop, as `note` refuses one,
+whether or not a line would be written.
 
 **The words it returns**, each a string, which the fixtures pin. `<Word>` is the word as written; `<id>` the entry's.
 - `changes`: `Status <old value> → <new Status>` (`(none)` for no or an empty Status); `Kind <old, or none> → <new>`; `Added comment → Log`; `Added comment (empty) removed`;
@@ -344,7 +350,7 @@ replaced:
 >   `**Location:**` body section);
 > - …
 > - the Status words `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in `Kind`), and `Done`,
->   `Moved` and `OBE` (`Resolved`, `Superseded` or `Dropped`). From v2.7 a Status outside the closed set is an
+>   `Moved` and `OBE` (`Resolved`, `Superseded` or `Dropped`; on an open entry, archive it or `Open`). From v2.7 a Status outside the closed set is an
 >   error (*The closed Status set*), whose text still names a retired word with what replaces it; `migrate` maps
 >   each (*Migrating to v2.7*).
 
@@ -422,7 +428,7 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
   - **unknown text survives** (§7.4): an entry with an unknown header field, an unknown gate, an unknown body
     section and an unknown Log prefix, whose content comes out unchanged;
   - an entry with a `Waits` line, a `Taken by` and an old-form decision, each left as written;
-  - a Log not last (a stop);
+  - a Log not last (a stop); two Logs (a stop), with and without a line to write;
   - an unreal date (`Done 2026-02-30`, passed over to the next source; an archived `Resolved 2026-02-30`, not
     already in the set); an open entry with no Status and with an empty one;
   - branch 4's `Open 2026-10-01 — was: Designed 2026-09-30`, `Open 2026-10-01 by TD-5: x` and `Open.`;
@@ -436,8 +442,10 @@ New cases, each an input and its expected JSON, invented (AGENTS.md's public-rep
     entry with nothing to answer (a stop);
   - an entry needing no change but not in canonical order (returned byte for byte);
   - the returned words, each template at least once;
-  - a stop on both the date and the word (both returned, the date's first); an unreal `**Resolved:**` date (no
-    lift), with a real `Added` (still no lift); a segment whose own head date is unreal (no lift); `Added: 2026-01-01 ()`, `( x )` and `(a) (b)` (kept whole); `Added: 2026-01-01.`; a gate's age before and after an `Added`
+  - a stop on both the date and the word (both returned, the date's first); an archived entry whose head and one segment
+    are undated and whose `**Resolved:**` date is unreal (no lift); an open stage word whose head is undated, with
+    an unreal `**Resolved:**` date and a real `Added` (still no lift); a segment whose own head date is unreal (no
+    lift); `Added: 2026-01-01 ()`, `( x )` and `(a) (b)` (kept whole); `Added: 2026-01-01.`; a gate's age before and after an `Added`
     comment moves; `Location` in a body with no lead section; an open `Resolved 2026-10-03: x` (a stop) and with
     `decided` `open`.
 - **`fixtures/ledger_writer/migrate_*`** (B2): a ledger whose one archived entry stops, so nothing is written and
