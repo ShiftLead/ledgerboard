@@ -15,7 +15,7 @@ The target design ends the v2 migration with a release that closes the Status vo
 Status notes and `Added` comments into the Log, and ships `migrate`, the tool that maps a ledger's old forms
 to the new ones. The design first called that release v2.5, then v2.6, now v2.7 (§7.1's amendments).
 `SPEC.md` already names "v2.7's `migrate`" in three places (*Retired words*, the Status grammar under *The
-Log*, the tripwire's exemption), and v2.7 work has landed (TD-046, TD-056, TD-057). But the newest tag is
+Log*, the tripwire's exemption), and v2.7 work has landed (TD-046, TD-056). But the newest tag is
 v2.6, and `migrate` is not built: only `migrate_subject()` (the commit subject) and `status_notes_to_log()`
 (the Status-notes lift that `note`, `archive` and `reopen` already call) exist. There is no
 `migrate_entry()` and no `ledger.py migrate`.
@@ -76,10 +76,10 @@ reads it (principle 4). This changes the canonical entry form, so it is a versio
 which is why it is in this ask. *Alternative:* leave `Location` in the header (it is harmless there) and drop
 it from the v2.7 row.
 
-**S6. `Waits` leaves the canonical order.** A `Waits` line left on an archived entry stays where it is, as
-history (ℹ `retired`, and kept by *unknown text survives*); `migrate` does not touch it. An open entry with a
-`Waits` line stops `migrate`, listed: turning a wait into a gate is the v2.4 remodel's judgment (§7.3), and
-none is left.
+**S6. `Waits` leaves the canonical order.** `canonical()` no longer places it: a `Waits` line still in a file
+(today only on archived entries) is kept, placed with the other fields the order does not name, in the file's order (SPEC
+*Canonical form*; *unknown text survives*), and stays ℹ `retired`. `migrate` does not touch it: turning a wait into a gate was the v2.4 remodel's judgment
+(§7.3), and no open entry in the three ledgers carries one.
 
 **S7. `migrate`'s lifecycle** (your note on the entry, 2026-11-07, adopted as you wrote it): it ships in
 v2.7, stays through every v2.x (roster repos still to migrate; a stale branch can bring old forms back; a
@@ -95,7 +95,7 @@ accepting and a refusing fixture (§7.4 *Grammar*).
 In series: each edits `SPEC.md`, the module and `fixtures/run.py`.
 
 - **B1.** The module's pure `migrate_entry(text, *, archived, closed_date=None, kinds=None) -> (text,
-  report)`, sharing `status_notes_to_log()`: S2, S3, S5, S6. SPEC's new *Migrating to v2.7* section. The §7.4
+  report)`, sharing `status_notes_to_log()`: S2, S3, S5. SPEC's new *Migrating to v2.7* section. The §7.4
   fixtures: twice gives no diff; an unmapped archived word (or a missing date) stops it with a list and writes
   nothing; unknown text survives `migrate`.
 - **B2.** `ledger.py migrate`: `--dry-run` (the `--plan` shape), `--closed-dates <file>`, `--kind`, one
