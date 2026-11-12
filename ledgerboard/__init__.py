@@ -1254,7 +1254,11 @@ LIVE_LOOK_ANSWERS = ("Works", "Not right: <what>")
 # The second of them is a FORM, its slot the person's words: offered as `Not right:` alone or with
 # one `<…>` placeholder. `Not right: wrong repo` is a complete answer, not the form.
 NOT_RIGHT = "Not right:"
-NOT_RIGHT_FORM_RE = re.compile(r"Not right:\s*(?:<[^<>]*>)?")
+NOT_RIGHT_FORM_RE = re.compile(r"Not right:\s*(?:<[^<>]*>)?")  # kept as a name (v2.8 reads FORM_RE)
+# Any offered answer whose label is `<head>:` alone or with one `<…>` placeholder is a FORM (v2.8): its slot is
+# the person's words. The head holds no `:`, `<` or `>` and starts with no whitespace; it compares in any case.
+FORM_RE = re.compile(r"(?P<head>[^:<>\s][^:<>]*?)\s*:\s*(?:<[^<>]*>)?")
+PLACEHOLDER_RE = re.compile(r"<[^<>]*>")
 # An item's bold head: its first `**…**` run, the line's title where it has one.
 BOLD_RE = re.compile(r"\*\*(?P<bold>.+?)\*\*")
 # The head: `[kind] YYYY-MM-DD (session <name> on <host>…)`, name and host optionally backticked.
@@ -1658,11 +1662,20 @@ def _item_gate(text: str) -> tuple[str | None, str | None]:
     return ref, gates[0] if len(gates) == 1 else None
 
 
-def _lifting(label: str, lifts: list[str] | None) -> bool:
+def _lifting(label: str, lifts: list[str] | None, offered: Sequence[str]) -> bool:
     """Whether ``label`` lifts: one of the item's `Lifts:` (`Go` when it has none), compared
-    case-insensitively, and never a waiting-only answer."""
-    said = " ".join(label.split()).lower()
-    return not waiting_only(label) and said in {" ".join(x.split()).lower() for x in (lifts or ["Go"])}
+    case-insensitively, or (v2.8) a fill of a form among ``offered`` (the item's answers) that `Lifts:` lists;
+    never a waiting-only answer. An answer naming a form's head with no words fills nothing here."""
+    if waiting_only(label):
+        return False
+    listed = {" ".join(x.split()).lower() for x in (lifts or ["Go"])}
+    if " ".join(label.split()).lower() in listed:
+        return True
+    try:
+        got = _form_filled(label, offered)
+    except Refused:
+        return False
+    return got is not None and " ".join(_labels(offered)[got[0]].split()).lower() in listed
 
 
 def closes(item: BoardItem | str, label: str, entries_after: Mapping[str, str]) -> bool:
@@ -1677,7 +1690,7 @@ def closes(item: BoardItem | str, label: str, entries_after: Mapping[str, str]) 
         return False
     if waiting_only(label):
         return True
-    if ref is None or "#" in ref or not _lifting(label, parse_lifts(text)):
+    if ref is None or "#" in ref or not _lifting(label, parse_lifts(text), parse_answers(text)):
         return False
     by_num = {_num(k): v for k, v in entries_after.items() if _is_id(k)}
     return not any(_carried(by_num.get(_num(x)), gate) for x in [ref, *parse_parts(text)] if "#" not in x)
@@ -1904,22 +1917,93 @@ def bold_head(text: str) -> str | None:
     return head or None
 
 
+def is_form(label: str) -> bool:
+    """Whether an offered answer's label is a form (v2.8): whitespace collapsed, a head (no `:`, `<` or `>`, not
+    starting with whitespace), any spaces, `:`, and nothing or one `<…>` placeholder."""
+    return isinstance(label, str) and FORM_RE.fullmatch(" ".join(label.split())) is not None
+
+
+def form_head(label: str) -> str | None:
+    """A form's head (v2.8), trimmed, whitespace collapsed and lower-cased, as heads compare; None for a complete
+    answer."""
+    m = FORM_RE.fullmatch(" ".join(label.split())) if isinstance(label, str) else None
+    return m.group("head").strip().lower() if m else None
+
+
+def _labels(offered: Sequence[str]) -> list[str]:
+    """Each offered answer's label, read through ``split_answer()``, whitespace collapsed."""
+    return [split_answer(" ".join(str(a).split()))[0] for a in offered]
+
+
+def _said_head(said: str) -> tuple[str, str] | None:
+    """`said`'s text before its first `:`, trimmed and lower-cased, and the words after it, trimmed; None with
+    no `:`."""
+    before, sep, after = said.partition(":")
+    return (before.strip().lower(), after.strip()) if sep else None
+
+
+def _fill(head_as_offered: str, words: str) -> str:
+    if not words or PLACEHOLDER_RE.fullmatch(words):
+        raise Refused(f"{head_as_offered} needs its words")
+    return f"{head_as_offered}: {words}"
+
+
+def _form_filled(said: str, offered: Sequence[str], form: int | None = None) -> tuple[int, str] | None:
+    """(the index of the form ``said`` fills among ``offered``, the fill), or None: ``fill_form()``'s reading."""
+    if not isinstance(said, str):
+        raise Refused(f"the answer is a string, not {type(said).__name__}")
+    said = " ".join(said.split())
+    labels = _labels(offered)
+    if form is not None:
+        if type(form) is not int or not 0 <= form < len(labels):
+            raise Refused(f"form is the index of one of the {len(labels)} offered answers, not {form!r}")
+        head = form_head(labels[form])
+        if head is None:
+            raise Refused(f"{labels[form]!r} is a complete answer, not a form")
+        got = _said_head(said)
+        words = got[1] if got and got[0] == head else said
+        return form, _fill(FORM_RE.fullmatch(labels[form]).group("head").strip(), words)
+    if said.lower() in {lbl.lower() for lbl in labels if not is_form(lbl)}:
+        return None  # one of the complete answers is that answer
+    got = _said_head(said)
+    if got is None:
+        return None
+    for i, lbl in enumerate(labels):
+        if form_head(lbl) == got[0]:
+            return i, _fill(FORM_RE.fullmatch(lbl).group("head").strip(), got[1])
+    return None
+
+
+def fill_form(said: str, offered: Sequence[str], form: int | None = None) -> str | None:
+    """The fill (v2.8) ``said`` writes into a form among ``offered`` (labels, or raw answers read through
+    ``split_answer()``): the form's head as offered, `: `, and the words after ``said``'s first `:`; None when it
+    fills none — it is one of the complete answers, or its text before its first `:` is no form's head (in any
+    case; where two forms share a head, the first). With ``form``, the caller's choice, that form alone is filled:
+    ``said``'s words after the head where it has it, else the whole of ``said``. Refused for a ``said`` that is no
+    string, a ``form`` out of range or naming a complete answer, and words that are empty or one placeholder."""
+    got = _form_filled(said, offered, form)
+    return got[1] if got else None
+
+
 def is_not_right_form(answer: str) -> bool:
-    """Whether an offered answer is the live look's `Not right: <what>` form — `Not right:` alone
-    or with one `<…>` placeholder, whitespace collapsed — rather than a complete answer."""
-    return bool(NOT_RIGHT_FORM_RE.fullmatch(" ".join(str(answer).split())))
+    """Whether an offered answer is the live look's `Not right: <what>` form: ``is_form()`` with the head
+    `not right`, in any case."""
+    return form_head(answer) == "not right"
 
 
 def fill_not_right(said: str, offered: list[str]) -> str | None:
-    """`said`, whitespace collapsed, when it fills a `Not right: <what>` form among `offered`;
-    None when no form is offered or `said` does not start `Not right:`. Refused when it says
-    nothing past the form — `Not right:` alone, or the form as offered."""
+    """The fill of a `Not right: <what>` form among `offered` (``fill_form()`` limited to that head); None when no
+    such form is offered or `said` names another head or none. Refused when it says nothing past the form —
+    `Not right:` alone, or the form as offered."""
     said = " ".join(str(said or "").split())
-    if not said.startswith(NOT_RIGHT) or not any(is_not_right_form(a) for a in offered):
+    forms = [lbl for lbl in _labels(offered) if is_not_right_form(lbl)]
+    got = _said_head(said)
+    if not forms or got is None or got[0] != "not right":
         return None
-    if is_not_right_form(said):
-        raise Refused("Not right needs its words: say what is off")
-    return said
+    try:
+        return fill_form(said, forms)
+    except Refused:
+        raise Refused("Not right needs its words: say what is off") from None
 
 
 def _sentence(body: str) -> str:
@@ -2024,6 +2108,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         answer = " ".join((answer or "").split())
         if not answer:
             raise Refused("the answer is empty")
+        answer = fill_form(answer, parse_answers(text)) or answer  # v2.8: a form's fill, the head as offered
         if DECIDED_BY_RE.match(answer):
             raise Refused("an answer may not end in `(by <name>)` — the reader would read it as who answered; "
                           "say it in other words")
@@ -2041,7 +2126,8 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         if close:  # v2.4: the answer closes the item in the same write
             if _item_gate(text)[1] is None:
                 raise Refused("only an item whose Context names a gate is closed by its answer")
-            reason = "kept waiting" if waiting_only(answer) else "lifted" if _lifting(answer, parse_lifts(text)) else None
+            reason = "kept waiting" if waiting_only(answer) else "lifted" if _lifting(answer, parse_lifts(text), parse_answers(text)) \
+                else None
             if reason is None:
                 raise Refused(f"{answer!r} neither lifts nor only keeps waiting — a work order stays open")
             closed = re.sub(r"^(\s*-\s*)\[ \]", r"\1[x]", new, count=1) + f" Closed: {today.isoformat()} — {reason}."
@@ -2202,6 +2288,19 @@ def _answer_parts(answers: object) -> list[tuple[str, str]]:
     return parts
 
 
+def _two_forms_one_head(labels: Sequence[str]) -> str | None:
+    """The head as first offered of the first form whose head another form shares (v2.8), or None."""
+    seen: set[str] = set()
+    for lbl in labels:
+        h = form_head(lbl)
+        if h is not None:
+            if h in seen:
+                return next(FORM_RE.fullmatch(" ".join(x.split())).group("head").strip()
+                            for x in labels if form_head(x) == h)
+            seen.add(h)
+    return None
+
+
 def _a_kind(kind: str | None) -> str:
     return "an item with no kind" if kind is None else f"{'an' if kind[0] in 'aeiou' else 'a'} {kind}"
 
@@ -2302,6 +2401,10 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
             raise Refused("a decide offers two or more answers")
         if default is not None and (type(default) is not int or not 0 <= default < len(offered)):
             raise Refused(f"default is the index of one of the {len(offered)} answers, not {default!r}")
+        if (two := _two_forms_one_head([lbl for lbl, _ in offered])) is not None:
+            raise Refused(f"two answers are forms with one head, {two}: a fill could not say which")
+        if default is not None and is_form(offered[default][0]):
+            raise Refused("a form cannot be the default: pressing it sends no words")
         missing = [p for p in DECIDE_NEEDS if p not in (detail or {})]
         if missing:
             raise Refused(f"a decide needs its detail block's {', '.join(missing)}")
@@ -2341,7 +2444,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
         raise Refused(f"{waits[0]!r} only keeps the gate waiting — it never lifts (v2.4)")
     label = offered[default][0] if offered and default is not None else None
     lines = _detail_lines(detail, label if kind == "decide" else None) if detail is not None else []
-    if parts is not None and not any(_lifting(lbl, lifted or None) for lbl, _ in offered):
+    if parts is not None and not any(_lifting(lbl, lifted or None, [x for x, _ in offered]) for lbl, _ in offered):
         raise Refused("a decide with parts offers an answer that lifts (Go, or one named in lifts): "
                       "a snapshot no answer lifts is a question no press can act on")
 
@@ -2404,7 +2507,8 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
     def opt(a: str, marked: bool) -> str:
         label, cons, _ = split_answer(ANY_FIELD_RE.sub(r"\1", " ".join(str(a).split())).replace("|", "\\|"))
         return label + (" (default)" if marked else "") + (CONSEQUENCE_SEP + cons if cons else "")
-    opts = [opt(a, i == default) for i, a in enumerate(answers or ()) if str(a).strip()]
+    opts = [opt(a, i == default and not is_form(split_answer(" ".join(str(a).split()))[0]))  # v2.8: no mark on a form
+            for i, a in enumerate(answers or ()) if str(a).strip()]
     tail = f" Answers: {' | '.join(opts)}." if opts else ""
     body = f"decide {today} (person) — {_sentence(head)} Context: {ref}. Due: {today}.{tail} Decided: {said}{f' (by {by})' if by else ''} ({today})."
     d, c = DECIDED_RE.search(body), CONTEXT_RE.search(body)
@@ -2675,6 +2779,10 @@ def item_problem(line: str) -> str | None:
             problems.append("answers: each answer has its own label")
         if marks > 1:
             problems.append("answers: more than one marked ` (default)`")
+        if (two := _two_forms_one_head(labels)) is not None:
+            problems.append(f"answers: two answers are forms with one head, {two}: a fill could not say which")
+        if any(mk and is_form(lb) for lb, _, mk in offered):
+            problems.append("answers: a form cannot be the default: pressing it sends no words")
     elif kind == "look":
         if raw not in LOOK_ANSWERS:
             problems.append("answers: a look carries exactly `Works | Not right: <what>`, "
@@ -5259,7 +5367,7 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
         if par is None or "#" in par or _num(par) != _num(ref):
             raise Refused(f"{p}, a part the item lists, is not Part of {ref} — the snapshot does not match")
         parts.append(by_num[_num(p)])
-    lifting = _lifting(said, item.lifts)
+    lifting = _lifting(said, item.lifts, item.answers)
     if not lifting and not waiting_only(said) and person is None:
         return {}  # an event's work order ("Rewrite the check", "Drop the entry"): no ledger line
     out: dict[str, str] = {}
@@ -5856,7 +5964,7 @@ def _answered_within(r: dict, today: date, days: int) -> bool:
     """A read item answered without a lift within ``days`` of ``today``: its ``Decided:`` label does not lift
     and its date is newer than the window."""
     it = r["item"]
-    return bool(it.decided) and not _lifting(it.decided[0], it.lifts) and (today - it.decided[1]).days < days
+    return bool(it.decided) and not _lifting(it.decided[0], it.lifts, it.answers) and (today - it.decided[1]).days < days
 
 
 def _log(text: str) -> list[dict]:
@@ -5912,7 +6020,7 @@ def _answers_owing(reads: list[dict], open_texts: Mapping[int, str], known: set[
         who = d.group("who").strip().lower()
         people = {p.lower() for p in (r["people"] or [])}
         label, day = it.decided
-        if who not in people or not _lifting(label, it.lifts) or day > today:
+        if who not in people or not _lifting(label, it.lifts, it.answers) or day > today:
             continue
         by = (it.decided_by or "").strip().lower()
         if it.decided_by is not None and by != who and not (
@@ -6218,7 +6326,7 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
     ``owing`` holds each (entry, gate key) an answer still owes a lift (v2.7)."""
     it, (num, gate_key, qual) = r["item"], r["ctx"]
     _, gate = _item_gate(it.text)
-    if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts):
+    if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts, it.answers):
         return False  # a work order waits for whoever acts on it
     if qual.startswith("board "):
         if num not in known:
@@ -6519,7 +6627,7 @@ def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, st
         _, gate = _item_gate(it.text)
         if gate is None or not GATE_DECISION_RE.match(gate):
             continue
-        if not any(_lifting(a, it.lifts) for a in it.answers):
+        if not any(_lifting(a, it.lifts, it.answers) for a in it.answers):
             refusals.append(("decision-no-lift", f"the new decide item on line {it.line} asks {gate} and none of "
                              f"its answers lifts it ({' | '.join(it.lifts or ['Go'])})"))
     return refusals, flags

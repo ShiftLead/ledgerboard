@@ -89,6 +89,44 @@
     3,
     "people: `People:` lists no name"
    ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ],
+   [
+    1,
+    "answers: two answers are forms with one head, Hold: a fill could not say which"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ],
+   [
+    1,
+    "answers: a form cannot be the default: pressing it sends no words"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
+  ],
+  [
+   [
+    0,
+    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
+   ]
   ]
  ],
  "bold_heads": {
@@ -160,6 +198,12 @@
   },
   {
    "refused": "doer: written `Doer: <value>.`, one space after `Doer:` and after `team`"
+  },
+  {
+   "refused": "answers: two answers are forms with one head, Hold: a fill could not say which"
+  },
+  {
+   "refused": "answers: a form cannot be the default: pressing it sends no words"
   }
  ],
  "components": {
@@ -710,6 +754,21 @@
   },
   {
    "refused": "the detail block's context carries a field's name (Doer:) — the reader would read it as the field; say it in other words"
+  },
+  {
+   "refused": "two answers are forms with one head, Hold: a fill could not say which"
+  },
+  {
+   "refused": "a form cannot be the default: pressing it sends no words"
+  },
+  {
+   "refused": "an answer carries a field's name (Due:) — the reader would read it as the field; say it in other words"
+  },
+  {
+   "ok": "- [ ] look 2026-01-15 (session `w-1`) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works (default) | Not right: <what>.\n"
+  },
+  {
+   "ok": "- [ ] decide 2026-01-15 (person) — Go on the build. Context: TD-12. Due: 2026-01-15. Answers: Go | Hold: <note>. Decided: Hold: the vendor (2026-01-15).\n"
   }
  ],
  "edit_actions": {
@@ -755,6 +814,24 @@
   "decide-refused-not-right-ends-by": {
    "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
   },
+  "decide_complete_answer_unchanged": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the build? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Hold: <note>. Lifts: Hold: <note>. Decided: go (by pat) (2026-01-15)."
+  },
+  "decide_fill_ending_by_refused": {
+   "refused": "an answer may not end in `(by <name>)` — the reader would read it as who answered; say it in other words"
+  },
+  "decide_fill_with_dash_and_colon": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the build? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Hold: <note>. Lifts: Hold: <note>. Decided: Hold: revise — add log sources: the shapes (by pat) (2026-01-15)."
+  },
+  "decide_refuses_empty_fill": {
+   "refused": "Hold needs its words"
+  },
+  "decide_refuses_unfilled_form": {
+   "refused": "Hold needs its words"
+  },
+  "decide_writes_fill": {
+   "ok": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the build? Context: TD-12 decision (pat). Due: 2026-01-20. Answers: Go | Hold: <note>. Lifts: Hold: <note>. Decided: Hold: wait (by pat) (2026-01-15)."
+  },
   "done-keeps-doer": {
    "ok": "- [x] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: acme/widgets. Due: 2026-01-20. Closed: 2026-01-15 — bumped."
   },
@@ -796,6 +873,12 @@
   },
   "due-undated-no-fields": {
    "ok": "- [ ] 2026-01-05 (session s-1) — Plain. Due: 2026-01-20."
+  },
+  "look_decided_fill": {
+   "ok": "- [ ] look 2026-01-05 (session `w-1`) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works | Not right: <what>. Decided: Not right: grey (by pat) (2026-01-15)."
+  },
+  "look_decided_form_refused": {
+   "refused": "Not right needs its words"
   },
   "not-an-open-item": {
    "refused": "the line is not an open item"
@@ -868,6 +951,122 @@
   },
   "snooze-undated-no-fields": {
    "refused": "after the edit the reader does not read Hide until: 2026-01-20 with the item's other fields unchanged"
+  }
+ },
+ "form_fills": {
+  "empty_words": {
+   "refused": "Hold needs its words"
+  },
+  "equals_complete_answer": {
+   "ok": null
+  },
+  "filled": {
+   "ok": "Hold: wait for the vendor"
+  },
+  "first_of_two_heads": {
+   "ok": "Hold: x"
+  },
+  "form_as_offered": {
+   "refused": "Hold needs its words"
+  },
+  "form_index_complete_answer": {
+   "refused": "'Go' is a complete answer, not a form"
+  },
+  "form_index_other_head": {
+   "ok": "Hold: Note: foo"
+  },
+  "form_index_out_of_range": {
+   "refused": "form is the index of one of the 2 offered answers, not 2"
+  },
+  "form_index_prefix_not_head": {
+   "ok": "Hold: Holdfast"
+  },
+  "form_index_said_equals_complete": {
+   "ok": "Hold: later"
+  },
+  "head_any_case": {
+   "ok": "Hold: wait for the vendor"
+  },
+  "names_no_form": {
+   "ok": null
+  },
+  "no_space_after_colon": {
+   "ok": "Hold: later"
+  },
+  "offered_with_consequence": {
+   "ok": "Hold: the vendor"
+  },
+  "other_head_spaced": {
+   "ok": "Other: x"
+  },
+  "placeholder_words": {
+   "refused": "Hold needs its words"
+  },
+  "said_not_a_string": {
+   "refused": "the answer is a string, not NoneType"
+  },
+  "space_before_colon": {
+   "ok": "Hold: the vendor"
+  },
+  "with_form_index": {
+   "ok": "Hold: the vendor"
+  },
+  "with_form_index_head_present": {
+   "ok": "Hold: the vendor"
+  }
+ },
+ "forms": {
+  ": <x>": {
+   "form_head": null,
+   "is_form": false
+  },
+  "<x>: <y>": {
+   "form_head": null,
+   "is_form": false
+  },
+  "A: b: <c>": {
+   "form_head": null,
+   "is_form": false
+  },
+  "Go": {
+   "form_head": null,
+   "is_form": false
+  },
+  "Hold:": {
+   "form_head": "hold",
+   "is_form": true
+  },
+  "Hold: <a> <b>": {
+   "form_head": null,
+   "is_form": false
+  },
+  "Hold: <note>": {
+   "form_head": "hold",
+   "is_form": true
+  },
+  "Hold:<note>": {
+   "form_head": "hold",
+   "is_form": true
+  },
+  "Not right : <what>": {
+   "form_head": "not right",
+   "is_form": true
+  },
+  "Not right: <what>": {
+   "form_head": "not right",
+   "is_form": true
+  },
+  "Not right: wrong repo": {
+   "form_head": null,
+   "is_form": false
+  },
+  "Other :  <what>": {
+   "form_head": "other",
+   "is_form": true
+  },
+  "hold: <x>": {
+   "form_head": "hold",
+   "is_form": true
   }
  },
  "implicit_keys": [
@@ -955,16 +1154,21 @@
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: Context: x (2026-01-16).": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: a (2026-01-16).": null,
   "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7. Due: 2026-01-20. Answers: a | b. Decided: b (default) (2026-01-16).": null,
+  "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> (default).": "answers: a form cannot be the default: pressing it sends no words",
+  "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:.": "answers: two answers are forms with one head, Hold: a fill could not say which",
+  "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:. Decided: Hold: x (2026-01-16).": null,
   "- [ ] decide 2026-01-15 (session `w-1`) — Go on the builds? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go (default) | Not yet.": null,
   "- [ ] fyi 2026-01-05 (n/a) — Moved. Context: none. Hide until: 2026-01-12.": null,
   "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7.": null,
   "- [ ] fyi 2026-01-15 (n/a) — The nightly job moved to 02:00. Context: TD-7. — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).": null,
   "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7. Due: 2026-01-20.": "due: an fyi carries no `Due:`",
   "- [ ] look 2026-01-15 (session `w-1` on box-1) — Look at it. Context: TD-7. Due: 2026-01-20. Answers: Works | Not right:.": "answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or not",
+  "- [ ] look 2026-01-15 (session `w-1`) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works | Not right: <what>.": null,
   "- [ ] look 2026-01-15 (session `w-1`) — Look at the new export page. Context: PR #12. Due: 2026-01-20. Answers: Works | Not right: <what>.": null,
   "- [ ] todo 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "kind: 'todo' is not a kind: one of decide, act, look, watch, fyi, in lower case",
   "- [ ]  act 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",
-  "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.": "open: not an open item"
+  "- [x] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20. Closed: 2026-01-16.": "open: not an open item",
+  "- [x] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:. Closed: 2026-01-16.": "open: not an open item"
  },
  "key_orders": [
   [
@@ -1052,10 +1256,19 @@
   "filled": {
    "ok": "Not right: the button is grey"
   },
+  "filled_lower_head": {
+   "ok": "Not right: grey"
+  },
   "form-as-offered": {
    "refused": "Not right needs its words: say what is off"
   },
   "no-form-offered": {
+   "ok": null
+  },
+  "no_space_after_colon": {
+   "ok": "Not right: grey"
+  },
+  "other_head": {
    "ok": null
   },
   "placeholder-only": {
@@ -1063,16 +1276,20 @@
   },
   "prefix-only": {
    "refused": "Not right needs its words: say what is off"
+  },
+  "said_none": {
+   "ok": null
   }
  },
  "not_right_forms": {
+  "Not right : <what>": true,
   "Not right:": true,
   "Not right:   <say what>": true,
   "Not right: <a> <b>": false,
   "Not right: <what>": true,
   "Not right: wrong repo": false,
   "Works": false,
-  "not right: <what>": false
+  "not right: <what>": true
  },
  "predicates": {
   "  - [x] 2026-01-05 (session s-1) — Closed.": {

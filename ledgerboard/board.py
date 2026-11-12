@@ -71,12 +71,14 @@ from . import (
     decided_line,
     edit_line,
     entries,
+    fill_form,
     is_item,
     is_person,
     item_line,
     item_notes,
     item_record,
     load,
+    parse_answers,
     parse_board,
     parse_lifts,
     parse_parts,
@@ -428,6 +430,8 @@ def plan_edit(board: str, action: str, line: int, expect: str, *, to: str | None
     info: dict = {"line": line}
     close = False
     if action == "decide":
+        if isinstance(answer, str) and answer.strip():  # v2.8: filled once, so board, ledger and subject agree
+            answer = fill_form(answer, parse_answers(ITEM_RE.match(body).group("text"))) or answer
         by = who_answered(old, by)
         close, changes, info = _decide_ledger(board, old, body, answer, by, day, ledger, board_only, today)
         info = {"line": line, **info}
@@ -507,7 +511,7 @@ def _decide_ledger(board_path: str, board_text: str, body: str, label: str | Non
         if board_only:
             shut = closes(body, label or "", base)
             text = ITEM_RE.match(body).group("text")
-            if not shut and _lifting(label or "", parse_lifts(text)):  # v2.7: write the line only when it closes
+            if not shut and _lifting(label or "", parse_lifts(text), parse_answers(text)):  # v2.7: write the line only when it closes
                 by_num = {_num(t): x for t, x in base.items()}
                 left = [x for x in ids if _carried(by_num.get(_num(x)), gate_) is not None]
                 return False, {}, {"entries": [], "board_only": True, "left_open": left, "gate": gate_}

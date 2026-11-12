@@ -562,6 +562,30 @@ class Doer(unittest.TestCase):
                 self.assertIn("Doer:", m.group(0))
 
 
+class AnswerForms(unittest.TestCase):
+    """Any offered `<head>:` or `<head>: <…>` answer is a form the person's words fill (v2.8, TD-075's D1–D5)."""
+    LINE = ("- [ ] decide 2026-01-06 (session `w-1`) — Go on the build? Context: TD-12 decision (pat). "
+            "Due: 2026-01-20. Answers: Go | Hold: <note> | Hold: later. Lifts: Hold: <note>.")
+
+    def test_a_fill_of_a_listed_form_lifts_and_a_complete_answer_lifts_only_by_equality(self):
+        offered = L.parse_answers(self.LINE)
+        lifts = L.parse_lifts(self.LINE)
+        self.assertTrue(L._lifting("hold: the vendor", lifts, offered))
+        self.assertTrue(L._lifting("Hold: <note>", lifts, offered))  # an unfilled Decided: reads as before
+        self.assertFalse(L._lifting("Hold: later", lifts, offered))
+        self.assertFalse(L._lifting("Hold:", lifts, offered))  # a reader returns False, never refuses
+
+    def test_lifting_takes_the_offered_answers_with_no_default(self):
+        with self.assertRaises(TypeError):
+            L._lifting("Go", None)  # type: ignore[call-arg]
+
+    def test_decide_writes_the_fill_once(self):
+        new = L.edit_line(self.LINE, "decide", answer="hold:  the vendor", by="pat", today=date(2026, 1, 15))
+        self.assertEqual(L.parse_decided(new)[0], "Hold: the vendor")
+        again = L.edit_line(self.LINE, "decide", answer="Hold: the vendor", by="pat", today=date(2026, 1, 15))
+        self.assertEqual(new, again)
+
+
 if __name__ == "__main__":
     unittest.main()
 
