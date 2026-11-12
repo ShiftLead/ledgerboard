@@ -1642,9 +1642,9 @@ a `Decided:` (`tripwire-shared-decided`), a diff v2.4 to v2.6 passed. No parse c
 line it writes, and no key moves. An item an older writer decided reads as before, a `decided` work order; the
 consumer closes it and asks again for the entries left.
 
-**v2.7 refuses a doubled Recommended label and names a refused field** (*The board writer*): on a `decide` with a
-default, a `recommended` whose words already open with that default's label and ` — ` is refused, naming the
-prefix, where v2.6 wrote the label twice (TD-069). The item writers' refusal of text carrying a field's name now
+**v2.7 refuses a doubled Recommended label and names a refused field** (*Edits*, *The board writer*): on a `decide` with a
+default, a `recommended` whose words already open with that default's label and ` — ` (compared ignoring case) is refused, naming the
+prefix, where v2.6 wrote the label twice (TD-069). The refusal of item text, a reply or an answer carrying a field's name now
 names the field it matched (`… carries a field's name (Context:) …`), where v2.6 listed every field (TD-057); a
 caller that matched the old message text reads the new one. No parse changes and no key moves.
 
