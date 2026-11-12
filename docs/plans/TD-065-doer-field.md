@@ -7,7 +7,7 @@ cadence.md §4.8). Rounds: four ended by the stop rule, 2026-11-11; Paul answere
 2, 0, 0 (fact-checks 0, 2, 1, 0+3 closing, 1, 0 closing); recurring topic: the doer's repo grammar and its final `.`
 (F5, F16, F23, F34, F36), which round 5 read and passed (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
 
-**Entry:** [TD-065](../ledger/TD-065.md). Asked for by ShiftLead (its design TD-1543, builds TD-1660 and TD-1661).
+**Entry:** [TD-065](../ledger/archive/TD-065.md). Asked for by ShiftLead (its design TD-1543, builds TD-1660 and TD-1661).
 
 ## The problem
 

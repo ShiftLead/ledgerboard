@@ -41,7 +41,8 @@ Fixtures, each an invented input and its expected JSON:
   that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
   and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
   ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate; and ``item_line(parts=)`` (v2.6):
-  the snapshot written in number order, spelled as given, and each of its refusals.
+  the snapshot written in number order, spelled as given, and each of its refusals; and ``Doer:`` (v2.8): read,
+  faulted and kept through every edit, ``item_line(doer=)`` and its refusals.
 - ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
   boards; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
   ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
@@ -494,7 +495,7 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
         to = date.fromisoformat(c["to"]) if c.get("to") else None
         out["edits"][c["name"]] = _refused(lambda c=c, to=to: L.edit_line(
             c["line"], c["action"], to=to, answer=c.get("answer"), why=c.get("why"),
-            reply=c.get("reply"), by=c.get("by"), today=today))
+            reply=c.get("reply"), by=c.get("by"), today=today, **({"close": True} if c.get("close") else {})))
     for c in spec["subjects"]:
         out["subjects"].append(_refused(lambda c=c: L.subject(
             c["tool"], c["action"], c["text"], to=c.get("to"), answer=c.get("answer"), session=c.get("session"))))
@@ -504,8 +505,8 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
     for c in spec["compose"]:
         if c["fn"] == "item_line":
-            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts")
-                  if k in c}  # v2.3's keywords; parts v2.6
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts", "doer")
+                  if k in c}  # v2.3's keywords; parts v2.6, doer v2.8
             out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
                 c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
         else:
