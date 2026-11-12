@@ -9,6 +9,7 @@
                                          [--session S [--host H]] [--said WORDS --by NAME]
                                          [--decided WORDS [--by NAME]] [--under HEADING]
                                          [--parts TD-a,TD-b]... [--ledger DIR]   (a decide's snapshot)
+                                         [--doer REPO | --doer "team NAME"]       (an act's doer)
     python3 -m ledgerboard.board snooze  --board PATH --line N --expect HEAD --to D   (hide until D)
     python3 -m ledgerboard.board due     --board PATH --line N --expect HEAD --to D   (move Due: to D)
     python3 -m ledgerboard.board done    --board PATH --line N --expect HEAD [--why TEXT]
@@ -277,19 +278,23 @@ def who_answered(board_text: str, by: str | None) -> str:
     return named
 
 
+DOER_DECIDED = "--doer is an act's, who does its step: a decided item is a decide and takes none"
+
+
 def plan_add(board: str, text: str, *, due: str | None = None, context: str | None = None,
              kind: str | None = None, answers: Sequence[str] | None = None, default: int | None = None,
              detail: Mapping | None = None, session: str | None = None, host: str | None = None,
              decided: str | None = None, said: str | None = None, by: str | None = None,
              under: str | None = NEEDS, today: str | date | None = None, tool: str = TOOL,
              hide_until: str | None = None, lifts: Sequence[str] | None = None,
-             parts: Sequence[str] | None = None, ledger: str | None = None) -> Plan:
+             parts: Sequence[str] | None = None, ledger: str | None = None, doer: str | None = None) -> Plan:
     """A new item at the top of the section `under` names (``item_line()``); with `said`, a question that
     was already answered, `by` and its words following the text as ` — <by>, <today>: <said>` (the
     subject keeps them out); with `decided`, an item already decided by the person (``decided_line()``:
     `text` its title, `context` its ref, `by` who answered, as ``who_answered()`` resolves it). With `parts`
     (v2.6), a decide's `Parts:` snapshot (``item_line(parts=)``), checked against the ledger (`ledger`, else
-    ``ledger/`` beside the board when it is a directory) by ``parts_problems()`` before the board's gate."""
+    ``ledger/`` beside the board when it is a directory) by ``parts_problems()`` before the board's gate. With
+    `doer` (v2.8), an act's `Doer:` (``item_line(doer=)``)."""
     day = _today(today).isoformat()
     bare = None
     if ledger is not None and parts is None:
@@ -297,6 +302,8 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
     if decided is not None:
         if parts is not None:
             raise Refused("--parts is a decide's snapshot, asked as a question: a decided item takes none")
+        if doer is not None:
+            raise Refused(DOER_DECIDED)
         if any(v is not None for v in (due, kind, detail, session, host, said, hide_until, lifts)):
             raise Refused("a decided item takes its title, context, answers, default, words and who gave them alone")
         new = decided_line(text, context or "", list(answers or []), default, decided, day,
@@ -312,7 +319,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
             return item_line(t, due, day, session, host, context, kind=kind,
                              answers=list(answers) if answers is not None else None, default=default, detail=detail,
                              hide_until=hide_until, lifts=list(lifts) if lifts is not None else None,
-                             parts=list(parts) if parts is not None else None)
+                             parts=list(parts) if parts is not None else None, doer=doer)
 
         new = compose(words)
         if said is not None:
@@ -636,6 +643,8 @@ def build(a: argparse.Namespace) -> Plan:
     if a.action == "add":
         if a.parts and a.decided is not None:  # step 1's order (SPEC *The board writer*): ahead of the pieces
             raise Refused("--parts is a decide's snapshot, asked as a question: a decided item takes none")
+        if a.doer is not None and a.decided is not None:  # the same step (v2.8): a decided line is a decide
+            raise Refused(DOER_DECIDED)
         parts = _parts_given(a.parts)
         detail = None
         if a.detail is not None:
@@ -648,7 +657,7 @@ def build(a: argparse.Namespace) -> Plan:
         return plan_add(a.board, a.text, due=a.due, context=a.context, kind=a.kind, hide_until=a.hide_until,
                         answers=a.answer or None, default=a.default, lifts=a.lift or None, detail=detail, session=a.session,
                         host=a.host, decided=a.decided, said=a.said, by=a.by, under=a.under,
-                        today=a.today, tool=a.tool, parts=parts, ledger=a.ledger)
+                        today=a.today, tool=a.tool, parts=parts, ledger=a.ledger, doer=a.doer)
     if a.action in EDITS:
         if a.action == "decide" and len(a.answer) != 1:
             raise Refused("decide takes one --answer, the person's")
@@ -675,7 +684,8 @@ def build(a: argparse.Namespace) -> Plan:
 TAKES = {
     "list": {"board", "today"},
     "add": {"board", "text", "due", "context", "kind", "answer", "default", "detail", "session", "host",
-            "decided", "said", "by", "under", "today", "tool", "hide_until", "lift", "parts", "ledger"},
+            "decided", "said", "by", "under", "today", "tool", "hide_until", "lift", "parts", "ledger",
+            "doer"},
     "snooze": {"board", "line", "expect", "to", "today", "tool", "session"},
     "due": {"board", "line", "expect", "to", "today", "tool", "session"},
     "done": {"board", "line", "expect", "why", "today", "tool", "session"},
@@ -724,6 +734,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--parts", action="append", default=[],
                     help="add: a decide's Parts: snapshot, TD-a,TD-b (repeat; each part Part of the Context's "
                          "entry and carrying its gate)")
+    ap.add_argument("--doer", help="add: an act's Doer:, who should do its step: a repo, or 'team <name>'")
     ap.add_argument("--text", help="add: the item's text; reply: the reply's words")
     ap.add_argument("--by", help="reply, add --said: who says it; decide, add --decided: who answered (the one name "
                     "on the board's People: when it lists one)")

@@ -1262,10 +1262,10 @@ BOLD_RE = re.compile(r"\*\*(?P<bold>.+?)\*\*")
 # first name, the host the first word after ` on ` anywhere inside the parentheses.
 HEAD_RE = re.compile(r"^(?:[A-Za-z]+\s+)?\d{4}-\d{2}-\d{2}\s*\(session\s+`?(?P<session>[^\s`,;)]+)`?(?P<rest>[^)]*)")
 HEAD_HOST_RE = re.compile(r"\bon\s+`?([^\s`,;)]+)")
-CONTEXT_RE = re.compile(r"\bContext:\s*(?P<ctx>.*?)(?=\s+(?:Parts|Due|Hide until|Answers|Lifts|Decided|Closed):|$)")
+CONTEXT_RE = re.compile(r"\bContext:\s*(?P<ctx>.*?)(?=\s+(?:Parts|Doer|Due|Hide until|Answers|Lifts|Decided|Closed):|$)")
 # `Parts: TD-15, TD-16.` (v2.3): the parts of the parent a decide's Context names that the question asks about,
 # right after Context: and ahead of Due:. Its ids are no Context refs. What a lift does with them is v2.4's.
-PARTS_RE = re.compile(r"\s+Parts:\s*(?P<ids>.*?)(?=\s+(?:Due|Hide until|Answers|Lifts|Decided|Closed):|$)")
+PARTS_RE = re.compile(r"\s+Parts:\s*(?P<ids>.*?)(?=\s+(?:Doer|Due|Hide until|Answers|Lifts|Decided|Closed):|$)")
 # `Hide until: D.` (v2.3): the item is left out of what needs the person until D, its Due: untouched. It
 # starts a sentence and is read only after the item's Due:, or after its Context: when it has none (an fyi).
 HIDE_RE = re.compile(r"(?:^|(?<=[.?!]\s))Hide until:\s*(?P<date>\d{4}-\d{2}-\d{2})\b")
@@ -1458,6 +1458,51 @@ def parse_parts(text: str) -> list[str]:
     return out
 
 
+# `Doer: <repo>.` or `Doer: team <team>.` (v2.8): who should do an act's step, right after the Context (and a
+# `Parts:` there), ahead of Due:. A team is a person's name after the word `team`; a doer's repo never ends in `.`.
+DOER_RE = re.compile(r"\s+Doer:\s*")
+DOER_TEAM_RE = re.compile(r"team[ \t]+(?P<name>" + PERSON + r")")
+
+
+def doer_value(value: str) -> tuple[str, str] | None:
+    """``("repo" | "team", name)`` for a doer's value as the field holds it (no final period), or None when it
+    does not read: `team`, spaces or tabs, and a person's name; else a repo not ending in `.`."""
+    m = DOER_TEAM_RE.fullmatch(value)
+    if m:
+        return "team", m.group("name")
+    if REPO_RE.fullmatch(value) and not value.endswith("."):
+        return "repo", value
+    return None
+
+
+def parse_doer(text: str) -> tuple[str, str, str] | None:
+    """The item's `Doer:` (v2.8) as ``(kind, name, text)``: kind ``repo`` or ``team``, the name and the value as
+    they stand on the line (its ends' whitespace and one final `.` taken off), or None: no `Doer:` where the
+    Context (or the `Parts:` that follows it) ends, or a value that does not read. Never read inside a reply's
+    words; read on any kind (``item_problem()`` faults it on all but an act)."""
+    c = CONTEXT_RE.search(text)
+    if c is None:
+        return None
+    at = c.end()
+    p = PARTS_RE.match(text, at)
+    if p:
+        at = p.end()
+    m = DOER_RE.match(text, at)
+    if m is None:
+        return None
+    start = m.end()
+    span = reply_span(text)
+    if span and span[0] <= start < span[1]:
+        return None
+    nxt = GATE_FIELD_RE.search(text, start)
+    ends = [len(text), *([nxt.start()] if nxt else []), *([span[0]] if span and span[0] >= start else [])]
+    value = text[start:min(ends)].strip()
+    if value.endswith("."):
+        value = value[:-1]
+    got = doer_value(value)
+    return (got[0], got[1], value) if got else None
+
+
 def parse_hide_until(text: str) -> date | None:
     """The item's `Hide until:` date, or None: none, or not a date."""
     m = _hide_match(text)
@@ -1499,6 +1544,7 @@ class BoardItem:
     hide_until: date | None = None  # `Hide until:` (v2.3): left out of what needs the person until then
     lifts: list[str] | None = None  # `Lifts:` (v2.3): the answers that lift; None means `Go`
     parts: list[str] = field(default_factory=list)  # `Parts:` (v2.3): the parts a parent's question asks about
+    doer: tuple[str, str, str] | None = None  # `Doer:` (v2.8): (kind, name, text), who should do an act's step
 
     def hidden(self, today: date) -> bool:
         """Left out of what needs the person today: a `Hide until:` still ahead. A decided item is a session's
@@ -1686,7 +1732,7 @@ def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
                                decided=parse_decided(text), decided_by=parse_decided_by(text), bad_due=bad,
                                kind=kind, fyi_due=fyi_due,
                                detail=detail_block(lines, lineno), hide_until=parse_hide_until(text),
-                               lifts=parse_lifts(text), parts=parse_parts(text)))
+                               lifts=parse_lifts(text), parts=parse_parts(text), doer=parse_doer(text)))
     return items
 
 
@@ -1785,6 +1831,7 @@ def item_record(item: BoardItem, today: date) -> dict:
         "notes": item_notes(item, today),  # v2.4
         "lifts": item.lifts,  # v2.3
         "parts": item.parts,  # v2.3
+        "doer": dict(zip(("kind", "name", "text"), item.doer)) if item.doer else None,  # v2.8
     }
 
 
@@ -1825,9 +1872,9 @@ def needs_you(board: str, today: date) -> list[tuple[BoardItem, str, int | None]
 # ---------------------------------------------------------------------------------------------
 
 EDIT_ACTIONS = ("snooze", "due", "done", "decide", "reply")  # `due` (v2.3) moves Due:; `snooze` hides until
-FIELDS_RE = re.compile(r"\s+\b(?:Context|Parts|Due|Hide until|Answers|Lifts|Decided):")
-FIELD_NAME_RE = re.compile(r"\b(?:Context|Parts|Hide until|Answers|Lifts|Decided|Closed):")  # in a reply, the reader would read the field
-ANY_FIELD_RE = re.compile(r"\b(Context|Parts|Due|Hide until|Answers|Lifts|Decided|Closed):")
+FIELDS_RE = re.compile(r"\s+\b(?:Context|Parts|Doer|Due|Hide until|Answers|Lifts|Decided):")
+FIELD_NAME_RE = re.compile(r"\b(?:Context|Parts|Doer|Hide until|Answers|Lifts|Decided|Closed):")  # in a reply, the reader would read the field
+ANY_FIELD_RE = re.compile(r"\b(Context|Parts|Doer|Due|Hide until|Answers|Lifts|Decided|Closed):")
 SESSION_RE = re.compile(r"\(session ([^\s,)]+)")  # as written: a backticked name keeps its backticks
 EDIT_HEAD_CHARS = 60
 
@@ -1938,9 +1985,9 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         was, got = parse_board(body, warn=False), parse_board(new, warn=False)
         if not got or not was or got[0].hide_until != to or got[0].due != was[0].due \
                 or (got[0].answers, got[0].consequences, got[0].default, got[0].decided, got[0].decided_by, got[0].kind,
-                    got[0].lifts, got[0].parts) \
+                    got[0].lifts, got[0].parts, got[0].doer) \
                 != (was[0].answers, was[0].consequences, was[0].default, was[0].decided, was[0].decided_by, was[0].kind,
-                    was[0].lifts, was[0].parts) \
+                    was[0].lifts, was[0].parts, was[0].doer) \
                 or parse_replies(new) != parse_replies(body) or item_refs(new) != item_refs(body) \
                 or item_key(new) != item_key(body):
             raise Refused(f"after the edit the reader does not read Hide until: {to.isoformat()} "
@@ -1969,7 +2016,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
                 or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
                 or got[0].decided != parse_decided(text) or got[0].decided_by != parse_decided_by(text) \
                 or got[0].hide_until != parse_hide_until(text) or got[0].lifts != parse_lifts(text) \
-                or got[0].parts != parse_parts(text):
+                or got[0].parts != parse_parts(text) or got[0].doer != parse_doer(text):
             raise Refused(f"after the edit the reader does not read Due: {to.isoformat()} "
                           "with the item's other fields unchanged")
         return new
@@ -2003,8 +2050,9 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
             was = parse_board(body, warn=False)[0]
             if ITEM_RE.match(closed) or len(got) != 1 or not m or m.group(0) != f"Closed: {today.isoformat()} — {reason}." \
                     or got[0].decided != (answer, today) or got[0].decided_by != by \
-                    or (got[0].answers, got[0].lifts, got[0].parts, got[0].consequences, got[0].default, got[0].due) \
-                    != (was.answers, was.lifts, was.parts, was.consequences, was.default, was.due) \
+                    or (got[0].answers, got[0].lifts, got[0].parts, got[0].doer, got[0].consequences, got[0].default,
+                        got[0].due) \
+                    != (was.answers, was.lifts, was.parts, was.doer, was.consequences, was.default, was.due) \
                     or item_key(closed) != item_key(body):
                 raise Refused(f"the reader would not read back 'Decided: {answer}' and the item closed "
                               f"{reason} today, with its other fields unchanged — rephrase the answer")
@@ -2012,7 +2060,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         got = parse_board(new, warn=False)
         if not got or got[0].decided != (answer, today) or got[0].decided_by != by \
                 or got[0].answers != parse_answers(text) or got[0].lifts != parse_lifts(text) \
-                or got[0].parts != parse_parts(text) \
+                or got[0].parts != parse_parts(text) or got[0].doer != parse_doer(text) \
                 or got[0].consequences != parse_consequences(text) or got[0].default != parse_default(text) \
                 or got[0].due != parse_board(body, warn=False)[0].due:
             raise Refused(f"the reader would not read back 'Decided: {answer}' with the item's "
@@ -2040,8 +2088,9 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
         was, got = parse_board(body, warn=False)[0], parse_board(new, warn=False)
         replies = parse_replies(new)
         if not got or (got[0].due, got[0].answers, got[0].consequences, got[0].decided, got[0].decided_by,
-                       got[0].lifts, got[0].parts) \
-                != (was.due, was.answers, was.consequences, was.decided, was.decided_by, was.lifts, was.parts) \
+                       got[0].lifts, got[0].parts, got[0].doer) \
+                != (was.due, was.answers, was.consequences, was.decided, was.decided_by, was.lifts, was.parts,
+                    was.doer) \
                 or parse_default(got[0].text) != parse_default(text) \
                 or item_refs(got[0].text) != item_refs(text) \
                 or replies[:-1] != parse_replies(body) or not replies \
@@ -2058,7 +2107,7 @@ def edit_line(body: str, action: str, *, to: date | None = None, answer: str | N
 DETAIL_PARTS = ("context", "question", "caveats", "recommended")  # a detail block's parts, in order
 DETAIL_KEYS = (*DETAIL_PARTS, "otherwise")  # `otherwise` is written on the Recommended bullet
 DECIDE_NEEDS = ("context", "question", "recommended")
-WRITER_FIELD_RE = re.compile(r"\b(?:Context|Parts|Hide until|Answers|Lifts|Decided|Closed):|\b(?i:due):")  # Due: in any case, as DUE_RE
+WRITER_FIELD_RE = re.compile(r"\b(?:Context|Parts|Doer|Hide until|Answers|Lifts|Decided|Closed):|\b(?i:due):")  # Due: in any case, as DUE_RE
 DATE_ONLY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 HEAD_NAME_BAD_RE = re.compile(r"[\s`,;)]")  # what would end a head's name early, as HEAD_RE reads it
 
@@ -2198,11 +2247,12 @@ def _parts_fault(ctx: str, parts: list) -> str | None:
 def item_line(text: str, due: str | None, today: str, session: str | None, host: str | None,
               context: str | None, *, kind: str | None = None, answers: list[str] | None = None,
               default: int | None = None, detail: Mapping | None = None, hide_until: str | None = None,
-              lifts: list[str] | None = None, parts: list[str] | None = None) -> str:
+              lifts: list[str] | None = None, parts: list[str] | None = None, doer: str | None = None) -> str:
     """A new item, in the board's own format, with its line ending and its detail block —
-    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Due: <due>.][ Hide until: <date>.]
-    [ Answers: <answers>.][ Lifts: <labels>.]`, `lifts` (v2.3, a decide's) naming which of its answers lift, written
-    unless it is `Go` alone, `parts` (v2.6, a decide's) its `Parts:` snapshot, ordered by number and spelled as given,
+    `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Doer: <doer>.][ Due: <due>.]
+    [ Hide until: <date>.][ Answers: <answers>.][ Lifts: <labels>.]`, `lifts` (v2.3, a decide's) naming which of its
+    answers lift, written unless it is `Go` alone, `parts` (v2.6, a decide's) its `Parts:` snapshot, ordered by
+    number and spelled as given, `doer` (v2.8, an act's) who should do its step, written exactly as given,
     the head ``session `<name>` on <host>``, ``session `<name>` `` or `n/a`. What each kind takes
     (a decide its answers and detail block, a look the fixed pair, an fyi no Due:) is SPEC
     *Edits*; refused, with why, for what the writer does not write and for any result the
@@ -2215,6 +2265,15 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
         if not isinstance(parts, (list, tuple)):
             raise Refused(f"parts is a list of ids, not {type(parts).__name__}")
         parts = list(parts)
+    want_doer = None
+    if doer is not None:
+        if kind != "act":
+            raise Refused(f"only an act names who does its step (doer), not {_a_kind(kind)}")
+        got_doer = doer_value(doer) if isinstance(doer, str) else None
+        if got_doer is None or (got_doer[0] == "team" and doer != f"team {got_doer[1]}"):
+            raise Refused(f"a doer is a repo, `<repo>` not ending in `.`, or a team, `team <name>` with one space, "
+                          f"not {doer!r}")
+        want_doer = (*got_doer, doer)
     words = _sentence(_item_words(text, "a board line's text"))
     today = _civil_date(today, "today is written")
     if kind == "fyi":
@@ -2293,6 +2352,8 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
     body = f"{f'{kind} ' if kind else ''}{today} ({head}) — {words} Context: {ctx}."
     if parts:
         body += f" Parts: {', '.join(parts)}."
+    if doer is not None:
+        body += f" Doer: {doer}."
     if due is not None:
         body += f" Due: {due}."
     if hide_until is not None:
@@ -2312,7 +2373,7 @@ def item_line(text: str, due: str | None, today: str, session: str | None, host:
                 got[0].default, item_head(got[0].text), item_refs(got[0].text), got[0].detail) != meant \
             or got[0].decided is not None or parse_replies(got[0].text) or got[0].fyi_due or got[0].bad_due \
             or (got[0].hide_until and got[0].hide_until.isoformat()) != hide_until \
-            or got[0].lifts != (lifted or None) or got[0].parts != (parts or []):
+            or got[0].lifts != (lifted or None) or got[0].parts != (parts or []) or got[0].doer != want_doer:
         raise Refused("the board's reader would not read this item back as meant — rephrase it")
     return new
 
@@ -2361,7 +2422,7 @@ def decided_line(title: str, ref: str, answers: list[str], default: int | None, 
 # answers, extra.
 GATE_HEAD_RE = re.compile(r"(?P<date>\S+) \((?P<head>[^()]*)\) — ")
 GATE_HEAD_FORM_RE = re.compile(r"session `(?P<session>[^\s`,;)]+)`(?: on (?P<host>[^\s`,;)]+))?|n/a|person")
-GATE_FIELD_RE = re.compile(r"\b(?P<name>Context|Parts|Hide until|Answers|Lifts|Decided|Closed|(?i:due)):")
+GATE_FIELD_RE = re.compile(r"\b(?P<name>Context|Parts|Doer|Hide until|Answers|Lifts|Decided|Closed|(?i:due)):")
 GATE_HIDE_RE = re.compile(r"Hide until:[ \t]*(?P<date>[^\s.]*)(?P<period>\.?)(?P<more>.*)")
 GATE_DUE_RE = re.compile(r"(?P<name>(?i:due)):[ \t]*(?P<date>[^\s.]*)(?P<period>\.?)(?P<more>.*)")
 GATE_DUE_ALONE_RE = re.compile(r"(?i:due):\s*\d{4}-\d{2}-\d{2}\.?")
@@ -2491,7 +2552,7 @@ def item_problem(line: str) -> str | None:
         if d.group("more").strip():
             problems.append(f"extra: {d.group('more').strip()!r} after `Due:`")
         i = order.index("Due")
-        if not moved and i > 0 and order[i - 1] not in ("Context", "Parts"):
+        if not moved and i > 0 and order[i - 1] not in ("Context", "Parts", "Doer"):
             problems.append(f"due: `Due:` stands after `{order[i - 1]}:`; it follows Context")
     hides = segs.get("Hide until", [])
     hide_s = None
@@ -2509,7 +2570,8 @@ def item_problem(line: str) -> str | None:
         if hd.group("more").strip():
             problems.append(f"extra: {hd.group('more').strip()!r} after `Hide until:`")
         i = order.index("Hide until")
-        after = "Due" if "Due" in order else "Parts" if "Parts" in order else "Context"
+        after = "Due" if "Due" in order else "Doer" if "Doer" in order else "Parts" if "Parts" in order \
+            else "Context"
         if i == 0 or order[i - 1] != after:
             problems.append(f"hide: `Hide until:` follows {after}")
     parts = segs.get("Parts", [])
@@ -2531,6 +2593,25 @@ def item_problem(line: str) -> str | None:
         i = order.index("Parts")
         if i == 0 or order[i - 1] != "Context":
             problems.append("parts: `Parts:` follows Context")
+    doers = segs.get("Doer", [])
+    doer_s = None
+    if len(doers) > 1:
+        problems.append("doer: `Doer:` stands more than once")
+    elif doers:
+        dm = re.fullmatch(r"Doer:(?P<space>\s*)(?P<value>.*?)(?P<period>\.?)", doers[0])
+        doer_s = dm.group("value")
+        if kind != "act":
+            problems.append(f"doer: {_a_kind(kind)} carries no `Doer:`: only an act names who does its step")
+        got = doer_value(doer_s)
+        if got is None:
+            problems.append("doer: `Doer:` names a repo, `<repo>`, or a team, `team <name>`")
+        elif dm.group("space") != " " or (got[0] == "team" and doer_s != f"team {got[1]}"):
+            problems.append("doer: written `Doer: <value>.`, one space after `Doer:` and after `team`")
+        if not dm.group("period"):
+            problems.append("doer: no period after its value")
+        i = order.index("Doer")
+        if i == 0 or order[i - 1] not in ("Context", "Parts"):
+            problems.append("doer: `Doer:` follows Context")
     answers = segs.get("Answers", [])
     raw = None
     if len(answers) > 1:
@@ -2604,6 +2685,7 @@ def item_problem(line: str) -> str | None:
     if not problems:
         want = (f"{f'{kind} ' if kind else ''}{date_s} ({head}) — {item_text.strip()} Context: {ctx}"
                 f"{f' Parts: {parts_s}.' if parts_s is not None else ''}"
+                f"{f' Doer: {doer_s}.' if doer_s is not None else ''}"
                 f"{f' Due: {due_s}.' if due_s else ''}{f' Hide until: {hide_s}.' if hide_s else ''}"
                 f"{f' Answers: {raw}.' if raw is not None else ''}{f' Lifts: {lifts_s}.' if lifts_s is not None else ''}")
         if body != want:
@@ -2653,7 +2735,7 @@ def canonical_item(line: str) -> str:
 
     def fields(it: BoardItem) -> tuple:
         return (it.kind, it.due, it.hide_until, it.answers, it.consequences, it.default, it.decided, it.decided_by,
-                it.lifts, it.parts, parse_replies(it.text), item_refs(it.text), item_head(it.text))
+                it.lifts, it.parts, it.doer, parse_replies(it.text), item_refs(it.text), item_head(it.text))
     if item_key(new) != item_key(line[: len(line) - len(ending)]) or len(was) != 1 or len(got) != 1 \
             or fields(was[0]) != fields(got[0]):
         raise Refused("the rewrite would change the line's item key or what the reader reads: "

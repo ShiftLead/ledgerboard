@@ -950,7 +950,7 @@ escalates, is the consumer's.
 
 **`Context:`** — what the item refers to, read as refs in order: `TD-NNN` or `<repo>#TD-NNN`,
 `PR #N` (`PRs #12/#13` and `PR #12, #13` give both), and best-effort `branch <name>`. A Context ends where the
-next field begins: ` Parts:`, ` Due:`, ` Hide until:`, ` Answers:`, ` Lifts:`, ` Decided:` or ` Closed:`. A `decide`
+next field begins: ` Parts:`, ` Doer:`, ` Due:`, ` Hide until:`, ` Answers:`, ` Lifts:`, ` Decided:` or ` Closed:`. A `decide`
 that lifts a gate names exactly one entry there: every `decide` whose Context names a gate, `decision (<person>)`
 or `event (<name>)` (a person's name, an event's name a letter or digit then letters, digits, `_`, `.` and `-`),
 since no `Lifts:` means `Go` lifts, and every `decide` that carries `Parts:` or `Lifts:`. The writer refuses,
@@ -963,6 +963,19 @@ each once, and never one inside a reply's words. The writers write the ids in nu
 part of the item key, since a changed snapshot is a different question. What an answer does to the parts it
 lists is *The decide lift*'s (v2.4). `item_line(parts=)` and `board.py add --parts` write it, and `parts_problems()` checks it against the
 ledger (v2.6, *Edits*).
+
+**`Doer:`** (v2.8) — `Doer: <repo>.` or `Doer: team <team>.`, right after the Context (after a `Parts:`, where
+one stands there), ahead of the `Due:`, and only on an `act`: who should do the item's step, a repo (*The ledger*'s
+`<repo>`) or a team (a person's name, below, after the word `team`), each name kept as written (the
+module compares no doers; a consumer that resolves one compares case-insensitively). A repo named `team` is
+`Doer: team.`, and a doer's repo never ends in `.` (`parse_doer()`, `BoardItem.doer`, `item_record()`'s
+`doer`: `{"kind": "repo" | "team", "name", "text"}`, `text` the value as it stands on the line without its ends'
+whitespace and its final period, or None for none or a value that does not read). It is read only in that place,
+on any kind, and never inside a reply's words; `item_problem()` faults it on any kind but `act`, no kind included.
+The reader reads it as it reads `Parts:`, any spacing and an absent period included, which `item_problem()`
+faults. It is part of the item key, and no edit changes it: a step for another doer is another item.
+What resolving it means, and what a press on it does, are the consumer's. `item_line(doer=)` and
+`board.py add --doer` write it.
 
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
 line's end, in this order:
@@ -1214,7 +1227,7 @@ back exactly what was meant:
 - **snooze** hides the item: it sets its `Hide until:` (adding one right after its `Due:`, or after its Context
   on an item with no `Due:`), and leaves the `Due:` alone (v2.3; before v2.3 it moved the `Due:`);
 - **due** sets the item's `Due:`, the real deadline (adding one ahead of its `Hide until:` and trailing fields when it
-  has none; v2.3);
+  has none, after a `Doer:`, where one stands; v2.3);
 - **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, or with `by` (v2.3) `Decided: <answer> (by <by>) (YYYY-MM-DD).`,
   replacing an earlier one. It refuses a `by` that is not a person's name, and an answer that itself ends in
@@ -1224,7 +1237,7 @@ back exactly what was meant:
   says when to pass it);
 - **reply** appends a reply tail.
 
-**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts, parts)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.] Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). A decide's `parts` (v2.6) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated by `, `, each as given. It is refused on any kind but `decide`. It is refused for an empty list, for an id that is not `TD-` and 1 to 18 ASCII digits, and for an id that shares its number with another or with the Context's entry. It is refused unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`, with nothing after the gate (*The gate sweep* reads an item whose Context goes on past its gate as naming no entry, so it would cover no part). And it is refused unless one of its answers lifts (as *Closing on the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written, and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling is a different key. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
+**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts, parts, doer)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Doer: <doer>.] Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). A decide's `parts` (v2.6) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated by `, `, each as given. It is refused on any kind but `decide`. It is refused for an empty list, for an id that is not `TD-` and 1 to 18 ASCII digits, and for an id that shares its number with another or with the Context's entry. It is refused unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`, with nothing after the gate (*The gate sweep* reads an item whose Context goes on past its gate as naming no entry, so it would cover no part). And it is refused unless one of its answers lifts (as *Closing on the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written, and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling is a different key. An act's `doer` (v2.8) writes ` Doer: <doer>.` right after the Context, the value exactly as given, neither trimmed nor collapsed: `<repo>` (not ending in `.`) or `team <team>`, with one space and no other whitespace (*The board*, `Doer:`). It is refused on any kind but `act`, no kind included, and for any other value. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
 - a `decide` carries two or more distinct answers, at most one marked ` (default)`, and a detail block;
 - a `look` carries exactly `Answers: Works | Not right: <what>.`, which the writer writes itself, `Works` marked ` (default)` only when the caller asks;
 - an `fyi` carries no `Due:`, and every other kind carries one;
@@ -1234,7 +1247,7 @@ These are the writer's rules. The reader still reads whatever a line carries. An
 
 The **detail block** is composed from named parts, in the order `Context`, `Question`, `Caveats`, `Recommended`. Each part is one two-space-indented bullet, ``- **<Part>:** <words>``, with any further lines as nested bullets under it. On a `decide` with a default, Recommended opens with that default's label and ` — `, which the writer adds: a `recommended` whose words already open with that label and ` — ` (whitespace collapsed, the label compared ignoring case) is refused, naming the prefix, rather than written with the label twice (TD-069). An `Otherwise` text follows the Recommended words on the same bullet as ``**Otherwise:** <words>``. A `decide` needs Context, Question and Recommended. No writer touches the block afterwards.
 
-The writer refuses text, a context, an answer or a detail value that carries a field name, or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
+The writer refuses text, a context, an answer or a detail value that carries a field name (`Doer:` among them from v2.8), or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
 
 An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line(…, by=)`), whose `Decided:` names who gave it as **decide** does, with the same refusals (v2.3).
 
@@ -1262,7 +1275,7 @@ reads the ledger calls it.
 **The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
 - opens `- [ ] ` at column 0;
 - carries an optional lower-case kind, a date, and a head that is ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)`, or `(person)` on a decided line;
-- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, on a `decide` optionally ` Parts: <ids>.` (ids separated by `, `, each once), and ` Due: <date>.` on every kind but `fyi`, then, when it has one, ` Hide until: <date>.`;
+- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, on a `decide` optionally ` Parts: <ids>.` (ids separated by `, `, each once), on an `act` optionally ` Doer: <doer>.`, and ` Due: <date>.` on every kind but `fyi`, then, when it has one, ` Hide until: <date>.`;
 - may then carry replies, then `Answers:` as *A new item* says a kind takes them (a decided line may carry any or none), then on a `decide` optionally ` Lifts: <labels>.` (each one of its answers, once, and never `Go` alone), then `Decided:`;
 - holds nothing else, one space between parts.
 
@@ -1291,7 +1304,8 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
 - **`add`** — a new item (`item_line()`, any kind, its answers and detail block, `--hide-until`); with `--parts TD-a,TD-b` (v2.6), a
   decide's snapshot (`item_line(parts=)`): the option may be repeated, each value is split on `,` and each piece
   trimmed, and an empty piece is refused; `--parts` with `--decided` is refused, and so is `--ledger` without
-  `--parts`. The line's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default
+  `--parts`. With `--doer <value>` (v2.8), an act's doer (`item_line(doer=)`); `--doer` with `--decided` is
+  refused. The line's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default
   `ledger/` beside the board when it is a directory, its open and archived entries), and the write is refused,
   with every problem, when `parts_problems()` names any, or when no ledger is found; with `--said` and `--by`, a
   question already answered, its answer following the text as ` — <by>, <date>: <words>`; with `--decided`, an
@@ -1670,6 +1684,18 @@ was "<old title>"`, `edit` refuses to add a section that belongs in the header a
 differently: `retitled:` joins the reserved prefixes, so a note an older `note` wrote with that prefix now reads
 as a malformed line (`log-line`). No key moves, and an older reader reads the new line as a note.
 
+**v2.8 adds `Doer:`** (*The board*, *Edits*, *The board writer*): an act's doer, `parse_doer()`, `BoardItem.doer`,
+`item_record()`'s `doer`, `item_line(doer=)` and `board.py add --doer`. It reads one thing differently: a
+`Context:`, and a `Parts:`, now end at a ` Doer:`, so a line that held those words in its Context before v2.8
+reads a shorter Context and fewer refs, and where the words after it read as a doer, a `doer` no writer meant,
+which `item_problem()` cannot tell from a v2.8 one: a consumer's v2.8 vendor PR shows that none of its boards holds
+such a line. No key moves. `item_problem()` now faults a `Doer:` in an item's text, one whose value does not read,
+and one on any kind but `act`; `board_problems()` judges only a line it adds, so no board has a
+flag day. `item_line()` now refuses a text, context, answer, detail value or `--said` holding `Doer:`, and the
+`reply` edit a reply's words holding it, which v2.7 wrote; `decided_line()` cuts the name from a title and from an
+answer option, and refuses a decision's words that hold it. v2.7 reads a `Doer:` as part of the Context, so a
+consumer writes one only once every reader of its board runs v2.8.
+
 ## Appendix: grammar
 
 The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; later releases add the rest).
@@ -1685,13 +1711,15 @@ An item line as the writers write it (*The form the writers write*): a line `ite
 Its line ending is not part of it.
 
 ```ebnf
-item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | other-item | decided-item )
+item-line      ::= "- [ ] " ( decide-item | look-item | fyi-item | act-item | other-item | decided-item )
 decide-item    ::= "decide " date " " head " — " text context parts? due hide? reply* choices lifts?
 look-item      ::= "look " date " " head " — " text context due hide? reply* look-answers
 fyi-item       ::= "fyi " date " " head " — " text context hide? fyi-reply*
-other-item     ::= ( ( "act" | "watch" ) " " )? date " " head " — " text context due hide? reply*
+act-item       ::= "act " date " " head " — " text context doer? due hide? reply*
+other-item     ::= ( "watch" " " )? date " " head " — " text context due hide? reply*
 decided-item   ::= ( "decide " date " " any-head " — " text context parts? due hide? reply* ( answers lifts? )?
-                   | ( ( "act" | "look" | "watch" ) " " )? date " " any-head " — " text context due hide? reply* answers?
+                   | "act " date " " any-head " — " text context doer? due hide? reply* answers?
+                   | ( ( "look" | "watch" ) " " )? date " " any-head " — " text context due hide? reply* answers?
                    | "fyi " date " " any-head " — " text context hide? fyi-reply* answers? ) decided
 head           ::= "(session `" head-name "`" ( " on " head-name )? ")" | "(n/a)"
 any-head       ::= head | "(person)"
@@ -1704,6 +1732,11 @@ parts          ::= " Parts: " entry-id ( ", " entry-id )* "."
 entry-id       ::= ( repo "#" )? "TD-" digit+
 repo           ::= repo-part ( "/" repo-part )*
 repo-part      ::= [A-Za-z0-9_] [A-Za-z0-9_.-]* | "." [A-Za-z0-9_-] [A-Za-z0-9_.-]* | ".." [A-Za-z0-9_.-]+
+doer           ::= " Doer: " ( doer-repo | "team " person ) "."
+doer-repo      ::= ( repo-part "/" )* doer-part
+doer-part      ::= [A-Za-z0-9_] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | "." [A-Za-z0-9_-] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | ".." [A-Za-z0-9_.-]* [A-Za-z0-9_-]
 due            ::= " Due: " date "."
 hide           ::= " Hide until: " date "."
 reply          ::= " — " reply-name ", " date ": " char*
@@ -1725,7 +1758,7 @@ decided        ::= " Decided:" char* "(" date ")" "."?
 words          ::= char* - ( char* field-at char* )
 field-at       ::= non-word field-name
 non-word       ::= [^A-Za-z0-9_#x80-#x10FFFF#xA]
-field-name     ::= "Context:" | "Parts:" | due-name | "Hide until:" | "Answers:" | "Lifts:" | "Decided:" | "Closed:"
+field-name     ::= "Context:" | "Parts:" | "Doer:" | due-name | "Hide until:" | "Answers:" | "Lifts:" | "Decided:" | "Closed:"
 due-name       ::= [Dd] [Uu] [Ee] ":"
 char           ::= [^#xA]
 ```
@@ -1745,6 +1778,10 @@ and runs to the line's end, which ends them with `.`, `?` or `!`; nor does a Con
 too, at most one marked. A `Parts:` names each id once. A `Lifts:` names each label once, each one of the item's
 answers (compared case-insensitively), and never `Go` alone. A `decide` whose Context names a gate, or that
 carries `Parts:` or `Lifts:`, names exactly one entry in its Context.
+
+A `Doer:` (v2.8) names a team only after the word `team` and one space; `Doer: team.` names the repo `team`. A
+doer's repo is a `repo` whose last component does not end in `.` (`doer-repo`, its last part `doer-part`, which is
+`repo-part` without a final `.`), so the period that ends the field is never the name's.
 
 ### `Blocked by` (v2.4)
 

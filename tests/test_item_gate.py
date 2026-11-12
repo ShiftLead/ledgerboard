@@ -23,7 +23,7 @@ def written() -> list[str]:
     spec = json.loads((ROOT / "fixtures/edit/cases.json").read_text(encoding="utf-8"))
     out = []
     for c in spec["compose"]:
-        kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts") if k in c}
+        kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts", "doer") if k in c}
         # each item_line case also with a hide (v2.3), so the gate's Hide until rule meets every kind
         for extra in ({}, {"hide_until": "2026-02-01"}) if c["fn"] == "item_line" else ({},):
             try:

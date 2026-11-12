@@ -547,6 +547,21 @@ class Parts(unittest.TestCase):
                 [ents, None, 5, "x"]), archived), list)
 
 
+class Doer(unittest.TestCase):
+    """`Doer:` (v2.8) is a field name in every set the module keeps, as `Parts:` is (TD-065's D4)."""
+
+    def test_a_context_and_a_parts_end_before_it(self):
+        self.assertEqual(L.CONTEXT_RE.search("Context: TD-4. Doer: acme.").group("ctx"), "TD-4.")
+        self.assertEqual(L.PARTS_RE.match(" Parts: TD-4. Doer: acme.").group("ids"), "TD-4.")
+
+    def test_every_field_name_set_finds_it(self):
+        for name in ("FIELDS_RE", "FIELD_NAME_RE", "ANY_FIELD_RE", "WRITER_FIELD_RE", "GATE_FIELD_RE"):
+            with self.subTest(name=name):
+                m = getattr(L, name).search("x Doer: y")
+                self.assertIsNotNone(m)
+                self.assertIn("Doer:", m.group(0))
+
+
 if __name__ == "__main__":
     unittest.main()
 

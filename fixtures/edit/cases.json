@@ -246,6 +246,71 @@
       "line": "- [ ] decide 2026-01-05 (session `w-1`) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15.",
       "action": "due",
       "to": "2026-01-25"
+    },
+    {
+      "name": "snooze-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20.",
+      "action": "snooze",
+      "to": "2026-01-18"
+    },
+    {
+      "name": "due-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20.",
+      "action": "due",
+      "to": "2026-01-25"
+    },
+    {
+      "name": "done-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: acme/widgets. Due: 2026-01-20.",
+      "action": "done",
+      "why": "bumped."
+    },
+    {
+      "name": "decide-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20.",
+      "action": "decide",
+      "answer": "done",
+      "by": "pat"
+    },
+    {
+      "name": "reply-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: acme/widgets. Due: 2026-01-20.",
+      "action": "reply",
+      "reply": "on it",
+      "by": "w-2"
+    },
+    {
+      "name": "due-added-after-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops.",
+      "action": "due",
+      "to": "2026-01-25"
+    },
+    {
+      "name": "due-added-after-doer-no-period",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: acme",
+      "action": "due",
+      "to": "2026-01-25"
+    },
+    {
+      "name": "snooze-after-doer-no-period",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: acme",
+      "action": "snooze",
+      "to": "2026-01-18"
+    },
+    {
+      "name": "reply-refused-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20.",
+      "action": "reply",
+      "reply": "ask Doer: acme",
+      "by": "w-2"
+    },
+    {
+      "name": "decide-close-keeps-doer",
+      "line": "- [ ] act 2026-01-05 (session `w-1`) — Lift the gate. Context: TD-12 decision (pat). Doer: team ops. Due: 2026-01-20.",
+      "action": "decide",
+      "answer": "Go",
+      "by": "pat",
+      "close": true
     }
   ],
   "subjects": [
@@ -292,6 +357,16 @@
       "tool": "board_edit",
       "action": "due",
       "text": "act 2026-01-05 (n/a) — Rotate. Context: TD-1."
+    },
+    {
+      "tool": "board_edit",
+      "action": "append",
+      "text": "act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20."
+    },
+    {
+      "tool": "board_edit",
+      "action": "append",
+      "text": "act 2026-01-05 (session `w-1`) — Ask the Doer: acme to bump it. Context: TD-12. Due: 2026-01-20."
     }
   ],
   "subject_kinds": [
@@ -1809,6 +1884,242 @@
       "session": "w-1",
       "host": "box-1",
       "context": "TD-7"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "acme/widgets"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team web.grind"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "decide",
+      "doer": "team ops",
+      "answers": [
+        "Go",
+        "Not yet"
+      ],
+      "detail": {
+        "context": "x.",
+        "question": "y?",
+        "recommended": "z."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "look",
+      "doer": "team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "watch",
+      "doer": "team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": null,
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "fyi",
+      "doer": "team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "doer": "team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": ""
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": " team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team "
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team  ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "team a b"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "Team ops"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "../x"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "acme."
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "doer": "acme\nwidgets"
+    },
+    {
+      "fn": "item_line",
+      "text": "Ask the Doer: acme.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12 Doer: acme",
+      "kind": "act"
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "decide",
+      "answers": [
+        "Go",
+        "Doer: acme"
+      ],
+      "detail": {
+        "context": "x.",
+        "question": "y?",
+        "recommended": "z."
+      }
+    },
+    {
+      "fn": "item_line",
+      "text": "Bump the pin.",
+      "due": "2026-01-20",
+      "session": "w-1",
+      "host": null,
+      "context": "TD-12",
+      "kind": "act",
+      "detail": {
+        "context": "Doer: acme."
+      }
     }
   ],
   "predicates": [
@@ -2231,7 +2542,25 @@
     "- [ ] \tact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
     "- [ ]  act 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
     "- [ ] \u000bact 2026-01-05 (n/a) — Rotate the key. Context: TD-7. Due: 2026-01-20.",
-    "- [ ] decide 2026-01-15 (session `w-1`) — Go on the builds? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go (default) | Not yet."
+    "- [ ] decide 2026-01-15 (session `w-1`) — Go on the builds? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go (default) | Not yet.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: acme/widgets. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team ops. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team. Due: 2026-01-20.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick one? Context: TD-7. Doer: team ops. Due: 2026-01-20. Answers: a | b.",
+    "- [ ] 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team ops. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team ops. Doer: acme. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: Team ops. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: acme.. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: acme Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Due: 2026-01-20. Doer: acme.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Ask the Doer: acme. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team ops. Hide until: 2026-01-18.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team ops. Due: 2026-01-20. Decided: done (by pat) (2026-01-16).",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer:acme. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: team  ops. Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Doer: acme. Context: TD-7. Due: 2026-01-20.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Parts: TD-15. Doer: team ops. Due: 2026-01-20. Answers: Go | Not yet.",
+    "- [ ] decide 2026-01-15 (session `w-1` on box-1) — Go on the parts? Context: TD-12 decision (pat). Doer: team ops. Parts: TD-15. Due: 2026-01-20. Answers: Go | Not yet."
   ],
   "canonical_items": [
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. due: 2026-01-20.",
@@ -2250,7 +2579,10 @@
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.\n",
     "- [ ] fyi 2026-01-15 (session `w-1` on box-1) — Heads up. Context: TD-7 — w-2, 2026-01-16: noted. Decided: ok (2026-01-16).",
     "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7 Due: 2026-01-20. — w-2, 2026-01-16: on it",
-    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. due: 2026-01-10 Hide until: 2026-01-12."
+    "- [ ] act 2026-01-05 (n/a) — Rotate. Context: TD-1. due: 2026-01-10 Hide until: 2026-01-12.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Due: 2026-01-20. Doer: acme.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer: acme Due: 2026-01-20.",
+    "- [ ] act 2026-01-15 (session `w-1` on box-1) — Bump the pin. Context: TD-7. Doer:  acme. Due: 2026-01-20."
   ],
   "board_problems": [
     {
