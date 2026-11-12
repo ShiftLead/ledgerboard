@@ -1,7 +1,7 @@
 # TD-075: any offered `<head>:` or `<head>: <…>` answer is a form the person's words fill
 
-**Status:** Draft 2, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
-that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1's fact-check ran (5 build-changing, 5 minor, applied).
+**Status:** Draft 3, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
+that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1's fact-check ran twice (6 build-changing and 4 minor, then 2 and 6, applied).
 
 **Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
@@ -90,15 +90,16 @@ ShiftLead's request keeps them.
 - `decided_line()` (an item already decided, from a ledger entry's answers) writes no ` (default)` mark on a form:
   where `default` names one, the line is written without a mark, so no writer writes a marked form (a decided
   line is not faulted, D4's last bullet, so this is the writer's rule alone, as ShiftLead asked).
-- **A form whose head is a field's name** (`Due: <x>`, `Lifts:`) is no `label`: the writers refuse it as they
-  refuse any answer holding a field's name (`_item_words()`), and the reader reads such a line as it does today.
+- **A form whose head is a field's name** (`Due: <x>`, `Lifts:`) is no `label`: `item_line()` refuses it as it
+  refuses any answer holding a field's name (`_item_words()`), `decided_line()` strips the field's colon as it
+  does today (`ANY_FIELD_RE`), and the reader reads such a line as it does today.
 - A `look`'s answers stay exactly `Works | Not right: <what>` (`Works` the only mark it may carry), so neither
   refusal can meet one. Only an open `decide` with no `Decided:` is faulted, the branch of `item_problem()` that
   checks a `decide`'s answers today; a decided line (`- [ ] … Decided: …`, which takes `item_problem()`'s
   `decided` branch), a closed item, and an item of any other kind are not: what is decided or closed is history.
 
-**The answer is filled once, before anything is written.** `board.py`'s `plan_edit()` for `decide` fills the
-answer (`fill_form()` over the item's offered answers) before it calls `_decide_ledger()` and `subject()`, so the
+**The answer is filled once, before anything is written.** `board.py`'s `plan_edit()` for `decide` fills a string
+answer (`fill_form()` over the item's offered answers; a missing answer goes on to today's refusal) before it calls `_decide_ledger()` and `subject()`, so the
 board's `Decided:`, the ledger's `gate lifted` Log line (`decide_lift()`, through `lift_gate(answer=)`) and the
 commit subject all carry the same text; `lift_pr_verdict()`, which recomputes `decide_lift()` from the board's
 `Decided:` and requires the ledger to match it, then agrees. `edit_line(…, "decide", answer=…)` fills the same way
@@ -106,7 +107,9 @@ for a caller of the module alone (a fill is filled once more unchanged). Both re
 item's forms as offered, unfilled, or names a form's head with empty words (*<head> needs its words*). Any other
 answer is written as today. `edit_line`'s existing refusal of an answer ending in `(by …)` stands, a fill
 included. Both consumers' wrappers call `plan_edit()` (agent-cadence's `board_edit.py`, ShiftLead's sync), so
-they gain the fill with no change of their own.
+they gain the fill with no change of their own. On the `--board-only` route the ledger was written first, by
+`ledger.py` (`lift_gate(answer=)`, which knows no item): there the caller passes the answer already filled
+(`fill_form()`), as it already passes the same words to both writes, so the two still match.
 
 **D5. How the reader reads a filled form.** `_lifting(label, lifts, offered)` gains the item's offered labels
 (`parse_answers()`, or `BoardItem.answers`). An answer **lifts** when it is one of the item's `Lifts:` labels as
@@ -117,7 +120,9 @@ fills nothing, and `_lifting()`, a reader, returns `False` for it rather than re
 never lifts. `_lifting()` is the one place every reader asks (no caller compares an answer to `Lifts:` itself), so
 each caller passes its item's answers and nothing else changes: `closes()`, `edit_line`'s `close`,
 `decide_lift()`, `board.py`'s `_decide_ledger()` (line 503), `_answered_within()`, `_answers_owing()`,
-`_sweep_closes()` and `uncovered_decisions()` read a fill as its form; `uncovered_decisions()`'s check that some offered answer
+`_sweep_closes()` and `uncovered_decisions()` read a fill as its form; `item_line()`'s check that some offered
+answer lifts (`parts=`) passes its own offered labels too. `offered` has no default, so a caller that forgets it
+fails at once; `uncovered_decisions()`'s check that some offered answer
 lifts still meets the form itself, which equals its `Lifts:` label. A `Decided:` already written with an unfilled
 form (`Decided: Hold: <note>`) reads as before: it equals its label. `Decided:` keeps its text as written, and the
 item key, which strips `Decided:`, moves on no line.
@@ -186,8 +191,8 @@ marked ` (default)` (v2.8; *The `Answers:` bullet*)."
 **Text 5, the grammar appendix, *What the productions leave to prose*.** After its first sentence, insert:
 
 > Which labels are forms (*The board*, the `Answers:` bullet) is a reading of a `label`, as its consequence split
-> is: the productions accept every form as a label (a head that is a field's name makes no label, and the
-> writers refuse it), and a fill is a `Decided:` text, which they accept as any.
+> is: the productions accept every form as a label (a head that is a field's name makes no label: `item_line()`
+> refuses it), and a fill is a `Decided:` text, which they accept as any.
 
 **Text 6, *Versions*, after the v2.8 title paragraph** (TD-078's text 4 writes two paragraphs there; this is a
 third, true alone, placed after them when they stand):
@@ -235,12 +240,14 @@ All in one build, B1, each group where its function's cases live today:
   `fill_of_unlisted_form_refused`; and a `decide_lift()` case, `decide_lift_fill_lifts`, the gate lifted as its
   form would be, the ledger's `gate lifted` line carrying the fill;
 - `fixtures/board_writer/`: `decide_fill_ledger_matches` — `board.py decide --answer "hold:wait"` on a lifting
-  item: the board's `Decided: Hold: wait`, the ledger's `gate lifted` line and the subject carry `Hold: wait`, and
-  `lift_pr_verdict()` over the result passes;
+  item: the board's `Decided: Hold: wait`, the ledger's `gate lifted` line and the subject carry `Hold: wait`;
+- `fixtures/verdict/cases.json`: `lift_fill_matches` — a base and head tree where the head's board `Decided:` is
+  a fill and its ledger's `gate lifted` line carries the same fill: `lift_pr_verdict()` passes;
 - `fixtures/sweep/`: `sweep_closes_filled_form`.
 
-Every changed or added fixture file is re-stamped in `fixtures/MANIFEST` (`fixtures/run.py --stamp`), and the
-new groups' outputs are new keys in their `expected.json`.
+The new groups' outputs are new keys in their `expected.json`. `fixtures/MANIFEST` is not touched: `release.sh`
+re-stamps it at the release. Case names above label the cases; in groups whose cases carry no `name`
+(`item_problems`, `board_problems`, `compose`, `closes`) they are descriptions, not keys.
 
 ## The builds
 
