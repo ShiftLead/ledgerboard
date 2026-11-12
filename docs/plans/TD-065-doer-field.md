@@ -1,10 +1,11 @@
 # TD-065: `Doer:`, who should do an act item's step
 
-**Status:** Draft 5, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 6, 2026-11-12 (session lb-designer). Class: **wide** (a vendored, published format: a new
 field on the board's item line, read by both consumers, with a change to what a `Context:` reads; cap 6 rounds,
-cadence.md §4.8). Rounds: **ended by the stop rule** at round 4, 2026-11-11 (its design review SHIP); build-changing
-findings per round in the design reviews 1, 1, 2, 0 (fact-checks 0, 2, 1, 0); recurring topic: the doer's repo
-grammar and its final `.` (F5, F16, F23, F34, F36) (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
+cadence.md §4.8). Rounds: four ended by the stop rule, 2026-11-11; Paul answered **One more round**, and round 5
+(TD-076) ended 2026-11-12 with its design review SHIP. Build-changing findings per round in the design reviews 1, 1,
+2, 0, 0 (fact-checks 0, 2, 1, 0+3 closing, 1, 0 closing); recurring topic: the doer's repo grammar and its final `.`
+(F5, F16, F23, F34, F36), which round 5 read and passed (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
 
 **Entry:** [TD-065](../ledger/TD-065.md). Asked for by ShiftLead (its design TD-1543, builds TD-1660 and TD-1661).
 
@@ -90,7 +91,8 @@ finds `Parts:`: ` Doer:` (after whitespace) then any whitespace, its **value** r
 field name as `GATE_FIELD_RE` finds it (at a word's start, `Parts:` and `Context:` among them, `Due:` in any case),
 the start of the line's first reply (`reply_span()`, which searches after the line's `Due:`; it can stop the
 value only on a hand-written line whose `Doer:` follows its `Due:` or that has none), or the line's end. As
-`parse_parts()` does, `parse_doer()` returns None when the ` Doer:` it finds starts inside `reply_span()` (on a line
+`parse_parts()` does (comparing where its ids start), `parse_doer()` returns None when its value's start, after
+` Doer:` and its whitespace, falls inside `reply_span()` (on a line
 with no `Due:`, `CONTEXT_RE` ends at a reply's ` Doer:`, so this check, not the Context's end, keeps a reply's words
 out); with the whitespace at its ends taken off, then one final `.`, and nothing more (a value with whitespace before its
 period, `Doer: acme .`, keeps that whitespace and so does not read). The value reads as a **team** when it is `team`, a run of
