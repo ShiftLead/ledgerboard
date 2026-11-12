@@ -638,7 +638,8 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   TD-065's `doer` production reads them there. Since TD-065 is shipped or closed before B1 starts, and no v2.x
   release follows B1, nothing of TD-065 lands after B1.
 - **TD-078's open question**, whether its archived-entry writer route "ships in a v2.x minor first", has the same
-  answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0.
+  answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0. *(Amended 2026-11-12, TD-078's
+  D3: it ships in the last v2.x minor, so B1 is `Blocked by` TD-078's B1 and B2.)*
 - **The builds**, B1 to B5, merge in order with no release between them; then v3.0.
 
 ## Consumers
