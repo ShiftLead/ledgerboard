@@ -435,8 +435,9 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
 - **agent-cadence**:
   - its `ledger.py`'s `prose_waits` (pinned tree `67023cc`, `files/scripts/ledger.py`) scans the raw text after
     `decision (…)` in a `Blocked by` for ids, through its vendored `DECISION_RE`; v2.8's `migrate` moves that text
-    into an `**Ask:**` or the Log, so an id named only there stops being seen. Its two open old-form entries (TD-065,
-    TD-144) name none there today; its v2.8 vendor PR checks that again before running `migrate`, and the scan's
+    into an `**Ask:**` or the Log, so an id named only there stops being seen. Of its two open old-form entries, TD-065's
+    text names no id and TD-144's names ShiftLead's TD-1029 in prose; its v2.8 vendor PR checks each such text
+    before running `migrate`, and an id that is a real wait moves into `Blocked by` first (as `shiftlead#TD-1029`), and the scan's
     old-form span goes once no old form can stand (v3.0);
   - its `ledger.py` stops writing `Taken by` on `new` and `renumber` and writes `Id take` alone (its TD-188's step
     4), before its v3.0 vendor PR, since every `Taken by` is a v3.0 error;
