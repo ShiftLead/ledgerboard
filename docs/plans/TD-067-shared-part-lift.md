@@ -151,8 +151,8 @@ of the old answer, the new item closes, the entries are no longer covered, and t
 (*… was answered with a lift on <D> but still stands …*), which the person closes. The repair needs nothing new
 from the module; the sweep fixture below holds the covered case.
 
-**D5. A minor release, v2.8.** No parse changes and no key moves: v2.3 to v2.7 read every line it writes.
-The writer writes less (D1), and one verdict changes: the tripwire flags one more shape (D3), which v2.4 to v2.7
+**D5. A minor release, v2.8.** *(Amended 2026-11-11: Paul folded TD-067 into v2.7, since its build, TD-073, merged before v2.7 was cut; SPEC, the code and the tests tag it `(v2.7)`, and the text quoted below keeps the design's `v2.8`.)* No parse changes and no key moves: v2.3 to v2.6 read every line it writes.
+The writer writes less (D1), and one verdict changes: the tripwire flags one more shape (D3), which v2.4 to v2.6
 passed. The SPEC text tags each change `(v2.8)`; if Paul folds TD-067 into v2.7 instead, the build tags it
 `(v2.7)` and the *Versions* paragraph joins v2.7's. It is not a version event under SPEC
 *Versions* (no item key, no canonical form). It ships as its own minor after v2.7, whose builds (TD-058's
@@ -280,7 +280,7 @@ All invented, in the existing fixtures' names (`robin`, `pat`, `sam`).
   Parts TD-15, TD-16, Due 2026-01-20) with no `Decided:`; line 8 the same question an older writer decided
   (Context `TD-20 decision (pat)`, Parts TD-21, TD-22, `Decided: Go (by pat) (2026-01-08)`). Its `needs_you` at
   the runner's `TODAY` puts line 8 first as `decided` and line 7 among the person's to-do with its `due` class:
-  the item a v2.8 writer left open stays asked, and the old one reads as it did (D4).
+  the item a v2.7 writer left open stays asked, and the old one reads as it did (D4).
 
 **`fixtures/sweep/`** (one shared set of files; new ids appended to `ledger.md` and `widgets.md`, `People: pat`,
 read at the existing runs' dates, 2026-11-03 and 2026-11-05, `reask_days` 30)
