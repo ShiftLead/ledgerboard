@@ -7,8 +7,8 @@ builds. Rounds: six ran, ending at the cap (round 6's design review still raised
 now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4; fact-checks 2, 2,
 1, 0, 0, 0, and the closing fact-check 1 (F81, `_real_day()` for a day's check), applied and read by no design
 review with round 6's. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
-F55), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review after round
-5's cuts. Each round's fixes applied, with the author's (the designer session's) rulings where the findings offered a
+F55), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review (order by round 3's rule
+for comparing two reads, F45; the shims and `Doer` by round 5's cuts). Each round's fixes applied, with the author's (the designer session's) rulings where the findings offered a
 choice (round 1: the tie order, `Doer:`, the releases, the sweep's reads, the stub; round 2: v2.8's content, ties at
 the split, the board's own major, the records through the builds, the duplicate-id tie-break; round 3: `Doer:` as
 this design's own field, the consumers' call sites, the v2 writers' read-backs, the order and the comparison of
@@ -357,8 +357,8 @@ numbered rules).
 - **The board's order** (round 3's F45), stated once: on a v3 board `items` and `closed` are each in id
   **descending** order, newest first; on a v2 board they are in line order (`closed` the board's closed lines, then
   the archive's). *What needs the person*'s ties (undated, unreadable-due and `fyi` items, and two items of one date)
-  fall back to it, as does every reader that lists items. Ids descending order by `Added` date, and
-  within one day at random; a v2 board's line order is whatever its writers and hand edits left (v2's `add` writes
+  fall back to it, as does every reader that lists items. Sorting ids descending orders items newest
+  `Added` date first, and within one day at random (the nonce); a v2 board's line order is whatever its writers and hand edits left (v2's `add` writes
   each item above the first of its section, a hand edit anywhere). **So a v2 board's ties follow its line order and
   a v3 board's follow id descending, and the order of tied items can change at the split**; which items need the
   person, their classes and their days do not. `board_dir`'s `ties` pins v3's order.
