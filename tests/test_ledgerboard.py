@@ -987,6 +987,41 @@ class TheLog(unittest.TestCase):
         self.assertIn("event-undated", [r["kind"] for r in L.check("# L\n\n" + bad, "", old="", today="2026-01-20")])
 
 
+class Retitle(unittest.TestCase):  # v2.8 (TD-068 B1): what the fixtures do not show on their own
+    ENTRY = "## TD-7: Old\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** until 2026-03-01\n\n**Why:** w\n"
+
+    def test_retitled_is_not_a_line_a_gate_ages_from(self):
+        self.assertNotIn("retitled", L.LOG_AGE_KINDS)
+        out = L.edit_entry(self.ENTRY, "set", title="New", today="2026-01-20")
+        self.assertEqual(L.log_line(out.splitlines()[-1])["kind"], "retitled")
+        self.assertEqual(L.gate_added(out, "until 2026-03-01"), None)
+
+    def test_each_refusal_names_the_verb_to_use(self):
+        stray = self.ENTRY + "\n**Status:** a stray\n"
+        nohdr = self.ENTRY.replace("**Status:** Open\n", "") + "\n**Status:** Open\n"
+        for call, verb in ((lambda: L.edit_entry(self.ENTRY, "edit", section="Title", words="x"), "set --title"),
+                           (lambda: L.edit_entry(self.ENTRY, "edit", section="Type", words="x"), "use set"),
+                           (lambda: L.edit_entry(self.ENTRY, "set", fields={"Title": "x"}), "set --title"),
+                           (lambda: L.edit_entry(nohdr, "edit", section="Status", remove=True), "set Status first"),
+                           (lambda: L.entry_text("TD-8", "t", {"Priority": "Low"}, [("Why", "w"), ("Title", "x")]),
+                            "set --title")):
+            with self.assertRaises(L.Refused) as e:
+                call()
+            self.assertIn(verb, str(e.exception))
+        self.assertNotIn("**Status:** a stray", L.edit_entry(stray, "edit", section="Status", remove=True))
+
+    def test_a_header_title_on_a_fields_ledger_is_misplaced_not_undeclared(self):
+        led = "# Ledger\n\nFields: Owner = a | b\n\n" + self.ENTRY.replace("**Status:** Open\n", "**Status:** Open\n**Title:** x\n")
+        kinds = [(r["kind"], r["field"]) for r in L.check(led, "", today=TODAY)]
+        self.assertIn(("misplaced-name", "title"), kinds)
+        self.assertNotIn(("undeclared-field", "title"), kinds)
+
+    def test_declared_fields_is_edits_alone(self):
+        for action, kw in (("set", {"fields": {"Priority": "High"}}), ("note", {"words": "w", "today": "2026-01-20"})):
+            with self.assertRaises(L.Refused):
+                L.edit_entry(self.ENTRY, action, declared_fields=["tracker"], **kw)
+
+
 class NextId(unittest.TestCase):
     """v2.4: the counter's takes judged (SPEC *The next id*)."""
 

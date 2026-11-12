@@ -600,13 +600,15 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                                      old=text({"file": c["old"]}) if c.get("old") else None,
                                                      today=spec["today"])
                                   if r["kind"] in ("archive-open-parts", "part-of-archived", "part-of-unknown",
-                                                   "log-not-last", "log-line", "event-undated", "status")  # status: v2.7
+                                                   "log-not-last", "log-line", "event-undated", "status",  # status: v2.7
+                                                   "misplaced-name")  # v2.8
                                   or (r["kind"], r["field"]) in (("retired", "waits"), ("retired", "location"))]  # v2.7
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
                 c["id"], c["title"], c["fields"],
                 c["sections"] if isinstance(c["sections"], dict) else [tuple(x) for x in c["sections"]],
-                **({"filed": c["filed"]} if "filed" in c else {})))
+                **({"filed": c["filed"]} if "filed" in c else {}),
+                **({"declared_fields": c["declared_fields"]} if "declared_fields" in c else {})))  # v2.8
                 for c in spec["entry_text"]},
             "log": {c["name"]: log(c) for c in spec.get("log", [])},
             "archive_plan": {c["name"]: plan(c) for c in spec.get("archive_plan", [])}}

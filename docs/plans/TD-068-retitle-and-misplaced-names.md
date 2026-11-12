@@ -5,7 +5,7 @@ writer argument, a new Log line shape and reserved prefix, and new refusals in `
 consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule** at round 6, the cap's last, 2026-11-11 (its design review SHIP); recurring topic: which copy of a name is the stray (F2, F28, F48, F56) (the record:
 [docs/reviews/TD-068.md](../reviews/TD-068.md)).
 
-**Entry:** [TD-068](../ledger/TD-068.md). Reported by ShiftLead (its TD-1551, 2026-11-11).
+**Entry:** [TD-068](../ledger/archive/TD-068.md). Reported by ShiftLead (its TD-1551, 2026-11-11).
 
 ## The problem
 

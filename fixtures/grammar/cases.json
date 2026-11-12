@@ -1048,6 +1048,15 @@
         "- 2026-01-05: was: "
       ]
     },
+    "log-retitled": {
+      "accept": [
+        "- 2026-01-05: retitled: was \"An \"old\" title\"",
+        "- 2026-01-05: retitled: was \"\""
+      ],
+      "refuse": [
+        "- 2026-01-05: retitled: the old one"
+      ]
+    },
     "log-token": {
       "accept": [
         "- 2026-01-05: kept waiting: until 2026-02-01 — by w-1@box.2/a_b; answer \"Keep waiting\""
