@@ -73,7 +73,9 @@ fills nothing and is the plain answer it is.
   trimmed, equals the form's head in any case), the words are the text after that colon; otherwise the whole `said`
   is the words and the head is put back (`fill_form("the vendor", ["Go", "Hold: <note>"], form=1)` is
   `Hold: the vendor`; `Holdfast` gives `Hold: Holdfast`, `Note: foo` gives `Hold: Note: foo`, and `Hold: later`
-  over `Go | Hold: <note> | Hold: later` with `form=1` gives the fill `Hold: later`). Refused (`Refused`):
+  over `Go | Hold: <note> | Hold: later` with `form=1` gives the fill `Hold: later`, whose text is that complete answer's, so a reader reads it as that
+  answer, which lifts only by equality, D5: a caller choosing a form gets the complete answer when its words make
+  one). Refused (`Refused`):
   a `said` that is not a string; a `form` out of range or naming a complete answer; empty words (D2).
 
 `is_not_right_form(answer)` and `fill_not_right(said, offered)` stay, as the look's case: `is_form()` with the head
@@ -156,7 +158,8 @@ each writes the first minor not yet tagged when it merges, and the last of the t
 number to its own where that is still untagged, so all three name one minor), since TD-070's D12 allows no v2.x release after TD-070's B1, and ShiftLead's
 TD-1698 waits on it. So TD-070's B1, when filed, is also `Blocked by` this design's B1; whichever of TD-070's,
 TD-078's and this design's build filings comes last writes it. If it misses that minor, it ships in v3.0 and
-TD-1698 waits for v3.0. Two lines for this repo's own entries, written when their builds are filed: TD-070's B1's
+TD-1698 waits for v3.0. Three lines for this repo's own entries, written when their builds are filed: TD-078's B1 and B2 carry this
+three-build number rule in place of their own two-build one (TD-078's D3); TD-070's B1's
 `decision (paul)` Ask (TD-078's D3) names this design's B1 beside TD-078's B1 and B2 as the builds the last v2.x
 minor holds; and TD-070's builds, which rework `BoardItem` and its readers, call `_lifting()` with its `offered`
 argument (D5), since B1 here makes it required.
