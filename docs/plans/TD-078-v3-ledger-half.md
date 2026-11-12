@@ -1,6 +1,6 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
+**Status:** Draft 5, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
 read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: four ran (build-changing per design review 6, 2, 2, 1; fact-checks 7, 1, 1, 0), their fixes applied; round 5 is next (round 4's design review raised one build-changing finding, so the stop rule did not end the rounds).
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
