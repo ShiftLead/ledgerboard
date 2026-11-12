@@ -194,7 +194,8 @@ are. …" becomes:
 > is placed after any line of an equal date (before the first line dated later). *The entry's date* is the
 > gate-neutral date on an open entry whose `Blocked by` carries a gate (`gate_items()`, or the old decision form),
 > and the filing date on any other. So rules 5–8 never move a gate's age (`gate_age()`) on an entry with a dated Log
-> line or an `Added` whose whole value is a real date; on any other they may.
+> line or an `Added` whose whole value is a real date; on any other they may (and on an entry whose first Log line
+> has an unreal date, `gate_age()` raises today, before and after).
 >
 > *Has an Ask* means the entry has an `Ask` header field or a body `**Ask:**` section, as `pickable()`'s
 > `ask-missing` reads it.
@@ -218,7 +219,8 @@ are. …" becomes:
 > of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`, placed as `edit` places a
 > section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
 > Log line, `Blocked by <the old item>`, dated by the entry's date. An empty text writes neither; on an open entry
-> with no Ask it is a **stop** (`decision (<who>)` with no Ask is `check()`'s `ask-missing` error). No `gate added`
+> with no Ask, where `decision (<who>)` reads as a decision (not a retired role), it is a **stop**, since that
+> leaves `check()`'s `ask-missing` error. No `gate added`
 > line is written.
 >
 > Stops are collected from every rule, 1 to 8, and with any the input is returned as given.
@@ -382,12 +384,14 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   `old_form_no_text_archived` (`decision (Kim) —`: rewritten, nothing written), `old_form_role` (`decision (designer) — x`: rewritten, still retired),
   `old_form_not_a_person_stops` (`decision (the owner) — x`);
 - `all_four_and_status` (each rule's order on one entry, two lines of one filing date in reverse rule order),
-  `unreal_first_log_date` (a first Log line dated `2026-02-30` passed over for the next dated one); each case's
+  `unreal_first_log_date` (a first Log line dated `2026-02-30` passed over for the next dated one; the case names
+  no gate, since `gate_age()` itself raises on such a Log, a fault this design leaves as it is); each case's
   output run again changes nothing (`run.py`'s existing `again`);
 - the existing `waits_taken_by_old_form_left` (an open entry holding `Waits: the vendor`) becomes
   `waits_taken_by_old_form_open_stops` (rule 6's stop wins, the input returned as given), and a new
   `waits_taken_by_old_form_archived` maps all three;
-- `fixtures/run.py` records each case's `gate_age()` before and after in its expected JSON, asserting nothing; a
+- each new case with a gate names it (`gate`), so `fixtures/run.py` records its `gate_age()` before and after in
+  the expected JSON, as it does today for the three cases that name one, asserting nothing; a
   unit test in `tests/test_ledgerboard.py` asserts the two are equal on every new case with a gate, and a dated Log
   line or an `Added` whose whole value is a real date, and on which rules 1–4 write nothing (`all_four_and_status` and
   `taken_by_added_not_a_date` are outside it);
@@ -410,7 +414,8 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   `set_other_field_keeps_old_form` rewritten (the value written as given, `check()` naming the unreadable item);
   `fixtures/ledger_writer/set_old_form` likewise (refused by the writer's refusal rule);
 - `fixtures/lift/cases.json`'s two `old_form_refused` cases refuse it as a gate the entry does not carry;
-- `fixtures/ledger_writer/migrate_v3` — `ledger.py migrate` in v3.0: exit 2, an unknown action;
+- `fixtures/ledger_writer/migrate_v3` — `python3 -m ledgerboard.ledger migrate` in v3.0: exit 2, the argument
+  parser's refusal of an unknown action;
 - `fixtures/ids/cases.json` and `run.py`'s `ids` group lose `accept_taken_by`, and an entry with only a
   `Taken by` fails `id-no-take`;
 - text 10's message regenerates every expected output that holds the old ending: `ledger_edit/expected.json`
