@@ -664,7 +664,7 @@
     "kind": "misplaced-name",
     "level": "info",
     "standing": false,
-    "text": "ℹ TD-606: its body has 2 sections named Title, which belongs in the header — edit and --remove refuse a name two sections share: merge them and fix it by hand"
+    "text": "ℹ TD-606: its body has 2 sections named Title, but the title is the heading — edit and --remove refuse a name two sections share: merge them and fix it by hand"
    },
    {
     "field": "status",

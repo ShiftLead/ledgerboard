@@ -3395,7 +3395,8 @@ def misplaced_names(text: str, declared_fields=()) -> list[tuple[str, str]]:
         name = lead.strip().rstrip(":").strip()
         n = len(_keyed(sections, key))
         if n > 1:
-            why = (f"its body has {n} sections named {name}, which belongs in the header — edit and --remove refuse "
+            where = "but the title is the heading" if key == "title" else "which belongs in the header"
+            why = (f"its body has {n} sections named {name}, {where} — edit and --remove refuse "
                    "a name two sections share: merge them and fix it by hand")
         elif key == "title":
             why = (f"a body section named {name} is not the title, which is the heading — remove it with "
