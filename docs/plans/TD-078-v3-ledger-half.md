@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Draft 3, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: two ran (build-changing per design review 6, 2; fact-checks 6, 1), their fixes applied.
+**Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: three ran (build-changing per design review 6, 2, 2; fact-checks 6, 1, 1), their fixes applied.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -62,7 +62,7 @@ it left:
 - **7. A header `Resolved`** → the body section `**Resolved:** <value>`, before the Log, as `reopen` moves one
   today; beside a body `**Resolved:**`, a stop, as `reopen` refuses it (the count shows none).
 - **8. The old decision form** `decision (<who>) <text>` → `decision (<who>)`, its text into an `**Ask:**` when
-  the entry has none, else into one plain Log line; a `<who>` that is neither a person's name nor a retired role is
+  the entry has none, else the old item whole into one plain Log line; a `<who>` that is neither a person's name nor a retired role is
   a stop, since `decision (<who>)` would be an unreadable item (no real entry has one); so is an empty text on an
   open entry with no Ask, which would leave an `ask-missing` error.
 
@@ -76,6 +76,15 @@ Text 1 is the one exact statement of the rules; this list is its summary. Three 
   never do.
 - **The text of the old form** goes to the `**Ask:**` the cadence asks every decision to carry (cadence.md §2.3),
   where the entry has none; where it has one, the existing Ask stands and the old text is kept in the Log.
+- **The merge gate sees no new decision.** `uncovered_decisions()` reads the decisions an open entry *gains* in a
+  diff from `_decisions()`, which skips the old form, so rule 8's `decision (<who>)` would read as gained, and the
+  migrate PR would be refused (`decision-uncovered`) or flagged (`decision-elsewhere`) on every open old-form entry
+  (two in agent-cadence, seven in ShiftLead). From v2.8 its base side also counts each old-form holder as
+  `decision (<who>)`, compared by `_gate_key`: the old form held as a decision by `<who>` (*The ledger*), so the
+  rewrite gains nothing. (Exempting the migrate commit by subject, as `tripwire()` does, would need a subject the
+  function does not take.) The gate does change for the gate sweep and `gate_age()`, which read `gate_items()`:
+  after the rewrite the sweep sees a decision it did not, and owes it a board item if none covers it, which is
+  right — the old form hid it.
 - **Each Log line is a plain note:** `Taken by`, `Waits` and `Blocked by` begin no writer's prefix, so `log_line()`
   reads each as a note and `check()`'s `log-line` passes it.
 
@@ -94,7 +103,8 @@ Status's notes into the Log, which on an archived Status in the closed set lifts
 repo that has not run v2.7's `migrate`: 1,139 of ShiftLead's 1,426 archived entries on 2026-11-11, 176 of them
 with notes `note` would lift) it may rewrite the Status. So `ledger.py note` refuses an archived entry whose
 Status `status_problem(text, archived=True)` faults — the whole 1,139, not only the 176, so one test says when an
-archived entry takes a note — *run migrate first*; on every other archived entry it only appends to history. `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
+archived entry takes a note — *run migrate first*; on every other archived entry it appends one Log line and writes the file in canonical form (which, for 9 of
+ShiftLead's archived entries holding a double blank line, also collapses it). `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
 `reopen`, then an edit, then an `archive`. The write's refusal rule stands (a `check()` error the ledger before it
 did not have), and `check()` reads only the open entries' Logs, as now.
 
@@ -107,8 +117,16 @@ must be able to run the new rules on a v2.x before it vendors v3.0. The builds f
 before TD-070's B1, and B1 is `Blocked by` them (*The builds*). The minor is v2.8 when it is cut after they merge,
 which is the order the board's open *Release v2.8* item allows; if v2.8 is cut first, they ship as v2.9, still
 before B1 merges. The rule for the number: each build writes, wherever the texts below say v2.8, the first minor
-not yet tagged when that build merges (v2.8 if it is untagged then, else v2.9); TD-070's D12 and its `Doer:` text,
-where they name v2.8 as the release before its B1, read as the last minor tagged before its B1 merges. The release is Paul's.
+not yet tagged when that build merges (v2.8 if it is untagged then, else v2.9), and whichever of B1 and B2 merges
+second rewrites the other's number to its own when that is still untagged, so both name one minor; the Consumers
+lines say *the last v2.x minor*. TD-070's D12 and its `Doer:` text, where they name v2.8 as the release before its
+B1, read as that minor.
+
+`Blocked by` B1 and B2 alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12 allows no
+v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask: *Is
+the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under `ledgerboard/`,
+`SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of TD-070's and
+TD-078's build filings comes second, with its board item). The release is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
@@ -129,8 +147,8 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   `check()`'s `written` grading, which every such line now meets as an error; `RETIRED_FIELDS` keeps `resolved`
   (already there) and its `location` text loses *run migrate*. `canonical()` loses `Taken by` from its order, so a `Taken by`
   left in a file is placed as any other field, in the file's order. `edit_entry`'s `archive` no longer removes a
-  header `Resolved`, nor its `reopen` moves one or refuses an entry with both: each writes what it writes beside
-  it, and the error stands.
+  header `Resolved` but refuses an entry holding one (text 8), and `reopen` no longer moves one or refuses an entry
+  with both: it writes what it writes beside it, and the error stands.
 - **The old decision form:** `parse_gates()` no longer reads it as a decision. `GATE_DECISION_RE` matches a whole item
   (`fullmatch`, where today it matches a prefix), so `decision (<who>) <text>` is neither the old form nor a
   decision but an unreadable item (`bad`), which keeps the block, names no holder and is an error (an unreadable
@@ -214,7 +232,8 @@ are. …" becomes:
 >
 > **8. The old decision form** (v2.8). *The old item* is the old form as *The ledger* reads it: from its
 > `decision (` to the end of the `Blocked by` value, commas, parentheses and all (`parse_gates()`'s `old_form`).
-> It is rewritten `decision (<who>)`, `<who>` as written, the items before it kept in their order; when `<who>` is
+> It is rewritten `decision (<who>)`, `decision` in lower case and `<who>` as `parse_gates()`'s `old_form` gives
+> it, the items before it kept in their order; when `<who>` is
 > not a person's name (`is_person()`, which a retired role passes), it is a **stop**. Its text, less its leading run
 > of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`, placed as `edit` places a
 > section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
@@ -272,8 +291,11 @@ the first, B2 the second.
 
 > **v2.8 gives `migrate` the last old forms** (*Migrating to v2.7*, rules 5–8): it maps `Taken by`, `Waits`, a
 > header `Resolved` and the old decision form, which v2.7's left. Nothing read changes: every line it writes is one
-> v2.7 reads (a body section, a plain Log line, a `decision (<who>)`), and no key moves. A repo that ran v2.7's
-> `migrate` runs v2.8's once more, as its own PR.
+> v2.7 reads (a body section, a plain Log line, a `decision (<who>)`), and no key moves. One thing is read
+> differently once a repo runs it: an old-form decision becomes `decision (<who>)`, which the gate sweep and
+> `gate_age()` read as a gate, where they passed the old form over. `uncovered_decisions()` counts an old-form
+> holder in the base as a decision already carried, so the rewrite is not a gained decision. A repo that ran
+> v2.7's `migrate` runs v2.8's once more, as its own PR.
 
 **Text 5 (B2), *Versions*, the v2.7 paragraph's last sentence.** "`migrate` stays through v2.x and goes in v3.0,
 whose precondition is that `migrate --plan` shows no entry with changes in every repo." becomes:
@@ -301,8 +323,8 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > and a Status outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0
 > reads no such form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for
 > `Waits` and `Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header
-> `Location`; the same with `--section Resolved` for a header `Resolved`; *rewrite it `decision (<person>)` with
-> `set`, its text in `edit --section Ask`* for the old decision form — then *; on an archived one by hand, then
+> `Location`; the same with `--section Resolved` for a header `Resolved`; *write its text with `edit --section
+> Ask`, then rewrite it `decision (<person>)` with `set`* for the old decision form — then *; on an archived one by hand, then
 > `ledger.py fmt TD-n`*.
 
 Its second item, "in `Blocked by`, the gate `hold` (…), the old form above, and a role in `decision (…)`, …",
@@ -320,8 +342,8 @@ is a retired error (v3.0)." In *Edits*: `set` loses "it is refused in the old fo
 entry whose `Blocked by` still holds the old form" and the sentences on **the gates the entry carried** in the old
 form (from "plus, when its `Blocked by` holds the old form" to "is kept. The old form's refusals come before the
 refusal for a missing `today`."), its gates being its `gate_items()`, compared by `_gate_key` (a person's
-name in any case), so `Decision (kim)` rewritten `decision (Kim)` is kept; `archive` loses "and a `Resolved` header
-field is removed"; `reopen` loses "A `Resolved` header field moves into a `**Resolved:**` section before the Log,
+name in any case), so `Decision (kim)` rewritten `decision (Kim)` is kept; `archive`'s "and a `Resolved` header field is removed" becomes "and an entry holding a `Resolved` header field is
+refused (*move it with `edit --section Resolved`, then remove it with `set`*)", so it never writes both; `reopen` loses "A `Resolved` header field moves into a `**Resolved:**` section before the Log,
 never deleted. An entry with both is refused: a person merges them."; *Lifting a gate* loses "and a decision still
 in the old form (*migrate it first*)". The entry writer's sentence "…its ids, then its gates in their order; the
 old form is refused." loses "; the old form is refused" (an unreadable item is `check()`'s).
@@ -333,7 +355,9 @@ the Log*, "`added`: an `Added` value `migrate_entry()` leaves alone, with no `ch
 open entry carrying it beside `**Status:** Open`" becomes "`added`: an `Added` value that is a real date, whole",
 and "Their cases are in `fixtures/migrate/` and `ledger_edit/check/status_*`" becomes "Their cases are in
 `fixtures/status/`, `fixtures/grammar/` and `ledger_edit/check/status_*`". The sentences that recount what
-v2.7's `migrate` maps (*Superseded and dropped*, the Status's notes under *The Log*) are history and stay.
+v2.7's `migrate` maps (*Superseded and dropped*, the Status's notes under *The Log*) are history and stay; *Versions*'
+v2.7 paragraph's "(*The closed Status set*, *Migrating to v2.7*)" becomes "(*The closed Status set*; *Migrating to
+v2.7*, removed in v3.0)".
 In *The ledger writer*'s closing paragraph, "(`subject` is null: a ledger edit has no commit subject of its own,
 so the caller names its commit — except `migrate`'s, which names `migrate_subject()`)" becomes "(`subject` is null:
 a ledger edit has no commit subject of its own, so the caller names its commit)". `status_problem(text, *,
@@ -418,6 +442,11 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   parser's refusal of an unknown action;
 - `fixtures/ids/cases.json` and `run.py`'s `ids` group lose `accept_taken_by`, and an entry with only a
   `Taken by` fails `id-no-take`;
+- `fixtures/ledger_edit/cases.json`'s `archive_header_resolved` (now refused), `reopen_header_resolved` and
+  `reopen_refused_both_resolved` (the header left); `fixtures/ledger_edit/check/`'s `waits_*` and `location_*`
+  (errors now, whatever the edit); `fixtures/ledger_edit/already.md` (its `Taken by` placed in the file's order);
+  `fixtures/ledger_writer/fmt_retired_fields` and `fmt_header_not_field`; and any other case `run.py` shows
+  changed, each regenerated and read;
 - text 10's message regenerates every expected output that holds the old ending: `ledger_edit/expected.json`
   and the `ledger_writer/*/expected.json` files that print it.
 
@@ -431,7 +460,10 @@ with the code, and the precheck green.
   CLI help *append a dated line to an open entry's Log*), `SPEC.md` (text 3, text 4's first paragraph),
   `fixtures/ledger_writer/`, `tests/test_ledger_writer.py`.
 - **B2 — `migrate`'s rules 5–8 (D1).** Location: `ledgerboard/__init__.py` (`migrate_entry()` and its
-  post-condition), `ledgerboard/ledger.py` (the `migrate` docstrings), `SPEC.md` (texts 1, 2, 4's second paragraph,
+  post-condition; `uncovered_decisions()`'s base side counting an old-form holder, with a `fixtures/verdict/` case
+  where a migrate diff rewrites one and gains nothing, and *The merge gate's verdicts*' sentence for it: "A
+  decision a base entry held in the old form (*The ledger*) is not gained when the head writes it `decision
+  (<who>)` (v2.8).", after "…which not every machine reads."), `ledgerboard/ledger.py` (the `migrate` docstrings), `SPEC.md` (texts 1, 2, 4's second paragraph,
   5), `fixtures/migrate/`, `fixtures/ledger_writer/migrate_old_forms`, `tests/`. B1 and B2 in either order.
 - **B3 — this repo's own ledger migrated.** `python3 -m ledgerboard.ledger migrate --release <the minor> --ledger
   docs/ledger` with B2's module, as its own PR: this repo's ledger has not run v2.7's rules either (its
@@ -454,7 +486,7 @@ with the code, and the precheck green.
   B3's command lands first as its own PR. B4's PR states that run.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
-by` B1 and B2 (written on whichever is filed second); TD-070's B1–B5; then B4; then v3.0 (Paul's).
+by` B1, B2 and Paul's decision that the minor is cut (D3; written on whichever is filed second); TD-070's B1–B5; then B4; then v3.0 (Paul's).
 
 ## Consumers
 
@@ -464,19 +496,20 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
   - its `ledger.py`'s `prose_waits` (pinned tree `67023cc`, `files/scripts/ledger.py`) scans the raw text after
     `decision (…)` in a `Blocked by` for ids, through its vendored `DECISION_RE`; v2.8's `migrate` moves that text
     into an `**Ask:**` or the Log, so an id named only there stops being seen. Of its two open old-form entries, TD-065's
-    text names no id and TD-144's names ShiftLead's TD-1029 in prose; its v2.8 vendor PR checks each such text
+    text names no id and TD-144's names ShiftLead's TD-1029 in prose; its vendor PR for the last v2.x minor checks each such text
     before running `migrate`, and an id that is a real wait moves into `Blocked by` first (as `shiftlead#TD-1029`), and the scan's
     old-form span goes once no old form can stand (v3.0);
   - its `ledger.py` stops writing `Taken by` on `new` and `renumber` and writes `Id take` alone (its TD-188's step
     4), before its v3.0 vendor PR, since every `Taken by` is a v3.0 error;
-  - its v2.8 vendor PR passes `note` on an archived entry through its wrapper, and runs v2.8's `migrate` over its
-    ledger as its own PR;
-  - its v3.0 vendor PR first runs `migrate --plan` with v2.8 (D5) and records it, then removes `migrate` from its
+  - its vendor PR for the last v2.x minor lets `note` take an archived entry through its wrapper (its own
+    `edit()` refuses archived entries itself), with the same refusal of an archived Status outside the closed set,
+    and its ledger then runs that minor's `migrate` as its own PR;
+  - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes `migrate` from its
     wrapper and `accept_taken_by` from its `judge_takes()` call, and reads `parse_gates()` without `old_form`.
 - **ShiftLead**: its Queue card's *held until …* reads the old form's text (`src/sessionorc/ledger.py`'s
   `until_of`, through `parse_gates()["old_form"]`), and seven open entries carry one; v2.8's `migrate` moves the
   text into an `**Ask:**` or the Log, so before its ledger runs it, `until_of` reads the `**Ask:**` (or the gate
-  alone), else those cards go blank at the v2.8 sync. Its sync PR for v2.8 runs `migrate` (v2.7's rules and v2.8's in one run, its ledger not yet
+  alone), else those cards go blank at that sync. Its sync PR for the last v2.x minor runs `migrate` (v2.7's rules and v2.8's in one run, its ledger not yet
   migrated), which stops today on five archived Statuses (TD-104, TD-120, TD-226, TD-227, TD-460), each answered
   with `--as` or `--closed-dates` in that PR; its v3.0 sync runs D5's check first, and drops any read of `Waits`, `Taken by` or `old_form`.
 
