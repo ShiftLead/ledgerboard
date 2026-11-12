@@ -1,9 +1,9 @@
 # TD-065: `Doer:`, who should do an act item's step
 
-**Status:** Draft 6, 2026-11-12 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 6, 2026-11-11 (session lb-designer). Class: **wide** (a vendored, published format: a new
 field on the board's item line, read by both consumers, with a change to what a `Context:` reads; cap 6 rounds,
 cadence.md §4.8). Rounds: four ended by the stop rule, 2026-11-11; Paul answered **One more round**, and round 5
-(TD-076) ended 2026-11-12 with its design review SHIP. Build-changing findings per round in the design reviews 1, 1,
+(TD-076) ended 2026-11-11 with its design review SHIP. Build-changing findings per round in the design reviews 1, 1,
 2, 0, 0 (fact-checks 0, 2, 1, 0+3 closing, 1, 0 closing); recurring topic: the doer's repo grammar and its final `.`
 (F5, F16, F23, F34, F36), which round 5 read and passed (the record: [docs/reviews/TD-065.md](../reviews/TD-065.md)).
 
