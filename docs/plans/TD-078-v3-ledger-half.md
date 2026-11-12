@@ -55,7 +55,8 @@ archived, writes nothing on a stop and is the one command each repo runs on taki
 v2.7*'s rule 5 ("What it leaves") becomes four rules, applied after `Location`, each to the entry the one before
 it left:
 
-*The entry's date* below is the first Log line's date when the Log has a line, else `Added` when that (after
+*The entry's date* below is the first readable Log line's date (`log_lines()`'s first with a date, in file
+order, as `gate_age()` reads it) when the Log has one, else `Added` when that (after
 rule 3) is a real date, else `today`; a line dated by it is placed after every Log line of an equal date. So such a
 line never becomes the Log's first line while the Log has one, and when it does (no Log), it carries `Added`, the
 date `gate_age()` fell back to: a gate's age is unmoved. The one exception is an entry with no Log and no real
@@ -144,7 +145,8 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   decision but an unreadable item (`bad`), which keeps the block, names no holder and is an error (an unreadable
   `Blocked by` item, as today). Its record loses `old_form`, and `retired` loses the kind `old-form`. Every
   old-form path goes with it: `OLD_FORM_REPLACES`; `_written_blocked()`'s two refusals (the old form, and a gate
-  added beside it), which `edit_entry`'s `set` calls, and `edit_entry`'s carried-gates clause, with their
+  added beside it), which `edit_entry`'s `set`, `entry_text()` and `reassign_gate()` call (each
+  caller checked), and `edit_entry`'s carried-gates clause, with their
   docstrings and `parse_gates()`'s; `_without`'s refusal, which `lift_gate()` and `reassign_gate()` share; `reassign_gate()`'s
   own; `_blocked_items`', `_one_copy`'s and `_item_gate_key`'s old-form branches; and `ledger.py`'s `set`-route
   refusal (*migrate it first*). A value holding the item is then written by `new` and `set` as any unreadable item
@@ -191,7 +193,7 @@ here as v2.8); texts 6–12 are B3's (v3.0).
 `Taken by`, an old-form decision, every other field and section, and every Log line already there are left as they
 are. …" becomes:
 
-> *The entry's date* (v2.8) is the first Log line's date when the Log has a line, else `Added` when that is a real
+> *The entry's date* (v2.8) is the first readable Log line's date when the Log has one, else `Added` when that is a real
 > date, else `today`; a line dated by it is placed after every Log line of an equal date, so it moves no gate's age
 > (`gate_age()`) unless the entry has neither.
 >
