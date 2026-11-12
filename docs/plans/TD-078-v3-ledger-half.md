@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Draft 2, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: round 1 ran (fact-checks 6 build-changing, design review 6), its fixes applied.
+**Status:** Draft 3, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: two ran (build-changing per design review 6, 2; fact-checks 6, 1), their fixes applied.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -63,7 +63,8 @@ it left:
   today; beside a body `**Resolved:**`, a stop, as `reopen` refuses it (the count shows none).
 - **8. The old decision form** `decision (<who>) <text>` → `decision (<who>)`, its text into an `**Ask:**` when
   the entry has none, else into one plain Log line; a `<who>` that is neither a person's name nor a retired role is
-  a stop, since `decision (<who>)` would be an unreadable item (no real entry has one).
+  a stop, since `decision (<who>)` would be an unreadable item (no real entry has one); so is an empty text on an
+  open entry with no Ask, which would leave an `ask-missing` error.
 
 Text 1 is the one exact statement of the rules; this list is its summary. Three choices in it are this design's:
 - **The dates.** A line about the entry's filing (`Taken by`, a `Waits`, an old decision's text) is dated by
@@ -185,14 +186,18 @@ here as v2.8); texts 6–12 are B4's (v3.0).
 `Taken by`, an old-form decision, every other field and section, and every Log line already there are left as they
 are. …" becomes:
 
-> The rules below read the entry rules 1–4 left. *The filing date* (v2.8) is `Added` when that is a real date,
-> else the first readable Log line's date, else `today`, and a line dated by it is placed before the first Log line
-> dated on or after it. *The gate-neutral date* is the first readable Log line's date (the first, in file order,
-> that `log_lines()` gives a date), else `Added` when that is a real date, else `today`, and a line dated by it is
-> placed after every Log line of an equal date. *The entry's date* is the gate-neutral date on an open entry whose
-> `Blocked by` carries a gate (`gate_items()`, or the old decision form), and the filing date on any other.
-> So rules 5–8 never move a gate's age (`gate_age()`), unless the entry has neither a readable Log line nor a real
-> `Added`.
+> The rules below read the entry rules 1–4 left. *A dated Log line* is one `log_lines()` gives a date that is a
+> real date. *The filing date* (v2.8) is `Added` when its whole value is a real date, else the first dated Log
+> line's date, else `today`; a line dated by it is placed before the first Log line dated on or after it, so lines
+> of one date written by two rules stand in reverse rule order. *The gate-neutral date* is the first dated Log
+> line's date (in file order), else `Added` when its whole value is a real date, else `today`; a line dated by it
+> is placed after any line of an equal date (before the first line dated later). *The entry's date* is the
+> gate-neutral date on an open entry whose `Blocked by` carries a gate (`gate_items()`, or the old decision form),
+> and the filing date on any other. So rules 5–8 never move a gate's age (`gate_age()`) on an entry with a dated Log
+> line or an `Added` whose whole value is a real date; on any other they may.
+>
+> *Has an Ask* means the entry has an `Ask` header field or a body `**Ask:**` section, as `pickable()`'s
+> `ask-missing` reads it.
 >
 > **5. `Taken by`** (v2.8). A header `Taken by` is removed and its line written as one plain Log line, `Taken by
 > <value>`, the value whole, dated by the entry's date. An empty one is removed and nothing written.
@@ -206,15 +211,17 @@ are. …" becomes:
 > <value>`, before the Log, else at the end. An empty one is removed and nothing written. A non-empty header
 > `Resolved` meeting a body `**Resolved:**` section is a **stop**.
 >
-> **8. The old decision form** (v2.8). A `Blocked by` whose last item is `decision (<who>) <text>` (the old form,
-> *The ledger*) has that item rewritten `decision (<who>)`, `<who>` as written and the other items kept in their
-> order; when `<who>` is neither a person's name nor a retired role (*Retired words*), it is a **stop**. `<text>`,
-> less its leading run of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`,
-> placed as `edit` places a section the body lacks, when the entry has no `**Ask:**`; when it has one, the whole old
-> value is written as one plain Log line, `Blocked by <value>`, dated by the entry's date. An empty `<text>` writes
-> neither. No `gate added` line is written.
+> **8. The old decision form** (v2.8). *The old item* is the old form as *The ledger* reads it: from its
+> `decision (` to the end of the `Blocked by` value, commas, parentheses and all (`parse_gates()`'s `old_form`).
+> It is rewritten `decision (<who>)`, `<who>` as written, the items before it kept in their order; when `<who>` is
+> not a person's name (`is_person()`, which a retired role passes), it is a **stop**. Its text, less its leading run
+> of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`, placed as `edit` places a
+> section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
+> Log line, `Blocked by <the old item>`, dated by the entry's date. An empty text writes neither; on an open entry
+> with no Ask it is a **stop** (`decision (<who>)` with no Ask is `check()`'s `ask-missing` error). No `gate added`
+> line is written.
 >
-> A stop from rule 2 wins over these rules: stops are collected first, and with one the input is returned as given.
+> Stops are collected from every rule, 1 to 8, and with any the input is returned as given.
 >
 > **9. What it leaves.** Every other field and section, and every Log line already there, are left as they are. A
 > Log is made at the end of the body when the entry has none and a line is written; a Log that is not last, or two
@@ -229,13 +236,15 @@ The sentence before rule 1, "The rules apply in this order, the Status (1 or 2),
 
 *The post-condition* bullet gains, after "any problem is a stop.":
 
-> From v2.8 the migrated entry also holds no `Taken by`, `Waits`, header `Resolved` or old decision form; one left
-> is the stop `migrated entry still holds <field>`.
+> From v2.8 the migrated entry also holds no `Taken by`, `Waits`, header `Resolved` or old decision form, and
+> gains no `ask-missing` the input did not have; either is a stop (`migrated entry still holds <field>`,
+> `migrated entry: ask-missing`).
 
 *The words it returns* gain: in `changes`, `Taken by → Log`, `Taken by (empty) removed`, `Waits → Log`, `Waits
 (empty) removed`, `Resolved → body`, `Resolved (empty) removed`, `old decision form → Ask`, `old decision form →
 Log` and `old decision form (no text)`; in `stops`, `Waits on an open entry`, `Resolved in the header and the
-body`, `old decision form: <who> is not a person` and `migrated entry still holds <field>` (`<field>` one of
+body`, `old decision form: <who> is not a person`, `old decision form: no text for its Ask`,
+`migrated entry: ask-missing` and `migrated entry still holds <field>` (`<field>` one of
 `Taken by`, `Waits`, `Resolved`, `Blocked by`).
 
 **Text 2 (B2), *The ledger*, *The old form*.** "…migrate it first, to `decision (<person>)` with its text in
@@ -244,11 +253,13 @@ body`, `old decision form: <who> is not a person` and `migrated entry still hold
 > …migrate it first, to `decision (<person>)` with its text in `**Ask:**`, which `migrate` does from v2.8 (*Migrating
 > to v2.7*, rule 8). v3.0 stops reading it.
 
-**Text 3 (B1), *The ledger writer*, the `set`, `note`, `edit` bullet.** "An archived entry is edited only once
-reopened." becomes:
+**Text 3 (B1), *The ledger writer*, the `set`, `note`, `edit` bullet.** Its lead "— one edit of an open entry
+(`edit_entry()`):" becomes "— one edit of an open entry, or for `note` (v2.8) of an archived one too
+(`edit_entry()`):", and "An archived entry is edited only once reopened." becomes:
 
-> `note` (v2.8) also takes an archived entry, writing its file where it is in `archive/`; `set` and `edit` take an
-> archived entry only once reopened.
+> `note` (v2.8) also takes an archived entry whose Status is in the closed set, writing its file where it is in
+> `archive/`, and refuses one whose Status is not (*run migrate first*); `set` and `edit` take an archived entry
+> only once reopened.
 
 **Text 4 (B1, then B2), *Versions*, after the v2.8 title paragraph.** Two paragraphs, each true alone: B1 writes
 the first, B2 the second.
@@ -274,15 +285,17 @@ whose precondition is that `migrate --plan` shows no entry with changes in every
 > line — was read by v2 as a decision by `<who>`. v3.0 does not read it: it is an unreadable item, which keeps the
 > block, names no holder, and is an error. Its replacement is `decision (<person>)` with the text in `**Ask:**`.
 
-**Text 7 (B4), *Retired words*, the paragraph's lead and its first list item.** "Where v2.x still reads one,
+**Text 7 (B4), *Retired words*, the paragraph's lead** (its list, with what replaces each word, stays but for the
+changes after the quote). "Where v2.x still reads one,
 `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than unknown — except a Status word,
 which from v2.7 is an error (*The closed Status set*):" becomes:
 
-> v3.0 reads none of them for its old meaning. `check()` names each it meets *retired*, with what replaces it,
+> v3.0 reads no retired field, and no `Blocked by` item in the old decision form, for its old meaning; a retired
+> item in `Blocked by` is read as before. `check()` names each it meets *retired*, with what replaces it,
 > rather than unknown: a retired field — `Waits`, `Taken by`, a header `Resolved` or a header `Location` — is an
 > error (`retired`) on every entry, open or archived, of a ledger that declares major 2 or more, whether or not the
 > edit changed the entry (never `standing`), and ℹ on a v1 ledger; so is a `Blocked by` item in the old decision
-> form (below), which is also an unreadable item; another retired item in `Blocked by` is ℹ and keeps the block;
+> form (*The old form*, above), which is also an unreadable item; another retired item in `Blocked by` is ℹ and keeps the block;
 > and a Status outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0
 > reads no such form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for
 > `Waits` and `Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header
@@ -319,15 +332,18 @@ open entry carrying it beside `**Status:** Open`" becomes "`added`: an `Added` v
 and "Their cases are in `fixtures/migrate/` and `ledger_edit/check/status_*`" becomes "Their cases are in
 `fixtures/status/`, `fixtures/grammar/` and `ledger_edit/check/status_*`". The sentences that recount what
 v2.7's `migrate` maps (*Superseded and dropped*, the Status's notes under *The Log*) are history and stay.
-`status_problem(text, *, archived)`'s definition moves to *The closed Status set*, unchanged but for its message's
-ending (text 10). The `set` route's sentence "a decision still in the old form is not dropped by `set` (*migrate it
+In *The ledger writer*'s closing paragraph, "(`subject` is null: a ledger edit has no commit subject of its own,
+so the caller names its commit — except `migrate`'s, which names `migrate_subject()`)" becomes "(`subject` is null:
+a ledger edit has no commit subject of its own, so the caller names its commit)". `status_problem(text, *,
+archived)`'s definition (its first sentence in *Migrating to v2.7*) moves, word for word, to the end of *The closed
+Status set*, ahead of text 10's change there. The `set` route's sentence "a decision still in the old form is not dropped by `set` (*migrate it
 first*)" is removed.
 
 **Text 10 (B4), *The closed Status set*.** "…and ends *run migrate, which maps it, lists it, or names what a person
 decides*." becomes:
 
 > …and ends *v3.0 reads no other form: on an open entry write `Open` with `set`, on an archived one by hand, then
-> `ledger.py fmt TD-n`*. `status_problem(text, *, archived)` gives that problem of one entry's Status, or None.
+> `ledger.py fmt TD-n`*.
 
 **Text 11 (B4), *The next id*, `judge_takes`.** The signature loses `accept_taken_by=False`, and the bullet "No
 `Id take` is `id-no-take` (fail), unless `accept_taken_by`, … An entry's nonce is compared exactly." becomes "No
@@ -358,19 +374,22 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
 - `waits_archived`, `waits_archived_empty`, `waits_open_stops`;
 - `resolved_header_archived` (to the body, before the Log), `resolved_header_no_log` (at the end),
   `resolved_header_and_body_stops`, `resolved_header_empty`;
-- `old_form_no_ask` (Ask written after the Why), `old_form_with_ask_open` (Log line dated by the entry's date;
+- `old_form_no_ask` (Ask written after the Why), `old_form_commas_after_id` (`TD-3, decision (Kim) — a, b (c, d)`:
+  `TD-3, decision (Kim)` and the Ask `a, b (c, d)`; with an Ask, the Log line `Blocked by decision (Kim) — a, b
+  (c, d)`), `old_form_header_ask` (an `Ask` header field counts as an Ask), `old_form_no_text_open_stops`, `old_form_with_ask_open` (Log line dated by the entry's date;
   its gate's `gate_age()` unchanged), `old_form_with_ask_no_log` (the line becomes the Log's first, dated by
   `Added`), `old_form_with_ask_archived`, `old_form_ids_kept` (`TD-3, decision (Kim) — x`),
-  `old_form_no_text` (`decision (Kim) —`), `old_form_role` (`decision (designer) — x`: rewritten, still retired),
+  `old_form_no_text_archived` (`decision (Kim) —`: rewritten, nothing written), `old_form_role` (`decision (designer) — x`: rewritten, still retired),
   `old_form_not_a_person_stops` (`decision (the owner) — x`);
-- `all_four_and_status` (each rule's order on one entry), `rerun_unchanged` (each case's output run again changes
-  nothing);
+- `all_four_and_status` (each rule's order on one entry, two lines of one filing date in reverse rule order),
+  `unreal_first_log_date` (a first Log line dated `2026-02-30` passed over for the next dated one); each case's
+  output run again changes nothing (`run.py`'s existing `again`);
 - the existing `waits_taken_by_old_form_left` (an open entry holding `Waits: the vendor`) becomes
   `waits_taken_by_old_form_open_stops` (rule 6's stop wins, the input returned as given), and a new
   `waits_taken_by_old_form_archived` maps all three;
 - `fixtures/run.py` records each case's `gate_age()` before and after in its expected JSON, asserting nothing; a
-  unit test in `tests/test_ledgerboard.py` asserts the two are equal on every new case with a gate, a readable Log
-  line or a real `Added`, and on which rules 1–4 write nothing (`all_four_and_status` and
+  unit test in `tests/test_ledgerboard.py` asserts the two are equal on every new case with a gate, and a dated Log
+  line or an `Added` whose whole value is a real date, and on which rules 1–4 write nothing (`all_four_and_status` and
   `taken_by_added_not_a_date` are outside it);
 - `fixtures/ledger_writer/migrate_old_forms` — `migrate --plan` over a directory with one of each, open and
   archived: the plan, its `entries` and the subject.
@@ -381,7 +400,9 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   a `status` group in `run.py`;
 - `fixtures/grammar/`: the `added` verdict judged by `_real_day()` (text 9), its cases unchanged;
 - `fixtures/ledger/`'s check cases gain `retired_waits_archived`, `retired_taken_by_open`,
-  `retired_resolved_header`, `retired_location_header` (each an error on a ledger no edit touched) and
+  `retired_resolved_header`, `retired_location_header`, `retired_taken_by_archived` (each an error on a ledger no
+  edit touched), `retired_old_form_open` (two errors: the retired record and the unreadable item),
+  `retired_old_form_archived` (one, the retired record) and
   `retired_v1_info` (ℹ on a v1 ledger); `fixtures/ledger/gates.json`'s records lose `old_form`, and its old-form
   cases read the item as unreadable;
 - `fixtures/ledger_edit/`: `refused_old_form` (the `entry_text` group), `set_refused_old_form`,
@@ -389,6 +410,7 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   `set_other_field_keeps_old_form` rewritten (the value written as given, `check()` naming the unreadable item);
   `fixtures/ledger_writer/set_old_form` likewise (refused by the writer's refusal rule);
 - `fixtures/lift/cases.json`'s two `old_form_refused` cases refuse it as a gate the entry does not carry;
+- `fixtures/ledger_writer/migrate_v3` — `ledger.py migrate` in v3.0: exit 2, an unknown action;
 - `fixtures/ids/cases.json` and `run.py`'s `ids` group lose `accept_taken_by`, and an entry with only a
   `Taken by` fails `id-no-take`;
 - text 10's message regenerates every expected output that holds the old ending: `ledger_edit/expected.json`
@@ -422,8 +444,9 @@ with the code, and the precheck green.
   archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
   `fixtures/run.py`, `SPEC.md` (texts 6–12), the fixtures above, `tests/`. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
   its last build, B5), so v3.0's ledger removals land after its board half and no v2.x release can follow them.
-  Done when also: `migrate --plan`, run with the last v2.x on this repo's ledger before the removal, shows no
-  entry with changes or stops.
+  Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with `main`'s module; if entries filed
+  since B3 (through the pinned agent-cadence writer, which may still write `Taken by`) show changes, a re-run of
+  B3's command lands first as its own PR. B4's PR states that run.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
 by` B1 and B2 (written on whichever is filed second); TD-070's B1–B5; then B4; then v3.0 (Paul's).
@@ -449,7 +472,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
   `until_of`, through `parse_gates()["old_form"]`), and seven open entries carry one; v2.8's `migrate` moves the
   text into an `**Ask:**` or the Log, so before its ledger runs it, `until_of` reads the `**Ask:**` (or the gate
   alone), else those cards go blank at the v2.8 sync. Its sync PR for v2.8 runs `migrate` (v2.7's rules and v2.8's in one run, its ledger not yet
-  migrated); its v3.0 sync runs D5's check first, and drops any read of `Waits`, `Taken by` or `old_form`.
+  migrated), which stops today on five archived Statuses (TD-104, TD-120, TD-226, TD-227, TD-460), each answered
+  with `--as` or `--closed-dates` in that PR; its v3.0 sync runs D5's check first, and drops any read of `Waits`, `Taken by` or `old_form`.
 
 ## Not in this design
 
