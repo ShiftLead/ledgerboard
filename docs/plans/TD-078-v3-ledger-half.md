@@ -90,9 +90,10 @@ where a Log line keeps the text and the existing Ask stands.
 takes an archived entry as it takes an open one: the module's `note` edit, unchanged, and the file written back
 where it is, in `archive/`. No flag: the id names the entry wherever it is. The module's `note` first lifts a
 Status's notes into the Log, which on an archived Status in the closed set lifts nothing; on one outside it (a
-repo that has not run v2.7's `migrate`: 1,153 of ShiftLead's 1,426 archived entries on 2026-11-11) it would
-rewrite the Status. So `ledger.py note` refuses an archived entry whose Status `status_problem(text,
-archived=True)` faults, *run migrate first*, and on every other archived entry it only appends to history. `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
+repo that has not run v2.7's `migrate`: 1,139 of ShiftLead's 1,426 archived entries on 2026-11-11, 176 of them
+with notes `note` would lift) it may rewrite the Status. So `ledger.py note` refuses an archived entry whose
+Status `status_problem(text, archived=True)` faults — the whole 1,139, not only the 176, so one test says when an
+archived entry takes a note — *run migrate first*; on every other archived entry it only appends to history. `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
 `reopen`, then an edit, then an `archive`. The write's refusal rule stands (a `check()` error the ledger before it
 did not have), and `check()` reads only the open entries' Logs, as now.
 
@@ -124,8 +125,8 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
 - **`Waits`, `Taken by`, a header `Resolved`, a header `Location`:** `check()` reads each as the retired field it
   is and errors, naming it; nothing else reads it. `pickable()`'s ℹ `retired` flag for a field goes (only the error
   survives, so a field carries one flag), with `WAITS_WRITTEN`, `LOCATION_WRITTEN`, `WRITTEN_RETIRED` and
-  `check()`'s `written` grading, which every such line now meets as an error; `RETIRED_FIELDS` gains `resolved`
-  and its `location` text loses *run migrate*. `canonical()` loses `Taken by` from its order, so a `Taken by`
+  `check()`'s `written` grading, which every such line now meets as an error; `RETIRED_FIELDS` keeps `resolved`
+  (already there) and its `location` text loses *run migrate*. `canonical()` loses `Taken by` from its order, so a `Taken by`
   left in a file is placed as any other field, in the file's order. `edit_entry`'s `archive` no longer removes a
   header `Resolved`, nor its `reopen` moves one or refuses an entry with both: each writes what it writes beside
   it, and the error stands.
@@ -417,8 +418,9 @@ with the code, and the precheck green.
   and `parse_gates()`, `edit_entry`'s `set`, `archive` and `reopen`, `_written_blocked()`, `OLD_FORM_REPLACES`,
   `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`, `judge_takes()`,
   `status_problem()`'s message; `migrate_entry()`, `migrate_subject()` and their helpers removed),
-  `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed), `fixtures/run.py`, `SPEC.md`
-  (texts 6–12), the fixtures above, `tests/`. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
+  `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed; `note`'s refusal of an
+  archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
+  `fixtures/run.py`, `SPEC.md` (texts 6–12), the fixtures above, `tests/`. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
   its last build, B5), so v3.0's ledger removals land after its board half and no v2.x release can follow them.
   Done when also: `migrate --plan`, run with the last v2.x on this repo's ledger before the removal, shows no
   entry with changes or stops.
@@ -431,9 +433,11 @@ by` B1 and B2 (written on whichever is filed second); TD-070's B1–B5; then B4;
 Lines for each consumer's own entry, filed there through its question seat (`ao td add --repo`), never here.
 
 - **agent-cadence**:
-  - its `ledger.py`'s `prose_waits` reads `parse_gates()["old_form"]`'s text for ids (pinned tree `67023cc`,
-    `files/scripts/ledger.py`); v2.8's `migrate` moves that text into an `**Ask:**` or the Log, so before its
-    ledger runs v2.8's `migrate`, that read moves to the `**Ask:**` (or goes), and in v3.0 it goes with `old_form`;
+  - its `ledger.py`'s `prose_waits` (pinned tree `67023cc`, `files/scripts/ledger.py`) scans the raw text after
+    `decision (…)` in a `Blocked by` for ids, through its vendored `DECISION_RE`; v2.8's `migrate` moves that text
+    into an `**Ask:**` or the Log, so an id named only there stops being seen. Its two open old-form entries (TD-065,
+    TD-144) name none there today; its v2.8 vendor PR checks that again before running `migrate`, and the scan's
+    old-form span goes once no old form can stand (v3.0);
   - its `ledger.py` stops writing `Taken by` on `new` and `renumber` and writes `Id take` alone (its TD-188's step
     4), before its v3.0 vendor PR, since every `Taken by` is a v3.0 error;
   - its v2.8 vendor PR passes `note` on an archived entry through its wrapper, and runs v2.8's `migrate` over its
