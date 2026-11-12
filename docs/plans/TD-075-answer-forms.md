@@ -2,7 +2,8 @@
 
 **Status:** Draft 5, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
 that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: three ran and the stop rule ended them (build-changing per design review 2, 1, 0; fact-checks 9, 0, 0);
-round 3's six minor findings are applied and read by no design review; the closing fact-check follows.
+round 3's six minor findings and the closing fact-check's three are applied and read by no design review; Paul's
+end-of-rounds item is on the board (recommended Go).
 
 **Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
