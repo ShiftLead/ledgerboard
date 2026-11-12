@@ -130,7 +130,11 @@ v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and
 the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under `ledgerboard/`,
 `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of TD-070's and
 TD-078's build filings comes second, with its board item; TD-070's plan's D12 amendment says so too). The release
-is Paul's.
+is Paul's. *(Amended 2026-11-12, TD-075's D6, merged after this design's rounds: TD-075's B1 ships in the same minor, so
+the number rule above covers three builds — each writes the first minor not yet tagged when it merges, and the last
+of TD-078's B1, B2 and TD-075's B1 to merge rewrites the others' number to its own where that is still untagged —
+and TD-070's B1's Ask names TD-075's B1 beside B1 and B2 as the builds that minor holds, written by whichever of the
+three designs' build filings comes last.)*
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
