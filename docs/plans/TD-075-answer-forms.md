@@ -1,8 +1,7 @@
 # TD-075: any offered `<head>:` or `<head>: <…>` answer is a form the person's words fill
 
-**Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
-that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1 ran: its fact-check four passes (build-changing 6, 2, 1, 0), its design review 2 build-changing
-and 5 minor, all applied; round 2 is next.
+**Status:** Draft 5, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
+that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: two ran, build-changing per design review 2, 1 (fact-checks 9, 0), all applied; round 3 is next.
 
 **Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
@@ -69,8 +68,12 @@ fills nothing and is the plain answer it is.
   answer.
 - `fill_form(said, offered, form=None) -> str | None` — D2's fill of `said` among `offered` (labels; a raw answer
   with its consequence or mark is read through `split_answer()` first), or `None` when it fills no form. With
-  `form` (an index into `offered`), that form alone is filled, and its head is put back when `said` does not start
-  with it (`fill_form("the vendor", ["Go", "Hold: <note>"], form=1)` is `Hold: the vendor`). Refused (`Refused`):
+  `form` (an index into `offered`, the caller's own choice of form), that form alone is filled and D2's exclusion of
+  a complete answer does not apply: when `said` **has the head** (D2's reading: its text before its first `:`,
+  trimmed, equals the form's head in any case), the words are the text after that colon; otherwise the whole `said`
+  is the words and the head is put back (`fill_form("the vendor", ["Go", "Hold: <note>"], form=1)` is
+  `Hold: the vendor`; `Holdfast` gives `Hold: Holdfast`, `Note: foo` gives `Hold: Note: foo`, and `Hold: later`
+  over `Go | Hold: <note> | Hold: later` with `form=1` gives the fill `Hold: later`). Refused (`Refused`):
   a `said` that is not a string; a `form` out of range or naming a complete answer; empty words (D2).
 
 `is_not_right_form(answer)` and `fill_not_right(said, offered)` stay, as the look's case: `is_form()` with the head
@@ -148,8 +151,9 @@ forms where they were complete answers. The
 writers' new refusals (D4) are listed in the release notes too: `decide` refuses an unfilled form, which it wrote
 before, and `item_line()` refuses two forms with one head and a form as `default`.
 
-It ships in the **last v2.x minor**, with TD-078's B1 and B2 (TD-078's D3, the same number rule: the first minor
-not yet tagged when its build merges), since TD-070's D12 allows no v2.x release after TD-070's B1, and ShiftLead's
+It ships in the **last v2.x minor**, with TD-078's B1 and B2 (TD-078's D3's number rule, widened to three builds:
+each writes the first minor not yet tagged when it merges, and the last of the three to merge rewrites the others'
+number to its own where that is still untagged, so all three name one minor), since TD-070's D12 allows no v2.x release after TD-070's B1, and ShiftLead's
 TD-1698 waits on it. So TD-070's B1, when filed, is also `Blocked by` this design's B1; whichever of TD-070's,
 TD-078's and this design's build filings comes last writes it. If it misses that minor, it ships in v3.0 and
 TD-1698 waits for v3.0. Two lines for this repo's own entries, written when their builds are filed: TD-070's B1's
@@ -240,7 +244,8 @@ All in one build, B1, each group where its function's cases live today:
     `space_before_colon`, `no_space_after_colon`, `empty_words`, `placeholder_words`, `form_as_offered`,
     `names_no_form` (`None`), `equals_complete_answer` (`Not right: wrong repo` offered whole: `None`),
     `first_of_two_heads`, `with_form_index` (the head put back), `with_form_index_head_present`,
-    `form_index_out_of_range`, `form_index_complete_answer`, `said_not_a_string`, `offered_with_consequence`
+    `form_index_out_of_range`, `form_index_complete_answer`, `form_index_prefix_not_head` (`Holdfast`),
+    `form_index_other_head` (`Note: foo`), `form_index_said_equals_complete` (`Hold: later`), `said_not_a_string`, `offered_with_consequence`
     (`Hold: <note> — keep it unfiled` read through `split_answer()`);
   - the `edits` group (`edit_line`): `decide_writes_fill` (`hold:  wait` written `Hold: wait`),
     `decide_refuses_unfilled_form`, `decide_refuses_empty_fill`, `decide_complete_answer_unchanged`;
@@ -300,6 +305,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
 
 ## Not in this design
 
-Forms on a `look` beyond `Not right: <what>` (its answers stay fixed). A waiting-only form (`Not yet: <why>`):
-`Keep waiting` and `Not yet` stay complete answers. A form's words read by any reader beyond the fill (what a
+Forms on a `look` beyond `Not right: <what>` (its answers stay fixed). A waiting-only form: `Keep waiting` and `Not yet` stay complete answers, waiting-only as
+today; `Not yet: <why>` or `Keep waiting: <why>` offered is a form like any other (D1), and a fill of it is no
+waiting-only answer (`waiting_only()` reads the bare label), so it neither keeps waiting nor lifts unless `Lifts:`
+lists it; `item_line(lifts=)` accepts it there, as it accepts any label that is not waiting-only. A form's words read by any reader beyond the fill (what a
 `Hold:` note says is the person's). Removing `NOT_RIGHT_FORM_RE` (a major's).
