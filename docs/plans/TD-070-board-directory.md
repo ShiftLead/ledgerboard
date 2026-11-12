@@ -1348,7 +1348,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 
 - **`fixtures/item/cases.json` and `expected.json`** (a new runner kind, `item_cases`, beside `edit_cases`):
   - `parse`: a file of each kind and its fields (the runner's `item_fields()`: the `BoardItem`'s fields by name, not
-    `item_record()`, whose B1 change is `doer` alone, D4); a heading, a Context, an answer, a detail line and a
+    `item_record()`, whose keys B1 leaves as v2.8 has them, D4, D12); a heading, a Context, an answer, a detail line and a
     reply each holding `Context:`, `Due:` and `Decided:` as words (the case S3 exists for), read as words;
     `**due:**` and `**hide-until:**` read as `Due` and `Hide until`; a repeated field (the first wins); an unknown
     `**Owner:**` field (ignored, in `fields`); `Decided:` with and without `by`, and a label ending `(by Friday)`
@@ -1389,7 +1389,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   gives the case's expected JSON, the JSON the v2 read gives (`covers`, the records, and `needs_you`), compared as
   D6's *Comparing two reads* says (records keyed by `id` without `path` and `line`; `covers` as a list sorted by id;
   `needs_you`'s **tie groups** as sets, the groups in order), since a v2 board's order is its lines' and its split's
-  is id descending. The v2 cases' JSONs gain `doer` (None) in each record at B1 and are regenerated at B2:
+  is id descending. The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
   `board_case` reads through `load_board()`, its records gain `id`, `path`, `added`, `context` and `closed` and keep
   `line` (B5 drops it), their `text` the item's words, `needs_you` rows are `[id, class, days]`, `keys` become the
   items' ids and `closed` the closed records; `twins_across` reads one closed item.
@@ -1495,7 +1495,8 @@ each build below names the expected JSONs whose records it regenerates. **Each b
 
 **B1, the item file.** D3, D4, D7's module half. Location: `ledgerboard/__init__.py` (`ITEM_ID_RE`, `item_id()`,
 `key_id()`, `item_path()`, `parse_item()` (filling `words` with the heading), `BoardItem`'s new fields,
-`parse_doer_value()`, `BoardItem.doer`, `item_record()`'s `doer`, `item_file()` with `doer`,
+`parse_doer_value()`, `BoardItem.doer`'s v3 reading (the field and the record's `doer` are v2.8's), `item_file()`
+with `doer`,
 `decided_file()`, `edit_item()`, `item_file_problem()`, `canonical_item_file()`, `subject()` gaining `id=None` (None
 gives the v2 subject the v2 writers still call), `subject_id()`, `bold_head()` reading a heading), `SPEC.md` (text
 8's *The item id* and *The item file*, 9 but its *gate* paragraph, 13), `fixtures/item/` (but `gate`),
