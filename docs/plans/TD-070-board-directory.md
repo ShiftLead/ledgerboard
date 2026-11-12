@@ -1,11 +1,15 @@
 # TD-070: the board as a directory, one file per item, for v3.0
 
-**Status:** Draft 7, 2026-11-11 (session lb-designer). Paul answered **Go** to the scope as drafted (S1–S10,
-TD-070's `decision (paul)`, 2026-11-11): every recommendation in it stands, and that Go is his only answer in this
-design. Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
+**Status:** Draft 8, 2026-11-12 (session lb-designer). Paul answered **Go** to the scope as drafted (S1–S10,
+TD-070's `decision (paul)`, 2026-11-11): every recommendation in it stands. He answered the end-of-rounds item **One
+more round** (2026-11-12), run as TD-081: round 7, past the cap. Before it, the plan took two facts settled since
+round 6: Paul's **Go** on TD-065's design (`Doer:` ships in v2.8, so the two-outcome branch went) and TD-075's B1 in
+the same last v2.x minor as TD-078's B1 and B2. Round 7's fact-check (R14) raised one build-changing finding (F87) and
+its design review (R15) two (F90, TD-075's forms carried into no v3 writer; F91, the `doer` record at B1, reopening
+F68), with five minor; all applied, read by the closing fact-check and no design review. Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
 builds. Rounds: six ran, ending at the cap (round 6's design review still raised build-changing findings, F73–F76,
-now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4; fact-checks 2, 2,
-1, 0, 0, 0, and the closing fact-check 1 (F81, `_real_day()` for a day's check), applied and read by no design
+now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4, 2 (round 7); fact-checks 2, 2,
+1, 0, 0, 0, 1 (round 7), and round 6's closing fact-check 1 (F81, `_real_day()` for a day's check), applied and read by no design
 review with round 6's. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
 F55), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review (order by round 3's rule
 for comparing two reads, F45; the shims and `Doer` by round 5's cuts). Each round's fixes applied, with the author's (the designer session's) rulings where the findings offered a
@@ -236,9 +240,9 @@ and a close keep it.
   item's line as written, its indent included; a v3 item's file text as read, every byte) and `detail_source` (B3,
   D8: a v2 item's detail block as its file holds it, `[]` for a v3 item). `line` stays: a v2 item's 1-based line,
   0 for a v3 item, read by nothing but v2 code (*The board's order*, D6, no longer reads it). `text` keeps its
-  meaning until B5 removes it (below). **`item_record()`** changes in three builds, and only there (round 2's F33,
-  round 3's F46): at B1 its `doer` key, v2.8's already (TD-065's build, D12), is filled for a v3 item as well, its shape
-  unchanged; at B2 it gains `id`, `path`, `added`, `context` and `closed`, and
+  meaning until B5 removes it (below). **`item_record()`** changes in two builds, and only there (round 2's F33,
+  round 3's F46, round 7's F91): its `doer` key is v2.8's already (TD-065's build, D12), so B1, which fills
+  `BoardItem.doer` for a v3 item too, changes no record; at B2 it gains `id`, `path`, `added`, `context` and `closed`, and
   its `text` reads `BoardItem.words` for both majors (a v2 record's `text` was the line after its tick), keeping
   `line`; at B5 it loses `line`. *The builds* list the expected JSONs each of the three regenerates.
 - **The record's keys, as JSON** (round 4's F57), for both majors; every key not named here keeps the shape it has
@@ -455,6 +459,17 @@ any kind but `act` or outside its form, a result that does not read back) and dr
 for a file; since no key rests on a file's spelling, `canonical_item_file()` rewrites any field.
 `item_file_problem()`'s messages are plain sentences, each opening with its rule's tag as `item_problem()`'s do; this
 plan fixes the rules, B1 writes the words, and the fixtures pin them.
+- **TD-075's answer forms carry over** (round 7's F90; TD-075's B1 merges before B1, D12): `item_file()` refuses on a
+  `decide` two forms with one head and a `default` naming a form, as `item_line()` does; `decided_file()` writes no
+  ` (default)` mark on a form, as `decided_line()` does, its words written as given; `item_file_problem()` faults
+  both on an open `decide` with no `Decided`, as `item_problem()` does, and nothing on a decided or closed file;
+  and `edit_item(…, "decide")` fills a string answer (`fill_form()` over the file's offered labels) before writing
+  it and refuses a form as offered, unfilled, or a head with empty words, as `edit_line(…, "decide")` does (TD-075's
+  D4). `board.py`'s `plan_edit()` fills once before `edit_item()`, `_decide_ledger()` and `subject()`, as TD-075's D4
+  has it before `edit_line()`. Every reader B2 moves onto a `BoardItem` (`closes()`, `decide_lift()`,
+  `_sweep_closes()`, `_answers_owing()`, `_answered_within()`, `uncovered_decisions()`, and `item_file()`'s own
+  check that some answer lifts) passes `_lifting(label, lifts, offered)` the item's offered labels,
+  `[a.label for a in BoardItem.answers]` (TD-075's D5); none compares an answer to `Lifts` itself.
 
 **The gate**, `board_problems(board, old)`, judges each open item of `board` whose id no item of `old` (open or
 closed) has, as `(path, problem)`. It refuses only when `board` is a v2 board; `old` may be either major (the split
@@ -570,6 +585,9 @@ the directory:
   gaining `../`: an inline link or image's target (`[t](target)`, `![t](target)`) or a reference definition's
   (`[label]: target`) whose target starts with no scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among them), no
   `#` and no `/`, outside code spans and fenced code;
+- a v2 item's `Doer` is written as `item_file()` writes it, one space after `team` (round 7's F93); a `Doer` on any
+  kind but `act`, which v2.8's `item_problem()` already faults, is left in the file and refused through
+  `board_dir_problems()` below: fix it on the v2 board first;
 - it refuses prose among the items, an item with no date, a closed item (a `[x]` line) with no readable `Closed:`
   date, which gives no month to file it under (round 4's F62: add the date by hand first), two open lines of one
   id, two closed lines of one id, two items given one id, and a result that does not read back the same items (compared as D6's *Comparing two reads*)
@@ -635,7 +653,8 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   whether that minor is tagged with nothing on `main` past it under `ledgerboard/`, `SPEC.md` or `fixtures/`; Paul's
   answer lifts it once he has cut it. TD-075's D6 puts its B1 in the same minor, so B1 is `Blocked by` it too. That
   minor is v2.8 when it is cut after them, as TD-078's D3 and TD-075's D6 rule; where this plan says v2.8 is
-  released before B1, it is that minor.)*
+  released before B1, it is that minor, and each build writes, wherever the SPEC texts here say v2.8, that minor's
+  number (v2.9 if v2.8 was cut first), as TD-078's D3 rules; round 7's F94.)*
 - **The builds**, B1 to B5, merge in order with no release between them; then v3.0.
 
 ## Consumers
@@ -1027,7 +1046,9 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 >   `(line number, line, why)`, for the caller to warn about, nothing rewritten: a line naming
 >   `user_attention.md`, `user_attention_archive.md`, `Needs the user` or `In-flight`, and a `Format:` line.
 
-**9. *Edits*** is replaced by:
+**9. *Edits*** is replaced by the text below, at B5 (round 7's F92). Until then the v2 writers run and their prose
+stands: B1 adds the text after *Edits* under the heading `## Edits (v3.0)`, and B5 removes v2's *Edits* and renames
+that heading `## Edits`.
 
 > ## Edits
 >
@@ -1043,7 +1064,9 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 > - **decide** sets `Decided: <today> — <answer>`, or with `by` `Decided: <today> by <by> — <answer>`, replacing an
 >   earlier one. It refuses a `by` that is not a person's name. With `close`, on an item whose Context names a
 >   gate, it also sets `Closed: <today> — kept waiting` for a waiting-only answer or `Closed: <today> — lifted` for a
->   lifting one, and refuses any other answer (`closes()` says when to pass it);
+>   lifting one, and refuses any other answer (`closes()` says when to pass it). An answer that fills one of the
+>   item's forms is written as its fill, the head as offered (v2.8); one that is a form as offered, unfilled, is
+>   refused (*<head> needs its words*);
 > - **reply** appends `- <today>: <by>: <words>` to the Log, opening a `**Log:**` section after the body when there is
 >   none. It refuses a `by` holding `:` or of more than 40 characters, and empty or blank words.
 >
@@ -1061,7 +1084,9 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 > for an id that is not `TD-` and 1 to 18 ASCII digits, for an id that shares its number with another or with the
 > Context's entry, unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`,
 > with nothing after the gate, and unless one of its answers lifts. What a kind takes:
-> - a `decide` carries two or more distinct answers, at most one marked ` (default)`, and a detail block;
+> - a `decide` carries two or more distinct answers, at most one marked ` (default)` and never a form (v2.8), no two
+>   forms with one head (v2.8), and a detail block; `decided_file()` writes no mark on a form, its `default` naming
+>   one written unmarked;
 > - a `look` carries exactly `Answers: Works | Not right: <what>`, which the writer writes itself, `Works` marked
 >   ` (default)` only when the caller asks;
 > - an `fyi` carries no `Due`, and every other kind carries one;
@@ -1102,7 +1127,8 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 > snooze, due, decide or reply. `item_file_problem(text)` names why a file is not in that form, or gives None, in a
 > plain sentence opening with its rule's tag: a `## ` heading and one blank line; a header block of known fields,
 > each once, in their order, spelled `**Name:** value` with one space; each value in its form (*Appendix: grammar*,
-> *The item file*); a kind's rules (*A new item*; a decided file may carry any answers or none); a body of detail
+> *The item file*); a kind's rules (*A new item*; a decided file may carry any answers or none, and the form rules bind an open `decide`
+> with no `Decided` alone); a body of detail
 > bullets; a Log, when there is one, last and holding replies alone; one blank line between the parts and one
 > newline at the end. It never judges the detail block's words. `canonical_item_file(text)` rewrites a file into
 > that form: line endings normalised to `\n`, the known fields in their order and spelled so, any other field after
@@ -1274,7 +1300,9 @@ becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*. After it
 > `added-field` and `context-field` always; `parts-field` only on a `decide`, `doer-field` only on an `act`; a
 > `due-field` on every kind but `fyi`; answers as *A new item* says a kind takes them, and a `lifts-field` only on
 > a `decide`, each label one of its answers once and never `Go` alone; a decided file has no `session-field` and may
-> carry any answers or none. An `item-label` holds no ` — ` and does not end in ` (default)`; a `reply-by` is at most
+> carry any answers or none. Which labels are forms (*The board*, the `Answers:` bullet) is a reading of an
+> `item-label`, as its consequence split is: the productions accept every form as a label, and a fill is a
+> `Decided` text, which they accept as any (v2.8). An `item-label` holds no ` — ` and does not end in ` (default)`; a `reply-by` is at most
 > 40 characters and ends in no whitespace; a `date` is a day of the calendar. A `doer-field` names a team only after
 > the word `team` and one space, so `**Doer:** team` names the repo `team` (`parse_doer_value()` also reads a run of
 > spaces or tabs there, a spelling `item_file_problem()` faults). A `doer-repo` is a `repo` whose last
@@ -1359,17 +1387,20 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   - `compose`: `item_file()` for each kind; a text, a context, an answer, a detail value and a `said` holding
     `Context:` and `Lifts:`, each written (the refusals that go); an `act` with a `doer`; refused: a two-line value,
     a host with no session, an empty text, a `decide` with one answer, a `look` with other answers, an `fyi` with a
-    `due`, `lifts` naming a waiting-only answer, `parts` on an `act`, `doer` on a `decide`, a `doer` of `acme.`;
+    `due`, `lifts` naming a waiting-only answer, `parts` on an `act`, `doer` on a `decide`, a `doer` of `acme.`,
+    a `decide` offering `Hold: <note>` and `hold: <why>` (two forms, one head), a `default` of `Hold: <note>`;
+    `decided_file()` with a `default` naming a form, written unmarked;
     `decided_file()` with and without `by`, and an answer ending `(by x)`, written;
   - `edits`: each of the five edits on a file, the unknown field and the body kept byte for byte; `due` and `snooze`
     adding their field in its place, one of them with an unknown field between its neighbours (placed after the last
     known field before it); `decide` replacing an earlier `Decided:`; `decide` with `close`, lifting and
-    waiting-only; `reply` opening the Log and appending to it; an edit of a CRLF file (its new line `\r\n`, every
+    waiting-only; `decide` with `Hold: not yet` on an item offering `Hold: <note>` and listing it in `Lifts`,
+    written as `Hold: not yet` and, with `close`, closed `lifted`; `reply` opening the Log and appending to it; an edit of a CRLF file (its new line `\r\n`, every
     other byte kept); refused: any edit of a closed item, a reply `by` holding `:`, a reply with blank words,
-    `decide` with `close` and a work order;
+    `decide` with `close` and a work order, `decide` with `Hold: <note>` unfilled and with `Hold:` alone;
   - `problems`: `item_file_problem()` passing each writer's file, and faulting fields out of order, a field twice,
-    an unknown field, `**Due:**` spelled `**due:**`, a `Parts:` on an `act`, a `Doer:` on a `decide`, a Log not
-    last, a body line that is no bullet (the messages pinned);
+    an unknown field, `**Due:**` spelled `**due:**`, a `Parts:` on an `act`, a `Doer:` on a `decide`, two forms
+    with one head and a marked form on an open `decide` (and neither faulted on a decided file), a Log not last, a body line that is no bullet (the messages pinned);
   - `canonical`: reordered and respelled fields rewritten, an unknown field placed after the known ones, a CRLF file
     normalised; refused: a header line that is no field, a repeated field;
   - `ids`: `item_id()` accepting `2026-11-11` and `3f9a2c1d`, refusing `2026-02-30`, `3F9A2C1D` and seven digits;
@@ -1488,8 +1519,8 @@ Each is filed `Part of: TD-070` on Paul's Go after the rounds, and lands its SPE
 and TD-075's B1; and whatever `main` carries past v2.7 (today TD-079 and TD-080, then those builds) is released as
 v2.8, the last v2.x minor, before B1 merges, Paul's `decision (paul)` saying he has cut it. No release is cut between B1 and B5. Each build
 leaves `main` green: where a later build retires a v2 name an earlier build would break, the earlier build keeps it
-working (a shim) and B5 removes the shim. **What a record shows** changes at B1 (`doer`), B2 and B5 alone (D4, round
-2's F33, round 3's F46);
+working (a shim) and B5 removes the shim. **What a record shows** changes at B2 and B5 alone (D4, round
+2's F33, round 3's F46; `doer` is v2.8's, round 7's F91);
 each build below names the expected JSONs whose records it regenerates. **Each build's `SPEC.md` search** is text
 14's, for that build's names; B5's is the full one.
 
