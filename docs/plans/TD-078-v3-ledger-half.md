@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
 **Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: three ran (build-changing per design review 6, 2, 2; fact-checks 6, 1, 1), their fixes applied; round 4's fact-check ran (0 build-changing, its one minor applied); round 4's design review is next.
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: four ran (build-changing per design review 6, 2, 2, 1; fact-checks 7, 1, 1, 0), their fixes applied; round 5 is next (round 4's design review raised one build-changing finding, so the stop rule did not end the rounds).
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -64,7 +64,8 @@ it left:
 - **8. The old decision form** `decision (<who>) <text>` → `decision (<who>)`, its text into an `**Ask:**` when
   the entry has none, else the old item whole into one plain Log line; a `<who>` that is neither a person's name nor a retired role is
   a stop, since `decision (<who>)` would be an unreadable item (no real entry has one); so is an empty text on an
-  open entry with no Ask, which would leave an `ask-missing` error.
+  open entry with no Ask, which would leave an `ask-missing` error; so is a `<who>` the entry's `Blocked by` already
+  carries as `decision (<who>)` (compared by `_gate_key`), which would leave a `gate-repeated` error.
 
 Text 1 is the one exact statement of the rules; this list is its summary. Three choices in it are this design's:
 - **The dates.** A line about the entry's filing (`Taken by`, a `Waits`, an old decision's text) is dated by
@@ -88,7 +89,8 @@ Text 1 is the one exact statement of the rules; this list is its summary. Three 
 - **Each Log line is a plain note:** `Taken by`, `Waits` and `Blocked by` begin no writer's prefix, so `log_line()`
   reads each as a note and `check()`'s `log-line` passes it.
 
-The **post-condition** gains one clause: the migrated entry holds none of the four forms, else it is a stop.
+The **post-condition** gains one clause: the migrated entry holds none of the four forms, and gains no `ask-missing`
+or `gate-repeated` the input did not have, else it is a stop.
 
 *Alternatives weighed.* (a) A `set` and `edit` that take archived entries, and each repo rewriting its 290 old
 forms entry by entry: many hand-chosen writes for a mechanical change, with history open to any edit. (b) Dropping
@@ -238,7 +240,8 @@ are. …" becomes:
 > section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
 > Log line, `Blocked by <the old item>`, dated by the entry's date. An empty text writes neither; on an open entry
 > with no Ask, where `decision (<who>)` reads as a decision (not a retired role), it is a **stop**, since that
-> leaves `check()`'s `ask-missing` error. No `gate added`
+> leaves `check()`'s `ask-missing` error. When the value already holds `decision (<who>)` for the same `<who>`
+> (`_gate_key`), it is a **stop**, since the rewrite would leave `check()`'s `gate-repeated` error. No `gate added`
 > line is written.
 >
 > Stops are collected from every rule, 1 to 8, and with any the input is returned as given.
@@ -257,14 +260,14 @@ The sentence before rule 1, "The rules apply in this order, the Status (1 or 2),
 *The post-condition* bullet gains, after "any problem is a stop.":
 
 > From v2.8 the migrated entry also holds no `Taken by`, `Waits`, header `Resolved` or old decision form, and
-> gains no `ask-missing` the input did not have; either is a stop (`migrated entry still holds <field>`,
-> `migrated entry: ask-missing`).
+> gains no `ask-missing` or `gate-repeated` (`gate_repeats()`) the input did not have; any is a stop (`migrated
+> entry still holds <field>`, `migrated entry: ask-missing`, `migrated entry: gate-repeated`).
 
 *The words it returns* gain: in `changes`, `Taken by → Log`, `Taken by (empty) removed`, `Waits → Log`, `Waits
 (empty) removed`, `Resolved → body`, `Resolved (empty) removed`, `old decision form → Ask`, `old decision form →
 Log` and `old decision form (no text)`; in `stops`, `Waits on an open entry`, `Resolved in the header and the
-body`, `old decision form: <who> is not a person`, `old decision form: no text for its Ask`,
-`migrated entry: ask-missing` and `migrated entry still holds <field>` (`<field>` one of
+body`, `old decision form: <who> is not a person`, `old decision form: no text for its Ask`, `old decision form:
+<who> already has a decision`, `migrated entry: ask-missing`, `migrated entry: gate-repeated` and `migrated entry still holds <field>` (`<field>` one of
 `Taken by`, `Waits`, `Resolved`, `Blocked by`).
 
 **Text 2 (B2), *The ledger*, *The old form*.** "…migrate it first, to `decision (<person>)` with its text in
@@ -370,6 +373,9 @@ decides*." becomes:
 > …and ends *v3.0 reads no other form: on an open entry write `Open` with `set`, on an archived one by hand, then
 > `ledger.py fmt TD-n`*.
 
+In *The ledger writer*, text 3's "(*run migrate first*)" becomes "(*The closed Status set*'s cure)", the same
+ending `note`'s refusal prints from v3.0.
+
 **Text 11 (B4), *The next id*, `judge_takes`.** The signature loses `accept_taken_by=False`, and the bullet "No
 `Id take` is `id-no-take` (fail), unless `accept_taken_by`, … An entry's nonce is compared exactly." becomes "No
 `Id take` is `id-no-take` (fail). An entry's nonce is compared exactly."
@@ -396,23 +402,29 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   same), `taken_by_open_with_gate` (the gate-neutral date: the first readable Log line's, placed after its
   equals), `taken_by_open_with_gate_no_log` (dated by `Added`), `taken_by_empty`, `taken_by_added_not_a_date`
   (dated by the first readable Log line);
-- `waits_archived`, `waits_archived_empty`, `waits_open_stops`;
+- `taken_by_archived_no_log` (a Log made at the end);
+- `waits_archived`, `waits_archived_empty`, `waits_open_stops`, `waits_open_empty` (removed, nothing written);
 - `resolved_header_archived` (to the body, before the Log), `resolved_header_no_log` (at the end),
-  `resolved_header_and_body_stops`, `resolved_header_empty`;
+  `resolved_header_and_body_stops`, `resolved_header_empty`, `resolved_header_open` (an open entry: to the body
+  likewise);
 - `old_form_no_ask` (Ask written after the Why), `old_form_commas_after_id` (`TD-3, decision (Kim) — a, b (c, d)`:
   `TD-3, decision (Kim)` and the Ask `a, b (c, d)`; with an Ask, the Log line `Blocked by decision (Kim) — a, b
   (c, d)`), `old_form_header_ask` (an `Ask` header field counts as an Ask), `old_form_no_text_open_stops`, `old_form_with_ask_open` (Log line dated by the entry's date;
   its gate's `gate_age()` unchanged), `old_form_with_ask_no_log` (the line becomes the Log's first, dated by
   `Added`), `old_form_with_ask_archived`, `old_form_ids_kept` (`TD-3, decision (Kim) — x`),
   `old_form_no_text_archived` (`decision (Kim) —`: rewritten, nothing written), `old_form_role` (`decision (designer) — x`: rewritten, still retired),
-  `old_form_not_a_person_stops` (`decision (the owner) — x`);
+  `old_form_not_a_person_stops` (`decision (the owner) — x`), `old_form_who_repeated_stops` (`decision (kim),
+  decision (Kim) — x`);
 - `all_four_and_status` (each rule's order on one entry, two lines of one filing date in reverse rule order),
   `unreal_first_log_date` (a first Log line dated `2026-02-30` passed over for the next dated one; the case names
   no gate, since `gate_age()` itself raises on such a Log, a fault this design leaves as it is); each case's
   output run again changes nothing (`run.py`'s existing `again`);
 - the existing `waits_taken_by_old_form_left` (an open entry holding `Waits: the vendor`) becomes
   `waits_taken_by_old_form_open_stops` (rule 6's stop wins, the input returned as given), and a new
-  `waits_taken_by_old_form_archived` maps all three;
+  `waits_taken_by_old_form_archived` maps all three; the existing cases holding a header `Resolved`
+  (`date_resolved_header_field`, `lift_none_undated_segment_unreal_resolved`,
+  `lift_open_undated_head_unreal_resolved`) now move it to the body, and they and any other case `run.py` shows
+  changed are regenerated and read;
 - each new case with a gate names it (`gate`), so `fixtures/run.py` records its `gate_age()` before and after in
   the expected JSON, as it does today for the three cases that name one, asserting nothing; a
   unit test in `tests/test_ledgerboard.py` asserts the two are equal on every new case with a gate, and a dated Log
@@ -508,9 +520,10 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
 - **ShiftLead**: its Queue card's *held until …* reads the old form's text (`src/sessionorc/ledger.py`'s
   `until_of`, through `parse_gates()["old_form"]`), and seven open entries carry one; v2.8's `migrate` moves the
   text into an `**Ask:**` or the Log, so before its ledger runs it, `until_of` reads the `**Ask:**` (or the gate
-  alone), else those cards go blank at that sync. Its sync PR for the last v2.x minor runs `migrate` (v2.7's rules and v2.8's in one run, its ledger not yet
-  migrated), which stops today on five archived Statuses (TD-104, TD-120, TD-226, TD-227, TD-460), each answered
-  with `--as` or `--closed-dates` in that PR; its v3.0 sync runs D5's check first, and drops any read of `Waits`, `Taken by` or `old_form`.
+  alone), else those cards go blank at that sync. Its sync PR for the last v2.x minor vendors it alone, and its ledger then runs that minor's `migrate` as its own
+  PR, as agent-cadence's does, so the merge gate grading the rewrite is v2.8's (`uncovered_decisions()`'s base side,
+  D1); that run (v2.7's rules and v2.8's in one, its ledger not yet migrated) stops today on five archived Statuses
+  (TD-104, TD-120, TD-226, TD-227, TD-460), each answered with `--as` or `--closed-dates` in that PR; its v3.0 sync runs D5's check first, and drops any read of `Waits`, `Taken by` or `old_form`.
 
 ## Not in this design
 
