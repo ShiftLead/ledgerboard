@@ -55,11 +55,12 @@ archived, writes nothing on a stop and is the one command each repo runs on taki
 v2.7*'s rule 5 ("What it leaves") becomes four rules, applied after `Location`, each to the entry the one before
 it left:
 
-*The entry's date* below is `Added` when that (after rule 3) is a real date, else the first Log line's date,
-else `today`; a line dated by it is placed before the first Log line dated on or after it (rule 3's placement).
-A line so dated and placed never moves a gate's age: `gate_age()` falls back to the first Log line's date, then
-`Added`, and such a line, when it becomes the first, carries the date the fallback already gave (or `today`
-where neither existed, as rule 3 can).
+*The entry's date* below is the first Log line's date when the Log has a line, else `Added` when that (after
+rule 3) is a real date, else `today`; a line dated by it is placed after every Log line of an equal date. So such a
+line never becomes the Log's first line while the Log has one, and when it does (no Log), it carries `Added`, the
+date `gate_age()` fell back to: a gate's age is unmoved. The one exception is an entry with no Log and no real
+`Added`, where the line is dated `today`; `gate_age()` already fails on such an entry's `Added` when it is
+date-shaped and unreal, and rule 3 lists every such `Added`.
 
 - **5. `Taken by`.** Removed from the header, and its line written as one plain Log line, `Taken by <value>`,
   dated by the entry's date. The value is kept whole: it is the take's `by`, history of who was handed the id.
@@ -79,10 +80,9 @@ where neither existed, as rule 3 can).
   `<who>` as written, the value's other items kept in their order. `<text>`, with its leading run of `—`, `–`,
   `-`, `:` and whitespace stripped, goes to the body section `**Ask:** <text>`, placed as `edit` places a section
   the body lacks, when the entry has no `**Ask:**`; when it has one, it is written as one plain Log line,
-  `Blocked by <the whole old value>`, dated by the entry's date, open or archived (never `today`: a first Log
-  line dated `today` would restart the gate's age, which `gate_age()` takes from the first Log line when no
-  `gate added` line names the gate — six of ShiftLead's open old-form entries have an Ask, and TD-846 among them
-  has no Log). An empty `<text>` writes neither. No `gate added` line is written: the gate was
+  `Blocked by <the whole old value>`, dated by the entry's date, open or archived (not `today`, which as a first
+  Log line would restart the gate's age: `gate_age()` takes the first Log line's date when no `gate added` line
+  names the gate, and of ShiftLead's six open old-form entries with an Ask, TD-846 has no Log). An empty `<text>` writes neither. No `gate added` line is written: the gate was
   already there (as `set` logs nothing for migrating the old form, *Edits*).
 - **9. What it leaves.** Every other field and section, and every Log line already there.
 
@@ -127,8 +127,11 @@ together, then v3.0's release (Paul's) with TD-070's half.
 **D4. What v3.0 stops reading, and what it does on meeting each form.** The four forms, and a header `Location`
 (retired in v2.7, mapped by v2.7's `migrate` and in the precondition for the same reason), are **retired errors**
 in v3.0: on **every entry, open or archived**, of a ledger that declares major 2 or more, an error whether or not
-the edit changed the entry (kind `retired`; the record's `standing` is false, as the closed Status set's is, so
-`check()` never downgrades it to ℹ and `ledger.py --check` and the merge gate fail on it); ℹ on a v1 ledger. The
+the edit changed the entry (kind `retired`; ℹ on a v1 ledger). Its records are built as `_status_records()`
+builds the closed Status set's: over every entry, the archive's included (the ℹ `retired` field flags today come
+from `pickable()`, which reads open entries alone), and appended after `check()`'s loop that downgrades a record
+on an untouched entry to ℹ, so they keep `standing` false and the error level, and `ledger.py --check` and the merge
+gate fail on them. The
 error's text is text 7's, and `status_problem()`'s text 10's, each defined once there. In detail:
 
 - **`Waits`, `Taken by`, a header `Resolved`, a header `Location`:** `check()` reads each as the retired field it
@@ -140,8 +143,9 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   (`fullmatch`, where today it matches a prefix), so `decision (<who>) <text>` is neither the old form nor a
   decision but an unreadable item (`bad`), which keeps the block, names no holder and is an error (an unreadable
   `Blocked by` item, as today). Its record loses `old_form`, and `retired` loses the kind `old-form`. Every
-  old-form path goes with it: `edit_entry`'s `set` refusals (the old form, and a gate added beside it) and its
-  carried-gates clause; `_without`'s refusal, which `lift_gate()` and `reassign_gate()` share; `reassign_gate()`'s
+  old-form path goes with it: `OLD_FORM_REPLACES`; `_written_blocked()`'s two refusals (the old form, and a gate
+  added beside it), which `edit_entry`'s `set` calls, and `edit_entry`'s carried-gates clause, with their
+  docstrings and `parse_gates()`'s; `_without`'s refusal, which `lift_gate()` and `reassign_gate()` share; `reassign_gate()`'s
   own; `_blocked_items`', `_one_copy`'s and `_item_gate_key`'s old-form branches; and `ledger.py`'s `set`-route
   refusal (*migrate it first*). A value holding the item is then written by `new` and `set` as any unreadable item
   is, for `check()`, whose error the writer's refusal rule (an error the ledger before did not have) refuses; and
@@ -187,8 +191,9 @@ here as v2.8); texts 6–12 are B3's (v3.0).
 `Taken by`, an old-form decision, every other field and section, and every Log line already there are left as they
 are. …" becomes:
 
-> *The entry's date* (v2.8) is `Added` when that is a real date, else the first Log line's date, else `today`; a
-> line dated by it is placed before the first Log line dated on or after it.
+> *The entry's date* (v2.8) is the first Log line's date when the Log has a line, else `Added` when that is a real
+> date, else `today`; a line dated by it is placed after every Log line of an equal date, so it moves no gate's age
+> (`gate_age()`) unless the entry has neither.
 >
 > **5. `Taken by`** (v2.8). A header `Taken by` is removed and its line written as one plain Log line, `Taken by
 > <value>`, the value whole, dated by the entry's date. An empty one is removed and nothing written.
@@ -349,7 +354,9 @@ tail (`Resolved 2026-01-10: why`): the note lifts it and appends (the module's `
 - the existing `waits_taken_by_old_form_left` (an open entry holding `Waits: the vendor`) becomes
   `waits_taken_by_old_form_open_stops` (rule 6's stop wins, the input returned as given), and a new
   `waits_taken_by_old_form_archived` maps all three;
-- `fixtures/run.py`'s gate-age check ("a line migrate writes first in the Log moves it") holds for every new case;
+- `fixtures/run.py` records each case's `gate_age()` before and after in its expected JSON, asserting nothing; a
+  unit test in `tests/test_ledgerboard.py` asserts the two are equal on every new case with a gate and a Log or a
+  real `Added`;
 - `fixtures/ledger_writer/migrate_old_forms` — `migrate --plan` over a directory with one of each, open and
   archived: the plan, its `entries` and the subject.
 
@@ -384,7 +391,7 @@ with the code, and the precheck green.
   `tests/`. B1 and B2 in either order.
 - **B3 — v3.0's ledger removals (D4).** Location: `ledgerboard/__init__.py` (`RETIRED_FIELDS` and `check()`'s
   retired grading, `GATE_DECISION_RE`'s whole match and `parse_gates()`, `edit_entry`'s `set`, `archive` and
-  `reopen`, `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`,
+  `reopen`, `_written_blocked()`, `OLD_FORM_REPLACES`, `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`,
   `judge_takes()`, `status_problem()`'s message; `migrate_entry()`, `migrate_subject()` and their helpers removed),
   `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed), `fixtures/run.py`, `SPEC.md` (texts 6–12), the fixtures above, `tests/`. **Blocked by**
   B1, B2 and TD-070 (the design entry archives with its last build, B5), so v3.0's ledger removals land after its
