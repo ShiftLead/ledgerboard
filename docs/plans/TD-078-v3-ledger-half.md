@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Draft 7, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: six ran, the cap (build-changing per design review 6, 2, 2, 1, 2, 1; fact-checks 7, 1, 1, 0, 0, 1), their fixes applied; the rounds ended at the cap, so the closing fact-check and Paul's end-of-rounds item follow.
+**Status:** Draft 8, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: six ran, the cap (build-changing per design review 6, 2, 2, 1, 2, 1; fact-checks 7, 1, 1, 0, 0, 1), their fixes applied; the rounds ended at the cap. Paul answered the end-of-rounds item **One more round** (2026-11-12), run as TD-082: round 7's fact-check raised one build-changing finding (B3's count of entries `migrate` changes, now five), its design review SHIP with two minor; all applied, then the closing fact-check, and the item again.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -119,22 +119,19 @@ corrected by a later dated line, never rewritten: the Log is history.
 must be able to run the new rules on a v2.x before it vendors v3.0. The builds for D1 and D2 therefore merge
 before TD-070's B1, and B1 is `Blocked by` them (*The builds*). The minor is v2.8 when it is cut after they merge,
 which is the order the board's open *Release v2.8* item allows; if v2.8 is cut first, they ship as v2.9, still
-before B1 merges. The rule for the number: each build writes, wherever the texts below say v2.8, the first minor
-not yet tagged when that build merges (v2.8 if it is untagged then, else v2.9), and whichever of B1 and B2 merges
-second rewrites the other's number to its own when that is still untagged, so both name one minor; the Consumers
-lines say *the last v2.x minor*. TD-070's D12 and its `Doer:` text, where they name v2.8 as the release before its
-B1, read as that minor.
+before B1 merges. TD-075's B1 (TD-075's D6) ships in the same minor. The rule for the number: each of the three
+builds — this design's B1 and B2 and TD-075's B1 — writes, wherever its texts say v2.8, the first minor not yet
+tagged when it merges (v2.8 if it is untagged then, else v2.9), and the last of the three to merge rewrites the
+others' number to its own where that is still untagged, so all three name one minor; the Consumers lines say *the
+last v2.x minor*. TD-070's D12 and its `Doer:` text, where they name v2.8 as the release before its B1, read as that
+minor. *(TD-075's B1 joined this rule on 2026-11-12, when TD-075's design merged after this design's sixth round.)*
 
-`Blocked by` B1 and B2 alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12 allows no
-v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask: *Is
-the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under `ledgerboard/`,
-`SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of TD-070's and
-TD-078's build filings comes second, with its board item; TD-070's plan's D12 amendment says so too). The release
-is Paul's. *(Amended 2026-11-12, TD-075's D6, merged after this design's rounds: TD-075's B1 ships in the same minor, so
-the number rule above covers three builds — each writes the first minor not yet tagged when it merges, and the last
-of TD-078's B1, B2 and TD-075's B1 to merge rewrites the others' number to its own where that is still untagged —
-and TD-070's B1's Ask names TD-075's B1 beside B1 and B2 as the builds that minor holds, written by whichever of the
-three designs' build filings comes last.)*
+`Blocked by` the three builds alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12
+allows no v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2, TD-075's B1 and `decision
+(paul)`, its Ask: *Is the last v2.x minor tagged, holding TD-078's B1 and B2 and TD-075's B1, with nothing on `main`
+past that tag under `ledgerboard/`, `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written
+by whichever of TD-070's, TD-075's and TD-078's build filings comes last, with its board item; TD-070's plan's D12
+says so too). The release is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
@@ -506,8 +503,8 @@ with the code, and the precheck green.
   5), `fixtures/migrate/`, `fixtures/ledger_writer/migrate_old_forms`, `tests/`. B1 and B2 in either order.
 - **B3 — this repo's own ledger migrated.** `python3 -m ledgerboard.ledger migrate --release <the minor> --ledger
   docs/ledger` with B2's module, as its own PR: this repo's ledger has not run v2.7's rules either: on 2026-11-12
-  `migrate --plan` changes four entries, the open TD-065, TD-070 and TD-078 (this design's own; a Status with notes
-  → `Open`, with a `was:` Log line) and the archived TD-076 (its Status, and `Location → body`); it holds 53 `Taken by`, 2 header `Resolved` and 1 `Waits`. Its
+  `migrate --plan` changes five entries, the open TD-065, TD-070, TD-075 and TD-078 (this design's own; a Status
+  with notes → `Open`, with a `was:` Log line) and the archived TD-076 (its Status, and `Location → body`); it holds 53 `Taken by`, 2 header `Resolved` and 1 `Waits`. Its
   stops, if any, are decided in the PR. **Blocked by** B2. Done when `migrate --plan` shows no entry with changes
   or stops. Entries filed afterwards through the pinned agent-cadence writer may carry `Taken by` again until
   agent-cadence stops writing it (*Consumers*); B4's own run of the plan catches them.
@@ -526,7 +523,8 @@ with the code, and the precheck green.
   B3's command lands first as its own PR. B4's PR states that run.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
-by` B1, B2 and Paul's decision that the minor is cut (D3; written on whichever is filed second); TD-070's B1–B5; then B4; then v3.0 (Paul's).
+by` B1, B2, TD-075's B1 and Paul's decision that the minor is cut (D3; written on whichever of the three designs'
+filings comes last); TD-070's B1–B5; then B4; then v3.0 (Paul's).
 
 ## Consumers
 
