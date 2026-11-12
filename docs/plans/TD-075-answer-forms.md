@@ -230,7 +230,7 @@ Where the texts say v2.8, the build writes the minor it ships in (D6).
 
 All in one build, B1, each group where its function's cases live today:
 - `fixtures/edit/cases.json` (run by `fixtures/run.py`'s `edit` groups, outputs in `fixtures/edit/expected.json`):
-  - `not_right_forms` gains nothing and changes one output: `not right: <what>` is now `true`. `not_right_fills`
+  - `not_right_forms` changes one output, `not right: <what>` now `true`, and gains `Not right : <what>` (below). `not_right_fills`
     keeps its eight cases (their outputs unchanged) and gains `filled_lower_head` (`not right: grey`, filled as
     `Not right: grey`), `other_head` (`Hold: x` among a look's answers: `None`) and `said_none` (`None`: `None`, the
     lenient reading kept);
@@ -261,11 +261,12 @@ All in one build, B1, each group where its function's cases live today:
 - `fixtures/verdict/cases.json`: `lift_fill_matches` — a base and head tree where the head's board `Decided:` is
   a fill and its ledger's `gate lifted` line carries the same fill: `lift_pr_verdict()` passes;
 - `fixtures/sweep/`: `sweep_closes_filled_form`, and cases for `_answered_within()` (a fill of a listed form counts
-  as lifted), `_answers_owing()` and `uncovered_decisions()` (an item whose only lifting answer is a form);
+  as lifted) and `_answers_owing()`, which `sweep()` runs; and in `fixtures/verdict/cases.json`'s `uncovered`
+  group, an `uncovered_decisions()` case (an item whose only lifting answer is a form);
 - `fixtures/edit/`'s `forms`, `form_fills` and `not_right_forms` gain `Other :  <what>` (head `other`; `other :x`
   filled `Other: x`) and `Not right : <what>` (now a form); `edits` gains `decide_fill_with_dash_and_colon`
-  (`Hold: revise — add log sources: the shapes` written and read back by `parse_decided()` unchanged, and
-  `closes()` reading it as a fill), `decide_fill_ending_by_refused` (`Hold: ask (by kim)`), and
+  (`Hold: revise — add log sources: the shapes` written and read back by `parse_decided()` unchanged; its
+  `closes()` reading as a fill is a `fixtures/lift/` `closes` case), `decide_fill_ending_by_refused` (`Hold: ask (by kim)`), and
   `look_decided_fill` (`not right:grey` written `Not right: grey`; `Not right: <what>` refused); and a
   `canonical_item()` case per new fault (the line refused, naming it).
 
