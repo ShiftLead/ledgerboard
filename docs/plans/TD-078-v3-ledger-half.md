@@ -167,7 +167,9 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   `lift_gate()` and `reassign_gate()` refuse it as a gate the entry does not carry. A person's name still compares
   in any case (`_gate_key`). So that it is named wherever it stands, `check()`'s retired records (above) include,
   on every entry open or archived, each `Blocked by` item that opens with `decision (<who>)` and has text after
-  it, as *the old decision form*: one error for the whole old item (from its `decision (` to the value's end, as
+  it, as *the old decision form*: one error per value, since the old item is the value's first `decision (`
+  with text after it to the value's end (`decision (a) — x, decision (b) — y` is one old item, as `parse_gates()`
+  reads it today); the error is for the whole old item (from its `decision (` to the value's end, as
   text 1 rule 8 defines it, commas and all), its text naming that item, beside the unreadable items' own flags on
   an open entry (one per comma-split piece, as `parse_gates()` splits any value).
 - **`migrate` goes:** `migrate_entry()`, `migrate_subject()` and their helpers, `ledger.py migrate`, and
@@ -525,11 +527,13 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     record loses `old_form` (a `KeyError` otherwise);
   - it already writes `Id take` alone and drops a carried `Taken by` on `renumber` (its TD-188 step 4), so no line
     is needed for that; its archived `Taken by` lines go with its ledger's migrate;
-  - its vendor PR for the last v2.x minor lets `note` take an archived entry through its wrapper (its own
-    `edit()` refuses archived entries itself), with the same refusal of an archived Status outside the closed set,
-    and its ledger then runs that minor's `migrate` (`python3 -m ledgerboard.ledger migrate`, the vendored writer;
-    its wrapper has no `migrate` of its own) as its own PR;
-  - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then drops
+  - its vendor PR for the last v2.x minor needs no wrapper change for `note`: its `edit()` leaves an archived id
+    to the vendored writer to refuse (`_lb_plan()` calls `plan_edit()`), so v2.8's writer lets the note through with
+    its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
+    migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
+    its own PR;
+  - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
+    wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes), drops
     `accept_taken_by=False` from its `judge_takes()` call (`files/scripts/ledger_next_id.py`), the keyword v3.0
     removes, and `prose_waits`' `old_form` read.
 - **ShiftLead**: its Queue card's *held until …* reads the old form's text (`src/sessionorc/ledger.py`'s
