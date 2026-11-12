@@ -5,7 +5,7 @@ that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: three ran and
 round 3's six minor findings and the closing fact-check's three are applied and read by no design review; Paul's
 end-of-rounds item is on the board (recommended Go).
 
-**Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
+**Entry:** [TD-075](../ledger/archive/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
 *A new item*), *Versions* and the grammar appendix; the module at `origin/main` (`ledgerboard/__init__.py`, cited
 by function: `split_answer()`, `is_not_right_form()`, `fill_not_right()`, `_lifting()`, `closes()`,

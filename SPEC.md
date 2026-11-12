@@ -988,18 +988,26 @@ line's end, in this order:
   end of an answer with a consequence (`a — b (default)`) still marks its label. A consequence
   shaped like a reply (` — <name>, <date>: `) reads as a reply, so no writer writes one.
   A `look` carries exactly `Answers: Works | Not right: <what>.`
-  Its second answer is a **form**, whose slot is the person's words: an offered answer is the form when
-  it is `Not right:` alone or followed by one `<…>` placeholder (whitespace collapsed, case as written);
-  `Not right: wrong repo` is a complete answer like any other. An answer given to a form fills it when
-  it starts `Not right:` and is not itself the form — one that adds nothing, or only a placeholder, is refused.
+  An offered answer whose label is a **form** (v2.8) takes the person's words: the label, whitespace collapsed, is
+  a **head** (one or more characters, none of them `:`, `<` or `>`, not starting with whitespace), then any
+  spaces, `:`, and nothing or one `<…>` placeholder (`is_form()`): `Hold: <note>`, `Other:` and the look's
+  `Not right: <what>` are forms; `Not right: wrong repo` and `Hold: <a> <b>` are complete answers like any other.
+  Heads compare in any case, whitespace collapsed (`form_head()`). An answer given to the item **fills** a form
+  when it is none of the item's complete answers and its text before its first `:` is that form's head; the fill
+  is the head as offered, `: `, and the words after the colon (`fill_form()`; the look's case
+  `fill_not_right()`, and `is_not_right_form()` for its form). Words that are empty or only a placeholder are
+  refused (*<head> needs its words*). Where two forms share a head, the first fills. A `decide` offers no two forms
+  with one head and marks no form ` (default)` (*Edits*).
 - `Lifts: a | b.` (v2.3) — which of a `decide`'s answers lift the gate its Context names, each one of its
   answers' labels (compared case-insensitively), `\|` for a literal bar (`parse_lifts()`, `BoardItem.lifts`,
   `item_record()`'s `lifts`). It is read only after the item's `Answers:` and ahead of its `Decided:`, starting a
   sentence, so a reply's or a `Decided:` text's words are never it, and the answers end where it begins. It is written only when it is not `Go` alone: no `Lifts:` means `Go`. It is part
   of the item key. An answer **lifts** when it is one of `Lifts:` (or `Go` when the item has none), compared
-  case-insensitively (v2.4). The two **waiting-only** answers, `Keep waiting` and `Not yet` (any case; a final
+  case-insensitively (v2.4), or when it fills a form listed there (v2.8; *The `Answers:` bullet*), so a `Decided:`
+  holding a fill of a listed form lifts and closes as its form would. The two **waiting-only** answers, `Keep waiting` and `Not yet` (any case; a final
   period dropped; `waiting_only(label)`), never lift: `item_line(lifts=)` refuses one and `item_problem()` faults
-  one.
+  one. `item_problem()` also faults, on an open `decide` with no `Decided:`, two forms with one head and a form
+  marked ` (default)` (v2.8; *The `Answers:` bullet*).
 - `Decided: <label> (by <person>) (YYYY-MM-DD).` — the person's answer, and (v2.3) who gave it. A decided item
   stays open and due; it now waits on whoever acts on it, not on the person. Only a final `(by <person>)` before
   the date, `<person>` a person's name (below), is split off (`parse_decided_by()`, `BoardItem.decided_by`,
@@ -1231,14 +1239,18 @@ back exactly what was meant:
 - **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
 - **decide** writes `Decided: <answer> (YYYY-MM-DD).`, or with `by` (v2.3) `Decided: <answer> (by <by>) (YYYY-MM-DD).`,
   replacing an earlier one. It refuses a `by` that is not a person's name, and an answer that itself ends in
-  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered. With `close` (v2.4), on
+  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered. An answer that fills one
+  of the item's forms is written as its fill, the head as offered (v2.8); one that is a form as offered, unfilled,
+  is refused (*<head> needs its words*). With `close` (v2.4), on
   an item whose Context names a gate, it also ticks the item and appends `Closed: YYYY-MM-DD — kept waiting.` for
   a waiting-only answer or `Closed: YYYY-MM-DD — lifted.` for a lifting one, and refuses any other answer (`closes()`
   says when to pass it);
 - **reply** appends a reply tail.
 
 **A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts, parts, doer)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Doer: <doer>.] Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). A decide's `parts` (v2.6) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated by `, `, each as given. It is refused on any kind but `decide`. It is refused for an empty list, for an id that is not `TD-` and 1 to 18 ASCII digits, and for an id that shares its number with another or with the Context's entry. It is refused unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`, with nothing after the gate (*The gate sweep* reads an item whose Context goes on past its gate as naming no entry, so it would cover no part). And it is refused unless one of its answers lifts (as *Closing on the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written, and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling is a different key. An act's `doer` (v2.8) writes ` Doer: <doer>.` right after the Context, the value exactly as given, neither trimmed nor collapsed: `<repo>` (not ending in `.`) or `team <team>`, with one space and no other whitespace (*The board*, `Doer:`). It is refused on any kind but `act`, no kind included, and for any other value. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
-- a `decide` carries two or more distinct answers, at most one marked ` (default)`, and a detail block;
+- a `decide` carries two or more distinct answers, at most one marked ` (default)` and never a form (v2.8), no two
+  forms with one head (v2.8), and a detail block; `decided_line()` writes no mark on a form, its `default` naming
+  one written unmarked;
 - a `look` carries exactly `Answers: Works | Not right: <what>.`, which the writer writes itself, `Works` marked ` (default)` only when the caller asks;
 - an `fyi` carries no `Due:`, and every other kind carries one;
 - no kind but `decide` and `look` carries answers.
@@ -1696,6 +1708,21 @@ flag day. `item_line()` now refuses a text, context, answer, detail value or `--
 answer option, and refuses a decision's words that hold it. v2.7 reads a `Doer:` as part of the Context, so a
 consumer writes one only once every reader of its board runs v2.8.
 
+**v2.8 reads any `<head>:` or `<head>: <…>` answer as a form** (*The board*, the `Answers:` bullet): where only a
+look's `Not right: <what>` was one, now every such label is, its head in any case, and an answer that fills a
+form listed in `Lifts:` lifts. One thing is read differently on lines already written: a `Decided:` filling a
+form its item's `Lifts:` lists now lifts, so `closes()` and the gate sweep may close the item or lift its gate,
+where it read as a work order; and `not right: …` in lower case, or `Not right : …` with a space before its colon,
+is the look's form; and `fill_not_right()` writes one space after the colon (`Not right:grey` is returned
+`Not right: grey`), and a PR writing a `Decided:` that holds an unfilled form goes to review
+(`lift_pr_verdict()`). No key moves and the canonical form is unchanged. Two new faults, on open `decide` items
+with no `Decided:`: two forms with one head, and a form marked ` (default)`. The writers gain refusals: `decide`
+refuses a form unfilled (`Not right: <what>` included, which it wrote before) and writes a fill with the head as
+offered; `item_line()` refuses two forms with one head and `default` naming a form, and `fmt` (`canonical_item()`)
+names the two faults on such a line. A board with no form in a `Lifts:` reads as before. A consumer writes a fill
+only once every reader of its board runs v2.8: an older reader reads a fill as a work order and never lifts or
+closes it.
+
 ## Appendix: grammar
 
 The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; later releases add the rest).
@@ -1764,7 +1791,9 @@ char           ::= [^#xA]
 ```
 
 What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
-whitespace. A field name counts only at a word's start, after a character that is no letter, digit or `_`
+whitespace. Which labels are forms (*The board*, the `Answers:` bullet) is a reading of a `label`, as its
+consequence split is: the productions accept every form as a label (a head that is a field's name makes no label:
+`item_line()` refuses it), and a fill is a `Decided:` text, which they accept as any. A field name counts only at a word's start, after a character that is no letter, digit or `_`
 (`field-at` names the ASCII ones; the module's word boundary also counts one after any other character that is
 no letter, digit or `_`, such as an em dash or a no-break space, so the grammar accepts such a line, which the
 module refuses). A

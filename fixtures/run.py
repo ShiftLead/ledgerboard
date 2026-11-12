@@ -42,7 +42,8 @@ Fixtures, each an invented input and its expected JSON:
   and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
   ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate; and ``item_line(parts=)`` (v2.6):
   the snapshot written in number order, spelled as given, and each of its refusals; and ``Doer:`` (v2.8): read,
-  faulted and kept through every edit, ``item_line(doer=)`` and its refusals.
+  faulted and kept through every edit, ``item_line(doer=)`` and its refusals; and answer forms (v2.8):
+  ``is_form()``, ``form_head()`` and ``fill_form()``, a fill written by ``decide``, and the two new refusals.
 - ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
   boards; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
   ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
@@ -528,6 +529,11 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["not_right_forms"] = {a: L.is_not_right_form(a) for a in spec["not_right_forms"]}
     out["not_right_fills"] = {c["name"]: _refused(lambda c=c: L.fill_not_right(c["said"], c["offered"]))
                               for c in spec["not_right_fills"]}
+    if "forms" in spec:  # v2.8: any <head>: answer is a form
+        out["forms"] = {a: {"is_form": L.is_form(a), "form_head": L.form_head(a)} for a in spec["forms"]}
+        out["form_fills"] = {c["name"]: _refused(lambda c=c: L.fill_form(c["said"], c["offered"],
+                                                                         **({"form": c["form"]} if "form" in c else {})))
+                             for c in spec["form_fills"]}
     out["queue_subjects"] = [_refused(lambda c=c: L.queue_subject(c["tool"], c["action"], c["ids"]))
                              for c in spec["queue_subjects"]]
     out["implicit_keys"] = [L.implicit_key(c["priority"], c["type"], c["id"], c["repo"]) for c in spec["implicit_keys"]]
