@@ -1,7 +1,7 @@
 # TD-075: any offered `<head>:` or `<head>: <…>` answer is a form the person's words fill
 
 **Status:** Draft 3, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
-that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1's fact-check ran twice (6 build-changing and 4 minor, then 2 and 6, applied).
+that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1's fact-check ran three times (build-changing 6, 2, 1; applied).
 
 **Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
@@ -107,9 +107,11 @@ for a caller of the module alone (a fill is filled once more unchanged). Both re
 item's forms as offered, unfilled, or names a form's head with empty words (*<head> needs its words*). Any other
 answer is written as today. `edit_line`'s existing refusal of an answer ending in `(by …)` stands, a fill
 included. Both consumers' wrappers call `plan_edit()` (agent-cadence's `board_edit.py`, ShiftLead's sync), so
-they gain the fill with no change of their own. On the `--board-only` route the ledger was written first, by
-`ledger.py` (`lift_gate(answer=)`, which knows no item): there the caller passes the answer already filled
-(`fill_form()`), as it already passes the same words to both writes, so the two still match.
+a caller on that route gains the fill with no change of its own. On the `--board-only` route the ledger was
+written first, by `ledger.py set --answer` (`lift_gate(answer=)`, which knows no item): there the caller must pass
+the same filled text (`fill_form()`) to the ledger's `set --answer` and to `decide --board-only --answer`, a new
+duty that holds today only because a lifting answer is a bare label; `lift_pr_verdict()` flags a mismatch. The
+Consumers lines name it.
 
 **D5. How the reader reads a filled form.** `_lifting(label, lifts, offered)` gains the item's offered labels
 (`parse_answers()`, or `BoardItem.answers`). An answer **lifts** when it is one of the item's `Lifts:` labels as
@@ -257,7 +259,7 @@ One build, filed `Part of: TD-075`, with no `Kind`, on Paul's Go:
   `is_not_right_form()` and `fill_not_right()` over them; `_lifting()`; `edit_line`'s `decide`; `_answer_parts()` or
   `item_line()` for the two refusals; `decided_line()`; `item_problem()`), `ledgerboard/board.py` (`plan_edit()`'s
   fill before `_decide_ledger()` and `subject()`; `_decide_ledger()`'s `_lifting()` call), `SPEC.md` (texts 1–6), `fixtures/edit/`,
-  `fixtures/lift/`, `fixtures/board_writer/`, `fixtures/sweep/`, `fixtures/run.py`, `fixtures/MANIFEST`,
+  `fixtures/lift/`, `fixtures/board_writer/`, `fixtures/sweep/`, `fixtures/verdict/`, `fixtures/run.py`,
   `tests/test_ledgerboard.py`. Done when the `SPEC.md` text lands with the code and fixtures and the precheck is
   green. Merges before TD-070's B1 (D6).
 
@@ -266,10 +268,11 @@ One build, filed `Part of: TD-075`, with no `Kind`, on Paul's Go:
 Lines for each consumer's own entry, filed there through its question seat (`ao td add --repo`), never here.
 
 - **agent-cadence**: its vendor PR for the minor; its `board_edit.py` passes `decide` through `board.py`'s
-  `plan_edit()`, so a fill is written and an unfilled form refused with no wrapper change. Before vendoring, it
+  `plan_edit()`, so a fill is written and an unfilled form refused with no wrapper change; where it decides
+  `--board-only` after a ledger `set --answer`, it fills the answer first and passes the fill to both (D4). Before vendoring, it
   searches its board for a `Decided:` filling a form its `Lifts:` lists (D6).
 - **ShiftLead**: its TD-1698 starts on the sync PR that carries the minor, calling `fill_form()` where TD-1557
-  says, and runs D6's search on its board first.
+  says (and before both writes on a `--board-only` route, D4), and runs D6's search on its board first.
 
 ## Not in this design
 
