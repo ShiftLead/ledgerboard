@@ -182,15 +182,15 @@ and a close keep it.
 - **`Doer`** is a v3 header field, defined wholly here: on an `act` only, who should do its step, `<repo>` (a repo
   name whose last part does not end in `.`, text 13's `doer-repo` and `doer-part`) or `team <team>` (`<team>` a
   person's name; `team` alone names the repo `team`). Its reader is `parse_doer_value(value)` (round 5's F68), new
-  in B1 whatever TD-065 does: it reads a bare value, as the header field holds it (no final period, no line around
+  in B1: it reads a bare value, as the header field holds it (no final period, no line around
   it), and gives `("repo" | "team", name, value)` or None for a value outside the form. It reads a team as TD-065's
   reader does (round 6's F79): `team`, a run of spaces or tabs, and a person's name, so `team  ops` reads as the
   team `ops`, its `value` as written; `item_file_problem()` and `board_dir_problems()` (rule 14) fault any spelling
   but one space, and the writer writes one. `BoardItem.doer` is that
-  tuple for a v3 item, and `item_record()`'s `doer` a dict of it (below), or None. TD-065's `parse_doer(text)`, if
-  it ships, stays a v2-line function (it finds ` Doer:` on a line and reads to the field's final period), which the
-  v2 half of `load_board()` uses for a v2 item; neither reader calls the other. Whether TD-065 ships is decided
-  before B1 starts (D12).
+  tuple for a v3 item, and `item_record()`'s `doer` a dict of it (below), or None. TD-065's `parse_doer(text)`, in
+  v2.8 (D12), stays a v2-line function (it finds ` Doer:` on a line and reads to the field's final period), which the
+  v2 half of `load_board()` uses for a v2 item; neither reader calls the other. TD-065's build merges before B1
+  starts (D12).
 - **A value is a whole line**, so it holds any words, field names among them: the field-name refusals end, and so
   does reading where a Context ends.
 - **A header-block line that is no field** (round 3's F51) does not end the block, which runs from the heading's
@@ -237,8 +237,8 @@ and a close keep it.
   D8: a v2 item's detail block as its file holds it, `[]` for a v3 item). `line` stays: a v2 item's 1-based line,
   0 for a v3 item, read by nothing but v2 code (*The board's order*, D6, no longer reads it). `text` keeps its
   meaning until B5 removes it (below). **`item_record()`** changes in three builds, and only there (round 2's F33,
-  round 3's F46): at B1 it gains `doer` (None on every v2 record unless v2.8 shipped TD-065's `Doer:`, in which case
-  the key is v2.8's already and B1 leaves it, D12); at B2 it gains `id`, `path`, `added`, `context` and `closed`, and
+  round 3's F46): at B1 its `doer` key, v2.8's already (TD-065's build, D12), is filled for a v3 item as well, its shape
+  unchanged; at B2 it gains `id`, `path`, `added`, `context` and `closed`, and
   its `text` reads `BoardItem.words` for both majors (a v2 record's `text` was the line after its tick), keeping
   `line`; at B5 it loses `line`. *The builds* list the expected JSONs each of the three regenerates.
 - **The record's keys, as JSON** (round 4's F57), for both majors; every key not named here keeps the shape it has
@@ -616,32 +616,26 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   TD-073 and a fold into v2.7, which the tag has overtaken).
 - **No v2.x release after B1 merges**, and no tooling to release from a branch: `release.sh` cuts from `origin/main`
   and stays so. A v2.x fix wanted after B1 merges goes into v3.0.
-- **TD-065 is decided before B1 starts** (round 5's F68, R10's fix, which replaces round 4's delta rule): a
-  precondition of B1 beside the v2.8 release, and the person's. `Doer` is this design's own v3 header field either
-  way (D4, text 8, text 13): B1 lands `parse_doer_value(value)`, `BoardItem.doer`, `item_record()`'s `doer`,
-  `item_file(doer=)`, the header field and text 13's `doer-field`, `doer-repo` and `doer-part`, unconditionally. The
-  two outcomes:
-  - **TD-065 ships in v2.8.** Its build merges before B1 starts, so it is in v2.8, which is released before B1
-    merges. A v2 line can then carry `Doer: <value>.`: TD-065's `parse_doer(text)` stays the v2-line reader the
-    v2 half of `load_board()` uses, and at the split (B5) the v2 half carries a v2 line's doer into the header field
-    `Doer` (`split_board()` writes a v2 item's `fields`, D4). Text 14's `Doer:` bullet substitutes in v2.8's
-    `Doer:` paragraph (*The board*, "**`Doer:`** (v2.8) — `Doer: <repo>.` or `Doer: team <team>.`, …", TD-065's
-    text 1).
-  - **TD-065 is closed as superseded by the v3 field.** No v2 line carries a `Doer:`, every v2 record's `doer` is
-    None, and text 14's `Doer:` bullet has no paragraph to substitute in.
-
-  Those two are the only differences in what B1 to B5 build. What follows from v2.8's starting point is mechanical:
-  when TD-065 shipped, `BoardItem.doer` and `item_record()`'s `doer` key are v2.8's already (B1 keeps them and
-  regenerates no record for them, *The builds*), and `SPEC.md`'s *The open item line* already defines `doer-repo`
-  and `doer-part`, with the bodies text 13 gives them, so B1 moves those two productions from that block into text
-  13's rather than adding them (a production is defined once: `tests/test_grammar.py`'s `ebnf()` asserts it), and
-  TD-065's `doer` production reads them there. Since TD-065 is shipped or closed before B1 starts, and no v2.x
-  release follows B1, nothing of TD-065 lands after B1.
+- **TD-065 ships in v2.8** (Paul's Go on TD-065's design, 2026-11-12, which settles round 5's F68 precondition):
+  its build merges before B1 starts, so it is in v2.8, which is released before B1 merges. `Doer` is also this
+  design's own v3 header field (D4, text 8, text 13). A v2 line can carry `Doer: <value>.`: TD-065's
+  `parse_doer(text)` stays the v2-line reader the v2 half of `load_board()` uses, and at the split (B5) the v2 half
+  carries a v2 line's doer into the header field `Doer` (`split_board()` writes a v2 item's `fields`, D4). Text 14's
+  `Doer:` bullet substitutes in v2.8's `Doer:` paragraph (*The board*, "**`Doer:`** (v2.8) — `Doer: <repo>.` or
+  `Doer: team <team>.`, …", TD-065's text 1). What follows is mechanical: `BoardItem.doer` and `item_record()`'s
+  `doer` key are v2.8's already (B1 keeps them and regenerates no record for them, *The builds*), and `SPEC.md`'s
+  *The open item line* already defines `doer-repo` and `doer-part`, with the bodies text 13 gives them, so B1 moves
+  those two productions from that block into text 13's rather than adding them (a production is defined once:
+  `tests/test_grammar.py`'s `ebnf()` asserts it), and TD-065's `doer` production reads them there. B1 lands
+  `parse_doer_value(value)`, `BoardItem.doer`'s v3 reading, `item_file(doer=)`, the header field and text 13's
+  `doer-field`. No v2.x release follows B1, so nothing of TD-065 lands after it.
 - **TD-078's open question**, whether its archived-entry writer route "ships in a v2.x minor first", has the same
   answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0. *(Amended 2026-11-12, TD-078's
   D3: it ships in the last v2.x minor, so B1 is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, whose Ask is
   whether that minor is tagged with nothing on `main` past it under `ledgerboard/`, `SPEC.md` or `fixtures/`; Paul's
-  answer lifts it once he has cut it.)*
+  answer lifts it once he has cut it. TD-075's D6 puts its B1 in the same minor, so B1 is `Blocked by` it too. That
+  minor is v2.8 when it is cut after them, as TD-078's D3 and TD-075's D6 rule; where this plan says v2.8 is
+  released before B1, it is that minor.)*
 - **The builds**, B1 to B5, merge in order with no release between them; then v3.0.
 
 ## Consumers
@@ -1228,8 +1222,6 @@ in the directory `path` (no subdirectories), or None when `path` is not a direct
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
 > nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
 
-Its `Doer` sentence is the same whichever way TD-065 was decided (D12): it is true of v3.0 either way.
-
 *Versions*' opening lines (round 4's F56) change too. "A ledger or board may declare its major version on a
 preamble line, `Ledgerboard: 1`; none means 1." becomes:
 
@@ -1301,13 +1293,12 @@ tagged with its build (round 6's F77):
   before its period; "`item_line(parts=)` and `board.py add --parts` write it" becomes "`item_file(parts=)` (v3.0;
   `item_line(parts=)` before it) and `board.py add --parts` write it". The "(v2)" is B2's, the writer substitution
   B5's.
-- *`Doer:`* (v2.8's paragraph after *`Parts:`*, TD-065's text 1; only when TD-065 shipped in v2.8, D12): "It is
+- *`Doer:`* (v2.8's paragraph after *`Parts:`*, TD-065's text 1, D12): "It is
   part of the item key" becomes "On a v2 line it is part of the item key"; "`item_line(doer=)` and `board.py add
   --doer` write it" becomes "`item_file(doer=)` (v3.0; `item_line(doer=)` before it) and `board.py add --doer`
   write it"; and it gains at its end "In an item file (v3.0) it is the header field `Doer` (*The item file*), a bare
   value read by `parse_doer_value()`; `parse_doer()` reads a v2 line's." Its last sentence is B1's, landing with
-  the header field; the two substitutions are B5's, with the writer items. When TD-065 was closed, `SPEC.md` holds
-  no such paragraph and this bullet lands nothing.
+  the header field; the two substitutions are B5's, with the writer items.
 - *Trailing fields*, `Lifts:`: "It is part of the item key" becomes "On a v2 line it is part of the item key";
   "`item_line(lifts=)` refuses one and `item_problem()` faults one" becomes "`item_file(lifts=)` refuses one and
   `item_file_problem()` faults one (v3.0; `item_line()` and `item_problem()` before it)". The `Decided:` bullet
@@ -1493,9 +1484,9 @@ new start.
 ## The builds
 
 Each is filed `Part of: TD-070` on Paul's Go after the rounds, and lands its SPEC text, code and fixtures together.
-**Preconditions of B1**, both the person's (D12): TD-065 is decided before B1 starts, either shipped (its build
-merged, so in v2.8) or closed as superseded by the v3 field; and whatever `main` carries past v2.7 (today TD-079 and
-TD-080, and TD-065's build if it ships) is released as v2.8 before B1 merges. No release is cut between B1 and B5. Each build
+**Preconditions of B1** (D12): TD-065's build has merged (Paul's Go, 2026-11-12), and so have TD-078's B1 and B2
+and TD-075's B1; and whatever `main` carries past v2.7 (today TD-079 and TD-080, then those builds) is released as
+v2.8, the last v2.x minor, before B1 merges, Paul's `decision (paul)` saying he has cut it. No release is cut between B1 and B5. Each build
 leaves `main` green: where a later build retires a v2 name an earlier build would break, the earlier build keeps it
 working (a shim) and B5 removes the shim. **What a record shows** changes at B1 (`doer`), B2 and B5 alone (D4, round
 2's F33, round 3's F46);
@@ -1512,15 +1503,14 @@ gives the v2 subject the v2 writers still call), `subject_id()`, `bold_head()` r
 Text 8's `parse_item()` paragraph lands without its closing `item_record()` sentence, its *The item file* without
 the clauses naming `board_dir_problems()`, and text 9 without its *snapshot* paragraph (each B2's: *The SPEC text
 the build lands*, round 4's F59, round 6's F77); text 14's *bold head* bullet is B1's.
-**Records:** `item_record()` gains `doer` and nothing else (None for every v2 item); the expected JSONs it
-regenerates are `fixtures/board/*.json` and `fixtures/board_writer/list/expected.json`, each record gaining
-`"doer": null`. When TD-065 shipped in v2.8, the key is v2.8's already, and B1 regenerates no record (D12).
+**Records:** `item_record()`'s keys do not change at B1: its `doer` key is v2.8's already (TD-065's build), and B1
+regenerates no record (D12).
 `fixtures/edit/expected.json` changes only by the groups that move to `item/` and `bold_heads`' heading case.
-**`Doer`:** B1 lands the whole v3 field whichever way TD-065 was decided (D4, D12: `parse_doer_value()`, text 8's
-*The item file*, text 13's `doer-field`, `doer-repo` and `doer-part`, and text 14's `Doer:` bullet's last sentence
-when TD-065 shipped). When TD-065 shipped, `BoardItem.doer` and the record's `doer` are v2.8's and stay, and
+**`Doer`:** B1 lands the v3 field (D4, D12: `parse_doer_value()`, text 8's *The item file*, text 13's `doer-field`,
+and text 14's `Doer:` bullet's last sentence). `BoardItem.doer` and the record's `doer` are v2.8's and stay, and
 `doer-repo` and `doer-part` move from *The open item line*'s block into text 13's (a production is defined once).
-Done when: TD-065 is shipped or closed, v2.8 is tagged, the precheck is green, every fixture above passes, and text
+Done when: TD-065's, TD-075's and TD-078's builds named in the preconditions have merged, v2.8 is tagged, the
+precheck is green, every fixture above passes, and text
 14's B1 search finds its names only where it allows.
 
 **B2, reading.** D5, D6, D9. Location: `ledgerboard/__init__.py` (`Board`, `load_board()`, `item_words()`, the
