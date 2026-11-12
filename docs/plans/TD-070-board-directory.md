@@ -8,11 +8,12 @@ the same last v2.x minor as TD-078's B1 and B2. Round 7's fact-check (R14) raise
 its design review (R15) two (F90, TD-075's forms carried into no v3 writer; F91, the `doer` record at B1, reopening
 F68), with five minor; all applied. Round 7's closing fact-check (R16) raised four build-changing findings, all slips in
 round 7's fixes (F95 `BoardItem.answers`, F96 the `## Edits (v3.0)` search and B5's swap, F97 a non-`act` `Doer` at
-the split, F98 the split's `Doer` spelling against the read-back), and six minor; applied and re-checked, read by no
+the split, F98 the split's `Doer` spelling against the read-back), and six minor (F99–F104: four applied, F102 rejected, F104 a check with nothing to change); its fixes re-checked
+(R17, four minor, applied), read by no
 design review, so the end-of-rounds item recommends **One more round** again. Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
 builds. Rounds: six ran, ending at the cap (round 6's design review still raised build-changing findings, F73–F76,
 now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4, 2 (round 7); fact-checks 2, 2,
-1, 0, 0, 0, 1 (round 7), and round 6's closing fact-check 1 (F81, `_real_day()` for a day's check), applied and read by no design
+1, 0, 0, 0, 1 (round 7), round 6's closing fact-check 1 and round 7's 4 (F81, `_real_day()` for a day's check), applied and read by no design
 review with round 6's. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
 F55), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review (order by round 3's rule
 for comparing two reads, F45; the shims and `Doer` by round 5's cuts). Each round's fixes applied, with the author's (the designer session's) rulings where the findings offered a
@@ -469,10 +470,10 @@ plan fixes the rules, B1 writes the words, and the fixtures pin them.
   and `edit_item(…, "decide")` fills a string answer (`fill_form()` over the file's offered labels) before writing
   it and refuses a form as offered, unfilled, or a head with empty words, as `edit_line(…, "decide")` does (TD-075's
   D4). `board.py`'s `plan_edit()` fills once before `edit_item()`, `_decide_ledger()` and `subject()`, as TD-075's D4
-  has it before `edit_line()`. Every reader B2 moves onto a `BoardItem` (`closes()`, `decide_lift()`,
+  has it before `edit_line()`. Every reader of an item's answers (`closes()`, `decide_lift()`,
   `_sweep_closes()`, `_answers_owing()`, `_answered_within()`, `uncovered_decisions()`, `edit_item()`'s `close`,
-  `board.py`'s `_decide_ledger()`, and `item_file()`'s own check that some answer lifts) passes `_lifting(label, lifts, offered)` the item's offered labels,
-  `BoardItem.answers`, already labels (TD-075's D5); none compares an answer to `Lifts` itself.
+  `board.py`'s `_decide_ledger()`, and `item_file()`'s own check that some answer lifts) passes `_lifting(label, lifts, offered)` the item's offered labels —
+  `BoardItem.answers`, already labels, where it holds a `BoardItem`, else `parse_answers()` of the file (TD-075's D5); none compares an answer to `Lifts` itself.
 
 **The gate**, `board_problems(board, old)`, judges each open item of `board` whose id no item of `old` (open or
 closed) has, as `(path, problem)`. It refuses only when `board` is a v2 board; `old` may be either major (the split
@@ -1363,8 +1364,8 @@ lands, in the sections that text rewrites, and finding each only in a *Versions*
 where `SPEC.md` holds them today:
 
 - **B1** (text 9 but its *gate* paragraph, as `## Edits (v3.0)`): none in *Edits*, which stands for the v2 writers
-  until B5 (round 7's F92, F96); `## Edits (v3.0)` holds `item_line`, `decided_line`, `item_problem`,
-  `canonical_item` and `archive_subject` only in a v2-tagged sentence. **B5** (text 9's swap) searches *Edits* for
+  until B5 (round 7's F92, F96); `## Edits (v3.0)` holds none of `item_line`, `decided_line`, `item_problem`,
+  `canonical_item` and `archive_subject` outside a v2-tagged sentence. **B5** (text 9's swap) searches *Edits* for
   those five (`edit_line` is not in *Edits*: `SPEC.md` holds it in *The merge gate's verdicts*, B4's, and *The
   board writer*, B3's).
 - **B2** (texts 2–6, 8's *Reading a board* and *Damage*, 9's *gate*, 11, 14's reader items): *The board* but its
@@ -1374,7 +1375,7 @@ where `SPEC.md` holds them today:
 - **B3** (text 10 but `split` and "(*split first*)"): *The board writer* for `item_line`, `decided_line`, `edit_line`, `canonical_item`,
   `archive_closed`, `archive_subject`, `--line`, `--expect` and `--under`.
 - **B4** (text 7): *The merge gate's verdicts* for `BOARD_PATH`, `BOARD_ARCHIVE_PATH` and `edit_line`.
-- **B5** (texts 1, 8's *Migration*, 10's `split`, 12, 14's writer items) runs the full search: all of `SPEC.md`, for
+- **B5** (texts 1, 9's swap, 8's *Migration*, 10's `split`, 12, 14's writer items) runs the full search: all of `SPEC.md`, for
   every name above (`item_line`, `decided_line`, `edit_line`, `item_problem`, `canonical_item`, `archive_closed`,
   `archive_subject`, `ARCHIVE_AT`, `closed_items`, `BOARD_PATH`, `BOARD_ARCHIVE_PATH`, `--line`, `--expect`,
   `--under`), each found only in a *Versions* paragraph, a v2-tagged sentence or text 12.
