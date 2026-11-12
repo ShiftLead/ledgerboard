@@ -628,7 +628,7 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
 - **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
   Log, making it at the end of the body if there is none. It is refused if the words begin with a
   writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
-- **edit** (`section`, `words`): replaces the named section's paragraphs, keeping its lead as
+- **edit** (`section`, `words`; v2.8 `remove`, `declared_fields`): replaces the named section's paragraphs, keeping its lead as
   written. A section the body lacks is added after the first Why, else before the first Done when,
   Related or Log, else at the end. It is refused when two sections have the name, and for the Log,
   which only its writers write. From v2.8 it refuses to add a section named `Title` (the heading's: `set` retitles),
@@ -1383,10 +1383,10 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
   stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
-- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags and
-  (v2.8) `--title "<title>"`, the heading's title (`--title ""` a usage error) (an
+- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field; not a non-empty `--location` or `--field Location=…`, from v2.7: `edit
-  --section Location`; an empty one still removes the header field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
+  --section Location`; an empty one still removes the header field) and (v2.8) `--title "<title>"`, the heading's
+  title, where `--title ""` is a usage error; `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
   one; the ledger's `Fields:` names are passed as `declared_fields`). An archived entry is edited only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event

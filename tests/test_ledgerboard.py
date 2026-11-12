@@ -1010,6 +1010,12 @@ class Retitle(unittest.TestCase):  # v2.8 (TD-068 B1): what the fixtures do not 
             self.assertIn(verb, str(e.exception))
         self.assertNotIn("**Status:** a stray", L.edit_entry(stray, "edit", section="Status", remove=True))
 
+    def test_a_header_title_on_a_fields_ledger_is_misplaced_not_undeclared(self):
+        led = "# Ledger\n\nFields: Owner = a | b\n\n" + self.ENTRY.replace("**Status:** Open\n", "**Status:** Open\n**Title:** x\n")
+        kinds = [(r["kind"], r["field"]) for r in L.check(led, "", today=TODAY)]
+        self.assertIn(("misplaced-name", "title"), kinds)
+        self.assertNotIn(("undeclared-field", "title"), kinds)
+
     def test_declared_fields_is_edits_alone(self):
         for action, kw in (("set", {"fields": {"Priority": "High"}}), ("note", {"words": "w", "today": "2026-01-20"})):
             with self.assertRaises(L.Refused):

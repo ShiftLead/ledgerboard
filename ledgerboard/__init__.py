@@ -4508,6 +4508,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         if key == "log":
             raise Refused("the Log is written by its writers (note, archive, reopen), never replaced by edit")
         declared = _declared_keys(declared_fields)
+        if not remove and not str(words or "").strip():
+            raise Refused(f"the section {name!r} needs its words")
         at = _keyed(sections, key)
         if len(at) > 1:
             raise Refused(f"the body has {len(at)} sections named {name!r} — edit it by hand")
