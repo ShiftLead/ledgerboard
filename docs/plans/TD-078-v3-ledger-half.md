@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
 **Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: three ran (build-changing per design review 6, 2, 2; fact-checks 6, 1, 1), their fixes applied.
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: three ran (build-changing per design review 6, 2, 2; fact-checks 6, 1, 1), their fixes applied; round 4's fact-check ran (0 build-changing, its one minor applied); round 4's design review is next.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -103,8 +103,7 @@ Status's notes into the Log, which on an archived Status in the closed set lifts
 repo that has not run v2.7's `migrate`: 1,139 of ShiftLead's 1,426 archived entries on 2026-11-11, 176 of them
 with notes `note` would lift) it may rewrite the Status. So `ledger.py note` refuses an archived entry whose
 Status `status_problem(text, archived=True)` faults — the whole 1,139, not only the 176, so one test says when an
-archived entry takes a note — *run migrate first*; on every other archived entry it appends one Log line and writes the file in canonical form (which, for 9 of
-ShiftLead's archived entries holding a double blank line, also collapses it). `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
+archived entry takes a note — *run migrate first*; on every other archived entry it appends one Log line and writes the file in canonical form. `set` and `edit` still take only open entries; a change to what an archived entry *says* is a
 `reopen`, then an edit, then an `archive`. The write's refusal rule stands (a `check()` error the ledger before it
 did not have), and `check()` reads only the open entries' Logs, as now.
 
