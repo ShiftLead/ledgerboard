@@ -1,7 +1,8 @@
 # TD-075: any offered `<head>:` or `<head>: <…>` answer is a form the person's words fill
 
-**Status:** Draft 3, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
-that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1's fact-check ran three times (build-changing 6, 2, 1; applied).
+**Status:** Draft 4, 2026-11-12 (session lb-designer). Class: **wide**: it changes a vendored, published format
+that both consumers read (cadence.md §4.8; cap 6 rounds). Rounds: round 1 ran: its fact-check four passes (build-changing 6, 2, 1, 0), its design review 2 build-changing
+and 5 minor, all applied; round 2 is next.
 
 **Entry:** [TD-075](../ledger/TD-075.md). **Source:** the entry's Why and Fix (ShiftLead's request, from its
 TD-1557's *Handed upstream*); `SPEC.md` *The board* (the `Answers:` and `Lifts:` bullets), *Edits* (`decide`,
@@ -42,7 +43,8 @@ nothing or one placeholder `<…>` (any spaces before it, none included, as `NOT
 form today). The head is one or more characters, none of them
 `:`, `<` or `>`, starting with neither a space nor a tab. So `Hold: <note>`, `Hold:`, `Other :  <what>` and
 `Not right: <what>` and `Hold:<note>` are forms; `Not right: wrong repo`, `Hold: <a> <b>`, `A: b: <c>` and `Go` are not. A form's
-head is compared **in any case, whitespace collapsed** (`form_head()`): `hold` and `HOLD` are one head. A complete
+head is the text before its `:`, **trimmed** (so `Other :  <what>`'s head is `Other`), and compared **in any case,
+whitespace collapsed** (`form_head()`): `hold` and `HOLD` are one head. A complete
 answer is everything else, as today.
 
 *Why this shape.* It is the look's form with its head opened, which keeps every look line's reading and gives
@@ -55,15 +57,15 @@ leave a work-order form (`Other: <what>`) unfillable.
 **D2. How a form is filled.** An answer given to an item (**said**), whitespace collapsed, **fills** a form among
 the item's offered answers when it is not itself one of the offered complete answers (compared as `_lifting()`
 compares, in any case; so `_lifting()` is given the offered answers, D5), and its text before its first `:`, trimmed, equals that form's head in any case. The
-**words** are the text after that colon, trimmed. The fill is written as the **head as offered**, `:`, one space,
-the words (`Hold: wait for the vendor` from `hold:wait for the vendor`). When the words are empty or are
+**words** are the text after that colon, trimmed. The fill is written as the **head as offered, trimmed**, `:`, one space,
+the words (`Other: x` from `other :x` against `Other :  <what>`; `Hold: wait for the vendor` from `hold:wait for the vendor`). When the words are empty or are
 themselves one placeholder, it is refused: *<head> needs its words* (the head as offered). When two offered forms
 share a head (which D4 faults, but a line may already stand so), the first fills. A said that names no form's head
 fills nothing and is the plain answer it is.
 
 **D3. The API.** Three functions, pure, over labels as `parse_answers()` gives them:
 - `is_form(label) -> bool` — D1.
-- `form_head(label) -> str | None` — the form's head, whitespace collapsed and lower-cased; `None` for a complete
+- `form_head(label) -> str | None` — the form's head, trimmed, whitespace collapsed and lower-cased; `None` for a complete
   answer.
 - `fill_form(said, offered, form=None) -> str | None` — D2's fill of `said` among `offered` (labels; a raw answer
   with its consequence or mark is read through `split_answer()` first), or `None` when it fills no form. With
@@ -89,7 +91,9 @@ ShiftLead's request keeps them.
   no words*); `item_problem()` faults the mark on a form on an open `decide`.
 - `decided_line()` (an item already decided, from a ledger entry's answers) writes no ` (default)` mark on a form:
   where `default` names one, the line is written without a mark, so no writer writes a marked form (a decided
-  line is not faulted, D4's last bullet, so this is the writer's rule alone, as ShiftLead asked).
+  line is not faulted, D4's last bullet, so this is the writer's rule alone, as ShiftLead asked). Its `words` are
+  written as given, neither filled nor refused, as today: the caller, which has the person's words and the entry's
+  answers, fills them first with `fill_form()`.
 - **A form whose head is a field's name** (`Due: <x>`, `Lifts:`) is no `label`: `item_line()` refuses it as it
   refuses any answer holding a field's name (`_item_words()`), `decided_line()` strips the field's colon as it
   does today (`ANY_FIELD_RE`), and the reader reads such a line as it does today.
@@ -97,6 +101,10 @@ ShiftLead's request keeps them.
   refusal can meet one. Only an open `decide` with no `Decided:` is faulted, the branch of `item_problem()` that
   checks a `decide`'s answers today; a decided line (`- [ ] … Decided: …`, which takes `item_problem()`'s
   `decided` branch), a closed item, and an item of any other kind are not: what is decided or closed is history.
+  `canonical_item()`, which runs `item_problem()` on the line it is given, refuses such a line too, so `board.py
+  fmt` names the fault on an open undecided `decide` that holds it even where nobody edited it. That is deliberate:
+  `fmt` is asked to make the line right, and the cure is the asker's (drop the mark, or give each form its own
+  head); a board `fmt` is not run on reads as before.
 
 **The answer is filled once, before anything is written.** `board.py`'s `plan_edit()` for `decide` fills a string
 answer (`fill_form()` over the item's offered answers; a missing answer goes on to today's refusal) before it calls `_decide_ledger()` and `subject()`, so the
@@ -135,7 +143,8 @@ now lifts, where it read as a work order, so `closes()` and the gate sweep may c
 release notes say so, and each consumer checks its board before vendoring with one search, `Decided:` beside a
 `Lifts:` naming a form (this repo's board carries no `Lifts:` field on 2026-11-12; the other boards are each
 consumer's to search). The new faults (D4) are flagged on open `decide` items only, as v2.1 flagged a cycle no earlier
-release named. The look's head read in any case makes `not right: …` a form where it was a complete answer. The
+release named. The look's head read in any case, and with spaces before its colon, makes `not right: …` and `Not right : …`
+forms where they were complete answers. The
 writers' new refusals (D4) are listed in the release notes too: `decide` refuses an unfilled form, which it wrote
 before, and `item_line()` refuses two forms with one head and a form as `default`.
 
@@ -143,7 +152,10 @@ It ships in the **last v2.x minor**, with TD-078's B1 and B2 (TD-078's D3, the s
 not yet tagged when its build merges), since TD-070's D12 allows no v2.x release after TD-070's B1, and ShiftLead's
 TD-1698 waits on it. So TD-070's B1, when filed, is also `Blocked by` this design's B1; whichever of TD-070's,
 TD-078's and this design's build filings comes last writes it. If it misses that minor, it ships in v3.0 and
-TD-1698 waits for v3.0.
+TD-1698 waits for v3.0. Two lines for this repo's own entries, written when their builds are filed: TD-070's B1's
+`decision (paul)` Ask (TD-078's D3) names this design's B1 beside TD-078's B1 and B2 as the builds the last v2.x
+minor holds; and TD-070's builds, which rework `BoardItem` and its readers, call `_lifting()` with its `offered`
+argument (D5), since B1 here makes it required.
 
 **D7. The grammar.** Unchanged: a form is a `label` as the grammar has it, and which labels are forms is a reading
 of one, as the consequence split is. The appendix's *What the productions leave to prose* gains a sentence
@@ -203,11 +215,14 @@ third, true alone, placed after them when they stand):
 > look's `Not right: <what>` was one, now every such label is, its head in any case, and an answer that fills a
 > form listed in `Lifts:` lifts. One thing is read differently on lines already written: a `Decided:` filling a
 > form its item's `Lifts:` lists now lifts, so `closes()` and the gate sweep may close the item or lift its gate,
-> where it read as a work order; and `not right: …` in lower case is the look's form. No key moves and the
+> where it read as a work order; and `not right: …` in lower case, or `Not right : …` with a space before its colon,
+> is the look's form. No key moves and the
 > canonical form is unchanged. Two new faults, on open `decide` items with no `Decided:`: two forms with one head,
 > and a form marked ` (default)`. The writers gain refusals: `decide` refuses a form unfilled (`Not right: <what>`
 > included, which it wrote before) and writes a fill with the head as offered; `item_line()` refuses two forms
-> with one head and `default` naming a form. A board with no form in a `Lifts:` reads as before.
+> with one head and `default` naming a form, and `fmt` (`canonical_item()`) names the two faults on such a line.
+> A board with no form in a `Lifts:` reads as before. A consumer writes a fill only once every reader of its
+> board runs v2.8: an older reader reads a fill as a work order and never lifts or closes it.
 
 Where the texts say v2.8, the build writes the minor it ships in (D6).
 
@@ -245,7 +260,14 @@ All in one build, B1, each group where its function's cases live today:
   item: the board's `Decided: Hold: wait`, the ledger's `gate lifted` line and the subject carry `Hold: wait`;
 - `fixtures/verdict/cases.json`: `lift_fill_matches` — a base and head tree where the head's board `Decided:` is
   a fill and its ledger's `gate lifted` line carries the same fill: `lift_pr_verdict()` passes;
-- `fixtures/sweep/`: `sweep_closes_filled_form`.
+- `fixtures/sweep/`: `sweep_closes_filled_form`, and cases for `_answered_within()` (a fill of a listed form counts
+  as lifted), `_answers_owing()` and `uncovered_decisions()` (an item whose only lifting answer is a form);
+- `fixtures/edit/`'s `forms`, `form_fills` and `not_right_forms` gain `Other :  <what>` (head `other`; `other :x`
+  filled `Other: x`) and `Not right : <what>` (now a form); `edits` gains `decide_fill_with_dash_and_colon`
+  (`Hold: revise — add log sources: the shapes` written and read back by `parse_decided()` unchanged, and
+  `closes()` reading it as a fill), `decide_fill_ending_by_refused` (`Hold: ask (by kim)`), and
+  `look_decided_fill` (`not right:grey` written `Not right: grey`; `Not right: <what>` refused); and a
+  `canonical_item()` case per new fault (the line refused, naming it).
 
 The new groups' outputs are new keys in their `expected.json`. `fixtures/MANIFEST` is not touched: `release.sh`
 re-stamps it at the release. Case names above label the cases; in groups whose cases carry no `name`
@@ -271,7 +293,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
   `plan_edit()`, so a fill is written and an unfilled form refused with no wrapper change; where it decides
   `--board-only` after a ledger `set --answer`, it fills the answer first and passes the fill to both (D4). Before vendoring, it
   searches its board for a `Decided:` filling a form its `Lifts:` lists (D6).
-- **ShiftLead**: its TD-1698 starts on the sync PR that carries the minor, calling `fill_form()` where TD-1557
+- **ShiftLead**: its TD-1698 starts on the sync PR that carries the minor, after agent-cadence's vendor PR (a fill
+  is written only once every reader of the board runs the minor, text 6), calling `fill_form()` where TD-1557
   says (and before both writes on a `--board-only` route, D4), and runs D6's search on its board first.
 
 ## Not in this design
