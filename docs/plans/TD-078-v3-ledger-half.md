@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Draft 5, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: four ran (build-changing per design review 6, 2, 2, 1; fact-checks 7, 1, 1, 0), their fixes applied; round 5 is next (round 4's design review raised one build-changing finding, so the stop rule did not end the rounds).
+**Status:** Draft 6, 2026-11-12 (session lb-designer). Class: **wide** — it changes a vendored, published format
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: five ran (build-changing per design review 6, 2, 2, 1, 2; fact-checks 7, 1, 1, 0, 0), their fixes applied; round 6, the cap's last, is next.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -25,7 +25,7 @@ Two things stand in the way.
    writer can: `set`, `note` and `edit` take only open entries (*The ledger writer*: "An archived entry is edited
    only once reopened"; `ledger.py`'s `_open_entry`). What is left is a hand edit, which cadence.md §2.12 allows
    for "a change to an archived entry other than `reopen`" only as the exception no command makes, through `fmt`
-   — not as the route by which three repos rewrite some 290 entries. The entry asks that each repo meet the
+   — not as the route by which three repos rewrite some 200 old forms (the table's 208 instances, fewer entries). The entry asks that each repo meet the
    precondition with no hand edit.
 2. **An archived entry cannot even take a note.** PR #226 (2026-11-11) named two archived entries in its title;
    the merge gate's ledger row asked it to touch their files, which no writer can, and the PR was retitled
@@ -43,9 +43,10 @@ What the four forms amount to, counted on 2026-11-11 with `entries()` and `parse
 | the old decision form | 0 / 0 | 2 / 0 | 7 / 4 |
 
 No entry holds a header `Resolved` beside a body `**Resolved:**` section, no open entry holds a `Waits`, and of the
-thirteen old-form entries nine already have an `**Ask:**` section (ShiftLead's six open and three archived). agent-cadence's pinned `ledger.py` still writes
-`Taken by` on every `new` and `renumber` (its `render()` and `plan()`, pinned tree `67023cc`), so its count grows
-until it stops.
+thirteen old-form entries nine already have an `**Ask:**` section (ShiftLead's six open and three archived). The agent-cadence tree this repo pins (`67023cc`)
+still writes `Taken by` on every `new` and `renumber` (its `render()` and `plan()`), so this repo's count grows
+until its pin moves past agent-cadence's TD-188 step 4, which agent-cadence's `main` (`acf46ea`, 2026-11-12)
+already carries: it writes `Id take` alone and drops a carried `Taken by` on `renumber`.
 
 ## Decisions
 
@@ -92,7 +93,7 @@ Text 1 is the one exact statement of the rules; this list is its summary. Three 
 The **post-condition** gains one clause: the migrated entry holds none of the four forms, and gains no `ask-missing`
 or `gate-repeated` the input did not have, else it is a stop.
 
-*Alternatives weighed.* (a) A `set` and `edit` that take archived entries, and each repo rewriting its 290 old
+*Alternatives weighed.* (a) A `set` and `edit` that take archived entries, and each repo rewriting its some 200 old
 forms entry by entry: many hand-chosen writes for a mechanical change, with history open to any edit. (b) Dropping
 `Taken by` and `Waits` with no Log line: shorter, but `migrate`'s rule is that nothing is lost, and the Log is
 where v2.7 put every other old value. (c) A stop for every old form with an `**Ask:**`: nine stops for a person,
@@ -127,7 +128,8 @@ B1, read as that minor.
 v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask: *Is
 the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under `ledgerboard/`,
 `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of TD-070's and
-TD-078's build filings comes second, with its board item). The release is Paul's.
+TD-078's build filings comes second, with its board item; TD-070's plan's D12 amendment says so too). The release
+is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
@@ -159,12 +161,15 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   caller checked), and `edit_entry`'s carried-gates clause, with their
   docstrings and `parse_gates()`'s; `_without`'s refusal, which `lift_gate()` and `reassign_gate()` share; `reassign_gate()`'s
   own; `_blocked_items`', `_one_copy`'s and `_item_gate_key`'s old-form branches; and `ledger.py`'s `set`-route
-  refusal (*migrate it first*). A value holding the item is then written by `new` and `set` as any unreadable item
+  refusal (*migrate it first*); and B2's base-side count in `uncovered_decisions()` (D1), which reads `old_form`
+  and would raise once the record loses it. A value holding the item is then written by `new` and `set` as any unreadable item
   is, for `check()`, whose error the writer's refusal rule (an error the ledger before did not have) refuses; and
   `lift_gate()` and `reassign_gate()` refuse it as a gate the entry does not carry. A person's name still compares
   in any case (`_gate_key`). So that it is named wherever it stands, `check()`'s retired records (above) include,
   on every entry open or archived, each `Blocked by` item that opens with `decision (<who>)` and has text after
-  it, as *the old decision form*: one error naming it, beside the unreadable item's own flag on an open entry.
+  it, as *the old decision form*: one error for the whole old item (from its `decision (` to the value's end, as
+  text 1 rule 8 defines it, commas and all), its text naming that item, beside the unreadable items' own flags on
+  an open entry (one per comma-split piece, as `parse_gates()` splits any value).
 - **`migrate` goes:** `migrate_entry()`, `migrate_subject()` and their helpers, `ledger.py migrate`, and
   `fixtures/migrate/`'s `migrate_entry` group and the `migrate_*` writer cases. `status_problem()` stays (the
   closed Status set is v3.0's too), with its message's new ending (text 10), and its cases move to
@@ -284,8 +289,9 @@ body`, `old decision form: <who> is not a person`, `old decision form: no text f
 > `archive/`, and refuses one whose Status is not (*run migrate first*); `set` and `edit` take an archived entry
 > only once reopened.
 
-**Text 4 (B1, then B2), *Versions*, after the v2.8 title paragraph.** Two paragraphs, each true alone: B1 writes
-the first, B2 the second.
+**Text 4 (B1, then B2), *Versions*, after the v2.8 title paragraph.** Two paragraphs, each true alone, in this order
+whatever order B1 and B2 merge in: B1's first, B2's after it; the later build places its paragraph before or after
+the earlier one's to keep that order.
 
 > **v2.8 gives an archived entry a note** (*The ledger writer*): `ledger.py note` writes an archived entry whose
 > Status is in the closed set in place, where v2.7 refused it, and refuses one whose Status is not (*run migrate
@@ -365,7 +371,8 @@ so the caller names its commit — except `migrate`'s, which names `migrate_subj
 a ledger edit has no commit subject of its own, so the caller names its commit)". `status_problem(text, *,
 archived)`'s definition (its first sentence in *Migrating to v2.7*) moves, word for word, to the end of *The closed
 Status set*, ahead of text 10's change there. The `set` route's sentence "a decision still in the old form is not dropped by `set` (*migrate it
-first*)" is removed.
+first*)" is removed, and so is *The merge gate's verdicts*' v2.8 sentence "A decision a base entry held in the old
+form (*The ledger*) is not gained when the head writes it `decision (<who>)` (v2.8)." (B2's).
 
 **Text 10 (B4), *The closed Status set*.** "…and ends *run migrate, which maps it, lists it, or names what a person
 decides*." becomes:
@@ -451,8 +458,12 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
 - `fixtures/lift/cases.json`'s two `old_form_refused` cases refuse it as a gate the entry does not carry;
 - `fixtures/ledger_writer/migrate_v3` — `python3 -m ledgerboard.ledger migrate` in v3.0: exit 2, the argument
   parser's refusal of an unknown action;
-- `fixtures/ids/cases.json` and `run.py`'s `ids` group lose `accept_taken_by`, and an entry with only a
-  `Taken by` fails `id-no-take`;
+- `fixtures/ids/cases.json` and `run.py`'s `ids` group lose `accept_taken_by`: its eight cases with
+  `"accept_taken_by": true` are removed, with the kinds `id-taken-by` and `id-no-taken-by` they expect (text 11),
+  and a new `taken_by_only_no_take` (an entry with only a `Taken by`) fails `id-no-take`;
+- `fixtures/verdict/`'s `migrate_old_form_not_gained` (B2's) is removed with the base-side count it pins;
+- `fixtures/ledger/`'s check cases also gain `retired_old_form_commas` (`decision (Kim) — a, b (c, d)` on an open
+  entry: one retired record naming the whole item, beside the comma-split pieces' unreadable-item flags);
 - `fixtures/ledger_edit/cases.json`'s `archive_header_resolved` (now refused), `reopen_header_resolved` and
   `reopen_refused_both_resolved` (the header left); `fixtures/ledger_edit/check/`'s `waits_*` and `location_*`
   (errors now, whatever the edit); `fixtures/ledger_edit/already.md` (its `Taken by` placed in the file's order);
@@ -471,19 +482,20 @@ with the code, and the precheck green.
   CLI help *append a dated line to an open entry's Log*), `SPEC.md` (text 3, text 4's first paragraph),
   `fixtures/ledger_writer/`, `tests/test_ledger_writer.py`.
 - **B2 — `migrate`'s rules 5–8 (D1).** Location: `ledgerboard/__init__.py` (`migrate_entry()` and its
-  post-condition; `uncovered_decisions()`'s base side counting an old-form holder, with a `fixtures/verdict/` case
-  where a migrate diff rewrites one and gains nothing, and *The merge gate's verdicts*' sentence for it: "A
+  post-condition; `uncovered_decisions()`'s base side counting an old-form holder, with a `fixtures/verdict/` case,
+  `migrate_old_form_not_gained`, where a migrate diff rewrites one and gains nothing, and *The merge gate's verdicts*' sentence for it: "A
   decision a base entry held in the old form (*The ledger*) is not gained when the head writes it `decision
   (<who>)` (v2.8).", after "…which not every machine reads."), `ledgerboard/ledger.py` (the `migrate` docstrings), `SPEC.md` (texts 1, 2, 4's second paragraph,
   5), `fixtures/migrate/`, `fixtures/ledger_writer/migrate_old_forms`, `tests/`. B1 and B2 in either order.
 - **B3 — this repo's own ledger migrated.** `python3 -m ledgerboard.ledger migrate --release <the minor> --ledger
-  docs/ledger` with B2's module, as its own PR: this repo's ledger has not run v2.7's rules either (its
-  `archive/TD-076.md` fails `status_problem()`) and holds 53 `Taken by`, 2 header `Resolved` and 1 `Waits`. Its
+  docs/ledger` with B2's module, as its own PR: this repo's ledger has not run v2.7's rules either: on 2026-11-12
+  `migrate --plan` changes four entries, the open TD-065, TD-070 and TD-078 (this design's own; a Status with notes
+  → `Open`, with a `was:` Log line) and the archived TD-076 (its Status, and `Location → body`); it holds 53 `Taken by`, 2 header `Resolved` and 1 `Waits`. Its
   stops, if any, are decided in the PR. **Blocked by** B2. Done when `migrate --plan` shows no entry with changes
   or stops. Entries filed afterwards through the pinned agent-cadence writer may carry `Taken by` again until
   agent-cadence stops writing it (*Consumers*); B4's own run of the plan catches them.
 - **B4 — v3.0's ledger removals (D4).** Location: `ledgerboard/__init__.py` (`RETIRED_FIELDS`, `pickable()`'s ℹ
-  `retired` field flag, `WAITS_WRITTEN`, `LOCATION_WRITTEN`, `WRITTEN_RETIRED` and `check()`'s `written` grading,
+  `retired` field flag, `uncovered_decisions()`'s old-form base-side count (B2's), `WAITS_WRITTEN`, `LOCATION_WRITTEN`, `WRITTEN_RETIRED` and `check()`'s `written` grading,
   `check()`'s retired records over every entry (fields and the old decision form), `GATE_DECISION_RE`'s whole match
   and `parse_gates()`, `edit_entry`'s `set`, `archive` and `reopen`, `_written_blocked()`, `OLD_FORM_REPLACES`,
   `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`, `judge_takes()`,
@@ -503,20 +515,23 @@ by` B1, B2 and Paul's decision that the minor is cut (D3; written on whichever i
 
 Lines for each consumer's own entry, filed there through its question seat (`ao td add --repo`), never here.
 
-- **agent-cadence**:
-  - its `ledger.py`'s `prose_waits` (pinned tree `67023cc`, `files/scripts/ledger.py`) scans the raw text after
-    `decision (…)` in a `Blocked by` for ids, through its vendored `DECISION_RE`; v2.8's `migrate` moves that text
-    into an `**Ask:**` or the Log, so an id named only there stops being seen. Of its two open old-form entries, TD-065's
-    text names no id and TD-144's names ShiftLead's TD-1029 in prose; its vendor PR for the last v2.x minor checks each such text
-    before running `migrate`, and an id that is a real wait moves into `Blocked by` first (as `shiftlead#TD-1029`), and the scan's
-    old-form span goes once no old form can stand (v3.0);
-  - its `ledger.py` stops writing `Taken by` on `new` and `renumber` and writes `Id take` alone (its TD-188's step
-    4), before its v3.0 vendor PR, since every `Taken by` is a v3.0 error;
+- **agent-cadence** (as its `main` stands at `acf46ea`, 2026-11-12, which vendors v2.7; the tree this repo pins,
+  `67023cc`, is older and is not what these lines describe):
+  - its `ledger.py`'s `prose_waits` (`files/scripts/ledger.py`) scans for ids the old form's text,
+    `LB.parse_gates(value)["old_form"][1]`; v2.8's `migrate` moves that text into an `**Ask:**` or the Log, so an id
+    named only there stops being seen. Of its two open old-form entries, TD-065's text names no id and TD-144's
+    names ShiftLead's TD-1029 in prose; its ledger's migrate PR checks each such text first, and an id that is a
+    real wait moves into `Blocked by` first (as `shiftlead#TD-1029`). Its v3.0 vendor PR drops that read, since the
+    record loses `old_form` (a `KeyError` otherwise);
+  - it already writes `Id take` alone and drops a carried `Taken by` on `renumber` (its TD-188 step 4), so no line
+    is needed for that; its archived `Taken by` lines go with its ledger's migrate;
   - its vendor PR for the last v2.x minor lets `note` take an archived entry through its wrapper (its own
     `edit()` refuses archived entries itself), with the same refusal of an archived Status outside the closed set,
-    and its ledger then runs that minor's `migrate` as its own PR;
-  - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes `migrate` from its
-    wrapper and `accept_taken_by` from its `judge_takes()` call, and reads `parse_gates()` without `old_form`.
+    and its ledger then runs that minor's `migrate` (`python3 -m ledgerboard.ledger migrate`, the vendored writer;
+    its wrapper has no `migrate` of its own) as its own PR;
+  - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then drops
+    `accept_taken_by=False` from its `judge_takes()` call (`files/scripts/ledger_next_id.py`), the keyword v3.0
+    removes, and `prose_waits`' `old_form` read.
 - **ShiftLead**: its Queue card's *held until …* reads the old form's text (`src/sessionorc/ledger.py`'s
   `until_of`, through `parse_gates()["old_form"]`), and seven open entries carry one; v2.8's `migrate` moves the
   text into an `**Ask:**` or the Log, so before its ledger runs it, `until_of` reads the `**Ask:**` (or the gate

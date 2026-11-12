@@ -639,7 +639,9 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   release follows B1, nothing of TD-065 lands after B1.
 - **TD-078's open question**, whether its archived-entry writer route "ships in a v2.x minor first", has the same
   answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0. *(Amended 2026-11-12, TD-078's
-  D3: it ships in the last v2.x minor, so B1 is `Blocked by` TD-078's B1 and B2.)*
+  D3: it ships in the last v2.x minor, so B1 is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, whose Ask is
+  whether that minor is tagged with nothing on `main` past it under `ledgerboard/`, `SPEC.md` or `fixtures/`; Paul's
+  answer lifts it once he has cut it.)*
 - **The builds**, B1 to B5, merge in order with no release between them; then v3.0.
 
 ## Consumers
