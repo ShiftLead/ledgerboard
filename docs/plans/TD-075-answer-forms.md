@@ -84,8 +84,8 @@ fills nothing and is the plain answer it is.
 (`not right: <what>` is a form). `fill_not_right()` keeps its refusal text, *Not right needs its words: say what is
 off*, and still returns `None` when `said` names another head or none, or no `Not right` form is offered.
 One output changes: a fill is written with one space after the colon, so `fill_not_right("Not right:grey", …)`
-returns `Not right: grey` where it returned `Not right:grey`; the eight existing `not_right_fills` cases all have
-a space there and keep their outputs. `NOT_RIGHT` and `NOT_RIGHT_FORM_RE` stay as names, the latter no longer used by the module (removing a public name
+returns `Not right: grey` where it returned `Not right:grey`; none of the eight existing `not_right_fills` cases
+has a colon with no space after it, so all keep their outputs. `NOT_RIGHT` and `NOT_RIGHT_FORM_RE` stay as names, the latter no longer used by the module (removing a public name
 is a major's). `fill_not_right()` keeps its lenient reading of `said` (`str(said or "")`, so a non-string or
 `None` gives `None`), where `fill_form()` refuses a non-string. *Weighed:* folding the two into `fill_form()` alone would be tidier, but they are public, and
 ShiftLead's request keeps them.
@@ -223,7 +223,7 @@ marked ` (default)` (v2.8; *The `Answers:` bullet*)."
 
 **Text 6, *Versions*, after the v2.8 title paragraph** (TD-078's text 4 writes two paragraphs there; this is a
 third, true alone, placed after them when they stand; where the minor is not v2.8 (D6), after the last v2.x
-paragraph, its title the minor's):
+paragraph, its title the minor's; where it ships in v3.0, within v3.0's paragraph instead):
 
 > **v2.8 reads any `<head>:` or `<head>: <…>` answer as a form** (*The board*, the `Answers:` bullet): where only a
 > look's `Not right: <what>` was one, now every such label is, its head in any case, and an answer that fills a
