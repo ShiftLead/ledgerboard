@@ -473,7 +473,8 @@ plan fixes the rules, B1 writes the words, and the fixtures pin them.
   has it before `edit_line()`. Every reader of an item's answers (`closes()`, `decide_lift()`,
   `_sweep_closes()`, `_answers_owing()`, `_answered_within()`, `uncovered_decisions()`, `edit_item()`'s `close`,
   `board.py`'s `_decide_ledger()`, and `item_file()`'s own check that some answer lifts) passes `_lifting(label, lifts, offered)` the item's offered labels —
-  `BoardItem.answers`, already labels, where it holds a `BoardItem`, else `parse_answers()` of the file (TD-075's D5); none compares an answer to `Lifts` itself.
+  `BoardItem.answers`, already labels, where it holds a `BoardItem`, else `parse_item(text).answers` (`parse_answers()` reads a v2 line only)
+  (TD-075's D5); none compares an answer to `Lifts` itself.
 
 **The gate**, `board_problems(board, old)`, judges each open item of `board` whose id no item of `old` (open or
 closed) has, as `(path, problem)`. It refuses only when `board` is a v2 board; `old` may be either major (the split
@@ -1365,7 +1366,7 @@ where `SPEC.md` holds them today:
 
 - **B1** (text 9 but its *gate* paragraph, as `## Edits (v3.0)`): none in *Edits*, which stands for the v2 writers
   until B5 (round 7's F92, F96); `## Edits (v3.0)` holds none of `item_line`, `decided_line`, `item_problem`,
-  `canonical_item` and `archive_subject` outside a v2-tagged sentence. **B5** (text 9's swap) searches *Edits* for
+  `canonical_item` (as a whole name: `canonical_item_file` stays) and `archive_subject` outside a v2-tagged sentence. **B5** (text 9's swap) searches *Edits* for
   those five (`edit_line` is not in *Edits*: `SPEC.md` holds it in *The merge gate's verdicts*, B4's, and *The
   board writer*, B3's).
 - **B2** (texts 2–6, 8's *Reading a board* and *Damage*, 9's *gate*, 11, 14's reader items): *The board* but its
