@@ -44,6 +44,8 @@ FIELD_RE = re.compile(r"^\*\*([A-Za-z][^*:\n]*?):\*\*[ \t]*(.*?)[ \t]*$")  # one
 FIELDS_DECL_RE = re.compile(r"^Fields:[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # the preamble's declaration
 CADENCE_FIELDS = ("priority", "type", "added", "status", "blocked by", "location", "part of",
                   "escaped from", "id take")  # the spec's own fields
+HEADER_NAMES = tuple(k for k in CADENCE_FIELDS if k != "location")  # v2.8: a body section so named is misplaced
+MISPLACED_FIELDS = ("title", "log")  # v2.8: never a header field — the heading's title, and the body's Log
 PRIORITY_RE = re.compile(r"^\*\*Priority:\*\*\s*(\w+)", re.MULTILINE)
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one line only
 PART_OF_RE = re.compile(r"^\*\*Part of:\*\*[ \t]*(.*?)[ \t]*$", re.MULTILINE)  # one parent, same ledger (v2.1)
@@ -641,7 +643,7 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
                           f"({' | '.join(allowed)})", e["id"], key, "vocabulary")
         if undeclared and vocab:
             for key in e["fields"]:
-                if key not in CADENCE_FIELDS and key not in vocab:
+                if key not in CADENCE_FIELDS and key not in vocab and key not in MISPLACED_FIELDS:  # v2.8: misplaced-name's
                     flags.add(f"ℹ {e['id']}: field {key!r} has no vocabulary on the preamble's Fields: line — "
                               "not validated; declare it (cadence.md §2.12)", e["id"], key, "undeclared-field")
         keys.setdefault(e["id"], lined.get(n) or implicit_key(prio, etype, e["id"], repo))
@@ -816,16 +818,22 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     Also with ``old`` (v2.7): the retired ``Waits`` field is an error on an entry whose Waits line the edit added
     or changed (SPEC *Retired words*), and stays information where the line is as it was. Last (v2.7), each
     entry's ``status`` (``_status_records()``): a Status outside the closed set, an error on every entry of a v2
-    ledger, open or archived, with or without ``old``, never standing. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
+    ledger, open or archived, with or without ``old``, never standing. From v2.8, ``misplaced-name`` (ℹ, never an
+    error, scoped by the entry's whole text): ``misplaced_names()`` of each open entry, the ledger's ``Fields:`` names
+    its declared ones. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
     texts = _entry_texts(ledger)
     old_texts = _entry_texts(old) if old is not None else {}
     day = utc_day(today, "check()'s today")
+    declared_fields = declared(ledger)[0]
     for tid, text in texts.items():
         for kind, why in log_problems(text):
             recs.append({"level": "error", "id": tid, "field": "log", "kind": kind, "text": f"⚠ {tid}: {why}",
+                         "standing": False})
+        for key, why in misplaced_names(text, declared_fields):  # v2.8: never an error
+            recs.append({"level": "info", "id": tid, "field": key, "kind": "misplaced-name", "text": f"ℹ {tid}: {why}",
                          "standing": False})
         for level, kind, why in event_problems(text, old_texts.get(tid, "") if old is not None else None, day):
             recs.append({"level": level, "id": tid, "field": "event", "kind": kind,
@@ -878,7 +886,7 @@ def _status_records(ledger: str, archive: str) -> list[dict]:
 
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
 EVENT_KINDS = ("event-section", "event-check", "event-ungated", "event-undated")  # check()'s flags on an entry's events (v2.4; event-undated v2.5)
-TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing", "gate-reassigned-often")  # flags that read the body: scoped by the entry's whole text
+TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing", "gate-reassigned-often", "misplaced-name")  # flags that read the body: scoped by the entry's whole text
 
 
 def _entry_texts(text: str) -> dict[str, str]:
@@ -3342,7 +3350,76 @@ def _section_key(lead: str) -> str:
     return field_key(lead.strip().rstrip(":"))
 
 
-def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None = None) -> str:
+def _declared_keys(declared_fields) -> set[str]:
+    """The ledger's ``Fields:`` names (``declared()``'s keys, or names as written) as section keys."""
+    return {_section_key(str(x)) for x in (declared_fields or ()) if str(x).strip()}
+
+
+def _misplaced_section(key: str, declared: set[str]) -> bool:
+    """A body section so keyed belongs elsewhere (v2.8): ``Title`` (the heading's) or a header name — the
+    format's own fields but ``Location``, or a name the ledger's ``Fields:`` line declares."""
+    return key == "title" or key in HEADER_NAMES or key in declared
+
+
+def _misplaced_field_refusal(name: str) -> str:
+    """Why a header field named ``Title`` or ``Log`` is not written (v2.8)."""
+    if field_key(name) == "title":
+        return "the title is the heading: use set --title"
+    return "the Log is a section its writers write, never a header field"
+
+
+def _misplaced_refusal(name: str, key: str) -> str:
+    """Why a section named ``name`` is not added (v2.8): the verb that writes it instead."""
+    if key == "title":
+        return "the title is the heading: use set --title"
+    return f"{name} is a header field: use set"
+
+
+def misplaced_names(text: str, declared_fields=()) -> list[tuple[str, str]]:
+    """``check()``'s ``misplaced-name`` (ℹ, v2.8) for one entry: [(field_key, sentence)], once for each
+    misplaced section — a body section named ``Title`` or a header name — and each misplaced field, a header
+    field named ``Title`` or ``Log``. An entry ``_entry_parts()`` refuses is not read (its own flag says why)."""
+    try:
+        m, header, body = _entry_parts(text)
+    except Refused:
+        return []
+    tid, declared = m.group(1), _declared_keys(declared_fields)
+    have = {field_key(n) for n, _ in header}
+    out, seen = [], set()
+    sections = _entry_sections(body)
+    for lead, _ in sections:
+        key = _section_key(lead) if lead is not None else None
+        if key is None or key in seen or not _misplaced_section(key, declared):
+            continue
+        seen.add(key)
+        name = lead.strip().rstrip(":").strip()
+        n = len(_keyed(sections, key))
+        if n > 1:
+            why = (f"its body has {n} sections named {name}, which belongs in the header — edit and --remove refuse "
+                   "a name two sections share: merge them and fix it by hand")
+        elif key == "title":
+            why = (f"a body section named {name} is not the title, which is the heading — remove it with "
+                   f"edit {tid} --section {name} --remove (set --title retitles)")
+        elif key in have:
+            why = (f"a body section named {name} belongs in the header — remove it with "
+                   f"edit {tid} --section {name} --remove")
+        else:
+            why = (f"a body section named {name} belongs in the header — set {name} first, then remove it with "
+                   f"edit {tid} --section {name} --remove")
+        out.append((key, why))
+    for n, _ in header:
+        key = field_key(n)
+        if key == "title":
+            out.append((key, f"a header field named {n.strip()} is not the title, which is the heading — retitle with "
+                             f"set {tid} --title, and remove the field with an empty set value (--field '{n.strip()}=')"))
+        elif key == "log":
+            out.append((key, f"a header field named {n.strip()} is not the Log, a section its writers write — remove "
+                             f"it with an empty set value (set {tid} --field '{n.strip()}=')"))
+    return out
+
+
+def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None = None,
+               declared_fields=()) -> str:
     """A new entry in canonical form: ``## <tid>: <title>``, its ``fields`` ({name: value} or (name,
     value) pairs, one line each; an empty value is left out), then ``sections`` — (name, text) pairs or a {name: text}
     mapping, each written ``**<name>:** <text>``, a whitespace-only line emptied (in a code block
@@ -3356,7 +3433,10 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
     ``filed`` (v2.4: {today, who, session, words, while}) writes the entry's Log: its first line,
     ``filed by <who>, session <s>[, while <id>]: "<words>"``, then one ``gate added: <gate>`` for each
     gate its Blocked by is filed with, in the canonical order. With it, Added is a bare date, Status (if given)
-    is ``Open``, and no section is named Log; ``today`` is a date, ``YYYY-MM-DD`` or an aware datetime."""
+    is ``Open``, and no section is named Log; ``today`` is a date, ``YYYY-MM-DD`` or an aware datetime.
+
+    From v2.8 it also refuses a field named ``Title`` or ``Log``, and a section named ``Title`` or a header name
+    (``HEADER_NAMES``, or a name of the ledger's ``Fields:`` line, given as ``declared_fields``)."""
     if not ID_ITEM_RE.match(str(tid)):
         raise Refused(f"an entry's id is TD-n, not {tid!r}")
     title = str(title or "")
@@ -3369,6 +3449,8 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
             continue
         if "\n" in value or "\r" in value:
             raise Refused(f"the {name} field is one line (cadence.md §2.12)")
+        if field_key(name) in MISPLACED_FIELDS:  # v2.8
+            raise Refused(_misplaced_field_refusal(name))
         m = FIELD_RE.match(f"**{name}:** {value}")
         if not m or m.group(1) != name or m.group(2) != value:
             raise Refused(f"{name!r}: {value!r} would not read back as one field")
@@ -3377,6 +3459,10 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
         seen.add(field_key(name))
         header.append((name, _written_blocked(value) if field_key(name) == "blocked by" else value))
     pairs = list(sections.items()) if isinstance(sections, Mapping) else list(sections or ())
+    declared = _declared_keys(declared_fields)
+    for name, _ in pairs:  # v2.8: a section that belongs in the header, or the heading
+        if name and _misplaced_section(_section_key(f"{str(name).strip()}:"), declared):
+            raise Refused(_misplaced_refusal(str(name).strip().rstrip(":"), _section_key(f"{str(name).strip()}:")))
     if filed is not None:
         added, status = _value(header, "added"), _value(header, "status")
         if added is not None and not ISO_DAY_RE.fullmatch(added):
@@ -3418,7 +3504,7 @@ def entry_text(tid: str, title: str, fields, sections, *, filed: Mapping | None 
 
 
 ENTRY_ACTIONS = ("set", "note", "edit", "archive", "reopen", "renumber", "rename_ref")
-_ENTRY_ARGS = {"set": {"fields"}, "note": {"words"}, "edit": {"section", "words"},
+_ENTRY_ARGS = {"set": {"fields", "title"}, "note": {"words"}, "edit": {"section", "words", "remove", "declared_fields"},
                "archive": {"why", "pr", "pointer", "as_is", "superseded_by", "dropped"}, "reopen": {"why"},
                "renumber": {"new"}, "rename_ref": {"old", "new"}}  # each action's keyword arguments
 _DATED_ACTIONS = ("note", "archive", "reopen")  # the actions that write today's date
@@ -3578,7 +3664,7 @@ LOG_LINE_RE = re.compile(r"^- (?P<date>\d{4}-\d{2}-\d{2}): (?P<words>\S.*?)$")
 # The writer prefixes (SPEC *The Log*): `note` refuses words that begin with one, and a lifted
 # Status note that would is written `note: <text>`.
 LOG_PREFIXES = ("filed by ", "gate added:", "gate lifted:", "gate reassigned:", "kept waiting:",
-                "gate lift skipped:", "was:", "archived:", "reopened —")
+                "gate lift skipped:", "was:", "archived:", "reopened —", "retitled:")  # retitled: v2.8
 LOG_TOKEN = r"[A-Za-z0-9_.@/-]+"  # who, a session, a host: no spaces, commas, colons or quotes
 LOG_ID = rf"(?:{REPO}#)?TD-\d+"  # the ids Blocked by takes
 LOG_GATE = r"decision \(" + PERSON + r"\)|until \d{4}-\d{2}-\d{2}|event \([a-z0-9-]+\)"
@@ -3605,6 +3691,7 @@ LOG_SHAPES = (
     ("archived", re.compile(r"archived: (?P<word>[A-Za-z]+) — (?P<why>\S.*)")),
     ("reopened", re.compile(r"reopened — (?P<why>\S.*)")),
     ("was", re.compile(r"was: (?P<status>\S.*)")),
+    ("retitled", re.compile(r"retitled: was \"(?P<title>.*)\"")),  # v2.8: the heading's title before set changed it
 )
 # The Status words, in two roles: the head words status_notes_to_log() reads (SPEC *The Log*), the four
 # of the target table and the reserved ones v2.5's migrate maps away; and the words an archived blocker's
@@ -3628,7 +3715,8 @@ LOG_AGE_KINDS = ("gate-added", "kept-waiting", "gate-reassigned")
 def log_line(line: str) -> dict | None:
     """One Log line read: {date, kind, text} and the shape's parts, or None for a line that is not
     ``- YYYY-MM-DD: words``. ``kind`` is a writer shape's (``filed``, ``gate-added``, ``gate-lifted``,
-    ``gate-lift-skipped``, ``kept-waiting``, ``gate-reassigned``, ``archived``, ``reopened``, ``was``),
+    ``gate-lift-skipped``, ``kept-waiting``, ``gate-reassigned``, ``archived``, ``reopened``, ``was``,
+    ``retitled`` (v2.8)),
     ``note`` for any other words, or ``malformed`` for words that begin with a writer prefix and do
     not take its shape. A ``gate-lifted`` line also says ``via``: answer, override, check or date."""
     m = LOG_LINE_RE.match(line.rstrip("\r"))
@@ -4295,7 +4383,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                words: str | None = None, section: str | None = None, why: str | None = None,
                pr: int | None = None, pointer: str | None = None, as_is: bool = False,
                superseded_by: str | None = None, new: str | None = None, old: str | None = None,
-               dropped: bool = False) -> str:
+               dropped: bool = False, title: str | None = None, remove: bool = False,
+               declared_fields=None) -> str:
     """One entry's text after ``action`` (``ENTRY_ACTIONS``), in canonical form; raises Refused. The
     edits (SPEC *Ledger entries and their edits*; from v2.4 note, archive and reopen write the Log):
 
@@ -4303,11 +4392,17 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       written with its ids first, then its gates in the canonical order, and refused in the old form,
       or when it adds a gate to an entry whose Blocked by still holds the old form; from v2.5 each gate
       it adds that the entry did not carry is logged ``- <today>: gate added: <gate>`` in that order;
+      from v2.8 ``title`` replaces the heading's title (``fields`` may then be empty), logged ``- <today>:
+      retitled: was "<old title>"`` ahead of any gate added line, and a non-empty ``Title`` or ``Log`` field is
+      refused; a title equal to the entry's, as read, changes nothing;
     - ``note`` (``words``): the Status's notes lifted into the Log (``status_notes_to_log``), then
       ``- <today>: <words>`` appended to it; refused for words that begin with a Log writer's prefix;
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
       kept; a section the body lacks is added after the first Why, else before the first Done when,
-      Related or Log, else at the end; the Log itself is refused;
+      Related or Log, else at the end; the Log itself is refused; from v2.8 adding a section named ``Title`` or
+      a header name (``HEADER_NAMES``, or ``declared_fields``: the ledger's ``Fields:`` names) is refused, and
+      ``remove`` (no ``words``) removes such a misplaced section — refused for any other, and for a header
+      name the entry's header lacks (set it first);
     - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``, ``TD-n`` or
       ``<repo>#TD-n``; or ``dropped``, v2.4: Status ``Dropped <today>`` and ``archived: Dropped — <why>``,
       the rest kept; ``archive_plan()`` says first which dependents each leaves, or refuses): the
@@ -4338,29 +4433,45 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     given = {k for k, v in (("fields", fields), ("words", words), ("section", section), ("why", why),
                             ("pr", pr), ("pointer", pointer), ("as_is", as_is or None),
                             ("superseded_by", superseded_by), ("new", new), ("old", old),
-                            ("dropped", dropped or None)) if v is not None}
+                            ("dropped", dropped or None), ("title", title), ("remove", remove or None),
+                            ("declared_fields", declared_fields)) if v is not None}
     stray = sorted(given - _ENTRY_ARGS[action]) + (["today"] if today is not None and action not in _TODAY_ACTIONS else [])
     if stray:
         raise Refused(f"{action} takes no {', '.join(stray)}")
     day = utc_day(today, action) if action in _DATED_ACTIONS or today is not None else ""
     m, header, body = _entry_parts(canonical(text))
-    tid, title = m.group(1), m.group(3).strip()
+    tid, heading = m.group(1), m.group(3).strip()
     title_read = entries(canonical(text))[0]["title"]  # as the reader reads it: an HTML comment dropped
     sections = _entry_sections(body)
     body_changed = False
 
     if action == "set":
-        if not fields:
+        if not fields and title is None:
             raise Refused("set needs the fields to set")
+        fields = fields or {}
         keys = [field_key(str(n)) for n in fields]
         if len(set(keys)) != len(keys):
             raise Refused("set names one field twice")
+        if title is not None:  # v2.8: the retitle, logged ahead of any gate added line
+            said = str(title).strip()
+            if not said or "\n" in said or "\r" in said or "<!--" in said:
+                raise Refused("a title is one line, not empty, with no \\r and no HTML comment — the heading would not "
+                              "read back as that title")
+            was = COMMENT_RE.sub("", heading).strip()  # the heading line's title as read, never the next line's
+            if said != was:
+                if not day:
+                    raise Refused("set retitles the entry, which the Log dates — pass today (v2.8)")
+                sections = _log_insert(sections, [(day, f'retitled: was "{was}"')], by_date=False)
+                body_changed = True
+                heading = title_read = said
         for name, value in fields.items():
             name = str(name).strip()
             if not value or not str(value).strip():
                 header = _with(header, name, None)
                 continue
             value = _one_line(f"the {name} field", value)
+            if field_key(name) in MISPLACED_FIELDS:  # v2.8: a removal (above) is the cure, never a value
+                raise Refused(_misplaced_field_refusal(name))
             if field_key(name) == "blocked by":
                 current = _value(header, "blocked by")
                 value = _written_blocked(value, current)
@@ -4393,30 +4504,45 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         name = _one_line("the section's name", section).rstrip(":").strip()
         if not name:
             raise Refused("edit needs the section's name")
-        if _section_key(name) == "log":
+        key = _section_key(name)
+        if key == "log":
             raise Refused("the Log is written by its writers (note, archive, reopen), never replaced by edit")
-        said = "\n".join(ln.rstrip() if not ln.strip() else ln
-                         for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
-        if not said.strip():
-            raise Refused(f"the section {name!r} needs its words")
-        at = _keyed(sections, _section_key(name))
+        declared = _declared_keys(declared_fields)
+        at = _keyed(sections, key)
         if len(at) > 1:
             raise Refused(f"the body has {len(at)} sections named {name!r} — edit it by hand")
-        before = parse_event_section(sections[at[0]][1]) if at else None
-        if at:
-            sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")
+        if remove:  # v2.8: a misplaced section removed, lead and paragraphs
+            if words is not None:
+                raise Refused("remove takes no words")
+            if not _misplaced_section(key, declared):
+                raise Refused(f"{name} is not misplaced: only a section named Title or as a header field is removed")
+            if not at:
+                raise Refused(f"the body has no section named {name!r} to remove")
+            if key != "title" and key not in {field_key(n) for n, _ in header}:
+                raise Refused(f"set {name} first: removing it would lose its only words")
+            del sections[at[0]]
         else:
-            pos = _section_place(sections)
-            sections.insert(pos, (f"{name}:", f"**{name}:** {said}"))
-        after = parse_event_section(sections[at[0] if at else pos][1])
-        carried = parse_gates(_value(header, "blocked by"))["events"]
-        if after["name"] in carried and not after["problem"] and after["check"]["type"] == "host-log" and (
-                before is None or before["problem"] or before["check"]["type"] != "host-log"
-                or _host_log_key(before["check"]) != _host_log_key(after["check"])):  # a changed question: a new wait
-            gate = f"event ({after['name']})"
-            if not day:
-                raise Refused(f"edit makes {gate}'s host-log check a new wait, which the Log dates — pass today (v2.5)")
-            sections = _log_insert(sections, [(day, f"gate added: {gate}")], by_date=False)
+            said = "\n".join(ln.rstrip() if not ln.strip() else ln
+                             for ln in str(words or "").replace("\r\n", "\n").split("\n")).strip("\n")
+            if not said.strip():
+                raise Refused(f"the section {name!r} needs its words")
+            if not at and _misplaced_section(key, declared):  # v2.8: a replace is allowed, an add is not
+                raise Refused(_misplaced_refusal(name, key))
+            before = parse_event_section(sections[at[0]][1]) if at else None
+            if at:
+                sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")
+            else:
+                pos = _section_place(sections)
+                sections.insert(pos, (f"{name}:", f"**{name}:** {said}"))
+            after = parse_event_section(sections[at[0] if at else pos][1])
+            carried = parse_gates(_value(header, "blocked by"))["events"]
+            if after["name"] in carried and not after["problem"] and after["check"]["type"] == "host-log" and (
+                    before is None or before["problem"] or before["check"]["type"] != "host-log"
+                    or _host_log_key(before["check"]) != _host_log_key(after["check"])):  # a changed question: a new wait
+                gate = f"event ({after['name']})"
+                if not day:
+                    raise Refused(f"edit makes {gate}'s host-log check a new wait, which the Log dates — pass today (v2.5)")
+                sections = _log_insert(sections, [(day, f"gate added: {gate}")], by_date=False)
         body_changed = True
     elif action == "archive":
         said = _one_line("the archive's why", why)
@@ -4504,7 +4630,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         raise Refused("an HTML comment in the body spans paragraphs, so a section's edit could land inside "
                       "it — edit by hand")
     new_body = "\n\n".join(t for _, t in sections) if body_changed else body
-    out = canonical(_render(tid, title, header, new_body))
+    out = canonical(_render(tid, heading, header, new_body))
     want = (tid, title_read, {field_key(n): v for n, v in header},
             [(_section_key(lead) if lead is not None else None, t) for lead, t in sections])
     e = entries(out)[0]

@@ -5,6 +5,7 @@ as a module."""
 import ast
 import contextlib
 import io
+import json
 import os
 import subprocess
 import sys
@@ -146,6 +147,37 @@ class Location(unittest.TestCase):  # v2.7 (TD-058 D4): the Location is a body s
         self.assertIn(L.LOCATION_WRITTEN, recs["TD-002"]["text"])
         self.assertTrue(all(r["level"] == "info" for r in L.check(new, "", today="2026-01-15")
                             if r["kind"] == "retired"))
+
+
+class Retitle(unittest.TestCase):  # v2.8 (TD-068 B1): set --title and edit --remove at the command line
+    def test_remove_with_from_and_neither_are_usage_errors_with_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            src = Path(tmp, "s.md")
+            src.write_text("x\n")
+            for extra in (["--remove", "--from", str(src)], []):
+                code, out, _ = run("edit", "TD-001", "--section", "Status", *extra, "--ledger", d, "--json")
+                self.assertEqual(code, 2, out)
+                self.assertIn("unusable", json.loads(out))
+
+    def test_title_alone_is_a_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            code, out, _ = run("set", "TD-001", "--title", "A narrower scope", "--ledger", d, "--today", "2026-01-15")
+            self.assertEqual(code, 0, out)
+            text = Path(d, "TD-001.md").read_text()
+            self.assertTrue(text.startswith("## TD-001: A narrower scope\n"))
+            self.assertIn('- 2026-01-15: retitled: was "The parser drops a trailing comment"\n', text)
+
+    def test_a_lift_on_the_set_route_comes_before_the_retitle(self):
+        gated = E1.replace("**Status:** Open\n", "**Status:** Open\n**Blocked by:** decision (kim)\n") + \
+            "\n**Ask:** which way?\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp, **{"TD-001.md": gated})
+            plan = W.plan_edit(W.Ledger.open(d), "set", "TD-001", fields={"Blocked by": ""}, by="kim",
+                               title="A narrower scope", today="2026-01-15")
+            log = plan.changes[os.path.join(d, "TD-001.md")].split("**Log:**\n", 1)[1].splitlines()
+            self.assertEqual([L.log_line(x)["kind"] for x in log], ["gate-lifted", "retitled"])
 
 
 class Migrate(unittest.TestCase):  # v2.7 (TD-058 B2): ledger.py migrate's text output and its usage errors

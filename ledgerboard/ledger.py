@@ -12,7 +12,7 @@
                                        [--status S] [--blocked-by B] [--part-of TD-n] [--location L]
                                        [--field NAME=VALUE]... [--take NONCE]
                                        [--by WHO --session S --words W [--while ID]]
-    python3 -m ledgerboard.ledger set  TD-n --FIELD VALUE ... [--field NAME=VALUE]...
+    python3 -m ledgerboard.ledger set  TD-n [--title T] --FIELD VALUE ... [--field NAME=VALUE]...
                                        [--by WHO [--answer L] [--board R | --no-board-item | --shared-item]
                                         | --by WHO --override WHY | --by WHO --why W]
     python3 -m ledgerboard.ledger split [--archive FILE] [--to DIR] [--also FILE...]
@@ -21,7 +21,7 @@
                                        [--board R | --no-board-item | --shared-item] [--people P,...]
                                        [--answered-by owner|any]
     python3 -m ledgerboard.ledger note TD-n "words"
-    python3 -m ledgerboard.ledger edit TD-n --section NAME --from FILE|-
+    python3 -m ledgerboard.ledger edit TD-n --section NAME (--from FILE|- | --remove)
     python3 -m ledgerboard.ledger archive TD-n --why W [--pr N] [--pointer P] [--as-is]
                                           [--superseded-by ID | --dropped] [--also FILE...]
     python3 -m ledgerboard.ledger reopen TD-n --why W [--also FILE...]
@@ -87,6 +87,7 @@ from . import (
     archive_plan,
     canonical,
     check,
+    declared,
     edit_entry,
     entries,
     entry_path,
@@ -445,7 +446,8 @@ def plan_new(led: Ledger, tid: str, title: str, fields: Sequence[tuple[str, str]
         raise Refused("an entry needs its Why: the Why is the point of an entry")
     if loc:  # after the Why and before every other section, where edit --section puts it
         sections = [sections[0], ("Location", str(loc[0]).strip()), *sections[1:]]
-    entry = entry_text(tid, title, out, sections, filed=dict(filed, today=day) if filed is not None else None)
+    entry = entry_text(tid, title, out, sections, filed=dict(filed, today=day) if filed is not None else None,
+                       declared_fields=tuple(declared(text)[0]))  # v2.8: a section never named as a header field
     path = _join(led.path, f"{tid}.md")
     notes = gate(led, {path: entry}, base=base, resolve=resolve, today=day)
     return Plan("new", None, {path: entry}, {"id": tid, "notes": notes})
@@ -519,9 +521,11 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
               words: str | None = None, section: str | None = None, by: str | None = None,
               answer: str | None = None, suffix: str | None = None, override: str | None = None,
               why: str | None = None, base: Ledger | None = None, resolve: Resolve | None = None,
-              today: str | None = None) -> Plan:
-    """One edit of an open entry (``edit_entry()``): ``set`` (``fields``, an empty value removing one), ``note``
-    (``words``, a dated Log line) or ``edit`` (``section`` replaced by ``words``). A ``set`` whose Blocked by
+              today: str | None = None, title: str | None = None, remove: bool = False) -> Plan:
+    """One edit of an open entry (``edit_entry()``): ``set`` (``fields``, an empty value removing one; from v2.8
+    ``title``, the heading's), ``note`` (``words``, a dated Log line) or ``edit`` (``section`` replaced by
+    ``words``, or from v2.8 a misplaced one removed with ``remove``; the ledger's ``Fields:`` names are passed as
+    ``declared_fields``). A ``set`` whose Blocked by
     drops a decision lifts it (``by``, ``answer``, ``suffix``, or ``override``) or, swapping it for another,
     reassigns it (``by``, ``why``): ``_gate_route()``."""
     if action not in ("set", "note", "edit"):
@@ -533,9 +537,14 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
         raise Unusable(f"{action} takes no gate route: --by, --answer, --override and --why are set's")
     if action == "set":
         lifted = _gate_route(text, dict(fields or {}), day, **route)
-        out = edit_entry(lifted, "set", fields=dict(fields or {}), today=day)  # v2.5: dates a gate it adds
+        out = edit_entry(lifted, "set", fields=dict(fields or {}), today=day,  # v2.5: dates a gate it adds
+                         **({"title": title} if title is not None else {}))  # v2.8: and a retitle
     else:
-        kw: dict = {"words": words} if action == "note" else {"section": section, "words": words}
+        if action != "edit" and (title is not None or remove):
+            raise Unusable(f"{action} takes no title or remove")
+        kw: dict = {"words": words} if action == "note" else {
+            "section": section, "declared_fields": tuple(declared(led.texts()[0])[0]),
+            **({"remove": True} if remove else {"words": words})}
         kw["today"] = day  # note's date; edit's (v2.5) only to date a host-log check it makes a new wait
         out = edit_entry(text, action, **kw)
     if out == text:
@@ -1038,9 +1047,9 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog=f"ledgerboard.ledger {cmd}", description={
         "fmt": "write each entry of a v2 ledger in canonical form",
         "new": "file a new entry in a v2 ledger, in canonical form, under an id the caller took",
-        "set": "set an open entry's header fields (an empty value removes one)",
+        "set": "set an open entry's header fields (an empty value removes one), or (v2.8) its title",
         "note": "append a dated line to an open entry's Log",
-        "edit": "replace one section of an open entry (or add it where SPEC puts it)",
+        "edit": "replace one section of an open entry (or add it where SPEC puts it), or (v2.8) remove a misplaced one",
         "archive": "archive an open entry (Resolved, Superseded or Dropped) and move its file to archive/",
         "reopen": "reopen an archived entry and move its file back into the ledger",
         "renumber": "give an open entry the id the caller took: its file, heading, the fields naming it, its rank line",
@@ -1077,6 +1086,7 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         if cmd == "set":
             _field_flags(ap, {"location": "empty only: removes a header Location (v2.7: write the body section with "
                                           "edit --section Location)"})
+            ap.add_argument("--title", help="the heading's title, logged retitled: was \"<old>\" (v2.8)")
             ap.add_argument("--by", help="who lifts or reassigns a decision the new Blocked by drops (the caller has "
                                          "checked who ran it)")
             ap.add_argument("--answer", help="the lifting answer's label (default Go)")
@@ -1096,7 +1106,9 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
             ap.add_argument("words", help="the note, one line")
         elif cmd == "edit":
             ap.add_argument("--section", required=True, help="the section's name: Why, Fix, Done when, …")
-            ap.add_argument("--from", dest="src", required=True, metavar="FILE", help="its new text from a file, or - for stdin")
+            ap.add_argument("--from", dest="src", metavar="FILE", help="its new text from a file, or - for stdin")
+            ap.add_argument("--remove", action="store_true", help="remove the section, in place of --from: only one "
+                            "named Title or as a header field (v2.8)")
         elif cmd in ("archive", "reopen"):
             ap.add_argument("--why", required=True, help="one line: why it is archived, or open again")
             if cmd == "archive":
@@ -1179,10 +1191,12 @@ def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
                         resolve=resolve, today=a.today)
     if cmd == "set":
         fields = dict(_fields_given(a))
-        if not fields:
-            raise Unusable("give at least one field to set")
+        if a.title is not None and not a.title.strip():
+            raise Unusable("--title is empty: an entry keeps a title")
+        if not fields and a.title is None:
+            raise Unusable("give at least one field, or --title, to set")
         return plan_edit(led, "set", tid_of(a.id), fields=fields, by=a.by, answer=a.answer, suffix=_suffix(a),
-                         override=a.override, why=a.why, base=base, resolve=resolve, today=a.today)
+                         override=a.override, why=a.why, base=base, resolve=resolve, today=a.today, title=a.title)
     if cmd == "lift":
         people = [x.strip() for x in a.people.split(",") if x.strip()] if a.people is not None else None
         return plan_lift(led, tid_of(a.id), a.gate, a.by, answer=a.answer, evidence=a.evidence, suffix=_suffix(a),
@@ -1201,6 +1215,13 @@ def _build(cmd: str, a: argparse.Namespace, resolve: Resolved) -> Plan:
                            "keeps its Why and Fix")
         return plan_archive(led, tid_of(a.id), a.why, pr=a.pr, pointer=a.pointer, as_is=a.as_is,
                             superseded_by=a.superseded_by, dropped=a.dropped, **kw)
+    if a.remove and a.src is not None:
+        raise Unusable("--remove takes no --from: it removes the section")
+    if a.remove:
+        return plan_edit(led, "edit", tid_of(a.id), section=a.section, remove=True, base=base, resolve=resolve,
+                         today=a.today)
+    if a.src is None:
+        raise Unusable("give --from FILE|- with the section's text, or --remove")
     words = _read_src("--from", a.src).strip()
     if not words:
         raise Unusable("--from is empty: a section is never emptied by edit")

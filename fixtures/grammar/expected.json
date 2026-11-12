@@ -1298,6 +1298,20 @@
     "why": "malformed"
    }
   ],
+  "log-retitled": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "malformed"
+   }
+  ],
   "log-token": [
    {
     "accepted": true,

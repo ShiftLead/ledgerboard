@@ -504,12 +504,13 @@ to lose or duplicate a line of, leaving that for a person to fix:
 
 Its rule: the result reads back the same id, title, fields and body, or nothing is written.
 
-**A new entry** (`entry_text(id, title, fields, sections, *, filed=None)`) is that form. Its fields are one line
+**A new entry** (`entry_text(id, title, fields, sections, *, filed=None, declared_fields=())`) is that form. Its fields are one line
 each, and an empty value is left out. Each section is written `**<name>:** <text>`; a first section
 with no name is the unnamed one, written as given. It is refused for an id that is not `TD-n`, a
 title that is empty or more than one line, a field that would not read back as one line or is named
 twice, and sections that would not read back as given (a section's paragraph that opens in bold
-would start a section of its own). A `Blocked by` is written as the writers write it (*The ledger*):
+would start a section of its own). From v2.8 it also refuses a field named `Title` or `Log`, and a section named
+`Title` or a header name (*edit*, below), the ledger's `Fields:` names given as `declared_fields`. A `Blocked by` is written as the writers write it (*The ledger*):
 its ids, then its gates in their order; the old form is refused. With `filed` (v2.4: `today`, `who`, `session`, `words`, and
 optionally `while`), it writes the entry's Log: the `filed by` line, then one `gate added: <gate>` line
 for each gate its `Blocked by` is filed with, in their order, so a gate ages from the day it was filed. A filed entry's `Added` is the date
@@ -521,7 +522,9 @@ the lead, one per line, each `- YYYY-MM-DD: words`, oldest first. It is always t
 section. `check()` flags a section after it, or a second Log (`log-not-last`), and a line that is not
 `- YYYY-MM-DD: words` or that opens with a writer's prefix but not in its shape (`log-line`). Both
 are errors on an entry this edit changed (its whole text, not only its header) and information on a
-standing one. `check()` reads the Logs of the open entries, not the archive's. A writer that appends to the Log refuses one that is not last, and `edit` and
+standing one. `check()` notes (ℹ, `misplaced-name`, v2.8) each misplaced section (*edit*, below) and each **misplaced
+field**: a header field named `Title` or `Log`. It is never an error: `edit`'s `remove` and `set`'s empty value clean
+them. An entry `canonical()` refuses is not read for it. `check()` reads the Logs of the open entries, not the archive's. A writer that appends to the Log refuses one that is not last, and `edit` and
 `archive` put a section they add before it.
 - **Every ledger date is the UTC date.** The entry writers take a date, `YYYY-MM-DD`, or an aware
   datetime, which they turn into its UTC date; a naive datetime is refused, since its zone is unknown.
@@ -544,9 +547,10 @@ standing one. `check()` reads the Logs of the open entries, not the archive's. A
   - `kept waiting: <gate> — by <who>; answer "<label>"`.
   - `gate reassigned: decision (<a>) → decision (<b>) — by <who>; <why>`.
   - `archived: <Status word> — <why>`, `reopened — <why>`, and `was: <Status>`.
+  - `retitled: was "<title>"` (v2.8), the title the heading held before `set` changed it.
   - Any other words are a note, kept byte for byte, an unknown tool's line among them.
 - **The writer prefixes are reserved:** `filed by `, `gate added:`, `gate lifted:`, `gate
-  reassigned:`, `kept waiting:`, `gate lift skipped:`, `was:`, `archived:`, `reopened —`. `note`
+  reassigned:`, `kept waiting:`, `gate lift skipped:`, `was:`, `archived:`, `reopened —`, `retitled:` (v2.8). `note`
   refuses words that begin with one ("reopened the thread" is still a note), and a lifted Status note
   that would is written `note: <text>`.
 - **A gate's age** (`gate_age(text, gate)`) is the date of the latest `gate added`, `kept waiting` or
@@ -601,7 +605,7 @@ nothing else: the same id, title, fields and sections but for the change. An edi
 the body joins its sections with one blank line, and is refused when an HTML comment there spans
 paragraphs. The date is the caller's (`today`, a date, `YYYY-MM-DD` or an aware datetime, written as its UTC date; a time is never written, and a naive datetime is refused), and
 an argument the action does not take is refused (`today` is taken by `note`, `archive` and `reopen`, which
-require it, and from v2.5 by `set` and `edit`, which require it only to date a gate). What a field's value means (a
+require it, and from v2.5 by `set` and `edit`, which require it only to date a gate or (v2.8) a retitle). What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
   it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order;
@@ -616,13 +620,23 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So
   migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept. The old
   form's refusals come before the refusal for a missing `today`.
+  From v2.8 `set` takes `title`, which replaces the heading's title, and `fields` may then be empty. The new title
+  is stripped and refused when empty, more than one line, or holding `\r` or `<!--`. One equal to the entry's title
+  as read changes nothing. Any other is written `## TD-n: <title>` and logs `retitled:
+  was "<old title>"`, dated `today`, which it then requires, ahead of any `gate added` line; the Log is made and
+  refused as above. The file keeps its name. `set` refuses a non-empty value for a field named `Title` or `Log`.
 - **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
   Log, making it at the end of the body if there is none. It is refused if the words begin with a
   writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
 - **edit** (`section`, `words`): replaces the named section's paragraphs, keeping its lead as
   written. A section the body lacks is added after the first Why, else before the first Done when,
   Related or Log, else at the end. It is refused when two sections have the name, and for the Log,
-  which only its writers write. From v2.5, `edit` takes an optional `today`. Replacing or adding an
+  which only its writers write. From v2.8 it refuses to add a section named `Title` (the heading's: `set` retitles),
+  a **header name** (`Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`, `Id take`, and
+  each name the ledger's `Fields:` line declares, given as `declared_fields`). A section the body has is
+  replaced whatever its name. With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a
+  header name, and is refused for any other, for a header name the entry's header lacks (`set` it first), and
+  with words. Names compare as leads do, so a qualified lead is never one. From v2.5, `edit` takes an optional `today`. Replacing or adding an
   `**Event (<name>):**` section for a gate the entry carries, when its check becomes `host-log` or its
   `host-log` source, kind, count or text changes (read by `parse_check()`, so spacing alone is no change),
   appends `gate added: event (<name>)` to the Log, dated `today`, which that case requires: a changed question
@@ -1369,10 +1383,12 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
   stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
-- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
+- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags and
+  (v2.8) `--title "<title>"`, the heading's title (`--title ""` a usage error) (an
   empty value removes the field; not a non-empty `--location` or `--field Location=…`, from v2.7: `edit
   --section Location`; an empty one still removes the header field), `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
-  --from FILE|-` replaces one section. An archived entry is edited only once reopened. From v2.5 `set` and `edit`
+  --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
+  one; the ledger's `Fields:` names are passed as `declared_fields`). An archived entry is edited only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
   section `edit` makes a new `host-log` wait;
 - **the `set` route's gates** — a `set` whose `--blocked-by` drops a `decision (<p>)` the entry carries lifts it
@@ -1648,6 +1664,12 @@ prefix, where v2.6 wrote the label twice (TD-069). The refusal of item text, a r
 names the field it matched (`… carries a field's name (Context:) …`), where v2.6 listed every field (TD-057); a
 caller that matched the old message text reads the new one. No parse changes and no key moves.
 
+**v2.8 gives the title its writer** (*Ledger entries and their edits*): `set` takes `title` and logs `retitled:
+was "<old title>"`, `edit` refuses to add a section that belongs in the header and removes a misplaced one,
+`set` and `new` refuse a `Title` or `Log` field, and `check()` notes `misplaced-name` (ℹ). It reads one thing
+differently: `retitled:` joins the reserved prefixes, so a note an older `note` wrote with that prefix now reads
+as a malformed line (`log-line`). No key moves, and an older reader reads the new line as a note.
+
 ## Appendix: grammar
 
 The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; later releases add the rest).
@@ -1833,7 +1855,7 @@ field-line        ::= "**" [A-Za-z] [^*:#xA]* ":**" char*
 log-line          ::= "- " date ": " log-words
 log-words         ::= log-filed | log-gate-added | log-lift-answer | log-lift-override | log-lift-check
                     | log-lift-date | log-lift-skipped | log-kept-waiting | log-reassigned | log-archived
-                    | log-reopened | log-was
+                    | log-reopened | log-was | log-retitled
 log-filed         ::= "filed by " log-token ", session " log-token ( ", while " entry-id )? ': "' char* '"'
 log-gate-added    ::= "gate added: " gate
 log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token '; answer "' char* '"' lift-suffix?
@@ -1849,6 +1871,7 @@ log-reassigned    ::= "gate reassigned: decision (" person ") → decision (" pe
 log-archived      ::= "archived: " [A-Za-z]+ " — " nonspace char*
 log-reopened      ::= "reopened — " nonspace char*
 log-was           ::= "was: " nonspace char*
+log-retitled      ::= 'retitled: was "' char* '"'
 log-token         ::= [A-Za-z0-9_.@/-]+
 nonspace          ::= [^#x9-#xD#x1C-#x20#x85#xA0#x1680#x2000-#x200A#x2028#x2029#x202F#x205F#x3000]
 ```
