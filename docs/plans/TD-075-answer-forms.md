@@ -107,7 +107,7 @@ for a caller of the module alone (a fill is filled once more unchanged). Both re
 item's forms as offered, unfilled, or names a form's head with empty words (*<head> needs its words*). Any other
 answer is written as today. `edit_line`'s existing refusal of an answer ending in `(by …)` stands, a fill
 included. Both consumers' wrappers call `plan_edit()` (agent-cadence's `board_edit.py`, ShiftLead's sync), so
-a caller on that route gains the fill with no change of its own. On the `--board-only` route the ledger was
+a caller that decides through `plan_edit()` with `--ledger` gains the fill with no change of its own. On the `--board-only` route the ledger was
 written first, by `ledger.py set --answer` (`lift_gate(answer=)`, which knows no item): there the caller must pass
 the same filled text (`fill_form()`) to the ledger's `set --answer` and to `decide --board-only --answer`, a new
 duty that holds today only because a lifting answer is a bare label; `lift_pr_verdict()` flags a mismatch. The
