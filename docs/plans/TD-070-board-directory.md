@@ -1,13 +1,15 @@
 # TD-070: the board as a directory, one file per item, for v3.0
 
-**Status:** Draft 4, 2026-11-11 (session lb-designer). Paul answered **Go** to the scope as drafted (S1–S10,
+**Status:** Draft 5, 2026-11-11 (session lb-designer). Paul answered **Go** to the scope as drafted (S1–S10,
 TD-070's `decision (paul)`, 2026-11-11): every recommendation in it stands, and that Go is his only answer in this
 design. Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
-builds. Rounds 1–3 ran (fact-check and design review each); their fixes applied, with the author's (the designer
+builds. Rounds 1–4 ran (fact-check and design review each); their fixes applied, with the author's (the designer
 session's) rulings where the findings offered a choice (round 1: the tie order, `Doer:`, the releases, the sweep's
 reads, the stub; round 2: v2.8's content, ties at the split, the board's own major, the records through the builds,
 the duplicate-id tie-break; round 3: `Doer:` as this design's own field, the consumers' call sites, the v2 writers'
-read-backs, the order and the comparison of records, the major of an undeclared v2 board). Class: **wide** (a new
+read-backs, the order and the comparison of records, the major of an undeclared v2 board; round 4: one accessor
+for a v2 item's line from B2 to B5 with a grep check, `Doer:`'s delta rule if TD-065's build lands first, the
+records' JSON shapes, a v3 item's `raw` and `show_board()`'s place). Class: **wide** (a new
 major of a vendored, published format, read and written by both consumers; cap 6 rounds, cadence.md §4.8).
 
 **Entry:** [TD-070](../ledger/TD-070.md). **Source:** the entry's Why and Fix; the scope (S1–S10, kept as each
@@ -172,7 +174,8 @@ and a close keep it.
   name whose last part does not end in `.`, text 13's `doer-repo` and `doer-part`) or `team <team>` (`<team>` a
   person's name; `team` alone names the repo `team`). Its reader is `parse_doer(value)`, which gives
   `("repo" | "team", name, value)` or None for a value outside the form; `BoardItem.doer` is that tuple, and
-  `item_record()`'s `doer` a dict of it (its keys B1's, pinned by the fixtures), or None. All of it lands in B1.
+  `item_record()`'s `doer` a dict of it (below), or None. All of it lands in B1, as D12's delta rule says if
+  TD-065's build is on `main` first.
 - **A value is a whole line**, so it holds any words, field names among them: the field-name refusals end, and so
   does reading where a Context ends.
 - **A header-block line that is no field** (round 3's F51) does not end the block, which runs from the heading's
@@ -194,36 +197,63 @@ and a close keep it.
   with no `Closed:` in its form is also named there, and read as closed (D6).
 - **`BoardItem` gains** `id`, `path` (its path relative to the board's directory, `""` for a v2 item), `added`,
   `session`, `host`, `context`, `closed` (`(date, why)`, `(None, None)` for an archived file with no `Closed:` in its
-  form, or None), `replies`, `doer` (B1, above), `fields` and `raw` (a v2 item's line as written, `""` for a v3
-  item); `text` becomes the item's words. `line` stays: a v2 item's 1-based line, 0 for a v3 item, read by nothing
-  but v2 code (*The board's order*, D6, no longer reads it). **`item_record()`** changes in three builds, and only
-  there (round 2's F33, round 3's F46): at B1 it gains `doer` (None on every v2 record, since the v2 reader of B1's
-  tree reads none, below); at B2 it gains `id`, `path`, `added`, `context` and `closed`, and its `text` becomes the
-  item's words for both majors (a v2 record's `text` was the line after its tick), keeping `line`; at B5 it loses
-  `line`. *The builds* list the expected JSONs each of the three regenerates.
+  form, or None), `replies`, `doer` (B1, above), `fields` and `raw` (round 4's F54: a v2 item's line as written; a
+  v3 item's file text as read, every byte); `text` becomes the item's words. `line` stays: a v2 item's 1-based line,
+  0 for a v3 item, read by nothing but v2 code (*The board's order*, D6, no longer reads it). **`item_record()`**
+  changes in three builds, and only there (round 2's F33, round 3's F46): at B1 it gains `doer` (None on every v2
+  record, since the v2 reader of B1's tree reads none, below; D12's delta rule if TD-065's build is on `main`
+  first); at B2 it gains `id`, `path`, `added`, `context` and `closed`, and its `text` becomes the item's words for
+  both majors (a v2 record's `text` was the line after its tick), keeping `line`; at B5 it loses `line`. *The
+  builds* list the expected JSONs each of the three regenerates.
+- **The record's keys, as JSON** (round 4's F57), for both majors; every key not named here keeps the shape it has
+  today:
+  - `id` — a string, `"YYYY-MM-DD-<8 hex>"`; `null` for a v2 line with no readable date (D6);
+  - `path` — a string, the file's path relative to the board's directory (`"2026-11-11-3f9a2c1d.md"`,
+    `"archive/2026-11/2026-10-30-0b7e41aa.md"`); `""` for a v2 item;
+  - `added` — a string, `"YYYY-MM-DD"`; `null` for an item with no `Added` (D6);
+  - `context` — a string, the Context's value without its final period (`"TD-070 decision (pat)"`, `"none"`);
+    `null` for a v2 line with no Context;
+  - `closed` — `{"date": "YYYY-MM-DD", "why": <string> | null}`, the why without its final period; `{"date": null,
+    "why": null}` for an archived file with no `Closed:` in its form; `null` for an open item;
+  - `decided` — unchanged: `{"text": <label>, "date": "YYYY-MM-DD"}` or `null`, with `decided_by` beside it a
+    string or `null`, read from either major's `Decided:`;
+  - `doer` — `{"kind": "repo" | "team", "name": <string>, "text": <string>}` (`text` the value as written:
+    `"acme/widgets"`, `"team ops"`, the shape TD-065's design gives) or `null`;
+  - `text` — a string, the item's words (B2); `line` — an integer, until B5.
+- **A v2 item's `fields`** (round 4's F63) are the header fields its split file carries, `(name, value)` in the
+  writing order (`Kind`, `Added`, `Session`, `Context`, …), each name spelled as D4's list spells it and each value
+  in the file's form: `Decided` as `<date>[ by <person>] — <label>`, `Closed` as `<date>[ — <why>]`, `Context` and
+  `Closed`'s why without the final period, `Session` as `<name>[ on <host>]`, `Answers` and `Lifts` without the
+  final period; a field the v2 reader reads that has no file form here keeps its value as the reader gives it, under
+  its name. So `split_board()` writes a v2 item's `fields` as its header block, and the two majors' `fields` of one
+  item are equal.
 - **A v2 item** is a `BoardItem` with every one of those fields filled by `parse_board()` from its line. The v2 half
   of `load_board()` is the v2 line reader as the last v2.x release has it, so whatever fields that reader returns
   (a `Doer:` among them, if a v2 release added one) fill the `BoardItem` fields of the same name and `split_board()`
   carries them into header fields of the same name. From it: `added` its date, `session` and `host` its head's,
   `context` its Context's value (without the final period), `closed` its `Closed:` (the why without its final
   period), `replies` its reply tails, `fields` its fields as `(name, value)` in their order, `text` its words
-  (`item_words(line)`, D11) and `raw` its line. The readers read the fields, never the line: `_item_gate()` and
-  `_sweep_context()` read `context`; `_item_date()` reads `added`; `_sweep_head()` reads `text`; `item_record()`,
-  `needs_you()`, `covers()`, `sweep()`, `board_problems()`, `decide_lift()` and `parts_problems()` read the fields.
-  Only v2 code reads `raw`: `item_key()` and `key_id()`, `show_board()` printing a v2 item, `split_board()`, and,
-  from B2 until B5 removes them, the v2 writers' read-backs (below). So a reader gives the same result for a v2 item
-  and for its split file (the fixtures `board_v3_case` and the sweep's v2 board and its split, below), compared as
-  D6's *Comparing two reads* says.
-- **The v2 writers' read-backs read `raw`** (round 3's F44). `item_line()`, `decided_line()`, `edit_line()`,
-  `item_problem()` and `canonical_item()` read back what they wrote through `parse_board(…)[0]` and pass its `text`,
-  today the line after its tick, to `item_head()`, `parse_replies()`, `item_refs()` and `parse_default()`; and
-  `closes()` reads a `BoardItem` through `_item_text()`, which returns its `text`. Once B2 makes `text` the item's
-  words, both would read less than the line and every v2 write would fail its read-back. So B2 adds a shim: each of
-  those read-backs reads the line after its tick from `raw` (`ITEM_RE`'s or `CLOSED_ITEM_RE`'s `text` group of it,
-  trimmed, as `_item_text()` does for a line), and `_item_text()` of a v2 `BoardItem` returns that text of its
-  `raw`. `closes()` reads a v3 item's `context`, `lifts` and `parts` fields, never `_item_text()`. B5 removes the
-  five writers, and with them the read-back shim and `_item_text()`'s v2 branch (D7: `closes()` then takes an item
-  file or a `BoardItem`).
+  (`item_words(line)`, D11) and `raw` its line. The readers read the fields, never the line: `_item_gate(item)`
+  takes a `BoardItem` from B2 and reads its `context` (round 4's F66; a string, a v2 line's text after its tick,
+  is still read as today until B5, for `closes()` given a line), and `_sweep_context()` reads `context`;
+  `_item_date()` reads `added`; `_sweep_head()` reads `text`; `item_record()`, `needs_you()`, `covers()`,
+  `sweep()`, `board_problems()`, `decide_lift()` and `parts_problems()` read the fields. `raw` is read by
+  `item_key()` and `key_id()`, `show_board()` (either major, D8), `split_board()` and `_item_text()` (below). So a
+  reader gives the same result for a v2 item and for its split file (the fixtures `board_v3_case` and the sweep's
+  v2 board and its split, below), compared as D6's *Comparing two reads* says.
+- **One accessor for a v2 item's line, B2 to B5** (round 4's F55, which replaces round 3's per-function list:
+  round 4's F53 found two of its five, `decided_line()` and `item_problem()`, read no `BoardItem` at all). Today a
+  `BoardItem`'s `text` is the line after its tick, and code across the module reads it as that line: the v2
+  writers' read-backs, `closes()`, `item_record()`, the sweep, `decide_lift()`, `parts_problems()`, and the
+  verdicts' `_item_gate(it.text)` (in `tripwire()`, `uncovered_decisions()` and `lift_pr_verdict()`, which read v2
+  trees until B4). Once B2 makes `text` the item's words, any of them left reading `text` reads less than the line.
+  So one mechanical rule holds from B2 until B5: **every read of a v2 item's line goes through `_item_text(item)`,
+  which gives `ITEM_RE`'s or `CLOSED_ITEM_RE`'s `text` group of its `raw`, trimmed** (a string is read as today),
+  **or reads the field it stands for** (`context`, `added`, `replies`, the head's `session` and `host`, as above);
+  **no code reads `BoardItem.text` as a line**. `_item_text()` of a v3 item is refused (`ValueError`, a bug in the
+  caller): a v3 item has no line, and `closes()` reads its `context`, `lifts` and `parts`. B2's *Done when* names the
+  grep that checks the rule. B5 removes the v2 writers and, its callers gone, `_item_text()` and `_item_gate()`'s
+  string form (D7: `closes()` then takes an item file or a `BoardItem`).
 
 **D5. No sections (S4).** Neither consumer reads a section for what an item is:
 - agent-cadence reads one heading, in one audit: `scripts/check_cadence.py` `classify_direct()` passes a direct
@@ -267,6 +297,11 @@ item read, the archive's among them), each a `BoardItem` with its `id`, and `pro
 - **The stub** (D11): a file that declares `Ledgerboard: 3` and holds no item is read as the directory beside it,
   its name less `.md`, so a caller configured with `docs/user_attention.md` reads the board it became.
 - **`ls`** lists each subdirectory with a trailing `/` (v3.0; `load()` and `entry_path()` ignore those names).
+  Every `ls` the module and the runner build does so (round 4's F65): `_dict_ls()`, the `ls` over a `{path:
+  text}` map that the ledger's `split()` reads its result back through today, lists a subdirectory once, as
+  `<name>/`, from B2, and is the `ls` `split_board()`'s read-back passes `load_board()` (B5); `_tree_ls()`, the
+  verdicts' `ls` over a tree, does the same from B4; the runner's `fs_ls` from B2 (*The runner*). The ledger's
+  reads through `_dict_ls()` and `_tree_ls()` are unchanged, since `load()` takes only `ENTRY_FILE_RE`'s names.
   `BoardItem.path` and every problem's path are relative to the board's directory (`archive/2026-11/<id>.md`).
 - **`since`**, a date, leaves out the archive months before its month, neither listed nor read. `Board.closed` is
   then partial, so `since` is for a reader that judges only open items and recent closes (a nudge, `show`, a
@@ -316,7 +351,10 @@ item read, the archive's among them), each a `BoardItem` with its `id`, and `pro
   B4's verdicts read their trees through `load_board()`, which judges no major against `FORMAT_MAJOR`. Until B3
   `board.py` reads v2 boards alone, which declare no major above 2.
 - **Damaged and odd input** (round 1's F15) never raises; `Board.problems` lists, as `(path, problem)`, what the read
-  skipped or could not settle, and `board_dir_problems()` names it too:
+  skipped or could not settle, and `board_dir_problems()` names it too. **Order** (round 4's F64): both lists are
+  sorted by path (the path string's code-point order; a v2 board's problems name its file's or its archive's
+  name), then by the order this plan lists the rules (this list, then text 8's *Damage* list for
+  `board_dir_problems()`'s own), then by line within the file:
   - a file `read()` gives None for, or that `parse_item()` reads as no item, is skipped and named;
   - `major` is what the preamble declares (`Ledgerboard: N`), else 2 for a file and 3 for a directory: a `README.md`
     that is missing, or declares no major, reads as 3 and is named; one declaring 2 reads as 2 and is named;
@@ -370,11 +408,12 @@ given the stub's path, `add` and the five edits write into the directory beside 
 `user_attention.md/<id>.md`. Its file-system `ls` lists subdirectories with `/` (one function, used by the board's
 read and by `read_ledger()`, whose files-only `ls` it replaces; `load()` ignores the new names).
 
-**D8. What a person reads (S8).** `board.py show [--hidden]` prints `show_board(board, today, hidden=False)`: for
-each item `needs_you()` gives, in its order, the line `*<id> · <class>*`, then the item's file as stored, items
-separated by one blank line; with `--hidden`, the hidden open items follow in the board's order (D6), each `*<id> ·
-hidden until <date>*`. It reads a v2 board too, printing each item's line and detail block in the file's place. No
-rendered file is stored: a stored view is one file every write touches, which is the conflict again.
+**D8. What a person reads (S8).** `board.py show [--hidden]` prints `show_board(board, today, hidden=False)`, the
+module's (pure, over a `Board`; B3): for each item `needs_you()` gives, in its order, the line `*<id> · <class>*`,
+then the item's file as stored (its `raw`, D4: a v3 item's file text as read), items separated by one blank line;
+with `--hidden`, the hidden open items follow in the board's order (D6), each `*<id> · hidden until <date>*`. It
+reads a v2 board too, printing each item's line (its `raw`) and detail block in the file's place. No rendered file
+is stored: a stored view is one file every write touches, which is the conflict again.
 
 **D9. The gate sweep over a directory.** `sweep()`'s board is `(origin_url, basename, board)`; `to_close` lists
 ids; the close rule and the filing rule match items by id. **A sweep reads each board whole**, every archive month.
@@ -436,8 +475,9 @@ the directory:
   gaining `../`: an inline link or image's target (`[t](target)`, `![t](target)`) or a reference definition's
   (`[label]: target`) whose target starts with no scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among them), no
   `#` and no `/`, outside code spans and fenced code;
-- it refuses prose among the items, an item with no date, two open lines of one id, two closed lines of one id, two
-  items given one id, and a result that does not read back the same items (compared as D6's *Comparing two reads*)
+- it refuses prose among the items, an item with no date, a closed item (a `[x]` line) with no readable `Closed:`
+  date, which gives no month to file it under (round 4's F62: add the date by hand first), two open lines of one
+  id, two closed lines of one id, two items given one id, and a result that does not read back the same items (compared as D6's *Comparing two reads*)
   or that `board_dir_problems()` flags.
 
 **The key a consumer persisted.** ShiftLead's `sessionorc/workorders.py`, as the pinned file has it:
@@ -478,8 +518,14 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   TD-073 and a fold into v2.7, which the tag has overtaken).
 - **No v2.x release after B1 merges**, and no tooling to release from a branch: `release.sh` cuts from `origin/main`
   and stays so. A v2.x fix wanted after B1 merges goes into v3.0.
-- **`Doer`** is this design's own v3 header field (D4, text 8, text 13), landing whole in B1. If a v2.x release
-  adds `Doer:` to the v2 line, the builder of B1 checks that the two value grammars agree.
+- **`Doer`** is this design's own v3 header field (D4, text 8, text 13), landing whole in B1, but for one delta
+  rule (round 4's F58). **If TD-065's build is on `main` when B1 starts** (and so in v2.8), B1 reuses its
+  `parse_doer()`, `BoardItem.doer` and `item_record()`'s `doer` key as they stand, and adds only the header field,
+  its grammar production (text 13's `doer-field`, `doer-repo` and `doer-part`, written to agree with TD-065's
+  value grammar), `item_file(doer=)` and `item_record()`'s reading of a v3 item's `doer`; the v2 records then
+  already carry TD-065's `doer`, so B1 regenerates no record for it, and text 12's `Doer` sentence takes its second
+  wording. Otherwise B1 lands all of it as D4 says, and text 12 takes the first. Everything else in this design is
+  the same either way.
 - **TD-078's open question**, whether its archived-entry writer route "ships in a v2.x minor first", has the same
   answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0.
 - **The builds**, B1 to B5, merge in order with no release between them; then v3.0.
@@ -538,6 +584,13 @@ is cut, agent-cadence's first. Each line below is a line for that entry, never c
 
 Each block is what `SPEC.md` says once built. Where a block names a substitution in a paragraph it keeps, the rest
 of that paragraph stands as written.
+
+**No sentence lands before the code that makes it true** (round 4's F59). Where a block's sentences belong to
+different builds, the block says which, and each build lands only its own: text 8's closing sentence of its
+`parse_item()` paragraph ("`item_record()` gives its record") is B2's, with *Reading a board*, though the rest of
+that paragraph is B1's; text 8's *Reading a board* lands at B2 without the words "and no `line`", which B5 adds;
+text 9's *A snapshot against the ledger* paragraph is B2's (its item-file input is B2's code), with 9's *gate*
+paragraph. *The builds* name each block's build so.
 
 **1. The title.** `# The ledger and board formats — versions 1 and 2` becomes `# The ledger and board formats —
 versions 1 to 3`.
@@ -599,8 +652,10 @@ versions 1 to 3`.
 In `sweep()`'s return, `to_close: {board: [item key]}` becomes `to_close: {board: [item id]}`; *The close rule*'s
 "(by item key)" becomes "(by id)"; "Each item filed is `item_line()`'s arguments (`text`, `context`, `kind`,
 `answers`, `default`, `detail`, `lifts`)" becomes "Each item filed is `item_file()`'s arguments (the same names)";
-and *One filing rule*'s "An item closed `— lifted.`" becomes "An item closed with the why `lifted`". After *The
-close rule*'s list, add:
+and *One filing rule*'s "An item closed `— lifted.`" becomes "An item closed with the why `lifted`". In `covers()`'s
+paragraph (round 4's F60), "`closed` or `closed-decided` (closed on the board or in its archive)" becomes
+"`closed` or `closed-decided` (closed: on a v3 board, its file under `archive/`; on a v2 board, closed on the
+board or in its archive)". After *The close rule*'s list, add:
 
 > **What a sweep reads** (v3.0): each board whole, every month of its archive. An answer owing a lift may be of any
 > age, and keeps the sweep's act open while it owes; the `; board <repo>` audit takes a decided item of any date. The
@@ -636,7 +691,9 @@ board item gains a `Decided:`" stands; **(b)** is replaced by:
 
 In **(c)**, "the PR changes exactly the board and the open file of each entry it changes" becomes "the PR changes
 exactly the item's files and the open file of each entry it changes", and "the PR changes the board alone" becomes
-"the PR changes the item's files alone". In `uncovered_decisions()`, "(its key on no line of the base board)" becomes
+"the PR changes the item's files alone", and "`decide_lift()` of the base line" becomes "`decide_lift()` of the
+base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)). In
+`uncovered_decisions()`, "(its key on no line of the base board)" becomes
 "(its id on no item of the base board, open or closed)".
 
 **8. A new section, `## The board as a directory (v3.0)`**, after *The board* and before *Edits*:
@@ -708,7 +765,8 @@ exactly the item's files and the open file of each entry it changes", and "the P
 >
 > `parse_item(text, path="")` reads one file as a `BoardItem`: its `id` from the path's name (None when it is not
 > one), `path`, its fields, `added`, `session` and `host`, `context`, `doer`, `closed` (`(date, why)` or None),
-> `replies`, `detail` and `fields`. `item_record()` gives its record (*Reading a board*).
+> `replies`, `detail`, `fields`, and `raw`, the file's text as read. `item_record()` gives its record (*Reading a
+> board*).
 >
 > **Reading a board** (`load_board(path, ls, read, *, since=None)`) gives a `Board`: `major`, `preamble`
 > (`README.md`'s text, or a v2 board's text before its first item), `items` (the open items), `closed` (every closed
@@ -752,13 +810,20 @@ exactly the item's files and the open file of each entry it changes", and "the P
 > - **`problems`** lists, as `(path, problem)`, what the read skipped or could not settle, never raising: a file
 >   `read()` gives None for, or that `parse_item()` reads as no item (skipped); a missing `README.md`, or one
 >   declaring no major or 2; a file declaring 3 that holds items (read as a v2 file); a stub whose directory is
->   missing; an item with no `Added`; one id on two open lines, or two closed lines, of a v2 file.
+>   missing; an item with no `Added`; one id on two open lines, or two closed lines, of a v2 file. They are sorted
+>   by path, then in the order this list and the next paragraph's give the rules, then by line.
 > - **The readers take the `Board`**: `needs_you()`, `covers()`, `sweep()`, `board_problems()` and the merge gate's
 >   verdicts; `board_people()`, `answered_by()`, `people_problems()` and `answered_by_problems()` read its preamble,
 >   every line of `README.md` on a v3 board and the lines above the first item on a v2 one, as `board.py`'s
 >   `who_answered(board, by)` does through `board_people()`; and a consumer calls `version_problem(board)` before
->   it trusts the rest. `item_record()` gives an item's record: `id`, `path` (the file's path in the directory; `""`
->   for a v2 item), `added`, `context`, `closed` and `doer` (v3.0), with `text` the item's words and no `line`.
+>   it trusts the rest. `item_record()` gives an item's record, of either major, with `text` the item's words and
+>   no `line`, and these keys (v3.0), every other key as before: `id`, a string `"YYYY-MM-DD-<8 hex>"`, or `null`
+>   for a v2 line with no readable date; `path`, a string, the file's path in the directory (`""` for a v2 item);
+>   `added`, `"YYYY-MM-DD"` or `null`; `context`, a string, the Context without its final period, or `null` for a
+>   v2 line with none; `closed`, `{"date": "YYYY-MM-DD", "why": <string> | null}` (both `null` for an archived file
+>   with no `Closed:` in its form), or `null` when the item is open; `decided`, as before, `{"text": <label>,
+>   "date": "YYYY-MM-DD"}` or `null`, `decided_by` beside it; and `doer`, `{"kind": "repo" | "team", "name":
+>   <string>, "text": <string>}` (`text` the value as written) or `null`.
 > - **Two reads of one board compared** (a v2 board and its split): records keyed by `id`, `path` and `line` left
 >   out; `covers()`, `to_close` and `lifts` as lists sorted by id; `needs_you()`'s rows by tie group (each run of
 >   one class and one `days`), each group as a set and the groups in order. So compared, a v2 board and its split
@@ -796,7 +861,8 @@ exactly the item's files and the open file of each entry it changes", and "the P
 >   dropped.
 > - It refuses a board that declares `Ledgerboard: 3`; a line after the first item that is no item, no detail
 >   block's, not blank and no `## ` heading (prose among the items: move it into the preamble first); an item with
->   no date; two open lines, or two closed lines, of one id; two items given one id; and a result that
+>   no date; a closed line with no readable `Closed:` date (no month to file it under: date it first); two open
+>   lines, or two closed lines, of one id; two items given one id; and a result that
 >   `load_board()` does not read back as the same items (open and closed, at one date, compared as *Reading a
 >   board* compares two reads) or that `board_dir_problems()` flags.
 > - `board_stub(title, name)` is what `board.py split` leaves at the v2 path: `# <title>`, a blank line,
@@ -913,8 +979,8 @@ exactly the item's files and the open file of each entry it changes", and "the P
 > - **`list`** — every open item's record (`item_record()`), read-only; the board a directory, the stub, or a v2 file;
 > - **`show`** (v3.0) — the board for a person (`show_board(board, today, hidden=False)`): for each item
 >   `needs_you()` gives, in its order, the line `*<id> · <class>*`, then the item's file as stored (a v2 item's line
->   and detail block), items separated by one blank line; with `--hidden`, the hidden open items after them, in id
->   order, each `*<id> · hidden until <date>*`. Read-only; no file holds it;
+>   and detail block), items separated by one blank line; with `--hidden`, the hidden open items after them, in the
+>   board's order (*Reading a board*), each `*<id> · hidden until <date>*`. Read-only; no file holds it;
 > - **`add`** — a new item (`item_file()`, any kind, its answers and detail block, `--hide-until`, `--doer`) at
 >   `<board>/<id>.md`, the id drawn at random (redrawn, up to 8 times, while the directory or its archive holds it),
 >   or `--id`'s, refused when it is no id, its date is not the item's `Added`, or it is held. With `--parts TD-a,TD-b`
@@ -990,15 +1056,36 @@ in the directory `path` (no subdirectories), or None when `path` is not a direct
 > `BOARD_DIR`; a subject carries the id; an `ls` lists subdirectories, so a caller's `ls` that lists files alone
 > reads a v3 board's archive as empty; and `lift_pr_verdict()` sends a lift on a v2 board to review. **The board's
 > order** for ties is a v2 board's line order and a v3 board's ids descending, newest first (by `Added` date, at
-> random within one day), so tied items can change order when a board is split. **`Doer`** is new: a header field on
-> an `act` naming who should do its step (*The item file*), which `add --doer` writes. The split carries every field
-> the v2 reader reads into the header field of the same name. v2.4's "no board action removes one" no longer holds:
+> random within one day), so tied items can change order when a board is split. {DOER} The split carries every
+> field the v2 reader reads into the header field of the same name. v2.4's "no board action removes one" no longer holds:
 > `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3 repo as the stub, which declares
 > `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer refuses it unread, and a reader
 > that checks nothing reads an empty board, so a repo splits its board only once every reader of it runs v3.0.
 > Within v3.x the same holds for a field: a later minor's field is faulted by an older v3 gate, so **a consumer
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
 > nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
+
+`{DOER}` is one of two sentences (round 4's F58), D12's delta rule naming which lands. TD-065's build not on `main`
+when B1 starts:
+
+> **`Doer`** is new: a header field on an `act` naming who should do its step (*The item file*), which `add --doer`
+> writes.
+
+TD-065's build on `main` when B1 starts (so `Doer:` is v2.8's field on a v2 line):
+
+> **`Doer`**, v2.8's field on an `act`'s line, is also a header field of the item file (*The item file*), with the
+> same value and the same record; `add --doer` writes it there.
+
+*Versions*' opening lines (round 4's F56) change too. "A ledger or board may declare its major version on a
+preamble line, `Ledgerboard: 1`; none means 1." becomes:
+
+> A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1 for a ledger,
+> and 2 for a board file (v3.0: a board's v1 and v2 are one format).
+
+and after "A v2 ledger declares it in its `README.md`, which `load()` puts first." add:
+
+> A v3 board declares it in its `README.md`, on any line outside an HTML comment (`board_major()`); a README that
+> declares none reads as 3, and is named (*Reading a board*).
 
 **13. *Appendix: grammar*.** The opening sentence's list gains "v3.0: the item file"; *The open item line (v2.3)*
 becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*. After it, add:
@@ -1178,7 +1265,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   written, a `Closed: D — lifted.` written `— lifted`, a `Context:` losing its final period); `decided_by` (a
   `Decided:` with and without `(by …)` rewritten); `persisted_key` (the id's digits equal to the hash ShiftLead's
   `key()` gives, for a column-0 line, an indented line and a `[x]` line); refused: `undated`, `duplicate_open`,
-  `two_closed`, `two_indents` (one text at two indents, one id), `prose_between_items`, `already_v3`.
+  `two_closed`, `two_indents` (one text at two indents, one id), `prose_between_items`, `already_v3`,
+  `closed_undated` (a `[x]` line with no readable `Closed:` date).
 - **`fixtures/board_writer/`**: new cases over a v3 directory: `add_v3`, `add_id_given`, `add_id_taken` (exit 1),
   `add_id_wrong_date` (exit 1), `add_said`, `add_decided`, `add_doer` (an `act` with `--doer`), `add_via_stub`
   (`--board` the stub's path: the file written in the directory beside it), `snooze_id`, `due_id`, `done_moves` (the
@@ -1243,11 +1331,16 @@ each build below names the expected JSONs whose records it regenerates. **Each b
 gives the v2 subject the v2 writers still call), `subject_id()`, `bold_head()` reading a heading), `SPEC.md` (text
 8's *The item id* and *The item file*, 9 but its *gate* paragraph, 13), `fixtures/item/` (but `gate`),
 `fixtures/grammar/`, `fixtures/edit/`'s subject groups moved, `fixtures/run.py` (`item_cases`, `item_fields()`).
+Text 8's `parse_item()` paragraph lands without its closing `item_record()` sentence, and text 9 without its
+*snapshot* paragraph (both B2's: *The SPEC text the build lands*, round 4's F59).
 **Records:** `item_record()` gains `doer` and nothing else (None for every v2 item); the expected JSONs it
 regenerates are `fixtures/board/*.json` and `fixtures/board_writer/list/expected.json`, each record gaining
 `"doer": null`. `fixtures/edit/expected.json` changes only by the groups that move to `item/` and `bold_heads`'
 heading case. **`Doer`:** B1 lands the whole field (D4, text 8's *The item file*, text 13's `doer-field`,
-`doer-repo` and `doer-part`). Done when: v2.8 is tagged,
+`doer-repo` and `doer-part`), unless TD-065's build is on `main` when B1 starts: then, by D12's delta rule, B1
+reuses TD-065's `parse_doer()`, `BoardItem.doer` and `item_record()`'s `doer` key, adds only the header field, its
+grammar production, `item_file(doer=)` and `item_record()`'s reading of a v3 item's `doer`, regenerates no record
+for `doer`, and lands text 12's second `Doer` wording. Done when: v2.8 is tagged,
 the precheck is green, every fixture above passes, and text 14's B1 search finds its names only where it allows.
 
 **B2, reading.** D5, D6, D9. Location: `ledgerboard/__init__.py` (`Board`, `load_board()`, `item_words()`, the
@@ -1256,9 +1349,11 @@ twin rule across board and archive, the stub's reading, the duplicate-id read, `
 `covers()`, `sweep()` (whole boards), `board_problems()`, `board_people()`, `answered_by()`, `people_problems()` and
 `answered_by_problems()` over a `Board`, each still taking a v2 board's text as before until B5, so `board.py` runs
 unchanged until B3; `parse_board()` filling every new `BoardItem` field and the ids; `item_record()`'s B2 change
-(D4); the v2 writers' read-backs and `_item_text()` reading `raw` (D4's shim, until B5); `parts_problems()`,
-`decide_lift()`, `closes()` over a file, each still taking a v2 line until B5),
-`SPEC.md` (text 2–6, 8's *Reading a board* and *Damage*, 9's *gate* paragraph, 11, 14's reader items),
+(D4); D4's one accessor: every read of a v2 item's line through `_item_text()` over `raw`, `_item_gate()` taking
+a `BoardItem` and reading its `context`, and no read of `BoardItem.text` as a line, until B5; `_dict_ls()` listing
+subdirectories (D6); `parts_problems()`, `decide_lift()`, `closes()` over a file, each still taking a v2 line until
+B5), `SPEC.md` (text 2–6, 8's *Reading a board* (without "and no `line`", B5's), its *Damage* and its `parse_item()`
+paragraph's `item_record()` sentence, 9's *gate* and *snapshot* paragraphs, 11, 14's reader items),
 `fixtures/board/` (regenerated, `twins_across`), `fixtures/board_dir/`, `fixtures/item/`'s `gate`,
 `fixtures/sweep/`, `fixtures/lift/`, `fixtures/run.py` (`fs_ls`, `board_dir_case`, `board_case`, `sweep_cases`,
 `lift_cases`). `load()`, `entry_path()` and `v2_problems()` need no change for `fs_ls`'s new `archive/` name: each
@@ -1270,9 +1365,13 @@ regenerates are `fixtures/board/`'s `answers.json`, `basic.json`, `hidden.json`,
 other writer case prints a record); besides records, `fixtures/sweep/expected.json` (`to_close` by id),
 `fixtures/lift/expected.json` (`decide_lift()`'s items as files) and `fixtures/edit/expected.json`
 (`board_problems` moved to `item/`'s `gate`, `item_notes` over `BoardItem`s) regenerate. Done when: the precheck is
-green, those fixtures pass, and text 14's B2 search finds its names only where it allows.
+green, those fixtures pass, every existing `fixtures/verdict/` case passes unchanged (the verdicts still read v2
+trees, through the one accessor), `grep -nE '\.text\b' ledgerboard/__init__.py` finds only `item_record()`'s
+`"text": item.text` and `_read_boards()`'s `_sweep_head(it.text)` (each the item's words, never a line; D4's one
+accessor, round 4's F55), and text 14's B2 search finds its names only where it allows.
 
-**B3, the writer.** D2's moves, D7's writer half, D8. Location: `ledgerboard/board.py` (`plan_add` by id, no
+**B3, the writer.** D2's moves, D7's writer half, D8. Location: `ledgerboard/__init__.py` (`show_board()`, pure
+over a `Board`, printing each item's `raw`; round 4's F54), `ledgerboard/board.py` (`plan_add` by id, no
 `under`, `--doer`; `plan_edit` by id, with the move; `show`; `plan_fmt` over files; the v2 refusal; `--id`,
 `--hidden`; the `archive` action, `--line`, `--expect` and `--under` gone; a board read through `load_board()` and
 checked with `version_problem(board)`, `read()` keeping `version_problem(text)` for the ledger and the rank file;
@@ -1291,10 +1390,9 @@ finds its names only where it allows.
 **B5, migration and the release's removals.** D11, D12. Location: `ledgerboard/__init__.py` (`split_board()`,
 `board_stub()`, `split_board_notes()`; `item_line()`, `decided_line()`, `edit_line()`, `item_problem()`,
 `canonical_item()`, `archive_closed()`, `archive_subject()`, `ARCHIVE_AT`, `closed_items()` removed, and B1's and
-B2's shims: `item_record()`'s `line`, `subject()`'s v2 form, the readers' v2-text and v2-line arguments, the v2
-read-backs' and `_item_text()`'s reading of `raw`; the
-ledger's `FORMAT_MAJOR` untouched), `ledgerboard/board.py` (`split`), `SPEC.md` (text 1, 8's *Migration*, 10's
-`split`, 12, 14's writer items), `fixtures/board_split/`, `fixtures/board/<case>.v3/`, `fixtures/board_writer/`
+B2's shims: `item_record()`'s `line`, `subject()`'s v2 form, the readers' v2-text and v2-line arguments,
+`_item_text()` and `_item_gate()`'s string form (D4's one accessor, its callers gone); the ledger's `FORMAT_MAJOR` untouched), `ledgerboard/board.py` (`split`), `SPEC.md` (text 1, 8's *Migration* and its
+*Reading a board*'s "and no `line`", 10's `split`, 12, 14's writer items), `fixtures/board_split/`, `fixtures/board/<case>.v3/`, `fixtures/board_writer/`
 (`split`, `split_exists`), `fixtures/run.py` (`board_split_case`, `board_v3_case` with its tie groups compared as
 sets; `archive_case` and the retired `edit_cases` groups removed), `fixtures/archive/` and the retired
 `fixtures/edit/` groups, `tests/`. **Records:** `item_record()` loses `line`; every expected JSON holding a record
