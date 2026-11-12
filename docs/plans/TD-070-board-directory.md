@@ -5,7 +5,8 @@ TD-070's `decision (paul)`, 2026-11-11): every recommendation in it stands, and 
 design. Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
 builds. Rounds: six ran, ending at the cap (round 6's design review still raised build-changing findings, F73–F76,
 now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4; fact-checks 2, 2,
-1, 0, 0, 0. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
+1, 0, 0, 0, and the closing fact-check 1 (F81, `_real_day()` for a day's check), applied and read by no design
+review with round 6's. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
 F55), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review after round
 5's cuts. Each round's fixes applied, with the author's (the designer session's) rulings where the findings offered a
 choice (round 1: the tie order, `Doer:`, the releases, the sweep's reads, the stub; round 2: v2.8's content, ties at
@@ -207,14 +208,16 @@ and a close keep it.
   other shape is kept and read as no reply. A reply decides nothing, as on a v2 line.
 - **The value readers** (round 6's F73). `parse_item()` reads each header value as a bare value, never through a
   v2-line function: `parse_decided()`, `parse_decided_by()`, `parse_answers()`, `parse_lifts()`, `parse_parts()`,
-  `parse_hide_until()` and `DUE_RE` find a field on a v2 line (after its `Due:`, by its name) and stay v2's. B1
+  `parse_hide_until()` and `DUE_RE` find a field on a v2 line by its name (the trailer's readers after its `Due:`,
+  `parse_parts()` after its `Context:`, `parse_hide_until()` after its `Due:` or else its `Context:`) and stay v2's. B1
   adds `parse_decided_value(value)`, giving `(label, date, by)` (`by` None when the value names no one) or None for a
   value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by`;
   `parse_closed_value(value)`, giving `(date, why)` (`why` None for a bare date) or None outside `<date>[ — <why>]`,
   which fills `closed`; and `parse_answers_value(value)`, giving the written answers split on each bar not after a
   `\`, `\|` read as a bar, each trimmed and none empty, which fills `answers`, `default` and `consequences` through
   `split_answer()` as `_raw_answers()`' readers do, and `lifts` from a `Lifts` value of the same form. `Kind` is one
-  of the five, `Due` and `Hide until` a `YYYY-MM-DD` day (`date.fromisoformat()`), and `Parts` its ids
+  of the five, `Due` and `Hide until` a `YYYY-MM-DD` day (`_real_day()`: the `ISO_DAY_RE` shape and a real date, since `date.fromisoformat()` alone also
+  takes `20261108` and `2026-W45-3` on Python 3.11 and later), and `Parts` its ids
   (`entry-id`s, read with `REF_TD_RE` as `parse_parts()` reads its ids), each read from the value by `parse_item()`; `Doer` by
   `parse_doer_value()`.
 - **A value not in its form** (round 3's F51, round 6's F76), for `Decided`, `Closed`, `Kind`, `Hide until`, `Parts`
@@ -703,8 +706,9 @@ second paragraph (the one opening "From v3.0, everything this section says about
 5's F71): until B5 the module still carries the v2 line writers and `board.py` writes a v2 board until B3, so
 neither "writes none" nor "read only" holds before B5 removes them. Round 6's F77 tags three more: text 8's *The
 item file* lands at B1 without its two clauses that name `board_dir_problems()` ("and `board_dir_problems()` names
-it", after the header-block line that is no field and after a value not in its form), which B2 adds with
-`board_dir_problems()`; text 10's closing sentence lands at B3 without "(*split first*)", which B5 adds with the
+it" after the header-block line that is no field, and "; `board_dir_problems()` names it" after a value not in its
+form), which B2 adds with
+`board_dir_problems()`; text 10's added paragraph lands at B3 without its first sentence's "(*split first*)", which B5 adds with the
 `split` action (until then `board.py`'s refusal of a v2 board says only that it writes a v3 directory, and B5's
 words give `write_v2_refused`'s expected output its `split` hint); and each of text 14's bullets carries its own
 build (B1, B2 or B5). *The builds* name each block's build so.
@@ -1280,8 +1284,8 @@ becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*. After it
 > the word `team` and one space, so `**Doer:** team` names the repo `team` (`parse_doer_value()` also reads a run of
 > spaces or tabs there, a spelling `item_file_problem()` faults). A `doer-repo` is a `repo` whose last
 > part, `doer-part`, is a `repo-part` that does not end in `.`. Every other production is the one above it of the
-> same name (`date`, `head-name`, `entry-id`, `answer-sep`, `label-start`, `label-char`, `person`, `repo-part`,
-> `nonspace`, `char`).
+> same name (`date`, `digit`, `char`, `nonspace`, `head-name`, `entry-id`, `repo`, `repo-part`, `person`,
+> `person-part`, `answer-sep`, `label-start`, `label-char`).
 
 **14. The rest of *The board*, and what else names a removed function.** Text 2's second paragraph says a line's
 text, key and writers are v2's. Each sentence below still reads as the only form, or names a function v3.0 removes
@@ -1336,7 +1340,7 @@ where `SPEC.md` holds them today:
   *Parts:*, *Trailing fields* and *The merge gate's verdicts* paragraphs, for `ARCHIVE_AT`, `archive_closed`,
   `closed_items` (as a whole name: `parse_closed_items` stays) and `item_line` (the last in *The gate sweep* and
   *The decide lift*).
-- **B3** (text 10 but `split`): *The board writer* for `item_line`, `decided_line`, `edit_line`, `canonical_item`,
+- **B3** (text 10 but `split` and "(*split first*)"): *The board writer* for `item_line`, `decided_line`, `edit_line`, `canonical_item`,
   `archive_closed`, `archive_subject`, `--line`, `--expect` and `--under`.
 - **B4** (text 7): *The merge gate's verdicts* for `BOARD_PATH`, `BOARD_ARCHIVE_PATH` and `edit_line`.
 - **B5** (texts 1, 8's *Migration*, 10's `split`, 12, 14's writer items) runs the full search: all of `SPEC.md`, for
