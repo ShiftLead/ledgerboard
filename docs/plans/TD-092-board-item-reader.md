@@ -11,7 +11,7 @@ has `closed` `(None, None)`) and six minor (F243–F249), all applied with the a
 fact-check (R38) raised two minor findings (F235, F236), both applied; round 5's design review (R39) raised two build-changing
 findings (F237 `keys`, F238 a head's extra text) and three minor (F239–F241), all applied with the author's
 rulings. Draft 7: round 4's design review (R37) raised one build-changing
-finding (F228, the rules by form) and five minor (F229–F234), all applied with the author's rulings. Draft 6: round
+finding (F228, the rules by form) and six minor (F229–F234), all applied with the author's rulings. Draft 6: round
 3's design review (R34) raised two build-changing
 findings (F220, F221) and two minor (F222, F223), all applied with the author's rulings (a closed v2 line read as
 written; one date reading, reversing F215's example). Draft 5: round 2's design review (R31) raised three build-changing
@@ -19,7 +19,7 @@ findings (F206–F208) and four minor (F209–F212), all applied with the author
 fact-check (R29) raised one build-changing finding (F196, `Board.path`) and six minor (F197–F202), all applied. Draft 3: round 1's design review (R28) raised three
 build-changing findings (F190–F192) and three minor (F193–F195), all applied with the author's rulings
 (`Board.form`; a v2 `context` without its replies; B3/B4 tags). Draft 2: round 1's fact-check (R26) raised four build-changing
-findings (F175–F178) and nine minor (F179–F188), all applied. Draft 1 was split from TD-070's plan (draft 11) at
+findings (F175–F178) and ten minor (F179–F188), all applied. Draft 1 was split from TD-070's plan (draft 11) at
 Paul's Hold (2026-11-13), his Go on this scope (#275). Class: **wide** (a new major of a vendored, published format,
 read by both consumers; cap 6 rounds, cadence.md §4.8). The record is docs/reviews/TD-092.md. Draft 1's text was
 TD-070's plan's, moved unchanged; that plan's nine rounds are in its Status, and their findings, F1–F174, are in

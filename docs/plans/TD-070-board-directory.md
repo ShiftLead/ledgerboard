@@ -227,7 +227,9 @@ archive files the consumer fetches.
   `BOARD_DIR/` and `LEDGER_DIR/` sends the PR to review (`lift-files`), as a stray path does today; its board
   paths are never compared, so a move reported as a rename or as two paths gives one verdict.
 - `tripwire()` reads covering items through `load_board()`; "newly closed `— lifted.`" is a `Closed:` whose why is
-  `lifted` at the head and none at the base. `uncovered_decisions()`'s new `decide` is one whose id no base item has;
+  `lifted` at the head and none at the base. `uncovered_decisions()`'s new `decide` is one whose id no base item has (an undated v2 item, id None by TD-092's
+  F206, is matched by `item_key()` with the base's undated items, never counted new for its None; open for the
+  second part's rounds, PR #277's review);
   its `decision-no-lift` message names the item by id (round 9's F156): `the new decide item <id> asks <gate> and
   none of its answers lifts it (<lifts>)`, where it said "on line {it.line}".
 - A split PR (a v2 pair at the base, the directory at the head) reads the same ids on both sides (D6, D11), so the
