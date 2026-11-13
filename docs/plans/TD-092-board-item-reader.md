@@ -267,7 +267,7 @@ and a close keep it.
   (round 2's F207) are the ones `due`, `hide_until` and `decided[1]` have today: `added` and `closed[0]` are
   `datetime.date` values (`parse_closed_value()` gives `(date, why)` so), and a record writes each as a
   `"YYYY-MM-DD"` string, as it writes `due` and `decided`'s date today. `item_path(id, closed)` keeps its
-  `YYYY-MM-DD` string argument (a path is text), so a caller holding `BoardItem.closed` passes `closed[0].isoformat()` when `closed[0]` is not None (round 3's F216).
+  `YYYY-MM-DD` string argument (a path is text), so a caller holding `BoardItem.closed` passes `closed[0].isoformat()` when `closed[0]` is not None, else `None` (round 3's F216, F218).
   `detail_source` is B3's
   (TD-070's plan, D8 and B3; round 1's F194), not B1's or B2's. `line` stays: a v2 item's 1-based line,
   0 for a v3 item, read by nothing but v2 code (*The board's order*, D6, no longer reads it). `text` keeps its
@@ -1472,7 +1472,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `(n/a)` head, `- [ ] act 2026-11-11 (n/a) — Ping sam.`, and a line with no head, `- [ ] Ping sam.`, each record's
   `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`), and a new
   `reply_ref`, round 1's F191: an `fyi` line `Context: TD-1.` with a reply naming `TD-9`, whose record's `refs` is
-  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; their `<case>.v3/` split directories and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
+  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
   `board_case` reads through `load_board()`, its records gain `id`, `path`, `added`, `context` and `closed` and keep
   `line` (B5 drops it), their `text` the item's words, their `refs` read from a `context` with no reply (F191),
   `needs_you` rows are `[id, class, days]`, `keys` become the items' ids and `closed` the closed records;
