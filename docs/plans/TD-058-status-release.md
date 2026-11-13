@@ -13,7 +13,7 @@ findings (F195–F200, applied). With nothing build-changing unread, the recomme
 fix. Target design §7.1–§7.3's roster path was amended in PR #200 on Paul's note of 2026-11-11 (the record: [docs/reviews/TD-058.md](../reviews/TD-058.md)). The
 builds are filed only on Paul's go after the rounds.
 
-**Entry:** [TD-058](../ledger/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
+**Entry:** [TD-058](../ledger/archive/TD-058.md). **Source:** [target design](target-design.md) §2.1, §2.2, §7.1 (the v2.7
 row and its amendments), §7.2 step 6, §7.3, §7.4.
 
 ## The problem
