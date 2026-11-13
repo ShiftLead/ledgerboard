@@ -623,7 +623,7 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its own PR;
   - its v3.0 vendor PR's cadence change entry names the commit its PR vendoring the last v2.x minor landed on `main`:
     the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7); that PR merges before the
-    v3.0 vendor PR, since D5's check in that PR runs under the minor, so the commit exists when the entry names it;
+    v3.0 vendor PR, since D5's check in the v3.0 vendor PR runs under the minor, so the commit exists when the entry names it;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
