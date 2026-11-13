@@ -43,10 +43,10 @@ What the four forms amount to, counted on 2026-11-11 with `entries()` and `parse
 | the old decision form | 0 / 0 | 2 / 0 | 7 / 4 |
 
 No entry holds a header `Resolved` beside a body `**Resolved:**` section, no open entry holds a `Waits`, and of the
-thirteen old-form entries nine already have an `**Ask:**` section (ShiftLead's six open and three archived). The agent-cadence tree this repo pins (`67023cc`)
-still writes `Taken by` on every `new` and `renumber` (its `render()` and `plan()`), so this repo's count grows
-until its pin moves past agent-cadence's TD-188 step 4, which agent-cadence's `main` (`acf46ea`, 2026-11-12)
-already carries: it writes `Id take` alone and drops a carried `Taken by` on `renumber`.
+thirteen old-form entries nine already have an `**Ask:**` section (ShiftLead's six open and three archived). The agent-cadence tree this repo pinned
+when they were counted (`67023cc`) wrote `Taken by` on every `new` and `renumber` (its `render()` and `plan()`);
+PR #249 moved the pin to `acf46ea` (2026-11-12), past agent-cadence's TD-188 step 4, which writes `Id take` alone
+and drops a carried `Taken by` on `renumber`, so this repo's count no longer grows.
 
 ## Decisions
 
@@ -131,7 +131,7 @@ allows no v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 
 (paul)`, its Ask: *Is the last v2.x minor tagged, holding TD-078's B1 and B2 and TD-075's B1, with nothing on `main`
 past that tag under `ledgerboard/`, `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written
 by whichever of TD-070's, TD-075's and TD-078's build filings comes last, with its board item; TD-070's plan's D12
-names TD-075's B1 among B1's blocks too from its round 7, TD-081)). The release is Paul's.
+names TD-075's B1 among B1's blocks too from its round 7, TD-081). The release is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
@@ -502,12 +502,11 @@ with the code, and the precheck green.
   (<who>)` (v2.8).", after "…which not every machine reads."), `ledgerboard/ledger.py` (the `migrate` docstrings), `SPEC.md` (texts 1, 2, 4's second paragraph,
   5), `fixtures/migrate/`, `fixtures/ledger_writer/migrate_old_forms`, `tests/`. B1 and B2 in either order.
 - **B3 — this repo's own ledger migrated.** `python3 -m ledgerboard.ledger migrate --release <the minor> --ledger
-  docs/ledger` with B2's module, as its own PR: this repo's ledger has not run v2.7's rules either: on 2026-11-12
-  `migrate --plan` changes five entries, the open TD-065, TD-070, TD-075 and TD-078 (this design's own; a Status
-  with notes → `Open`, with a `was:` Log line) and the archived TD-076 (its Status, and `Location → body`); it holds 53 `Taken by`, 2 header `Resolved` and 1 `Waits`. Its
-  stops, if any, are decided in the PR. **Blocked by** B2. Done when `migrate --plan` shows no entry with changes
-  or stops. Entries filed afterwards through the pinned agent-cadence writer may carry `Taken by` again until
-  agent-cadence stops writing it (*Consumers*); B4's own run of the plan catches them.
+  docs/ledger` with B2's module, as its own PR. v2.7's rules already ran here (PR #249, which also moved the pin to
+  `acf46ea`): counted on 2026-11-13, v2.7's `migrate --plan` changes no entry, and B2's rules 5–8 change 59 archived
+  entries (57 hold a `Taken by`, 2 a header `Resolved`, 1 a `Waits`, TD-020, which holds a `Taken by` too) and no
+  open one; no entry holds the old decision form. The builder counts again at build time. Its stops, if any, are
+  decided in the PR. **Blocked by** B2. Done when `migrate --plan` shows no entry with changes or stops.
 - **B4 — v3.0's ledger removals (D4).** Location: `ledgerboard/__init__.py` (`RETIRED_FIELDS`, `pickable()`'s ℹ
   `retired` field flag, `uncovered_decisions()`'s old-form base-side count (B2's), `WAITS_WRITTEN`, `LOCATION_WRITTEN`, `WRITTEN_RETIRED` and `check()`'s `written` grading,
   `check()`'s retired records over every entry (fields and the old decision form), `GATE_DECISION_RE`'s whole match
@@ -518,9 +517,8 @@ with the code, and the precheck green.
   archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
   `fixtures/run.py`, `SPEC.md` (texts 6–12), the fixtures above, `tests/`. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
   its last build, B5), so v3.0's ledger removals land after its board half and no v2.x release can follow them.
-  Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with `main`'s module; if entries filed
-  since B3 (through the pinned agent-cadence writer, which may still write `Taken by`) show changes, a re-run of
-  B3's command lands first as its own PR. B4's PR states that run.
+  Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with `main`'s module, a cheap guard; if
+  entries filed since B3 show changes, a re-run of B3's command lands first as its own PR. B4's PR states that run.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
 by` B1, B2, TD-075's B1 and Paul's decision that the minor is cut (D3; written on whichever of the three designs'
@@ -530,8 +528,8 @@ filings comes last); TD-070's B1–B5; then B4; then v3.0 (Paul's).
 
 Lines for each consumer's own entry, filed there through its question seat (`ao td add --repo`), never here.
 
-- **agent-cadence** (as its `main` stands at `acf46ea`, 2026-11-12, which vendors v2.7; the tree this repo pins,
-  `67023cc`, is older and is not what these lines describe):
+- **agent-cadence** (as its `main` stands at `acf46ea`, 2026-11-12, which vendors v2.7 and which this repo pins
+  since PR #249):
   - its `ledger.py`'s `prose_waits` (`files/scripts/ledger.py`) scans for ids the old form's text,
     `LB.parse_gates(value)["old_form"][1]`; v2.8's `migrate` moves that text into an `**Ask:**` or the Log, so an id
     named only there stops being seen. Of its two open old-form entries, TD-065's text names no id and TD-144's
