@@ -218,81 +218,48 @@ precondition-clean ledger reads. Their date fallback loses the header `Resolved`
 `**Resolved:**` line, else `Added`, as v3.0 reads no retired field for its old meaning (text 7); after the
 precondition no entry holds one, and on an entry that still does (a retired error) a lifted note is dated by
 `Added`. `_closing_source()`'s like read goes with `migrate_entry()`. The retired gate `hold` and the role `decision (designer)` stay retired items
-that keep the block (no repo holds either). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
+that keep the block (none of the three repos holds either; a roster repo's remodel decides each, D7). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
 precondition reads the same under v3.0. A ledger that declares `Ledgerboard: 3` is refused by v3.0 as by v2.x
 (`version_problem()`: newer than the module reads), which is right: no ledger form of major 3 exists.
 
 **D7. A roster repo's one remodel, after v3.0** (TD-096, on Paul's input, 2026-11-13). A roster repo takes no v2.7
 remodel (target design §7.2 step 6, amended). When its own team picks it up again, after v3.0 is cut and both
 consumers vendor it, it takes one remodel: one session and one PR, by its own team, in two bumps of its agent-cadence
-pin (`docs/cadence.toml`'s `ref`, a full commit). Its steps, in this order, each run from the PR's own worktree
-(`agent-cadence run` reads the pin of the checkout it runs in; the repo's main checkout and its hooks keep the old
-pin until the PR merges):
+pin (`docs/cadence.toml`'s `ref`, a full commit). This design fixes what that PR must show and how v3.0 grades it;
+the commands, their order and their commit points are agent-cadence's remodel procedure (*Consumers*), since every
+one is an agent-cadence wrapper's (`bump`, `ledger.py --split`, `migrate`'s git dating, `board_edit.py`), tested
+there and changed without a ledgerboard release.
 
-1. **Clear the way.** Open PRs that edit the ledger land or close first (cadence.md §2.12 asks it before a split),
-   and so do those that edit the board (this design's, for the board's steps 7 and 9); the team does no other work until the remodel merges (target design §7.3, *Who merges*), so
-   nothing new reaches `main` under the old forms while it is open.
-2. **Bump to the last v2.x pin**: the commit agent-cadence's PR vendoring the last v2.x minor (v2.8) landed on
-   `main` (its squash commit), which agent-cadence's v3.0 vendor PR names in its cadence change entry with the
-   minor's number (v2.8, or v2.9 should D3's rule have made it so; *Consumers*). That commit is fixed once its PR
-   merges, so no reader computes it from where `main` stood at a merge, and no tag is needed (agent-cadence tags no
-   release per vendored minor). The bump is `agent-cadence bump <commit>`; from a pin whose `bump` has no hand-off to
-   the target's code, cadence.md §9.19's manual form (`CADENCE_REPO_ROOT=<repo> python3 <checkout at the
-   target>/launcher/words.py bump <commit>`). Then the version guard: the first line of the file `agent-cadence
-   path scripts/ledgerboard/__init__.py` prints reads `# ledgerboard v<x.y> sha256:…`, and the remodel goes on only
-   when its `v<x.y>` is that minor.
-3. **A ledger still in one file (v1) is split**, under that pin: `agent-cadence run ledger.py --split` (the
-   wrapper's flag, which also moves the rank file, relinks other Markdown and removes the v1 ledger and archive),
-   **left uncommitted** until step 5 has run: the wrapper's `migrate` dates an archived entry whose Status has no date
-   from the day git added its `docs/ledger/archive/` file, which after a committed split is the split's day for
-   every entry. Uncommitted, git gives none, so each such entry is a stop, answered with `--closed-dates` from the
-   v1 archive file's history (the day the commit that added the entry's heading landed) or with `--as`; the PR lists
-   each date so read. Then **what `canonical()` refuses**: `ledger.py fmt --check` names each entry it refuses (a
-   duplicate field, a field below the header block), and each is put right by hand now, the PR saying which, since
-   `set`, `edit` and `migrate` each read an entry through `canonical()` and refuse or stop on such an entry.
-4. **The judgment steps** (target design §7.3), on the open entries, through the writers: each open old-form
-   decision whose `<who>` is neither a person nor a retired role has its holder put right by hand in the header (no
-   writer changes an old form's holder; rule 8 stops on it), which step 6's `fmt` then checks; an entry holding
-   both an open `Waits` and the old form has its old form rewritten first, its text written with `edit --section
-   Ask` and the item replaced by `decision (<who>)` with `set`, since a gate is not added beside the old form; then
-   each open `Waits` becomes its gate through `set` (rule 6 stops on an open `Waits`).
-5. **`migrate`**: `ledger.py migrate --plan --release <the minor>`, then without `--plan`: v2.7's rules and v2.8's in
-   one pass, every stop answered in the PR (rule 7's, rule 8's others, an archived Status outside the set, which
-   takes `--as`, step 3's dates, and a `refused:` one step 3 missed). **`migrate` stays usable for this after v3.0 removes it:** a pin is a commit on
-   agent-cadence's `main`, which stays, so `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's
-   `migrate` whatever v3.0 has removed; nothing in ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
-6. **`fmt`**: `ledger.py fmt --check`, then `ledger.py fmt`. `split` copies entries as written and `migrate` leaves
-   an entry it does not change as given, and the merge gate's `ledger` row fails every new or changed entry file
-   that is not canonical: after a split every entry file is new, so any not canonical fails; what `canonical()`
-   refuses was put right in step 3.
-7. **The board under that pin**: its `People:` line (a preamble line no writer writes, typed once, target design
-   §7.2 step 0's roster step), then `agent-cadence run board_edit.py fmt` (the key rule, §7.3).
-8. **The check between the bumps**, at this point's commit, under that pin, its output in the PR body with §7.3's
-   before/after list and the dry-run: the ledger is a v2 directory, `migrate --plan --release <the minor>` shows no
-   entry with changes or stops (D5's check), and `ledger.py --check` and `ledger.py --check --since
-   origin/<default>` report no error. That is the precondition, met per repo. It is the PR's evidence, not a graded
-   row: the merge gate reads the PR's base and head alone, and the squash drops the commit between. At the head,
-   v3.0's retired errors (D4, on a v2 ledger) refuse any old form the check missed.
-9. **Bump to the v3.0 pin**: a commit of agent-cadence's `main` that vendors v3.0, given to `agent-cadence bump
-   <commit>`; then v3.0's steps for a consumer there, the board's split among them (TD-070's second part, TD-095,
-   designs it, a split PR whose base board predates v2.3 included).
-10. **A board item for each decision steps 4 and 5 wrote**, from an old form or a `Waits`, under the v3.0 pin's writer, after the split:
-   `agent-cadence run board_edit.py add --kind decide --context "TD-n decision (<who>)" --answer <a> --answer <b>
-   --lift <a> …`, its Context naming the entry and the gate so that it covers it.
-
-**The merge gate grades the PR at its head, under the v3.0 pin**, which reads no old form (D4). `check()` grades what
-the head holds, reading the base only to tell a standing finding from one the edit made; `tripwire()` reads the base
-through `_decisions()`, and `uncovered_decisions()` through `_carried()`, which sees no old form once B4 removes
-`_held_old_form()`, so an old-form item is unseen: removing one trips nothing, and a decision rule 8 or step 4 wrote reads as
-gained. Step 10's items answer that: a gained decision whose person the board's `People:` lists, with no covering
-item, is refused (`decision-uncovered`); one whose person it does not list is flagged (`decision-elsewhere`). The
-gate sweep owes such an item in any case, since the old form hid it (D1). Should an old form still reach the head
-after step 9, it is rewritten through v3.0's own cures (text 7); `bump` takes no pin back, and step 1 keeps `main`
-from bringing one.
-
-**What it supersedes for a roster repo:** cadence.md §2.12's "`--split` as its own PR" and its `migrate` run as a PR
-of its own both give way to this one PR, as Paul asked (agent-cadence's cadence.md line, *Consumers*). The roster
-repos' own counts are their remodels' to take: no roster ledger is counted here.
+- **The last v2.x pin.** The first bump moves the pin to the commit agent-cadence's PR vendoring the last v2.x minor
+  landed on `main` (its squash commit): v2.8, tagged here 2026-11-13 (#281), unless a v2.9 is cut before TD-070's
+  B1 merges (D3). That commit is fixed once its PR merges, so no reader computes it from where `main` stood at a
+  merge; agent-cadence's v3.0 vendor PR names it with the minor's number (*Consumers*). **`migrate` stays usable
+  through it after v3.0 removes it:** a pin is a commit on agent-cadence's `main`, which stays, so `agent-cadence
+  run ledger.py migrate` under that pin runs the last v2.x's `migrate` whatever v3.0 has removed. Nothing in
+  ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
+- **What the PR shows between the bumps** — the precondition, met per repo (D5), taken under the last v2.x pin
+  before the second bump, its output in the PR body: the ledger is a v2 directory (a v1 file split first: the
+  writers, `migrate` among them, refuse one); `ledger.py migrate --plan --release <the minor>` shows no entry with
+  changes or stops; every entry file is canonical (`ledger.py fmt --check` changes nothing); and `ledger.py --check`
+  reports no error. It is the PR's evidence, not a graded row: the merge gate reads the PR's base and head alone, and
+  the squash drops the commits between.
+- **How v3.0 grades the PR**, at its head, under the v3.0 pin, from the PR's own worktree (`agent-cadence run` reads
+  the pin of the checkout it runs in; the repo's main checkout and its hooks keep the old pin until the PR merges).
+  It reads no old form (D4): at the head, v3.0's retired errors (on a v2 ledger) refuse any old form the remodel
+  left. `check()` grades what the head holds, reading the base only to tell a standing finding from one the edit
+  made; `tripwire()` reads the base through `_decisions()`, and `uncovered_decisions()` through `_carried()`, which
+  sees no old form once B4 removes `_held_old_form()`, so a base old-form item is unseen: removing one trips
+  nothing, and every `decision (<who>)` the remodel writes, from an old form or a `Waits`, reads as gained. Each
+  needs a board item that covers it (its Context `TD-n decision (<who>)`), else the gate refuses it
+  (`decision-uncovered`, when the board's `People:` lists the person) or flags it (`decision-elsewhere`). The gate
+  sweep owes such an item in any case, since the old form hid it (D1).
+- **The board** takes, in the same PR, the v2.x steps a roster board missed (its `People:` line, target design §7.2
+  step 0; `fmt`'s key rule, §7.3) and, under the v3.0 pin, its split, which TD-070's second part (TD-095) designs,
+  a split PR whose base board predates v2.3 included; the board items above are written by the writer of the board
+  as it then stands.
+- **What it supersedes for a roster repo:** cadence.md §2.12's "`--split` as its own PR" and its `migrate` run as a
+  PR of its own both give way to this one PR, as Paul asked (agent-cadence's line, *Consumers*). The roster repos'
+  own counts are their remodels' to take: no roster ledger is counted here.
 
 *Alternatives weighed.* (a) Two PRs, the first merged under the last v2.x pin, so v2.8's gate grades the rewrite and
 the rewritten decisions need no board item in that PR: two remodels where Paul asked one, and the board items are
@@ -303,6 +270,10 @@ has it. (d) The last commit before agent-cadence's v3.0 vendor PR, as Paul's not
 vendors v2.8"), in place of the vendoring PR's own commit: it would carry agent-cadence's later fixes, but it is
 known only once the v3.0 vendor PR has merged, so the entry that names it would race its own merge (F126). The
 vendoring PR's commit is fixed and carries the same `migrate`; the second bump brings every later fix.
+(e) The remodel's commands, in order, in this plan (D7 as rounds 9–11 had it): every build-changing finding on them
+(F142, F153, F154, F162, and round 11's) was an agent-cadence wrapper's argument form, side effect or commit point,
+which ledgerboard cannot check from its tree and which moves with agent-cadence; so this plan keeps the predicate and
+the grading, and the procedure is agent-cadence's (*Consumers*).
 
 ## The `SPEC.md` text
 
@@ -668,9 +639,22 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     and that minor's number:
     the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7); that PR merges before the
     v3.0 vendor PR, since D5's check in the v3.0 vendor PR runs under the minor, so the commit exists when the entry names it;
-  - its `cadence.md` §2.12 says a v1 ledger's `--split` is its own PR and a `migrate` run a PR of its own; its v3.0
-    vendor PR (or the cadence change that lands with it) says a roster repo's one remodel after v3.0 (D7) does both
-    in that one PR, with D7's order (the split uncommitted until `migrate` has run, then `fmt`);
+  - **a roster repo's remodel procedure** (D7), beside its `cadence.md` §2.12 and §9.19, which a roster session
+    follows: the commands, their order and their commit points for the one PR, superseding for it §2.12's
+    "`--split` as its own PR" and `migrate` as a PR of its own. What rounds 9–11 of this design found it must get
+    right, each an agent-cadence wrapper's behaviour (F142–F175, `docs/reviews/TD-078.md`): open ledger and board PRs
+    land or close first, and the team does no other work until it merges; a pin whose `bump` has no hand-off bumps
+    by §9.19's manual form; the pinned tree's vendored `ledgerboard/__init__.py` names the minor before anything
+    runs; a v1 ledger is split, and the split is not committed before `migrate` runs, since the wrapper dates an
+    undated archived Status by the day git added its archive file (the split's day, once committed); a missing date
+    is answered only by `--closed-dates` (a JSON object, TD-n to the UTC day of the newest commit that added the
+    entry's heading to the v1 archive), `--as` only an unmapped word; what `canonical()` refuses is put right by hand
+    before any writer runs, since `set`, `edit` and `migrate` refuse or stop on it; target design §7.3's judgment
+    steps (an old-form holder that is no person, a role, `hold`, each `Waits`, an entry holding both an open `Waits`
+    and the old form rewritten first) run before `migrate`; `fmt` runs after it; `board_edit.py`'s `fmt` and `add`
+    take `--board`, and `add` commits and refuses a dirty board, so the commit points are the procedure's; and the
+    check D7 names is taken at a commit the procedure fixes. It carries a test of its own, as agent-cadence's
+    launcher tests do. Filed through agent-cadence's question seat with its v3.0 vendor entry;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
