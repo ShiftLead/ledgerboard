@@ -434,7 +434,7 @@ bullet, its numbered rules).
 - **`form`** (round 1's F190) is how the board was read: `"dir"` from a directory (a stub's directory among them),
   `"file"` from one file and its archive, None for an empty `Board` read from nothing (a missing `path`, rule 6's
   stub). A `Board` has a form and a major apart because they can disagree: a directory whose `README.md` declares 2
-  is `"dir"` with `major` 2 (rule 4), a file declaring 3 is `"file"` with `major` 3 (rule 5). So everything that
+  is `"dir"` with `major` 2 (rule 4), a file declaring 3 or newer that holds items is `"file"` with `major` the file's (rule 5; round 6's F251). So everything that
   depends on how the board is laid out is defined on `form`: the preamble readers (below), *The board's order*,
   `board_problems()`' refusal (D7's *The gate*) and `board_dir_problems()`' checks (D11); `major` serves the version
   check alone (*The board's major*). Where this plan's prose (not the SPEC text, which says *read from a directory* or *from a
@@ -594,7 +594,7 @@ bullet, its numbered rules).
      path.
   3. `problems`: a `README.md` that is missing, or declares no major: `major` 3, named under `README.md`.
   4. `problems`: a `README.md` declaring 2: read as a directory, `form` `"dir"`, `major` 2 (through a stub, `major`
-     3, round 6's F244), named under `README.md`.
+     the stub's, the greater: 3 for a stub declaring 3; round 6's F244, F250), named under `README.md`.
   5. `problems`: a file declaring `Ledgerboard: 3` or a newer major that holds items (it is no stub): read as a v2
      file, `form` `"file"`, `major` the file's (3, or the newer one, which `version_problem(board)` then refuses as
      any newer major; round 6's F246), named under its name.
@@ -1236,7 +1236,7 @@ board or in its archive)". After *The close rule*'s list, add:
 >      non-blank line is no header field, `**<Name>:** `): skipped, named under its path.
 >   3. `problems`: a `README.md` that is missing, or declares no major: `major` 3, named under `README.md`.
 >   4. `problems`: a `README.md` declaring 2: read as a directory, `form` `"dir"`, `major` 2 (through a stub,
->      `major` 3), named under `README.md`.
+>      `major` the stub's, the greater: 3 for a stub declaring 3), named under `README.md`.
 >   5. `problems`: a file declaring `Ledgerboard: 3` or a newer major that holds items (it is no stub): read from
 >      the file, `form` `"file"`, `major` the file's (a newer one refused by `version_problem()`), named under its
 >      name.
@@ -1282,8 +1282,8 @@ board or in its archive)". After *The close rule*'s list, add:
 >   item with none; `refs`, as before, the refs of `context` (*The board*, `Context:`), so a v2 item's never one
 >   read from a reply; `closed`, `{"date": "YYYY-MM-DD", "why": <string> | null}` (both `null` for an archived file
 >   with no `Closed:` in its form, and for a v2 closed line with no readable `Closed:` date: one whose date is no
->   day, its `Closed` kept as written in its fields, or one with no `Closed:` or one holding no date, which is in
->   its words), or `null` when the item is open; `decided`, as before, `{"text": <label>,
+>   day, its `Closed` kept as written in its fields, or one with no `Closed:` at all, or one whose `Closed:` holds no
+>   date, that `Closed:` staying in its words), or `null` when the item is open; `decided`, as before, `{"text": <label>,
 >   "date": "YYYY-MM-DD"}` or `null`, `decided_by` beside it; and `doer`, `{"kind": "repo" | "team", "name":
 >   <string>, "text": <string>}` (`text` the value as written) or `null`.
 > - **Two reads of one board compared** (a v2 board and its split): records keyed by `id`, `path` and `line` left
@@ -1704,7 +1704,8 @@ whose `Closed:` date the split refuses, round 4's F231), and `board_v3_case` are
   directory in id order, its `README.md` read whole as preamble, F190); `file_v3_items` (a file declaring 3 holding
   items: `form` `"file"`, `major` 3, rule 5's case as it stands since round 6's F246 widened rule 5 to a newer
   major, read as v2, in line order, its preamble the lines above its first item, named;
-  F190); `missing` (no path: empty, `form` and `major` None, `path` the path given, F196); `readme_item_line` (a `- [ ]` line in
+  F190); `file_newer_items` (a file declaring 4 holding items: `form` `"file"`, `major` 4, rule 5 named, and
+  `version_problem()` refusing it as any newer major; round 6's F251); `missing` (no path: empty, `form` and `major` None, `path` the path given, F196); `readme_item_line` (a `- [ ]` line in
   `README.md` above `People:`, which is still read); `newer` (a README declaring `Ledgerboard: 4`:
   `version_problem(board)` names it, in D6's words); `readme_major_late` (a README whose `Ledgerboard: 3` stands below a `- [ ]`
   line of prose: `major` 3, read by `board_major()`); `v2_undeclared` (a v2 file with no `Ledgerboard:` line:
