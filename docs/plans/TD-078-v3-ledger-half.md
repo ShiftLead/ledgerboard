@@ -227,7 +227,8 @@ remodel (target design §7.2 step 6, amended). When its own team picks it up aga
 consumers vendor it, it takes one remodel: one session and one PR, by its own team, in two bumps of its agent-cadence
 pin.
 1. **The last v2.x pin.** The pin (`docs/cadence.toml`'s `ref`, a full commit, as `agent-cadence bump` writes it)
-   moves to the merge commit of agent-cadence's PR that vendors the last v2.x minor (v2.8). That commit is fixed
+   moves to the commit that agent-cadence's PR vendoring the last v2.x minor (v2.8) lands on `main` (its
+   squash commit). That commit is fixed
    once the PR merges, before agent-cadence's v3.0 vendor PR, whose cadence change entry names it (agent-cadence's
    line, *Consumers*), so no reader computes it from where `main` stood at a merge, and no tag is needed
    (agent-cadence tags no release per vendored minor). Before running anything, the remodel reads the first line
@@ -245,8 +246,8 @@ pin.
 2. **The check between the bumps**, run under the last v2.x pin at that bump's commit, its output in the PR body:
    `ledger.py migrate --plan --release <the minor>` shows no entry with changes or stops (D5's check), and
    `ledger.py --check` reports no error. That is the precondition, met per repo.
-3. **The v3.0 pin.** The pin moves to a commit of agent-cadence's `main` that vendors v3.0 (its current one, as a
-   bump takes), and the remodel does v3.0's
+3. **The v3.0 pin.** The pin moves to a commit of agent-cadence's `main` that vendors v3.0, given to
+   `agent-cadence bump <commit>`, and the remodel does v3.0's
    steps for a consumer there, the board's split among them (TD-070's second part, TD-095, designs it).
 
 **The merge gate grades the PR at its head, under the v3.0 pin**, which reads no old form (D4): B4 removes
@@ -620,9 +621,9 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its v3.0 vendor PR's cadence change entry names the merge commit of its PR that vendored the last v2.x minor:
+  - its v3.0 vendor PR's cadence change entry names the commit its PR vendoring the last v2.x minor landed on `main`:
     the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7); that PR merges before the
-    v3.0 vendor PR (D5), so the commit exists when the entry names it;
+    v3.0 vendor PR, since D5's check in that PR runs under the minor, so the commit exists when the entry names it;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
