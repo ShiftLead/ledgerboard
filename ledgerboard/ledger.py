@@ -106,6 +106,7 @@ from . import (
     reassign_gate,
     set_rank,
     split,
+    status_problem,
     utc_day,
     v2_problems,
     version_problem,
@@ -462,6 +463,19 @@ def _open_entry(led: Ledger, tid: str, why: str = "it is edited only once reopen
     return path, led.files[path]
 
 
+def _noted_entry(led: Ledger, tid: str) -> tuple[str, str]:
+    """(path, raw text) of entry ``tid`` for ``note``: an open one, or (v2.8) an archived one whose Status is in
+    the closed set, written where it is in ``archive/``; Refused for an archived one whose Status is not, whose
+    notes ``note`` would lift into the Log (*run migrate first*); Unusable for one in neither directory."""
+    _writable(led)
+    path, archived = led.entry_file(tid)
+    text = led.files[path]
+    if archived and (problem := status_problem(text, archived=True)):
+        raise Refused(f"{tid} is archived ({path}) with a Status outside the closed set — run migrate first: "
+                      f"{problem}")
+    return path, text
+
+
 def _decisions(value: str | None) -> list[str]:
     """The ``decision (<person>)`` gates of a Blocked by value, as written."""
     return [f"decision ({p})" for p in parse_gates(value)["decisions"]]
@@ -522,7 +536,8 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
               answer: str | None = None, suffix: str | None = None, override: str | None = None,
               why: str | None = None, base: Ledger | None = None, resolve: Resolve | None = None,
               today: str | None = None, title: str | None = None, remove: bool = False) -> Plan:
-    """One edit of an open entry (``edit_entry()``): ``set`` (``fields``, an empty value removing one; from v2.8
+    """One edit of an open entry, or for ``note`` (v2.8) of an archived one too (``_noted_entry()``;
+    ``edit_entry()``): ``set`` (``fields``, an empty value removing one; from v2.8
     ``title``, the heading's), ``note`` (``words``, a dated Log line) or ``edit`` (``section`` replaced by
     ``words``, or from v2.8 a misplaced one removed with ``remove``; the ledger's ``Fields:`` names are passed as
     ``declared_fields``). A ``set`` whose Blocked by
@@ -530,7 +545,7 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
     reassigns it (``by``, ``why``): ``_gate_route()``."""
     if action not in ("set", "note", "edit"):
         raise Unusable(f"an entry edit is set, note or edit, not {action!r}")
-    path, text = _open_entry(led, tid)
+    path, text = _noted_entry(led, tid) if action == "note" else _open_entry(led, tid)
     day = _today(today)
     route = {"by": by, "answer": answer, "suffix": suffix, "override": override, "why": why}
     if action != "set" and any(v is not None for v in route.values()):
@@ -1048,7 +1063,7 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         "fmt": "write each entry of a v2 ledger in canonical form",
         "new": "file a new entry in a v2 ledger, in canonical form, under an id the caller took",
         "set": "set an open entry's header fields (an empty value removes one), or (v2.8) its title",
-        "note": "append a dated line to an open entry's Log",
+        "note": "append a dated line to an entry's Log (v2.8: an archived one too, in place)",
         "edit": "replace one section of an open entry (or add it where SPEC puts it), or (v2.8) remove a misplaced one",
         "archive": "archive an open entry (Resolved, Superseded or Dropped) and move its file to archive/",
         "reopen": "reopen an archived entry and move its file back into the ledger",

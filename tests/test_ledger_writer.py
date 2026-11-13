@@ -77,6 +77,52 @@ class Clock(unittest.TestCase):
             self.assertIn(f"- {day}: looked again\n", plan.changes[os.path.join(d, "TD-001.md")])
 
 
+
+ARCHIVED = ("## TD-005: The old exporter wrote the wrong header\n\n**Priority:** Low\n**Added:** 2025-12-01\n"
+            "**Status:** {status}\n\n**Why:** the header named the wrong column.\n")
+
+
+class ArchivedNote(unittest.TestCase):
+    """v2.8 (TD-078 D2): ``note`` takes an archived entry whose Status is in the closed set, in place; ``set`` and
+    ``edit`` still take only open entries."""
+
+    def archived(self, tmp: str, status: str) -> tuple[str, str]:
+        d = ledger(tmp)
+        os.makedirs(os.path.join(d, "archive"))
+        path = os.path.join(d, "archive", "TD-005.md")
+        Path(path).write_text(ARCHIVED.format(status=status))
+        return d, path
+
+    def test_a_note_is_written_where_the_archived_entry_is(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d, path = self.archived(tmp, "Resolved 2025-12-20")
+            plan = W.plan_edit(W.Ledger.open(d), "note", "TD-005", words="also fixed the importer", today="2026-01-15")
+            self.assertEqual(list(plan.changes), [path])
+            self.assertTrue(plan.changes[path].endswith("**Log:**\n- 2026-01-15: also fixed the importer\n"))
+            self.assertIn("**Status:** Resolved 2025-12-20\n", plan.changes[path])
+
+    def test_a_status_outside_the_closed_set_is_refused_whatever_its_notes(self):
+        for status in ("Resolved 2026-01-10: the header now names the right column", "done", "Resolved"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                d, _ = self.archived(tmp, status)
+                with self.assertRaises(Refused) as e:
+                    W.plan_edit(W.Ledger.open(d), "note", "TD-005", words="x", today="2026-01-15")
+                self.assertIn("run migrate first", str(e.exception))
+                self.assertNotIsInstance(e.exception, W.Unusable)
+
+    def test_set_and_edit_still_refuse_an_archived_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d, _ = self.archived(tmp, "Resolved 2025-12-20")
+            for action, kw in (("set", {"fields": {"Priority": "High"}}), ("edit", {"section": "Why", "words": "y"})):
+                with self.subTest(action=action), self.assertRaises(W.Unusable):
+                    W.plan_edit(W.Ledger.open(d), action, "TD-005", today="2026-01-15", **kw)
+
+    def test_an_id_in_neither_directory_is_unusable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d, _ = self.archived(tmp, "Resolved 2025-12-20")
+            with self.assertRaises(W.Unusable):
+                W.plan_edit(W.Ledger.open(d), "note", "TD-009", words="x", today="2026-01-15")
+
 class InProcess(unittest.TestCase):
     def test_the_resolver_is_a_callback(self):
         asked = []

@@ -1409,12 +1409,15 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
   stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
-- **`set`, `note`, `edit`** — one edit of an open entry (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
+- **`set`, `note`, `edit`** — one edit of an open entry, or for `note` (v2.8) of an archived one too
+  (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field; not a non-empty `--location` or `--field Location=…`, from v2.7: `edit
   --section Location`; an empty one still removes the header field) and (v2.8) `--title "<title>"`, the heading's
   title, where `--title ""` is a usage error; `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
-  one; the ledger's `Fields:` names are passed as `declared_fields`). An archived entry is edited only once reopened. From v2.5 `set` and `edit`
+  one; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
+  Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*run
+  migrate first*); `set` and `edit` take an archived entry only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
   section `edit` makes a new `host-log` wait;
 - **the `set` route's gates** — a `set` whose `--blocked-by` drops a `decision (<p>)` the entry carries lifts it
@@ -1722,6 +1725,10 @@ offered; `item_line()` refuses two forms with one head and `default` naming a fo
 names the two faults on such a line. A board with no form in a `Lifts:` reads as before. A consumer writes a fill
 only once every reader of its board runs v2.8: an older reader reads a fill as a work order and never lifts or
 closes it.
+
+**v2.8 gives an archived entry a note** (*The ledger writer*): `ledger.py note` writes an archived entry whose
+Status is in the closed set in place, where v2.7 refused it, and refuses one whose Status is not (*run migrate
+first*). Nothing read changes, and no key moves.
 
 ## Appendix: grammar
 
