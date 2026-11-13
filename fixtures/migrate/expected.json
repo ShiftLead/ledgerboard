@@ -1250,6 +1250,32 @@
    ],
    "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n**Blocked by:** decision (Kim) —\n\n**Why:** a reason.\n\n**Log:**\n- 2026-09-10: a note\n"
   },
+  "old_form_no_text_open_with_ask": {
+   "again": {
+    "changes": [],
+    "same_text": true,
+    "stops": []
+   },
+   "changes": [
+    "old decision form (no text)"
+   ],
+   "listed": [],
+   "stops": [],
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n**Blocked by:** decision (Kim)\n\n**Why:** a reason.\n\n**Ask:** an older ask.\n\n**Log:**\n- 2026-09-10: a note\n"
+  },
+  "old_form_no_text_role_open": {
+   "again": {
+    "changes": [],
+    "same_text": true,
+    "stops": []
+   },
+   "changes": [
+    "old decision form (no text)"
+   ],
+   "listed": [],
+   "stops": [],
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n**Blocked by:** decision (designer)\n\n**Why:** a reason.\n\n**Log:**\n- 2026-09-10: a note\n"
+  },
   "old_form_not_a_person_stops": {
    "again": null,
    "changes": [],

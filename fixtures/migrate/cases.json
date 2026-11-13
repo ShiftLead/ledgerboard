@@ -958,6 +958,16 @@
    "name": "waits_taken_by_old_form_archived",
    "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Built 2026-10-01\n**Taken by:** abc123\n**Blocked by:** decision (pat) — wants a look\n**Waits:** the vendor\n\n**Why:** a reason.\n",
    "archived": true
+  },
+  {
+   "name": "old_form_no_text_open_with_ask",
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n**Blocked by:** decision (Kim) —\n\n**Why:** a reason.\n\n**Ask:** an older ask.\n\n**Log:**\n- 2026-09-10: a note\n",
+   "archived": false
+  },
+  {
+   "name": "old_form_no_text_role_open",
+   "text": "## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n**Blocked by:** decision (designer) —\n\n**Why:** a reason.\n\n**Log:**\n- 2026-09-10: a note\n",
+   "archived": false
   }
  ],
  "status_problem": [
