@@ -1,6 +1,11 @@
 # TD-092: the board's item file, its id and the v2/v3 reader (TD-070's B1 and B2)
 
-**Status:** Draft 9, 2026-11-13 (session lb-designer): round 6's fact-check (R40) raised one build-changing
+**Status:** Draft 10, 2026-11-13 (session lb-designer): round 6's design review (R42) raised nothing
+build-changing and three minor findings (F253 text 13's retitle B5's, F254 `item_fields()` and `item_attrs()`,
+F255 `edit_cases`' moved groups) and a note (F256 `since` and the archived twin), all applied with the author's
+rulings. The rounds end by the stop rule after round 6: build-changing findings per design review, rounds 1–6, 3,
+3, 2, 1, 2, 0; per round's fact-checks, first and re-checks together, 4, 1, 2, 1, 0, 1 (round 3's re-check, R33,
+raised F217). The closing fact-check follows. Draft 9: round 6's fact-check (R40) raised one build-changing
 finding (F242, reopening F231: a v2 closed line with no readable `Closed:` date, the field missing or no date,
 has `closed` `(None, None)`) and six minor (F243–F249), all applied with the author's rulings. Draft 8: round 5's
 fact-check (R38) raised two minor findings (F235, F236), both applied; round 5's design review (R39) raised two build-changing
@@ -514,7 +519,10 @@ bullet, its numbered rules).
   with `since`. `Board.closed` is
   then partial, so `since` is for a reader that judges only open items and recent closes (a nudge, `show`, a
   consumer's Inbox), never for what a board ever held: the sweep (D9), `board_problems()`'s `old`, the verdicts and
-  `split_board()`'s read-back each take a board read whole.
+  `split_board()`'s read-back each take a board read whole. A read with `since` applies the archived-copy-wins
+  rule (*One id in two files* above, rule 8) only over the months it reads, so an open file whose archived twin sits in a month before
+  `since`'s reads open: a documented limit, and why `since` is for readers that judge open items and recent closes
+  alone (round 6's F256).
 - **The board's order** (round 3's F45), stated once, on `form` (round 1's F190): on a `"dir"` board `items` and
   `closed` are each in id **descending** order, newest first; on a `"file"` board they are in line order (`closed`
   the board's closed lines, then the archive's), whatever `major` either declares. *What needs the person*'s ties (undated, unreadable-due and `fyi` items, and two items of one date)
@@ -943,7 +951,9 @@ text 9's *A snapshot against the ledger* paragraph is B2's (its item-file input 
 paragraph. Text 2 lands at B2 without its first paragraph's "; v3.x reads one and writes none" and without its
 second paragraph (the one opening "From v3.0, everything this section says about a line"), which B5 adds (round
 5's F71): until B5 the module still carries the v2 line writers and `board.py` writes a v2 board until B3, so
-neither "writes none" nor "read only" holds before B5 removes them. Round 6's F77 tags three more: text 8's *The
+neither "writes none" nor "read only" holds before B5 removes them. For the same reason text 13 lands at B1
+without its retitle of *The open item line (v2.3)* to "…; a v2 board's, read only from v3.0", which B5 makes
+(round 6's F253, reopening F71 by analogy). Round 6's F77 tags three more: text 8's *The
 item file* lands at B1 without its three clauses that name `board_dir_problems()` ("and `board_dir_problems()` names
 it" after the header-block line that is no field, "; `board_dir_problems()` names it" after a value not in its
 form, and " and `board_dir_problems()` names it" after a field on a kind that does not take it, round 9), which B2 adds with
@@ -1210,7 +1220,9 @@ board or in its archive)". After *The close rule*'s list, add:
 > - **`since`**, a `datetime.date` or None, leaves the archive's months before its month unlisted and unread, so
 >   `closed` holds only the months read; the month equal to `since`'s is read. It applies to a board read from a
 >   directory alone: a board read from a file ignores it, its archive being one file. It is for a reader of open items and recent closes; the sweep, `board_problems()`'s `old`, the
->   verdicts and `split_board()` read a board whole.
+>   verdicts and `split_board()` read a board whole. A read with `since` applies rule 8's archived-copy-wins only
+>   over the months it reads: an open item whose archived copy is in a month before `since`'s reads open, a limit
+>   of `since`, which is why it is for readers of open items and recent closes alone.
 > - **`major`** is what the preamble declares, else 2 for a file and 3 for a directory (through a stub, the greater
 >   of the stub's and `README.md`'s); a missing `path` gives an
 >   empty `Board` with `form` and `major` None and `path` the path given. A board read from a directory has its
@@ -1413,7 +1425,9 @@ in the directory `path` (no subdirectories), or None when `path` is not a direct
 > files alone still reads a ledger); or None when `path` is not a directory;
 
 **13. *Appendix: grammar*.** The opening sentence's list gains "v3.0: the item file"; *The open item line (v2.3)*
-becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*. After it, add:
+becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*, a retitle that is B5's (round 6's F253,
+F59's rule, as F71 holds back text 2's words: until B5 the module still carries the v2 line writers, so "read only"
+does not hold before then); the rest of text 13 is B1's. After it, add:
 
 > ### The item file (v3.0)
 >
@@ -1570,8 +1584,9 @@ The B3, B4 and B5 searches are TD-070's plan's.
 All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions `w-9`, `lb-x`).
 
 - **`fixtures/item/cases.json` and `expected.json`** (a new runner kind, `item_cases`, beside `edit_cases`):
-  - `parse`: a file of each kind and its fields (the runner's `item_fields()`: the `BoardItem`'s fields by name, not
-    `item_record()`, whose keys B1 leaves as v2.8 has them, D4, D12); a heading, a Context, an answer, a detail line and a
+  - `parse`: a file of each kind, printed as the runner's `item_attrs()` (its attributes) and `item_fields()` (its
+    header fields), both defined under *The runner* (round 6's F254), not as `item_record()`, whose keys B1 leaves
+    as v2.8 has them (D4, D12); a heading, a Context, an answer, a detail line and a
     reply each holding `Context:`, `Due:` and `Decided:` as words (the case S3 exists for), read as words;
     `**due:**` and `**hide-until:**` read as `Due` and `Hide until`; a repeated field (the first wins); an unknown
     `**Owner:**` field (ignored, in `fields`); `Decided:` with and without `by`, and a label ending `(by Friday)`
@@ -1761,7 +1776,15 @@ whose `Closed:` date the split refuses, round 4's F231), and `board_v3_case` are
   `hm`, where the line's read gives None (round 9's F167); the rest (`today`, `predicates`, `versions`, `not_right_forms`,
   `not_right_fills`, `queue_subjects`, `implicit_keys`, `key_orders`, `midpoints`, `rank_reads`, `rank_writes`,
   `rank_paths`, `components`, `respaces`, `split_notes`, `forms`, `form_fills`; round 9's F161) are untouched.
-- **The runner** (`fixtures/run.py`): `fs_ls` lists subdirectories with `/` (B2); the kinds `item_cases` (B1) and
+- **The runner** (`fixtures/run.py`): two functions print a `BoardItem` (round 6's F254), each defined here once:
+  `item_fields(item)` is `BoardItem.fields` as `[name, value]` pairs, in order (B1; `board_case` prints it beside
+  each record from B2, F248); `item_attrs(item)` prints, for `item/`'s `parse` case alone, the attributes that
+  case names: `id`, `words`, `kind`, `added`, `due`, `bad_due`, `fyi_due`, `hide_until`, `context`, `answers`,
+  `default`, `decided`, `decided_by`, `doer`, `parts`, `replies` and `closed`, each date as `YYYY-MM-DD` and each
+  tuple as a list (`decided` `[label, date]`, `closed` `[date, why]`, `doer` `[kind, name, text]`, each reply
+  `[by, date, words]`), None as `null` (B1). `edit_cases` stops reading and emitting the groups that move to
+  `item/`, `subjects`, `subject_kinds` and `edit_actions` (B1), and `board_problems` (B2), their keys leaving
+  `fixtures/edit/cases.json` and `expected.json` (round 6's F255). `fs_ls` lists subdirectories with `/` (B2); the kinds `item_cases` (B1) and
   `board_dir_case` (B2) join `cases()`; `board_case` (B2) takes a directory under `fixtures/board/` as one case,
 reading its `board.md` through `load_board()` with `board_archive.md` beside it (round 2's F209; `twins_across`),
 as it takes each `<case>.md`: `cases()` iterates `fixtures/board/`'s directories beside its `*.md` files, each with
@@ -1814,16 +1837,19 @@ gives the v2 subject the v2 writers still call), `subject_id()`, `bold_head()` r
 at `\n` alone (F157) and reading a field on any kind (F147)), `SPEC.md` (text
 8's heading, intro paragraph, tree and *An open item* bullet (F175), *The item id* (with `is_item_id()`,
 `item_path()` and `key_id()`'s definition, F194, F195) and *The item file*, 9 but its
-*gate* paragraph, 13 with `item-header`, F148), `fixtures/item/` (but `gate`
+*gate* paragraph, 13 with `item-header`, F148, but its retitle of *The open item line*, B5's, round 6's F253), `fixtures/item/` (but `gate`
 and `strings`), `fixtures/grammar/`, `fixtures/edit/`'s subject groups moved, `fixtures/run.py` (`item_cases`,
-`item_fields()`, and `judge["item-file"]` → `item_file_problem()` in `grammar_cases()`, whose `judge` names each
+`item_fields()` and `item_attrs()` (round 6's F254, defined under *The runner*), `edit_cases` no longer reading or
+emitting `subjects`, `subject_kinds` and `edit_actions`, whose keys leave `fixtures/edit/expected.json` (round 6's
+F255), and `judge["item-file"]` → `item_file_problem()` in `grammar_cases()`, whose `judge` names each
 start, F179; `item_cases` recording a raised `ValueError` as `{"raises": "ValueError"}`, the `ids` case's non-id, F195), `tests/test_item_gate.py`'s item-file properties (F149).
 Text 8's `parse_item()` paragraph lands without its closing `item_record()` sentence, its *The item file* without
 the clauses naming `board_dir_problems()`, and text 9 without its *snapshot* paragraph (each B2's: *The SPEC text
 the build lands*, round 4's F59, round 6's F77); text 8's *An open item* bullet without "Closing an item moves its
 file in the same write", its *The item id* without "The writer draws the nonce …", and text 9 without "; the writer
 moves it in the same write" (each B3's, TD-070's plan, F175); its *The item id* also without "A v2 item's id is its
-line's date and `key_id()` of its key (*Reading a board*)." (B2's, round 2's F201); text 14's *bold head* bullet and its grammar-prose
+line's date and `key_id()` of its key (*Reading a board*)." (B2's, round 2's F201); text 13 without its retitle
+of *The open item line (v2.3)* (B5's, TD-070's plan, round 6's F253); text 14's *bold head* bullet and its grammar-prose
 `Doer` bullet are B1's. `parse_item()` reads `Kind` and `Due` as D4's F119 bullet says; `subject(…, id=)` makes its head from the
 words, never through `edit_head()` (D7, F117).
 **Records:** `item_record()`'s keys do not change at B1: its `doer` key is v2.8's already (TD-065's build), and B1
@@ -1880,7 +1906,9 @@ paragraph's `item_record()` sentence and *The item file*'s `board_dir_problems()
 `words_prefix`, F208, round 3's F221 and round 4's F232, `closed_words`, round 3's F220, `closed_no_day`, round 4's
 F231, its `Closed: soon.` line round 6's F242, `reply_ref`, F191; `basic`'s `fields` for its line 8, round 5's F238), `fixtures/board_dir/` (`v2_undeclared`'s undated line, round 4's F228; `damage`'s `Added`
 that is no day and `ties`' empty `Due`, F230; `stub_newer`, round 5's F240; `stub_readme_v2`, round 6's F244), `fixtures/item/`'s `gate` and `strings`,
-`fixtures/sweep/` (`undated_close`, F206, `head_in_reply`, F210), `fixtures/lift/`, `fixtures/run.py` (`fs_ls`, `board_dir_case` with `case.json`, F158, `board_case` taking a case directory, F209, `sweep_cases`,
+`fixtures/sweep/` (`undated_close`, F206, `head_in_reply`, F210), `fixtures/lift/`, `fixtures/run.py` (`fs_ls`, `board_dir_case` with `case.json`, F158, `board_case` taking a case directory, F209, and printing each item's `fields` through `item_fields()`, F248,
+round 6's F254, `edit_cases` no longer reading or emitting `board_problems`, whose key leaves
+`fixtures/edit/expected.json` (round 6's F255), `sweep_cases`,
 `lift_cases`; the runner's two reads of `BoardItem.text` move off it, so B5's removal changes no expected JSON:
 `lift_cases`' `closed_items` prints `words`, and `sweep_cases`' `covers` the item's id).
 `load()`, `entry_path()` and `v2_problems()` need no change for `fs_ls`'s new `archive/` name: each

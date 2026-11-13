@@ -807,7 +807,7 @@ B2's shims: `item_record()`'s `line`, `subject()`'s v2 form, the readers' v2-tex
 `BoardItem.text`, today's `_item_text()` and `_item_gate()`'s string form (D4's *`words` and `text`*, their callers
 gone; `words` keeps its name); `parse_board()` filling no `text`; the ledger's `FORMAT_MAJOR` untouched),
 `ledgerboard/board.py` (`split`), `SPEC.md` (text 1, 9's swap — v2's *Edits* removed and `## Edits (v3.0)` renamed `## Edits` — 8's *Migration* and its
-*Reading a board*'s "and no `line`", 2's words B2 left out, 10's `split` and "(*split first*)", 12, 14's writer
+*Reading a board*'s "and no `line`", 2's words B2 left out, 13's retitle of *The open item line (v2.3)* B1 left out (TD-092's round 6's F253), 10's `split` and "(*split first*)", 12, 14's writer
 items),
 `fixtures/board_split/`, `fixtures/board/<case>.v3/`, `fixtures/board_writer/`
 (`split`, `split_exists`, and `write_v2_refused`'s message gaining *split first*), `fixtures/run.py` (`board_split_case`, `board_v3_case` with its tie groups compared as
