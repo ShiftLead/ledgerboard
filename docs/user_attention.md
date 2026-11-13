@@ -16,7 +16,7 @@ Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <
 
 ## Needs the user
 
-- [ ] act 2026-11-12 (session `lb-grinder`) — Merge PR #249, which moves the agent-cadence pin to one that vendors ledgerboard v2.7 and migrates this ledger; it touches docs/cadence.toml, so only you can do this. Context: TD-071 / PR #249. Due: 2026-11-12.
+- [x] act 2026-11-12 (session `lb-grinder`) — Merge PR #249, which moves the agent-cadence pin to one that vendors ledgerboard v2.7 and migrates this ledger; it touches docs/cadence.toml, so only you can do this. Context: TD-071 / PR #249. Due: 2026-11-12. Closed: 2026-11-12.
   - **Context:** PR #249 (TD-071) conflicted with main once TD-083 and TD-084 merged, and was rebased today. The ledger migration was re-run on the entries main had changed since. Its independent review says SHIP, and its precheck and cadence check pass. Under this team's rules a change to docs/cadence.toml is your merge. Each PR that adds a note to an entry's Status before it merges can make it conflict again, so merging sooner is cheaper.
   - **Question:** Merge PR #249 (suggested: gh pr merge 249 --squash, from a worktree).
 - [ ] decide 2026-11-12 (session `lb-designer`) — Say One more round, Go or Hold on TD-070's design (PRs #241, #252): v3.0's board as a directory; round 7, the one you bought, raised six build-changing findings across its design review and closing fact-check, all applied and unread by a design review. Context: TD-070 decision (paul). Due: 2026-11-20. Answers: One more round (default) — an eighth design review, then this item again | Go — B1 to B5 are filed Part of TD-070, B1 after the last v2.x minor is cut | Hold: <note> — the builds stay unfiled and your note goes into TD-070's Ask.
