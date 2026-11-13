@@ -500,6 +500,10 @@
   {
    "name": "a new decision item whose only lifting answer is a form",
    "boards": []
+  },
+  {
+   "name": "migrate_old_form_not_gained",
+   "boards": []
   }
  ]
 }

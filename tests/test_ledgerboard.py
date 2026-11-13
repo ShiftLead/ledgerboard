@@ -460,6 +460,32 @@ class Migrate(unittest.TestCase):
                         self.assertEqual((again["text"], again["changes"], again["stops"]), (got["text"], [], []))
                         self.assertIsNone(L.status_problem(got["text"], archived=archived))
 
+    RULES_5_TO_8 = ("Taken by", "Waits", "Resolved", "old decision form")
+
+    def test_rules_5_to_8_never_move_a_gate_age(self):
+        """v2.8 (TD-078 D1): on a case naming a gate, with a dated Log line or a real Added, where only rules
+        5–8 change the entry, the gate's age is the same before and after."""
+        spec = json.loads((ROOT / "fixtures" / "migrate" / "cases.json").read_text(encoding="utf-8"))
+        seen = 0
+        for c in spec["migrate_entry"]:
+            if "gate" not in c:
+                continue
+            got = L.migrate_entry(c["text"], archived=c["archived"], today=spec["today"])
+            if got["stops"] or not got["changes"] or not all(x.startswith(self.RULES_5_TO_8) for x in got["changes"]):
+                continue
+            seen += 1
+            with self.subTest(case=c["name"]):
+                self.assertEqual(L.gate_age(got["text"], c["gate"]), L.gate_age(c["text"], c["gate"]))
+        self.assertGreaterEqual(seen, 5)
+
+    def test_rule_8_reads_the_gate_the_old_form_held(self):
+        text = ("## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n"
+                "**Blocked by:** TD-3, decision (Kim) — a, b (c, d)\n\n**Why:** a reason.\n")
+        got = L.migrate_entry(text, archived=False, today="2026-11-11")
+        g = L.parse_gates(L.entries(got["text"])[0]["blocked_raw"])
+        self.assertEqual((g["ids"], g["decisions"], g["old_form"]), (["TD-3"], ["Kim"], None))
+        self.assertIn("**Ask:** a, b (c, d)\n", got["text"])
+
 
 class DetailRecommended(unittest.TestCase):
     """TD-069: the writer opens a decide's Recommended with its default's label; words that already do are refused."""

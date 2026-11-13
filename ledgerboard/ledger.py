@@ -857,7 +857,8 @@ def plan_migrate(led: Ledger, release: str, ids: Sequence[str] = (), *, closed_d
                  kinds: Mapping[str, str] | None = None, decided: Mapping[str, str] | None = None,
                  today: str | None = None) -> Plan:
     """``migrate_entry()`` over each entry named, else every entry, open and archived (v2.7, SPEC *Migrating to
-    v2.7*). ``closed_dates`` and ``decided`` are keyed by id, matched by number; ``kinds`` is the stage words' map.
+    v2.7*; from v2.8 its rules 5–8 map ``Taken by``, ``Waits``, a header ``Resolved`` and the old decision form).
+    ``closed_dates`` and ``decided`` are keyed by id, matched by number; ``kinds`` is the stage words' map.
     Any stop stops the run: the plan is empty and ``info["stopped"]`` true. ``info["entries"]`` maps each entry
     changed, listed or stopped to its ``{changes, listed, stops}``; ``info["reblocked"]`` each open entry a
     blocker of which flips between released and not, to ``[{blocker, before, after}]``. The subject is
@@ -1304,7 +1305,8 @@ def run_write(cmd: str, argv: list[str]) -> int:
 
 def migrate_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="ledgerboard.ledger migrate", description=(
-        "migrate each entry named, else every entry, open and archived, to v2.7's forms (migrate_entry()); "
+        "migrate each entry named, else every entry, open and archived, to v2.7's forms, and from v2.8 out of "
+        "Taken by, Waits, a header Resolved and the old decision form (migrate_entry()); "
         "any stop stops the run and writes nothing"))
     ap.add_argument("ids", nargs="*", metavar="TD-n", help="the entries to migrate; default: every entry")
     ap.add_argument("--release", required=True, metavar="X.Y", help="the release migrated to: the commit subject's")
