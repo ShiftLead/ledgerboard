@@ -764,7 +764,7 @@ in the same write", "; a person reads the board through `board.py show`" and *Th
 nonce …" sentence, and text 9's "; the writer moves it in the same write"), `fixtures/board_writer/` (but
 `split`, `split_exists`; `edit_moved` removed, `edit_newer_major` rewritten, F161), `tests/test_board_writer.py`
 rewritten (F149). **Records:** `item_record()` is untouched; the `list` cases (`list`, `list_v2`,
-`list_stub`) print B2's records. Done when: the precheck is green, every writer case passes, and text 14's B3
+`list_stub`) print B2's records. Done when: the precheck is green, every writer case passes, and *The search*'s B3
 search finds its names only where it allows.
 
 **B4, the merge gate's verdicts.** D10. Location: `ledgerboard/__init__.py` (`BOARD_DIR`, `BOARD_V2_PATH`,
@@ -773,7 +773,7 @@ trees, `tripwire()`, `lift_pr_verdict()`, `uncovered_decisions()`, each reading 
 `BoardItem` where it read `_item_gate(it.text)`, D4; `lift_pr_verdict()` judging the changed set from the trees and
 `files` only for a path outside the board and the ledger, F153; `decision-no-lift` naming the item's id, F156),
 `SPEC.md` (text 7), `fixtures/verdict/`, `tests/test_ledgerboard.py`'s verdict tests (F149).
-**Records:** none change. Done when: the precheck is green, every verdict case passes, and text 14's B4 search
+**Records:** none change. Done when: the precheck is green, every verdict case passes, and *The search*'s B4 search
 finds its names only where it allows.
 
 **B5, migration and the release's removals.** D11, D12. Location: `ledgerboard/__init__.py` (`split_board()`,
@@ -795,7 +795,7 @@ sets; `archive_case` and the retired `edit_cases` groups removed; `lift_cases`' 
 (those groups, regenerated), `fixtures/archive/` and the retired
 `fixtures/edit/` groups, `tests/` (B5's bullet under *Unit tests*, F149). **Records:** `item_record()` loses `line`; every expected JSON holding a record
 regenerates: `fixtures/board/*.json`, `fixtures/board_dir/*/expected.json`, and `fixtures/board_writer/`'s `list`,
-`list_v2` and `list_stub`. Done when: the precheck is green, every fixture passes, text 14's full search of
+`list_v2` and `list_stub`. Done when: the precheck is green, every fixture passes, *The search*'s full search of
 `SPEC.md` finds no removed name outside the places it allows, and `board.py split` of this repo's own board, run on
 a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README.md`, F118).
 
