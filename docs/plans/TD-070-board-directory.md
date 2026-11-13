@@ -625,8 +625,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/item/`** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
 - **`fixtures/board/<case>.v3/`** for each v2 case `fixtures/board/` holds when B5 is built (today `basic`,
   `answers`, `doer`, `hidden`, `people`, `lifts_parts` and `shared_part_left_open`; round 8's F122: `doer` is
-  v2.8's, so `doer.v3/` is among them), and a new `twins_across`, an open line
-  on the board and its closed twin in the archive: its split directory. **Each of the seven splits** under the
+  v2.8's, so `doer.v3/` is among them), and TD-092's `twins_across` (B2: a case directory, `board.md` beside
+  `board_archive.md`, TD-092's F209), an open line on the board and its closed twin in the archive: its split
+  directory, `fixtures/board/twins_across/v3/`. TD-092's `undated_twins` and `words_prefix` (B2) hold undated
+  lines, which the split refuses (D11), so they are read-only cases with no `.v3/` (TD-092's F213). **Each of the seven splits** under the
   ruling (round 9's F147, checked against D11's kept refusals: every line dated with a day, no closed line without
   a readable `Closed:` date, no two items of one id, no preamble line after the first item, no colonless `Due
   <day>.` and no `Due` v2 reads inside another span, round 9's F164, F165): `basic` (its `fyi` with `Due: 2026-01-20.` and its `Due: 2026-1-9.` carried, its
@@ -725,7 +727,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   `canonical_item()`; `tests/test_ledgerboard.py`'s tests of the removed writers (`item_line()`, `decided_line()`,
   `edit_line()`, among them `test_every_edit_keeps_the_item_key`) go or move to item files, and its `sweep()` tests
   pass `(origin_url, basename, board)`; the property test that `split_board()` then `load_board()` gives a board's
-  items back runs over the fixture boards that split, every `fixtures/board/*.md` (each has a `.v3/`, F147), and
+  items back runs over the fixture boards that split, every `fixtures/board/` case with a `.v3/` (F147; not `undated_twins`
+  or `words_prefix`, TD-092's F213), and
   each accepted `board_split` case, never a refused one.
 - `tests/test_ledger_writer.py` and `tests/test_release.py` change in no build.
 

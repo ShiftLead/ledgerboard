@@ -267,7 +267,7 @@ and a close keep it.
   (round 2's F207) are the ones `due`, `hide_until` and `decided[1]` have today: `added` and `closed[0]` are
   `datetime.date` values (`parse_closed_value()` gives `(date, why)` so), and a record writes each as a
   `"YYYY-MM-DD"` string, as it writes `due` and `decided`'s date today. `item_path(id, closed)` keeps its
-  `YYYY-MM-DD` string argument (a path is text), so a caller holding `BoardItem.closed` passes `closed[0].isoformat()`.
+  `YYYY-MM-DD` string argument (a path is text), so a caller holding `BoardItem.closed` passes `closed[0].isoformat()` when `closed[0]` is not None (round 3's F216).
   `detail_source` is B3's
   (TD-070's plan, D8 and B3; round 1's F194), not B1's or B2's. `line` stays: a v2 item's 1-based line,
   0 for a v3 item, read by nothing but v2 code (*The board's order*, D6, no longer reads it). `text` keeps its
@@ -695,7 +695,9 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   from wherever the rule stopped: `- [ ] 2026-11-11 — Ping sam.` gives `Ping sam.`, `- [ ] act 2026-11-11 (n/a) —
   Ping sam.` gives `Ping sam.`, and `- [ ] Ping sam.` gives `Ping sam.` (a group not after a date is words:
   `- [ ] (later) Ping sam.` gives `(later) Ping sam.`); and `- [ ] act (n/a) — Ping sam.` gives the whole `act (n/a) — Ping sam.`, since v2 reads no kind
-  and no head on a line with no date, `KIND_RE` and `HEAD_RE` each needing one).
+  and no head on a line with no date, `KIND_RE` and `HEAD_RE` each needing one. A word before the date that is no
+  kind is words too, as `KIND_RE` reads no kind there: `- [ ] Foo 2026-11-11 (session x) — Ping.` gives
+  `Foo 2026-11-11 (session x) — Ping.`, though `HEAD_RE` reads a head there; round 3's F215).
   **The span** (round 6's F80), defined by how the v2 reader finds each field and the replies on the line after its
   prefix: each field's span runs from its name to its value's end as its reader takes it, `Context` to where
   `CONTEXT_RE` ends it over the line with `reply_span()` removed (the next field's name, the reply's start, or the
@@ -1554,7 +1556,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **The runner** (`fixtures/run.py`): `fs_ls` lists subdirectories with `/` (B2); the kinds `item_cases` (B1) and
   `board_dir_case` (B2) join `cases()`; `board_case` (B2) takes a directory under `fixtures/board/` as one case,
 reading its `board.md` through `load_board()` with `board_archive.md` beside it (round 2's F209; `twins_across`),
-as it takes each `<case>.md`; `grammar_cases()`' `judge` gains `"item-file"` → `item_file_problem()` (B1,
+as it takes each `<case>.md`: `cases()` iterates `fixtures/board/`'s directories beside its `*.md` files, each with
+its `expected.json`, and skips a `<case>.v3/` directory (TD-070's B5), which is no case (round 3's F214); `grammar_cases()`' `judge` gains `"item-file"` → `item_file_problem()` (B1,
   round 1's F179); `board_case`, `sweep_cases` and `lift_cases` read through `load_board()` (B2); `board_dir_case`
   reads a case's `case.json` (`unreadable`, `path`, F158). B5's runner changes (`board_v3_case` and
   `board_split_case` joining `cases()`, `archive_case` and the retired groups of `edit_cases` going, and
