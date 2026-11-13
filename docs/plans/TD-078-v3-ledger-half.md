@@ -44,7 +44,7 @@ What the four forms amount to, counted on 2026-11-11 with `entries()` and `parse
 
 No entry holds a header `Resolved` beside a body `**Resolved:**` section, no open entry holds a `Waits`, and of the
 thirteen old-form entries nine already have an `**Ask:**` section (ShiftLead's six open and three archived). The agent-cadence tree this repo pinned
-when they were counted (`67023cc`) wrote `Taken by` on every `new` and `renumber` (its `render()` and `plan()`);
+when this repo's entries were counted (2026-11-11, `67023cc`) wrote `Taken by` on every `new` and `renumber` (its `render()` and `plan()`);
 PR #249 moved the pin to `acf46ea` (2026-11-12), past agent-cadence's TD-188 step 4, which writes `Id take` alone
 and drops a carried `Taken by` on `renumber`, so this repo's count no longer grows.
 
