@@ -627,8 +627,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `answers`, `doer`, `hidden`, `people`, `lifts_parts` and `shared_part_left_open`; round 8's F122: `doer` is
   v2.8's, so `doer.v3/` is among them), and TD-092's `twins_across` (B2: a case directory, `board.md` beside
   `board_archive.md`, TD-092's F209), an open line on the board and its closed twin in the archive: its split
-  directory, `fixtures/board/twins_across.v3/` beside the case's directory, and TD-092's `reply_ref` (B2, dated),
-  which splits (TD-092's F217). TD-092's `undated_twins` and `words_prefix` (B2) hold undated
+  directory, `fixtures/board/twins_across.v3/` beside the case's directory, and TD-092's `reply_ref` and `closed_words` (B2, dated),
+  which split (TD-092's F217, F224; `closed_words`' `Closed: 2026-01-10 lifted.` carried as round 9's F160 says,
+  written `**Closed:** 2026-01-10` with `lifted.` in the heading). TD-092's `undated_twins` and `words_prefix` (B2) hold undated
   lines, which the split refuses (D11), so they are read-only cases with no `.v3/` (TD-092's F213). **Each of the seven v2 cases splits** under the
   ruling (round 9's F147, checked against D11's kept refusals: every line dated with a day, no closed line without
   a readable `Closed:` date, no two items of one id, no preamble line after the first item, no colonless `Due

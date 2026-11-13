@@ -211,12 +211,14 @@ and a close keep it.
   `parse_hide_until()` and `DUE_RE` find a field on a v2 line by its name (the trailer's readers after its `Due:`,
   `parse_parts()` after its `Context:`, `parse_hide_until()` after its `Due:` or else its `Context:`) and stay v2's. B1
   adds `parse_decided_value(value)`, giving `(label, date, by)` (`by` None when the value names no one) or None for a
-  value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by` (round 3's F223: `by` is a
-  person in the person grammar, `PERSON`, as `parse_decided_by()` reads one today, splitting off only a final `(by
+  value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by` (round 3's F223, F227: `by` is a
+  person in the person grammar, `PERSON`, the person rule `parse_decided_by()` reads today, splitting off only a final `(by
   <person>)` in that grammar and leaving any other `(by …)` in the label; the grammar holds no space, so the first `
   — ` after it ends it, and a value whose text from `by ` to the first ` — ` is no person, `2026-11-12 by pat smith
   — Go`, is outside the form, read as no answer and named under rule 14; the split never writes one, since v2's
-  `Go (by pat smith)` is all label and is written `2026-11-12 — Go (by pat smith)`);
+  `Go (by pat smith)` is all label and is written `2026-11-12 — Go (by pat smith)`. Reading that v3 value as no
+  answer is v3's value grammar, not v2's reading: v2 reads `Go (by pat smith)` as decided, its label whole, `by`
+  None, and has no line equivalent of the v3 form);
   `parse_closed_value(value)`, giving `(date, why)` (`why` None for a bare date) or None outside `<date>[ — <why>]`,
   which fills `closed`; and `parse_answers_value(value)`, giving the written answers split on each bar not after a
   `\`, `\|` read as a bar, each trimmed, the empty ones dropped (round 3's F223: `Go | | No` and `Go | No |` read
@@ -354,7 +356,7 @@ and a close keep it.
   period), `replies` its reply tails, `fields` its fields as `(name, value)` in their order, `words` its words
   (`item_words(line)`, D11), `text` (until B5) the line's text after its tick, trimmed, as today, and `raw` its line.
   **A closed v2 line** (round 3's F220) is read by `parse_closed_items()`, which hands `parse_board()` a rewritten
-  line (its `[x]` made `[ ]`, the text from `Closed:` to the line's end cut, every other line blanked), so the line
+  line (its `[x]` made `[ ]`, the text from `Closed:` to the line's end cut, every open item line blanked and every other line kept; round 4's F225), so the line
   `parse_board()` sees is not the line written. `parse_closed_items()` therefore fills `raw`, `closed`, `fields`,
   `words` and `context` itself, from the original `[x]` line as written: `raw` that line, `closed` its `Closed:`
   (D11), `fields` with its `Closed` in its place, `words` `item_words()` of it (so `Closed: 2026-01-10 lifted.`
@@ -1516,7 +1518,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `(n/a)` head, `- [ ] act 2026-11-11 (n/a) — Ping sam.`, and a line with no head, `- [ ] Ping sam.`, each record's
   `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`; round 3's F221: `- [ ]
   Foo 2026-11-11 (session x) — Ping.`, whose `text` is `"Ping."`, `added` `"2026-11-11"`, `kind` `null` and `id`
-  `"2026-11-11-<8 hex>"`, its date part `2026-11-11`), a new `closed_words` (round 3's F220: `- [x] act 2026-01-05
+  `"2026-11-11-<8 hex>"`, its date part `2026-11-11`), a new `closed_words` (round 3's F220; a record's `text` here is the item's `words` until B5, as for every case below, not
+  `BoardItem.text`'s cut text, round 4's F226: `- [x] act 2026-01-05
   (session w-9) — Rotate the key. Context: TD-1. Closed: 2026-01-10 lifted.`, whose closed record's `text` is
   `"Rotate the key. lifted."` and `closed` `{"date": "2026-01-10", "why": null}`, and `- [x] fyi 2026-01-06
   (session w-9) — Read the notes. Context: TD-2. Closed: 2026-01-12 — read them.`, `text` `"Read the notes."` and
@@ -1525,7 +1528,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   "2026-01-10"]` and the second's `["Closed", "2026-01-12 — read them"]`, each after `Kind`, `Added`, `Session` and
   `Context`), and a new
   `reply_ref`, round 1's F191: an `fyi` line `Context: TD-1.` with a reply naming `TD-9`, whose record's `refs` is
-  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
+  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory, `reply_ref.v3/`, `closed_words.v3/`, round 4's F224; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
   `board_case` reads through `load_board()`, its records gain `id`, `path`, `added`, `context` and `closed` and keep
   `line` (B5 drops it), their `text` the item's words, their `refs` read from a `context` with no reply (F191),
   `needs_you` rows are `[id, class, days]`, `keys` become the items' ids and `closed` the closed records;
