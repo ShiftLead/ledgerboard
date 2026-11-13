@@ -209,7 +209,7 @@ entry holding `changes` or `stops`. With D1 that covers every old form: the Stat
 the four. Each consumer runs it first in its v3.0 vendor PR, before vendoring, and records its output in the PR.
 No new check is added: the command exists, and its output is what the precondition means. A roster repo (any
 other repo that pins agent-cadence) is outside it: v3.0 leaves it untouched until it bumps its own pin, and it meets
-the same check in its own remodel, between that remodel's two bumps (D7). *(Amended 2026-11-13, TD-096, on Paul's
+the same check, with D7's added conditions, in its own remodel, between that remodel's two bumps (D7). *(Amended 2026-11-13, TD-096, on Paul's
 input: the roster repos skip their v2.7 remodel and take one remodel straight to v3.0.)*
 
 **D6. What v3.0's ledger half leaves.** `status_notes_to_log()` and the lifting of a Status's notes in `note`,
@@ -218,7 +218,8 @@ precondition-clean ledger reads. Their date fallback loses the header `Resolved`
 `**Resolved:**` line, else `Added`, as v3.0 reads no retired field for its old meaning (text 7); after the
 precondition no entry holds one, and on an entry that still does (a retired error) a lifted note is dated by
 `Added`. `_closing_source()`'s like read goes with `migrate_entry()`. The retired gate `hold` and the role `decision (designer)` stay retired items
-that keep the block (none of the three repos holds either; a roster repo's remodel decides each, D7). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
+that keep the block (none of the three repos holds either; a roster repo's remodel leaves no open entry
+holding either, D7's predicate). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
 precondition reads the same under v3.0. A ledger that declares `Ledgerboard: 3` is refused by v3.0 as by v2.x
 (`version_problem()`: newer than the module reads), which is right: no ledger form of major 3 exists.
 
@@ -240,12 +241,14 @@ there and changed without a ledgerboard release.
 - **What the PR shows between the bumps** — the precondition, met per repo (D5), taken under the last v2.x pin
   before the second bump, its output in the PR body: the ledger is a v2 directory (a v1 file split first: the
   writers, `migrate` among them, refuse one); `ledger.py migrate --plan --release <the minor>` shows no entry with
-  changes or stops; every entry file is canonical (`ledger.py fmt --check` changes nothing); and `ledger.py --check`
-  reports no error. It is the PR's evidence, not a graded row: the merge gate reads the PR's base and head alone, and
-  the squash drops the commits between.
-- **How v3.0 grades the PR**, at its head, under the v3.0 pin, from the PR's own worktree (`agent-cadence run` reads
-  the pin of the checkout it runs in; the repo's main checkout and its hooks keep the old pin until the PR merges).
-  It reads no old form (D4): at the head, v3.0's retired errors (on a v2 ledger) refuse any old form the remodel
+  changes or stops; every entry file is canonical (`ledger.py fmt --check` exits 0: no entry would change and none
+  is refused); no open entry's `Blocked by` holds the retired gate `hold` or a role in `decision (…)` (each a
+  retired item v3.0 still reads as a block, ℹ only, D6); `ledger.py --check` reports no error; and the board carries
+  its `People:` line and is in `fmt`'s form. It is the PR's evidence, not a graded row: the merge gate reads the PR's
+  base and head alone, and the squash drops the commits between, so the techlead who merges it (target design §7.3,
+  *Who merges*) reads it before merging.
+- **How v3.0 grades the PR**, at its head, under the v3.0 pin (where the gate runs from is the procedure's). It
+  reads no old form (D4): at the head, v3.0's retired errors (on a v2 ledger) refuse any old form the remodel
   left. `check()` grades what the head holds, reading the base only to tell a standing finding from one the edit
   made; `tripwire()` reads the base through `_decisions()`, and `uncovered_decisions()` through `_carried()`, which
   sees no old form once B4 removes `_held_old_form()`, so a base old-form item is unseen: removing one trips
@@ -253,13 +256,15 @@ there and changed without a ledgerboard release.
   needs a board item that covers it (its Context `TD-n decision (<who>)`), else the gate refuses it
   (`decision-uncovered`, when the board's `People:` lists the person) or flags it (`decision-elsewhere`). The gate
   sweep owes such an item in any case, since the old form hid it (D1).
-- **The board** takes, in the same PR, the v2.x steps a roster board missed (its `People:` line, target design §7.2
-  step 0; `fmt`'s key rule, §7.3) and, under the v3.0 pin, its split, which TD-070's second part (TD-095) designs,
+- **The board** takes, in the same PR, under the last v2.x pin, the v2.x steps a roster board missed (its `People:`
+  line, target design §7.2 step 0; `fmt`'s key rule, §7.3) and, under the v3.0 pin, its split, which TD-070's second part (TD-095) designs,
   a split PR whose base board predates v2.3 included; the board items above are written by the writer of the board
   as it then stands.
 - **What it supersedes for a roster repo:** cadence.md §2.12's "`--split` as its own PR" and its `migrate` run as a
   PR of its own both give way to this one PR, as Paul asked (agent-cadence's line, *Consumers*). The roster repos'
   own counts are their remodels' to take: no roster ledger is counted here.
+- **A roster remodel starts only once agent-cadence's procedure has merged** (*Consumers*), and its board half once
+  TD-095's design gives the split and the board's writer under v3.0.
 
 *Alternatives weighed.* (a) Two PRs, the first merged under the last v2.x pin, so v2.8's gate grades the rewrite and
 the rewritten decisions need no board item in that PR: two remodels where Paul asked one, and the board items are
@@ -414,7 +419,8 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > rather than unknown: a retired field — `Waits`, `Taken by`, a header `Resolved` or a header `Location` — is an
 > error (`retired`) on every entry, open or archived, of a ledger that declares major 2 or more, whether or not the
 > edit changed the entry (never `standing`), and ℹ on a v1 ledger; so is a `Blocked by` item in the old decision
-> form (*The old form*, above), which is also an unreadable item, and so an error on a v1 ledger too; another retired item in `Blocked by` is ℹ and keeps the block;
+> form (*The old form*, above), which is also an unreadable item, and so an error on an open entry of a v1 ledger too (ℹ on an archived one there, whose
+> unreadable item no reader flags); another retired item in `Blocked by` is ℹ and keeps the block;
 > and a Status outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0
 > reads no such form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for
 > `Waits` and `Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header
@@ -424,8 +430,8 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > age starts that day, and the merge gate wants a board item for it, as for any decision gained. The retired words,
 > with what replaces each:
 
-That cost is accepted (round 8's F115): the precondition (D5) leaves no repo holding the old form when it vendors
-v3.0, so the cure meets only an entry a v2.x writer of another tree filed late.
+That cost is accepted (round 8's F115): the precondition (D5) leaves none of the three repos holding the old form when it vendors
+v3.0, and a roster repo none once its remodel has merged (D7), so the cure meets only an entry a v2.x writer of another tree filed late.
 
 Its second item, "in `Blocked by`, the gate `hold` (…), the old form above, and a role in `decision (…)`, …",
 loses "the old form above,", reading "the gate `hold` (…) and a role in `decision (…)`, …" (round 8's F116): the old form is no longer read as a retired item (text 6). Its third item's
@@ -491,7 +497,8 @@ ending `note`'s refusal prints from v3.0.
 > `Taken by`; and `migrate`, `migrate_entry()` and `migrate_subject()` are gone, while `subject_kind()` still names a
 > migrate subject. A v2 ledger that met the precondition (*v2.8*, above) reads exactly as under v2.8, and declares
 > no new major. One that did not is not misread: each old form is an error that names it (a retired field ℹ on a
-> v1 ledger, *Retired words*; the old decision form an error there too, as an unreadable item).
+> v1 ledger, *Retired words*; the old decision form an error there on an open entry, as an unreadable item, and ℹ on an
+> archived one).
 
 ## Fixtures
 
@@ -548,7 +555,8 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   `retired_resolved_header`, `retired_location_header`, `retired_taken_by_archived` (each an error on a ledger no
   edit touched), `retired_old_form_open` (two errors: the retired record and the unreadable item),
   `retired_old_form_archived` (one, the retired record) and
-  `retired_v1_info` (ℹ on a v1 ledger); `fixtures/ledger/gates.json`'s TD-115 old-form case (its records are
+  `retired_v1_info` (ℹ on a v1 ledger), `retired_old_form_v1_open` (an error: the unreadable item, beside the ℹ
+  record) and `retired_old_form_v1_archived` (ℹ alone); `fixtures/ledger/gates.json`'s TD-115 old-form case (its records are
   `pickable()`'s, which carry no `old_form`) reads the item as unreadable: its ℹ `retired` flag becomes a
   `blocked-item` flag beside the new retired error;
 - `fixtures/ledger_edit/`: `refused_old_form` (the `entry_text` group), `set_refused_old_form`,
@@ -601,7 +609,7 @@ with the code, and the precheck green.
   `check()`'s retired records over every entry (fields and the old decision form), `GATE_DECISION_RE`'s whole match
   and `parse_gates()`, `edit_entry`'s `set`, `archive` and `reopen`, `_written_blocked()`, `OLD_FORM_REPLACES`,
   `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`, `judge_takes()`,
-  `status_problem()`'s message, `_fallback_day()`'s header read (D6); `migrate_entry()`, `migrate_subject()` and the helpers only they use removed, `MIGRATE_SUBJECT_RE` kept, D4),
+  `status_problem()`'s message, `_fallback_day()`'s header read, `uncovered_decisions()`' `_held_old_form()` (D6); `migrate_entry()`, `migrate_subject()` and the helpers only they use removed, `MIGRATE_SUBJECT_RE` kept, D4),
   `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed; `note`'s refusal of an
   archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
   `fixtures/run.py`, `SPEC.md` (texts 5′ and 6–12), the fixtures above, `tests/` (`test_ledgerboard.py`'s migrate cases,
@@ -647,12 +655,16 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     by §9.19's manual form; the pinned tree's vendored `ledgerboard/__init__.py` names the minor before anything
     runs; a v1 ledger is split, and the split is not committed before `migrate` runs, since the wrapper dates an
     undated archived Status by the day git added its archive file (the split's day, once committed); a missing date
-    is answered only by `--closed-dates` (a JSON object, TD-n to the UTC day of the newest commit that added the
-    entry's heading to the v1 archive), `--as` only an unmapped word; what `canonical()` refuses is put right by hand
+    is answered only by `--closed-dates` (a file holding a JSON object, TD-n to the UTC day of the newest commit that
+    added the entry's heading to the v1 archive, covering every undated archived entry, since giving it replaces
+    git's dates), and `--as` answers a stop on the word (an unmapped word, a `Superseded` with no `by`, a `Moved`
+    naming several ids), never a date; what `canonical()` refuses is put right by hand
     before any writer runs, since `set`, `edit` and `migrate` refuse or stop on it; target design §7.3's judgment
     steps (an old-form holder that is no person, a role, `hold`, each `Waits`, an entry holding both an open `Waits`
     and the old form rewritten first) run before `migrate`; `fmt` runs after it; `board_edit.py`'s `fmt` and `add`
-    take `--board`, and `add` commits and refuses a dirty board, so the commit points are the procedure's; and the
+    take `--board`, and `add` commits and refuses a dirty board, so the commit points are the procedure's; the gate
+    and every check run from the PR's own worktree (`agent-cadence run` reads the pin of the checkout it runs in,
+    and the repo's main checkout and its hooks keep the old pin until the PR merges); and the
     check D7 names is taken at a commit the procedure fixes. It carries a test of its own, as agent-cadence's
     launcher tests do. Filed through agent-cadence's question seat with its v3.0 vendor entry;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
