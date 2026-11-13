@@ -133,8 +133,8 @@ merged.)*
 allows no v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask:
 *Is the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under
 `ledgerboard/`, `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of
-TD-070's and TD-078's build filings comes last, with its board item; TD-070's plan's D12 says the same from its round
-8, TD-085's F129). The release is Paul's.
+TD-070's and TD-078's build filings comes last, with its board item; TD-070's plan's D12 says the same once its round 8,
+TD-085, lands). The release is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
