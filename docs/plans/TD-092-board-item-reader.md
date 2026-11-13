@@ -1,6 +1,8 @@
 # TD-092: the board's item file, its id and the v2/v3 reader (TD-070's B1 and B2)
 
-**Status:** Draft 6, 2026-11-13 (session lb-designer): round 3's design review (R34) raised two build-changing
+**Status:** Draft 7, 2026-11-13 (session lb-designer): round 4's design review (R37) raised one build-changing
+finding (F228, the rules by form) and five minor (F229–F234), all applied with the author's rulings. Draft 6: round
+3's design review (R34) raised two build-changing
 findings (F220, F221) and two minor (F222, F223), all applied with the author's rulings (a closed v2 line read as
 written; one date reading, reversing F215's example). Draft 5: round 2's design review (R31) raised three build-changing
 findings (F206–F208) and four minor (F209–F212), all applied with the author's rulings. Draft 4: round 2's
@@ -212,13 +214,15 @@ and a close keep it.
   `parse_parts()` after its `Context:`, `parse_hide_until()` after its `Due:` or else its `Context:`) and stay v2's. B1
   adds `parse_decided_value(value)`, giving `(label, date, by)` (`by` None when the value names no one) or None for a
   value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by` (round 3's F223, F227: `by` is a
-  person in the person grammar, `PERSON`, the person rule `parse_decided_by()` reads today, splitting off only a final `(by
-  <person>)` in that grammar and leaving any other `(by …)` in the label; the grammar holds no space, so the first `
+  person in the person grammar, `PERSON`, the grammar `parse_decided_by()` reads a v2 person in; the grammar holds no space, so the first `
   — ` after it ends it, and a value whose text from `by ` to the first ` — ` is no person, `2026-11-12 by pat smith
   — Go`, is outside the form, read as no answer and named under rule 14; the split never writes one, since v2's
   `Go (by pat smith)` is all label and is written `2026-11-12 — Go (by pat smith)`. Reading that v3 value as no
   answer is v3's value grammar, not v2's reading: v2 reads `Go (by pat smith)` as decided, its label whole, `by`
-  None, and has no line equivalent of the v3 form);
+  None, and has no line equivalent of the v3 form). `parse_decided_by()`, v2's and unchanged, reads a v2 line: it
+  splits off only a final `(by <person>)` in that grammar and leaves any other `(by …)` in the label. **A v3
+  `Decided` value's label is never split on a trailing `(by …)`** (round 4's F233): its person is only the `by
+  <person>` before ` — `, so `2026-11-12 — Go (by pat)` is decided `Go (by pat)`, `decided_by` None;
   `parse_closed_value(value)`, giving `(date, why)` (`why` None for a bare date) or None outside `<date>[ — <why>]`,
   which fills `closed`; and `parse_answers_value(value)`, giving the written answers split on each bar not after a
   `\`, `\|` read as a bar, each trimmed, the empty ones dropped (round 3's F223: `Go | | No` and `Go | No |` read
@@ -237,13 +241,18 @@ and a close keep it.
   `entry-id`s separated by `, ` as no parts; a `Doer` outside its form as no doer. `board_dir_problems()` names the
   field (rule 14: `Decided: not <date>[ by <person>] — <label>`, `Closed: not <date>[ — <why>]`, `Kind: not one of
   decide, act, look, watch, fyi`, and so on). A `Due` that is no day stays what *The board* says it is, reported
-  (`bad_due`), never read as absent. A file in `archive/` with no `Closed:` in its form is named in `problems` (D6's
+  (`bad_due`), never read as absent. An `Added` that is no day (`2026-02-30`, `soon`) reads `added` None and is
+  named under rule 7, as a missing `Added` is, not under rule 13 (round 4's F230). A file in `archive/` with no `Closed:` in its form is named in `problems` (D6's
   rule 9, so by `board_dir_problems()` too), and read as closed.
 - **`Kind` and `Due` as v2 reads them** (round 8's F119), so the split's read-back agrees field by field. `Kind` is
   read ignoring case and lowercased, as `KIND_RE` (`re.IGNORECASE`) and `parse_board()`'s `.lower()` read a line's
   (`**Kind:** ACT` is an `act`); `item_file_problem()` faults a kind not in lower case, as `item_problem()`'s `kind:`
   fault does, and `canonical_item_file()` lowercases it. `Due`: a value that is a day (`_real_day()`) is `due`; any
-  other value is `bad_due`, the value as written, `due` None. v2 reports a bad `Due:` only in `DUE_ATTEMPT_RE`'s
+  other value is `bad_due`, the value as written, `due` None, an empty `**Due:**` among them, `bad_due` `""` (round
+  4's F230). So `needs_you()` (its `bad_due` class and the order within `dated()`) tests `bad_due is not None`,
+  never its truth as today's `it.bad_due` does, and the record's `due_error` is `""`, not `null`. v2 never gives
+  `""` (`DUE_ATTEMPT_RE`'s `raw` holds digits; an empty `Due:` on a line is no field, the item undated), so a
+  `"file"` board's items read as today. v2 reports a bad `Due:` only in `DUE_ATTEMPT_RE`'s
   date shape because on a line it must find the field in prose; a header value is wholly the field's, so no shape
   test is needed, and every value the split writes is one v2 read as a date or as `DUE_ATTEMPT_RE`'s `raw` (a `Due:
   soon.` on a line is no field to v2, so the split writes no `Due` and its words stay in the heading, D11): the two
@@ -274,8 +283,8 @@ and a close keep it.
   F119). Rule 14 names it, and `item_file()` refuses one.
 - **`BoardItem` gains** `id`, `path` (its path relative to the board's directory, `""` for a v2 item), `words`
   (below), `added` (`datetime.date | None`), `session`, `host`, `context`, `closed` (`(date, why)`, a
-  `datetime.date | None` and a `str | None`; `(None, None)` for an archived file with no `Closed:` in its form; None
-  for an open item), `replies`, `fields` and `raw` (round 4's F54: a v2
+  `datetime.date | None` and a `str | None`; `(None, None)` for an archived file with no `Closed:` in its form, and
+  for a v2 closed line whose `Closed:` date is no day, round 4's F231; None for an open item), `replies`, `fields` and `raw` (round 4's F54: a v2
   item's line as written, its indent included; a v3 item's file text as read, every byte). **The date types**
   (round 2's F207) are the ones `due`, `hide_until` and `decided[1]` have today: `added` and `closed[0]` are
   `datetime.date` values (`parse_closed_value()` gives `(date, why)` so), and a record writes each as a
@@ -295,12 +304,14 @@ and a close keep it.
   - `id` — a string, `"YYYY-MM-DD-<8 hex>"`; `null` for a v2 line with no readable date (D6);
   - `path` — a string, the file's path relative to the board's directory (`"2026-11-11-3f9a2c1d.md"`,
     `"archive/2026-11/2026-10-30-0b7e41aa.md"`); `""` for a v2 item;
-  - `added` — a string, `"YYYY-MM-DD"`; `null` for an item with no `Added` (D6);
+  - `added` — a string, `"YYYY-MM-DD"`; `null` for an item file with no `Added` or one that is no day (D6's rule 7,
+    round 4's F230), and for a v2 line with no readable date (no problem, round 4's F228);
   - `context` — a string, the Context's value without its final period (`"TD-070 decision (pat)"`, `"none"`);
     `null` for an item with no Context, of either major (round 5's F72: a v3 file a hand edit left without one
     among them);
   - `closed` — `{"date": "YYYY-MM-DD", "why": <string> | null}`, the why without its final period; `{"date": null,
-    "why": null}` for an archived file with no `Closed:` in its form; `null` for an open item;
+    "why": null}` for an archived file with no `Closed:` in its form and for a v2 closed line whose `Closed:` date
+    is no day (round 4's F231); `null` for an open item;
   - `decided` — unchanged: `{"text": <label>, "date": "YYYY-MM-DD"}` or `null`, with `decided_by` beside it a
     string or `null`, read from either major's `Decided:`;
   - `doer` — `{"kind": "repo" | "team", "name": <string>, "text": <string>}` (`text` the value as written:
@@ -461,12 +472,22 @@ bullet, its numbered rules).
   writes a v2 board, D7) closes every open line of it. `split_board()` refuses the board until one line is left (D11).
 - **The stub** (D11): a file that declares `Ledgerboard: 3` and holds no item is read as the directory beside it,
   its name less `.md`, so a caller configured with `docs/user_attention.md` reads the board it became.
+- **How `load_board()` tells them apart** (round 4's F229), in this order: `ls(path)` not None is a directory
+  (`form` `"dir"`); else `read(path)` a text is a stub (it declares `Ledgerboard: 3` and holds no items: the
+  directory beside it, `"dir"`, or rule 6's empty `Board` when that is missing), a file declaring 3 that holds items
+  (rule 5, `"file"`), or a v2 file (`"file"`); else the path is missing (an empty `Board`, `form` None). A missing
+  `<stem>_archive.md` reads as an empty archive, as `load()` reads a missing archive, and is no problem; a stub whose
+  directory's `README.md` declares 2 is read as rule 4 says (`"dir"`, `major` 2).
 - **`ls`** lists each subdirectory with a trailing `/` (v3.0; `load()` and `entry_path()` ignore those names).
-  Every `ls` the module and the runner build does so (round 4's F65): `_dict_ls()`, the `ls` over a `{path:
+  Every `ls` passed to `load_board()` does so (round 4's F65, F234): `_dict_ls()`, the `ls` over a `{path:
   text}` map that the ledger's `split()` reads its result back through today, lists a subdirectory once, as
   `<name>/`, from B2, and is the `ls` `split_board()`'s read-back passes `load_board()` (B5); `_tree_ls()`, the
   verdicts' `ls` over a tree, does the same from B4; the runner's `fs_ls` from B2 (*The runner*). The ledger's
   reads through `_dict_ls()` and `_tree_ls()` are unchanged, since `load()` takes only `ENTRY_FILE_RE`'s names.
+  Two `ls` stay file-only and unaffected, since `load_board()` never receives either: `ledger.py`'s `Ledger.ls()`
+  and `board.py`'s `read_ledger()`'s `ls` each list a ledger's files, for `load()` (and `ledger.py`'s for `entry_path()` and
+  `v2_problems()`) alone. The `ls`
+  `board.py` passes `load_board()` from B3 is B3's (TD-070's plan).
   `BoardItem.path` and every problem's path are relative to the board's directory (`archive/2026-11/<id>.md`).
 - **`since`**, a `datetime.date | None` (round 2's F212), leaves out the archive months before its month, neither
   listed nor read; the month equal to `since`'s is read (round 1's F195). It applies to a `"dir"` board's archive
@@ -541,7 +562,12 @@ bullet, its numbered rules).
   string's code-point order; a v2 board's problems name its file's or its archive's name), then by the rule's
   number here, then by line within the file. Text 8 copies this list as it stands. **The words** (round 2's F211,
   as for `item_file_problem()`): this plan fixes each rule's condition and the path it is named under; B2 writes each
-  rule's sentence, and `fixtures/board_dir/`'s expected JSONs pin them.
+  rule's sentence, and `fixtures/board_dir/`'s expected JSONs pin them. **Which form raises each rule** (round 4's
+  F228, reopening F206), by what the rule is about: rules 1–4, 7–9 and 11–16 are about item files, `README.md`,
+  archive months and v3 header blocks, and only a `"dir"` board raises them; rule 5 (a file declaring 3) and rule 10
+  (a v2 board's lines) only a `"file"` board; rule 6 only the empty `Board` of a stub with no directory (`form`
+  None). No rule is about both forms. So a v2 line with no readable date raises nothing: it is read as v2 reads it,
+  its `added` and `id` None (rule 7 is an item file's `Added`).
   1. `problems`: a file `read()` gives None for: skipped, named under its path.
   2. `problems`: a file `parse_item()` reads as no item (its first non-blank line does not open `## `, or the next
      non-blank line is no header field, `**<Name>:** `; D7's one rule, round 9's F139): skipped, named under its
@@ -551,7 +577,8 @@ bullet, its numbered rules).
   5. `problems`: a file declaring `Ledgerboard: 3` that holds items (it is no stub): read as a v2 file, `form`
      `"file"`, `major` 3, named under its name.
   6. `problems`: a stub whose directory is missing: an empty `Board`, `form` None, named under the stub's name.
-  7. `problems`: an item with no `Added`: read, its `added` None, named under its path.
+  7. `problems`: an item file with no `Added`, or one that is no day (round 4's F230): read, its `added` None, named
+     under its path.
   8. `problems`: one id in two files of a v3 board: read once (above), named once, under the path of the archived
      file that wins (the later month's of two archived copies).
   9. `problems`: a file under `archive/` with no `Closed:` in its form: read as closed, its `closed` `(None,
@@ -566,7 +593,7 @@ bullet, its numbered rules).
       month; a directory in a month. Each is named once, under its own path (a directory's with
       its trailing `/`), and not read or descended into.
   12. `board_dir_problems() only`: a header-block line that is no field (D4): kept, in no field.
-  13. `board_dir_problems() only`: an `Added` that is not the id's date.
+  13. `board_dir_problems() only`: an `Added` that is a day but not the id's date (one that is no day is rule 7's).
   14. `board_dir_problems() only`: a `Decided` or `Closed` not in its form (D4): read as no answer, or no close; a
       `Kind`, `Hide until`, `Parts` or `Doer` not in its form (round 6's F76): read as the field absent, a `Kind`
       outside the five as a to-do, shown; a `Doer` that reads but is spelled with more than one space, or a tab,
@@ -691,7 +718,9 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   written, as it reads the line's `raw`, `fields`, `words` and `context` (D4's *A closed v2 line*, round 3's F220): the date `CLOSED_RE` reads when it is a day (`_real_day()`;
   `2026-02-30` is not, so the line is a closed item with no readable `Closed:` date, which the split refuses, TD-070's plan, D11), and the why the
   text after a ` — ` that directly follows the date, trimmed, its final period dropped, None without one (round 9's
-  F160).
+  F160). **A `Closed:` date that is no day** (round 4's F231): `closed` is `(None, None)`, the why unread too, and
+  `fields` keeps `Closed` as written, a value not in its form (D4's *A v2 item's `fields`*: the line's text, trimmed,
+  its one final `.` dropped), so `Closed: 2026-02-30 — lifted.` gives `("Closed", "2026-02-30 — lifted")`.
 - A v2 item's `Doer` field (round 1's F176; TD-070's plan, D11, round 7's F93, F98, round 9's F172) is carried as
   written, never respelled (the read-back compares `doer.text`): one spelled with more than one space or a tab after
   `team`, one on a kind but `act`, and one outside its form each fill `fields` as the line holds them (D4's *A v2
@@ -705,12 +734,13 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   **The prefix** (round 2's F208) is one rule, whatever the head's shape: the tick (`ITEM_RE`'s or
   `CLOSED_ITEM_RE`'s, `- [ ] ` or `- [x] `, its indent and spaces as they read them), then an optional word before
   a date (`[A-Za-z]+\s+`, followed by a date, as `ITEM_DATE_RE` reads it; round 3's F221), then an optional date,
-  then, immediately after the date, an optional one parenthesised group (any `(…)` with no `)` inside: `(n/a)` and
-  `(session …)` alike), then an optional ` — `:
+  then, immediately after the date, an optional one parenthesised head of a form the format writes (round 4's F232,
+  narrowing F208's any `(…)`): `(n/a)`, `(person)` (a decided line's, `any-head`), or `(session` and whitespace,
+  as `HEAD_RE` reads it, then anything up to the first `)`; then an optional ` — `:
 
   ```python
   ITEM_PREFIX_RE = re.compile(r"^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?"
-                              r"(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?")
+                              r"(?:\d{4}-\d{2}-\d{2}\b(?:\s*\((?:n/a|person|session\s[^)]*)\))?)?(?:\s*—\s)?")
   ```
 
   No `re.IGNORECASE`: the word is `ITEM_DATE_RE`'s, which reads case as written, and `[A-Za-z]` under
@@ -721,10 +751,12 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   space cannot shift one reading from the other. The kind is still `KIND_RE`'s, so a word that is no kind is no
   kind, yet is prefix, not words.
   Everything after its match is the words' source. Every part but the tick is optional, so the rule always matches,
-  and a line whose head does not match (no date, a date with no group, an unclosed `(`) leaves the rest as words
+  and a line whose head does not match (no date, a date with no group, an unclosed `(`, a group that is no head)
+  leaves the rest as words
   from wherever the rule stopped: `- [ ] 2026-11-11 — Ping sam.` gives `Ping sam.`, `- [ ] act 2026-11-11 (n/a) —
   Ping sam.` gives `Ping sam.`, and `- [ ] Ping sam.` gives `Ping sam.` (a group not after a date is words:
-  `- [ ] (later) Ping sam.` gives `(later) Ping sam.`); and `- [ ] act (n/a) — Ping sam.` gives the whole `act (n/a) — Ping sam.`, since v2 reads no kind
+  `- [ ] (later) Ping sam.` gives `(later) Ping sam.`; so is a group after a date that is no head, round 4's F232:
+  `- [ ] 2026-11-11 (later) Ping sam.` gives `(later) Ping sam.`, `added` 2026-11-11); and `- [ ] act (n/a) — Ping sam.` gives the whole `act (n/a) — Ping sam.`, since v2 reads no kind
   and no head on a line with no date, `KIND_RE` and `HEAD_RE` each needing one. A word before the date that is no kind is prefix, as `ITEM_DATE_RE`
   reads the date after it: `- [ ] Foo 2026-11-11 (session x) — Ping.` gives `Ping.`, `added` 2026-11-11 and `kind`
   None (round 3's F221, reversing F215's example, which kept the whole as words while the date was read as
@@ -835,13 +867,13 @@ A row whose build names B3, B4 or B5 beside B1 or B2 is shared: its later part i
 | function | reads today | a v3 item's source | build |
 |---|---|---|---|
 | `BoardItem` | — | gains `id`, `path`, `words`, `added`, `session`, `host`, `context`, `closed`, `replies`, `fields`, `raw` (D4); `text` `""` | B1; `text` gone B5 (`detail_source` is B3's, TD-070's plan; F194) |
-| `parse_board()`, `parse_closed_items()`, `detail_block()`, `item_key()`, `is_item()`, `is_open_item()` | a v2 line | none: the v2 half of `load_board()` (D6) | B2 fills the new fields (`parse_closed_items()` a closed line's `raw`, `closed`, `fields`, `words` and `context` from the line as written, its `text` the cut line's; round 3's F220); stay v2's |
-| `parse_answers()`, `parse_default()`, `parse_consequences()`, `parse_decided()`, `parse_decided_by()`, `parse_lifts()`, `parse_parts()`, `parse_hide_until()`, `parse_doer()`, `DUE_RE` | a v2 line | `parse_item()`'s value readers (D4) | B1; stay v2's |
+| `parse_board()`, `parse_closed_items()`, `detail_block()`, `item_key()`, `is_item()`, `is_open_item()` | a v2 line | none: the v2 half of `load_board()` (D6) | B2 fills the new fields (`parse_closed_items()` a closed line's `raw`, `closed`, `fields`, `words` and `context` from the line as written, its `text` the cut line's; round 3's F220; a `Closed:` date that is no day `(None, None)`, its `Closed` field as written, round 4's F231; `words` through the narrowed `ITEM_PREFIX_RE`, round 4's F232); stay v2's |
+| `parse_answers()`, `parse_default()`, `parse_consequences()`, `parse_decided()`, `parse_decided_by()`, `parse_lifts()`, `parse_parts()`, `parse_hide_until()`, `parse_doer()`, `DUE_RE` | a v2 line | `parse_item()`'s value readers (D4; a v3 `Decided` label never split on a `(by …)`, round 4's F233; an empty `Due` `bad_due` `""`, F230) | B1; stay v2's |
 | `item_head()` | `.text`'s head | `BoardItem.session`, `.host` (`Session`) | B2 (F123) |
 | `item_refs()` | `CONTEXT_RE` over `.text` | the same result, its body now `context_refs()` over `CONTEXT_RE`'s `ctx` (round 2's F205), giving that text what it gives today; no record reads it (round 2's F199) | B2 (F123) |
 | `parse_replies()` | `.text`'s tails | `BoardItem.replies` (the Log) | B1 fills it, B2 reads it (F123) |
 | `item_record()` | `.text`, `.line` and the fields | `words`, the fields, `refs` from `context_refs(item.context)`, for a v2 item too, its `context` read with `reply_span()` removed (F191; round 2's F199) | B2; `line` gone B5 |
-| `needs_you()` | `parse_board()`, `.line` for ties | the `Board` (`isinstance`, F193), its order on `form` (D6, F190) | B2 |
+| `needs_you()` | `parse_board()`, `.line` for ties | the `Board` (`isinstance`, F193), its order on `form` (D6, F190); `bad_due is not None`, an empty `Due`'s `""` among it (round 4's F230) | B2 |
 | `bold_head()` | a line, `reply_span()` cut | the heading, whole: `bold_head(words, heading=True)` (F162) | B1 |
 | `edit_head()`, `subject()` | `.text`'s head, `SESSION_RE` | `subject(…, id=)`: the words, the session passed in (F117) | B1; v2 form gone B5 |
 | `_people_line()`, `_answered_by_line()`, `board_people()`, `answered_by()`, `people_problems()`, `answered_by_problems()` | the lines above the first item | every line of `README.md` (a `Board` of `form` `"dir"`, F190); `isinstance(x, Board)` (F198); `(path, problem)` pairs, `README.md` or `Board.path`'s basename, a missing line's message among them (F193; round 2's F196) | B2 |
@@ -932,7 +964,8 @@ definition a sentence of its own. *The builds* name each block's build so.
 > **What needs the person** (`needs_you(board, today)`, v2.3; from v3.0 `board` is a `Board`, *Reading a board*) is
 > every open item not hidden, each with one class and a signed `days`, in one order: `decided` (`days` the
 > decision's age; oldest decision first); then the person's to-do — `overdue` (days past due; most first), `due` (0
-> on the due date, negative days until it; soonest first), `bad_due` and `undated` (the board's order); then each
+> on the due date, negative days until it; soonest first), `bad_due` (a `Due` the reader cannot read, an item
+> file's empty `Due` among them, v3.0) and `undated` (the board's order); then each
 > `watch` item, ordered the same way and keeping its own class and signed days; then each `fyi`, never due, in the
 > board's order. **The board's order** breaks every tie: a board read from one file (`form` `"file"`) in line order,
 > and one read from a directory (`"dir"`) in ids descending, newest first (by `Added` date; within one day the order
@@ -1024,12 +1057,14 @@ board or in its archive)". After *The close rule*'s list, add:
 >     (*Appendix: grammar*, `doer-repo`), or `team <team>`, `<team>` a person's name; `Doer: team` alone names the
 >     repo `team`. `doer_value(value)` reads it as `("repo" | "team", name)`, or None outside that form,
 >     reading a run of spaces or tabs after `team` as one space (`item_file_problem()` faults that spelling);
->   - `Due`, `Hide until` — a date each; a `Due` that is no day is reported as written (`bad_due`), never silently
->     undated; on an `fyi`, a `Due` is ignored, and flagged (`fyi_due`), as on a v2 line;
+>   - `Due`, `Hide until` — a date each; a `Due` that is no day is reported as written (`bad_due`; an empty one as
+>     `""`, which a reader tests as present, `bad_due` not None), never silently undated; on an `fyi`, a `Due` is ignored, and flagged (`fyi_due`), as on a v2 line;
 >   - `Answers`, `Lifts` — as on a v2 line, without the final period;
 >   - `Decided` — `<date>[ by <person>] — <label>`: the date and who answered first, so the label runs to the line's
 >     end and holds any words; `<person>` is a name in the person grammar, as in a v2 `(by <person>)`, so a value
->     whose text from `by ` to the first ` — ` is no person is outside the form. `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
+>     whose text from `by ` to the first ` — ` is no person is outside the form. The label is never split on a
+>     trailing `(by …)`: the person is only the `by <person>` before ` — ` (`2026-11-12 — Go (by pat)` is decided
+>     `Go (by pat)`, by no one). `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
 >     form, and `parse_item()` reads it into `decided` and `decided_by`; `parse_decided()` and `parse_decided_by()`
 >     read a v2 line's;
 >   - `Closed` — `<date>` or `<date> — <why>`, read by `parse_closed_value(value)` as `(date, why)`, or None outside
@@ -1104,15 +1139,21 @@ board or in its archive)". After *The close rule*'s list, add:
 >   line's date, which gives its `added` and its id's date, is the date the line's text after its tick, trimmed,
 >   opens with, after at most one word of ASCII letters and whitespace (`^(?:[A-Za-z]+\s+)?(\d{4}-\d{2}-\d{2})\b`),
 >   when it is a day of the calendar; its kind is that word only when it is one of the five. The prefix is the tick,
->   then an optional word of ASCII letters followed by a date, then an optional date, then an optional one
->   parenthesised group right after the date (any `(…)` with no `)` inside, `(n/a)` and `(session …)` alike), then
->   an optional ` — `
->   (`^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?`,
+>   then an optional word of ASCII letters followed by a date, then an optional date, then an optional one head
+>   right after the date, of a form the format writes (`(n/a)`, `(person)`, or `(session` and whitespace up to the
+>   first `)`), then an optional ` — `
+>   (`^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?(?:\d{4}-\d{2}-\d{2}\b(?:\s*\((?:n/a|person|session\s[^)]*)\))?)?(?:\s*—\s)?`,
 >   case as written), so it ends where the date's head ends whether or not the word is a kind (`- [ ] Foo
 >   2026-11-11 (session x) — Ping.` has the words `Ping.`, the date 2026-11-11 and no kind); what a line's head does
->   not match is words, from wherever the prefix stopped.
+>   not match is words, from wherever the prefix stopped (`- [ ] 2026-11-11 (later) Ping sam.` has the words
+>   `(later) Ping sam.`).
 > - **The stub**, a file that declares `Ledgerboard: 3` and holds no item, is read as the directory beside it, its
 >   name without `.md`.
+> - **Which form**, in this order: `ls(path)` not None is a directory (`"dir"`); else `read(path)` a text is a stub
+>   (declaring 3 and holding no items), a file declaring 3 that holds items (rule 5, `"file"`), or a v2 file
+>   (`"file"`); else the path is missing (an empty `Board`). A missing `<stem>_archive.md` reads as an empty
+>   archive, as `load()` reads a missing archive; a stub whose directory's `README.md` declares 2 is read as rule 4
+>   says.
 > - **The caller does the I/O**, as for `load()`: `ls(path)` returns the names directly in the directory `path`,
 >   each subdirectory's name followed by `/` (v3.0; `load()` ignores those), or None when `path` is not a
 >   directory; `read(path)` returns a file's text, or None. Every path a `Board` names is relative to the board's
@@ -1136,7 +1177,10 @@ board or in its archive)". After *The close rule*'s list, add:
 >   `(path, problem)`, every rule of both marks on a `"dir"` board, and gives `Board.problems` alone on a `"file"`
 >   one. Each
 >   rule names its finding once. Both lists are sorted by path (code-point order), then by the rule's number, then
->   by line within the file.
+>   by line within the file. Only a board read from a directory raises rules 1–4, 7–9 and 11–16 (item files,
+>   `README.md`, archive months, header blocks); only one read from a file raises rules 5 and 10; only an empty
+>   `Board` raises rule 6. No rule is raised on both forms, so a v2 line with no readable date raises nothing: it is
+>   read as v2 reads it, its `added` and `id` None.
 >   1. `problems`: a file `read()` gives None for: skipped, named under its path.
 >   2. `problems`: a file `parse_item()` reads as no item (its first non-blank line does not open `## `, or the next
 >      non-blank line is no header field, `**<Name>:** `): skipped, named under its path.
@@ -1146,7 +1190,8 @@ board or in its archive)". After *The close rule*'s list, add:
 >   5. `problems`: a file declaring `Ledgerboard: 3` that holds items (it is no stub): read from the file, `form`
 >      `"file"`, `major` 3, named under its name.
 >   6. `problems`: a stub whose directory is missing: an empty `Board`, `form` None, named under the stub's name.
->   7. `problems`: an item with no `Added`: read, its `added` None, named under its path.
+>   7. `problems`: an item file with no `Added`, or one that is no day: read, its `added` None, named under its
+>      path.
 >   8. `problems`: one id in two files of a board read from a directory: read once, named once, under the path of the archived file
 >      that wins (the later month's of two archived copies).
 >   9. `problems`: a file under `archive/` with no `Closed:` in its form: read as closed, with no date, named under
@@ -1160,7 +1205,7 @@ board or in its archive)". After *The close rule*'s list, add:
 >       `archive/` that is not a month; a directory in a month. Each is named once, under its own path (a directory's with its trailing `/`), and not read or
 >       descended into.
 >   12. `board_dir_problems() only`: a header-block line that is no field: kept, in no field.
->   13. `board_dir_problems() only`: an `Added` that is not the id's date.
+>   13. `board_dir_problems() only`: an `Added` that is a day but not the id's date.
 >   14. `board_dir_problems() only`: a `Decided` or `Closed` not in its form: read as no answer, or no close; a
 >       `Kind`, `Hide until`, `Parts` or `Doer` not in its form: read as the field absent, a `Kind` outside the five
 >       as a to-do, shown; a `Doer` that reads but is spelled with more than one space, or a tab, after `team`: read;
@@ -1184,7 +1229,8 @@ board or in its archive)". After *The close rule*'s list, add:
 >   `added`, `"YYYY-MM-DD"` or `null`; `context`, a string, the Context without its final period, or `null` for an
 >   item with none; `refs`, as before, the refs of `context` (*The board*, `Context:`), so a v2 item's never one
 >   read from a reply; `closed`, `{"date": "YYYY-MM-DD", "why": <string> | null}` (both `null` for an archived file
->   with no `Closed:` in its form), or `null` when the item is open; `decided`, as before, `{"text": <label>,
+>   with no `Closed:` in its form, and for a v2 closed line whose `Closed:` date is no day, its `Closed` kept as
+>   written in its fields), or `null` when the item is open; `decided`, as before, `{"text": <label>,
 >   "date": "YYYY-MM-DD"}` or `null`, `decided_by` beside it; and `doer`, `{"kind": "repo" | "team", "name":
 >   <string>, "text": <string>}` (`text` the value as written) or `null`.
 > - **Two reads of one board compared** (a v2 board and its split): records keyed by `id`, `path` and `line` left
@@ -1457,7 +1503,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     reply each holding `Context:`, `Due:` and `Decided:` as words (the case S3 exists for), read as words;
     `**due:**` and `**hide-until:**` read as `Due` and `Hide until`; a repeated field (the first wins); an unknown
     `**Owner:**` field (ignored, in `fields`); `Decided:` with and without `by`, and a label ending `(by Friday)`
-    read whole; `Closed:` with and without a why; a `Decided:` and a `Closed:` not in their form (not decided,
+    read whole, and a label ending in a person-grammar `(by pat)`, `**Decided:** 2026-11-12 — Go (by pat)`, read
+    whole too, `decided` `Go (by pat)` and `decided_by` None (round 4's F233: a v3 label is never split, where v2's
+    `parse_decided_by()` would read `pat` off a line); an empty `**Due:**` on an `act`, `bad_due` `""` (round 4's
+    F230); `Closed:` with and without a why; a `Decided:` and a `Closed:` not in their form (not decided,
     open), and a `Decided:` of `2026-11-12 by pat smith — Go` (no person: not decided; round 3's F223); an
     `**Answers:** Go (default) | | No |`, an empty piece and a trailing bar, read as `answers` `["Go", "No"]` and
     `default` `"Go"`, as v2 reads the line (round 3's F223); an `act` with `**Doer:** acme/widgets` and one with `**Doer:** team ops` (`doer` in its fields); a Log
@@ -1516,7 +1565,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   undated closed twin, read as one closed item with `id` `null`, beside an undated open line of another key, read
   open with `id` `null`), a new `words_prefix` (round 2's F208: a date-only head, `- [ ] 2026-11-11 — Ping sam.`, an
   `(n/a)` head, `- [ ] act 2026-11-11 (n/a) — Ping sam.`, and a line with no head, `- [ ] Ping sam.`, each record's
-  `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`; round 3's F221: `- [ ]
+  `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`; round 4's F232: `- [ ]
+  2026-11-11 (later) Ping sam.`, a group after the date that is no head, whose `text` is `"(later) Ping sam."` and
+  `added` `"2026-11-11"`; round 3's F221: `- [ ]
   Foo 2026-11-11 (session x) — Ping.`, whose `text` is `"Ping."`, `added` `"2026-11-11"`, `kind` `null` and `id`
   `"2026-11-11-<8 hex>"`, its date part `2026-11-11`), a new `closed_words` (round 3's F220; a record's `text` here is the item's `words` until B5, as for every case below, not
   `BoardItem.text`'s cut text, round 4's F226: `- [x] act 2026-01-05
@@ -1526,9 +1577,13 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `closed` `{"date": "2026-01-12", "why": "read them"}`; its expected JSON also holds each closed item's `raw`, the
   `- [x]` line as written, and `fields` as the runner's `item_fields()` prints them, the first's ending `["Closed",
   "2026-01-10"]` and the second's `["Closed", "2026-01-12 — read them"]`, each after `Kind`, `Added`, `Session` and
-  `Context`), and a new
+  `Context`), a new `closed_no_day` (round 4's F231, beside `closed_words` rather than in it, since the split
+  refuses a closed line with no readable `Closed:` date and `closed_words` splits, F224: `- [x] act 2026-01-07
+  (session w-9) — Check the logs. Context: TD-3. Closed: 2026-02-30 — lifted.`, whose record's `closed` is
+  `{"date": null, "why": null}` and whose `fields` end `["Closed", "2026-02-30 — lifted"]`), and a new
   `reply_ref`, round 1's F191: an `fyi` line `Context: TD-1.` with a reply naming `TD-9`, whose record's `refs` is
-  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory, `reply_ref.v3/`, `closed_words.v3/`, round 4's F224; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
+  `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory, `reply_ref.v3/`, `closed_words.v3/`, round 4's F224; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217, nor `closed_no_day`,
+whose `Closed:` date the split refuses, round 4's F231), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
   `board_case` reads through `load_board()`, its records gain `id`, `path`, `added`, `context` and `closed` and keep
   `line` (B5 drops it), their `text` the item's words, their `refs` read from a `context` with no reply (F191),
   `needs_you` rows are `[id, class, days]`, `keys` become the items' ids and `closed` the closed records;
@@ -1539,10 +1594,12 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `board_dir_problems()`): `months` (closed items across three months, read whole and with a `since` inside the
   second, which reads the second and the third: the month equal to `since`'s is read, F195; beside them a directory
   `archive/old/`, named by rule 11 once, in `board_dir_problems()`' output, round 2's F197); `ties` (undated,
-  unreadable-due and `fyi` items, and two items of one due date, some added on one day and some on others, ordered
+  unreadable-due (one an empty `**Due:**`, `bad_due` `""`, in the `bad_due` class, round 4's F230) and `fyi`
+  items, and two items of one due date, some added on one day and some on others, ordered
   by id descending: the case that pins v3's tie order); `field_words` (headings and contexts holding field names);
   `unknown_field`; `stub` (the v2 path holding the stub, read as the directory, `form` `"dir"`); `stub_no_dir` (empty, `form` None, the stub
-  named); `damage` (a name that is no id, an `Added` not the id's date, a missing `Added`, a `Closed:` not in its
+  named); `damage` (a name that is no id, an `Added` not the id's date, a missing `Added`, an `**Added:**
+  2026-02-30` (`added` `null`, named under rule 7 and not 13, round 4's F230), a `Closed:` not in its
   form, a closed item outside `archive/`, a file inside it with no `Closed:` (read as closed), a wrong month, one id
   twice (an open and an archived copy, the archived read; two archived copies, the later month's read), a file
   `read()` gives None for, a file with no heading, a header-block line that is no field (kept, named); round 6's
@@ -1558,7 +1615,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `README.md` above `People:`, which is still read); `newer` (a README declaring `Ledgerboard: 4`:
   `version_problem(board)` names it, in D6's words); `readme_major_late` (a README whose `Ledgerboard: 3` stands below a `- [ ]`
   line of prose: `major` 3, read by `board_major()`); `v2_undeclared` (a v2 file with no `Ledgerboard:` line:
-  `major` 2, no problem); `v2_duplicate_open` (a v2 file with two open lines of one id: both read with that id, the
+  `major` 2, no problem; it also holds an undated open line, `- [ ] Ping sam. Context: none. Due: 2026-11-20.`,
+  read with `id` and `added` `null`, its expected JSON pinning no problem for it, round 4's F228); `v2_duplicate_open` (a v2 file with two open lines of one id: both read with that id, the
   id named once in `problems`, and `board_dir_problems()` giving `Board.problems` alone). `damage` also holds an
   item with a field its kind does not take (round 9: named under rule 14, read as written). **What git cannot
   store** (round 9's F158) is the runner's to make: a case may hold `case.json` beside `board/`, its `unreadable`
@@ -1649,7 +1707,9 @@ section *The search* (after text 14), for that build's names; B5's is the full o
 (read by `item_id()` and `parse_item()`'s `id`, round 1's F195), `item_id()` (`added` and `nonce` strings, `ValueError`
 for anything that is no id, round 3's F222), `key_id()`, `item_path()` (`closed` a
 `YYYY-MM-DD` string, `ValueError` for a non-id, F195, and for a `closed` failing `_real_day()`, round 2's F202), `parse_item()` (filling `words` with the heading, and
-`closed` from its path, F195; its `Answers` dropping an empty piece and its `Decided` `by` a person, round 3's F223), `BoardItem`'s new fields (`added` and `closed`'s date `datetime.date`, round 2's F207),
+`closed` from its path, F195; its `Answers` dropping an empty piece and its `Decided` `by` a person, round 3's F223,
+its `Decided` label never split on a trailing `(by …)`, round 4's F233; an empty `Due` read as `bad_due` `""` and an
+`Added` that is no day as `added` None, round 4's F230), `BoardItem`'s new fields (`added` and `closed`'s date `datetime.date`, round 2's F207),
 `BoardItem.doer`'s v3 reading through v2.8's `doer_value()` (the field and the record's `doer` are v2.8's), `item_file()`
 with `doer`,
 `decided_file()`, `edit_item()`, `item_file_problem()`, `canonical_item_file()`, `subject()` gaining `id=None` (None
@@ -1682,14 +1742,18 @@ precheck is green, every fixture above passes, and *The search*'s B1 search find
 **B2, reading.** D5, D6, D9. Location: `ledgerboard/__init__.py` (`Board` with `form`, on which the preamble
 readers, the order, `board_problems()`' refusal and `board_dir_problems()`' checks turn, `major` for the version
 check alone (round 1's F190), and `path`, the path `load_board()` was given (round 2's F196), `load_board()` (`since` reading its own month, F195; a
-`datetime.date | None`, ignored by a `"file"` board, round 2's F212), `item_words()` (its prefix `ITEM_PREFIX_RE`,
-round 2's F208, its word before the date `ITEM_DATE_RE`'s and `added` and the id's date `ITEM_DATE_RE`'s match, a
+`datetime.date | None`, ignored by a `"file"` board, round 2's F212; telling the forms apart in D6's order, round
+4's F229), `item_words()` (its prefix `ITEM_PREFIX_RE`,
+round 2's F208, its group after the date narrowed to the heads the format writes, round 4's F232, its word before the date `ITEM_DATE_RE`'s and `added` and the id's date `ITEM_DATE_RE`'s match, a
 day, round 3's F221), `parse_closed_items()` filling a closed line's `raw`, `closed`, `fields`, `words` and `context`
-from the line as written, `text` the cut line's (round 3's F220), the
+from the line as written, `text` the cut line's (round 3's F220; a `Closed:` date that is no day `(None, None)`,
+round 4's F231), the
 twin rule across board and archive, the stub's reading, the duplicate-id read (an undated line matched by its key
 with the other undated lines alone, never by id, and never in a `Board`-form `to_close`; a text-form `sweep()` still
-giving keys; round 2's F206), `Board.problems`,
-`board_dir_problems()` (no `since`: the whole tree, round 2's F197); `BOARD_MAJOR = 3`, `board_major()`, `version_problem()` taking a `Board`; `needs_you()`,
+giving keys; round 2's F206), `Board.problems` (each rule raised by the form D6 names, an undated v2 line raising
+none, round 4's F228),
+`board_dir_problems()` (no `since`: the whole tree, round 2's F197); `BOARD_MAJOR = 3`, `board_major()`, `version_problem()` taking a `Board`; `needs_you()`
+(testing `bad_due is not None`, round 4's F230),
 `covers()`, `sweep()` (whole boards), `board_problems()`, `board_people()`, `answered_by()`, `people_problems()` and
 `answered_by_problems()` over a `Board`, each still taking a v2 board's text as before until B5, so `board.py` runs
 unchanged until B3 (each telling the two apart by `isinstance(x, Board)`, round 2's F198; `people_problems()`
@@ -1715,7 +1779,9 @@ and its *The readers take the `Board`* bullet without "and the merge gate's verd
 its *Damage*, its *The item id*'s v2-id sentence (round 2's F201), its `parse_item()`
 paragraph's `item_record()` sentence and *The item file*'s `board_dir_problems()` clauses, 9's *gate* and *snapshot* paragraphs, 11, 14's reader items, the *`Context:`* one among them, F191),
 `fixtures/board/` (regenerated, `twins_across` a case directory, round 2's F209, `undated_twins`, F206,
-`words_prefix`, F208 and round 3's F221, `closed_words`, round 3's F220, `reply_ref`, F191), `fixtures/board_dir/`, `fixtures/item/`'s `gate` and `strings`,
+`words_prefix`, F208, round 3's F221 and round 4's F232, `closed_words`, round 3's F220, `closed_no_day`, round 4's
+F231, `reply_ref`, F191), `fixtures/board_dir/` (`v2_undeclared`'s undated line, round 4's F228; `damage`'s `Added`
+that is no day and `ties`' empty `Due`, F230), `fixtures/item/`'s `gate` and `strings`,
 `fixtures/sweep/` (`undated_close`, F206, `head_in_reply`, F210), `fixtures/lift/`, `fixtures/run.py` (`fs_ls`, `board_dir_case` with `case.json`, F158, `board_case` taking a case directory, F209, `sweep_cases`,
 `lift_cases`; the runner's two reads of `BoardItem.text` move off it, so B5's removal changes no expected JSON:
 `lift_cases`' `closed_items` prints `words`, and `sweep_cases`' `covers` the item's id).

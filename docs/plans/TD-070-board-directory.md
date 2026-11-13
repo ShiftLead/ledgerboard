@@ -630,7 +630,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   directory, `fixtures/board/twins_across.v3/` beside the case's directory, and TD-092's `reply_ref` and `closed_words` (B2, dated),
   which split (TD-092's F217, F224; `closed_words`' `Closed: 2026-01-10 lifted.` carried as round 9's F160 says,
   written `**Closed:** 2026-01-10` with `lifted.` in the heading). TD-092's `undated_twins` and `words_prefix` (B2) hold undated
-  lines, which the split refuses (D11), so they are read-only cases with no `.v3/` (TD-092's F213). **Each of the seven v2 cases splits** under the
+  lines, which the split refuses (D11), so they are read-only cases with no `.v3/` (TD-092's F213), as is TD-092's
+  `closed_no_day` (B2), a closed line whose `Closed:` date is no day (TD-092's F231). **Each of the seven v2 cases splits** under the
   ruling (round 9's F147, checked against D11's kept refusals: every line dated with a day, no closed line without
   a readable `Closed:` date, no two items of one id, no preamble line after the first item, no colonless `Due
   <day>.` and no `Due` v2 reads inside another span, round 9's F164, F165): `basic` (its `fyi` with `Due: 2026-01-20.` and its `Due: 2026-1-9.` carried, its
@@ -730,7 +731,7 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   `edit_line()`, among them `test_every_edit_keeps_the_item_key`) go or move to item files, and its `sweep()` tests
   pass `(origin_url, basename, board)`; the property test that `split_board()` then `load_board()` gives a board's
   items back runs over the fixture boards that split, every `fixtures/board/` case with a `.v3/` (F147; not `undated_twins`
-  or `words_prefix`, TD-092's F213), and
+  or `words_prefix`, TD-092's F213, nor `closed_no_day`, TD-092's F231), and
   each accepted `board_split` case, never a refused one.
 - `tests/test_ledger_writer.py` and `tests/test_release.py` change in no build.
 
