@@ -236,8 +236,9 @@ pin.
    on only when its `v<x.y>` is that minor, so an agent-cadence that carried an older
    ledgerboard there cannot run an older `migrate` unseen. The minor's number comes from the same cadence change
    entry, which names it beside the commit (v2.8, or v2.9 should D3's rule have made it so). **A ledger still in
-   one file (v1)** is split into a v2 directory first, under the same pin (`ledger.py split`): the writers, `migrate`
-   among them, refuse a v1 file (*split first*). Then, under that pin, the remodel does target design §7.3's steps, the
+   one file (v1)** is split into a v2 directory first, under the same pin (`agent-cadence run ledger.py --split`, the
+   wrapper's flag, which also moves the rank file, relinks other Markdown and removes the v1 ledger and archive): the
+   writers, `migrate` among them, refuse a v1 file (*split first*). Then, under that pin, the remodel does target design §7.3's steps, the
    judgment ones first: each open `Waits` becomes its gate through `set` (rule 6 stops on an open `Waits`), and each
    open old-form decision's `<who>` is checked (rule 8 stops on one that is neither a person nor a retired role), and
    any other stop `migrate --plan` lists is answered the same way (rule 7's, rule 8's others, an archived Status
@@ -258,11 +259,12 @@ pin.
 **The merge gate grades the PR at its head, under the v3.0 pin**, run from the PR's own worktree: `agent-cadence
 run` reads the pin in the checkout it runs in, so a run from the repo's main checkout, or its hooks, still use the
 old pin until the PR merges. That gate reads no old form (D4). `check()` grades what the head holds, reading the
-base only to tell a standing finding from one the edit made, and `tripwire()` and `uncovered_decisions()` read the
-base through its decisions, where an old-form item is unreadable and so unseen: removing one trips nothing, and a
+base only to tell a standing finding from one the edit made; `tripwire()` reads the base through `_decisions()`, and
+`uncovered_decisions()` through `_carried()`, which sees no old form once B4 removes `_held_old_form()`, so an
+old-form item is unseen: removing one trips nothing, and a
 decision rule 8 rewrote reads as gained, since B4 removes `uncovered_decisions()`'s old-form base-side count. The
 remodel gives each one a board item in the same PR, one that covers the gate (its Context `TD-n decision (<who>)`),
-written by the `board.py` of the pin current at that step (the v2.x pin's before the split, the v3.0 pin's after),
+written by the pin's board writer (`agent-cadence run board_edit.py add`) current at that step (the v2.x pin's before the split, the v3.0 pin's after),
 on a board that already carries its `People:` line (target design §7.2 step 0's roster step), else the gate only
 flags `decision-elsewhere` where it would refuse. The gate sweep owes such an item in any case, since the old form
 hid it (D1). The board's steps under the first bump (`People:`, `fmt`'s key rule) and its split under the second
