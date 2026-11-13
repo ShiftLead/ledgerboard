@@ -299,8 +299,9 @@ and a close keep it.
     synthesised line (a value holds field names as words, D4). The value's missing final period changes no ref:
     `REF_TD_RE` and `REF_PR_RE` read no period, and a branch part is read `.rstrip(".")` already. **A v2 item's
     `context` is read without its replies** (round 1's F191, reopening F123, F66 and F80): `CONTEXT_RE`'s match over
-    the line with `reply_span()` removed, reply tails cut as `_gate_body()` cuts them for `_item_gate()` today (its
-    `Decided:` cut changes no Context, since `CONTEXT_RE`'s lookahead ends at ` Decided:`; round 2's F200), where
+    the line with `reply_span()` removed, reply tails and the `Decided:` field cut as `_gate_body()` cuts them for `_item_gate()` today (round 2's
+    F200; with the `Decided:` cut, a `Context:` written only inside a Decided text reads as no Context, as
+    `_item_gate()` reads it today; round 2's F205), where
     `item_refs()` today runs `CONTEXT_RE` over the raw text. One `context` then serves `refs` and `_item_gate()` alike.
     So an id read only from a reply's words leaves a v2 record's `refs` at B2: `fyi … Context: TD-1. — pat,
     2026-01-05: see TD-9 now` gave `refs` `["TD-1", "TD-9"]` and gives `["TD-1"]`, as its gate was already
@@ -371,7 +372,9 @@ The `## Needs` audit stands for "a service account appends what the person must 
 work", which the kind states (`watch` is a session's own re-check). So no `**Section:**` field: agent-cadence's
 audit reads the appended files instead (its line in *Consumers*), and `add --under` goes.
 
-**D6. Reading (S5).** `load_board(path, ls, read, *, since=None)` gives a `Board`: `form`, `path`, `major`,
+**D6. Reading (S5).** In this plan's own prose (not the SPEC text, which says *a board read from a directory* or
+*from a file*, round 2's F201), a *v3 board* means `form` `"dir"` and a *v2 board* or *v2 file* `form` `"file"`,
+whatever its `major` (round 2's F204). `load_board(path, ls, read, *, since=None)` gives a `Board`: `form`, `path`, `major`,
 `preamble` (`README.md`'s text, or a v2 board's text before its first item), `items` (the open items), `closed`
 (every closed item read, the archive's among them), each a `BoardItem` with its `id`, and `problems` (D6's last
 bullet, its numbered rules).
@@ -759,7 +762,7 @@ A row whose build names B3, B4 or B5 beside B1 or B2 is shared: its later part i
 | `parse_board()`, `parse_closed_items()`, `detail_block()`, `item_key()`, `is_item()`, `is_open_item()` | a v2 line | none: the v2 half of `load_board()` (D6) | B2 fills the new fields; stay v2's |
 | `parse_answers()`, `parse_default()`, `parse_consequences()`, `parse_decided()`, `parse_decided_by()`, `parse_lifts()`, `parse_parts()`, `parse_hide_until()`, `parse_doer()`, `DUE_RE` | a v2 line | `parse_item()`'s value readers (D4) | B1; stay v2's |
 | `item_head()` | `.text`'s head | `BoardItem.session`, `.host` (`Session`) | B2 (F123) |
-| `item_refs()` | `CONTEXT_RE` over `.text` | unchanged: `item_refs(text)` calls `context_refs()` over `CONTEXT_RE`'s `ctx`, giving that text what it gives today; no record reads it (round 2's F199) | B2 (F123) |
+| `item_refs()` | `CONTEXT_RE` over `.text` | the same result, its body now `context_refs()` over `CONTEXT_RE`'s `ctx` (round 2's F206), giving that text what it gives today; no record reads it (round 2's F199) | B2 (F123) |
 | `parse_replies()` | `.text`'s tails | `BoardItem.replies` (the Log) | B1 fills it, B2 reads it (F123) |
 | `item_record()` | `.text`, `.line` and the fields | `words`, the fields, `refs` from `context_refs(item.context)`, for a v2 item too, its `context` read with `reply_span()` removed (F191; round 2's F199) | B2; `line` gone B5 |
 | `needs_you()` | `parse_board()`, `.line` for ties | the `Board` (`isinstance`, F193), its order on `form` (D6, F190) | B2 |
