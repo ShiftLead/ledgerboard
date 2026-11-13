@@ -319,7 +319,8 @@ on an `fyi` are all carried. The rule, for each:
   shape's note, at the item's `Session` line (or, with no `Session`, its heading), naming the text lost, so a person
   sees the loss. The written files no longer hold that text, so the note is made from the v2 line (its `raw`), which
   the notes' input must reach: how (the split's own result carrying it, or `split_board_notes()` taking the v2
-  texts) is B5's design. `board.py split` prints
+  texts) is B5's design, open for the second part's rounds, as are this note in text 8's *Migration* bullet
+  and a `board_split` case for it (`head_extra`; PR #277's review). `board.py split` prints
   them as warnings (`warnings` in `--json`).
 
 **The key a consumer persisted** (ShiftLead's `key()`, `key_id()`, an indented line and a `[x]` line) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
