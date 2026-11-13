@@ -749,8 +749,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
 
 **B3, the writer.** D2's moves, D3's writer half (TD-092's plan, D3: `add`'s nonce drawn up to 8 times, `--id`
 and its refusals, `--today`; TD-092's round 1's F183), D7's writer half, D8. Location: `ledgerboard/__init__.py` (`show_board()`, pure
-over a `Board`, its bytes as D8 gives them; `parse_board()` keeping `detail_source`, D8; round 4's F54, round 5's
-F70), `ledgerboard/board.py` (`plan_add` by id, no
+over a `Board`, its bytes as D8 gives them; `BoardItem.detail_source`, which `parse_board()` keeps and a v3 item
+holds as `[]`, D8; round 4's F54, round 5's F70; moved here from TD-092's B1 and B2 by TD-092's round 1's F194), `ledgerboard/board.py` (`plan_add` by id, no
 `under`, `--doer`; `plan_edit` by id, with the move; `show`; `plan_fmt` over files; the v2 refusal; `--id`,
 `--hidden`; the `archive` action, `--line`, `--expect` and `--under` gone; a board read through `load_board()` and
 checked with `version_problem(board)`, `read()` keeping `version_problem(text)` for the ledger and the rank file;
@@ -761,7 +761,9 @@ gives them, `_find()` and `_under()` gone; every output shape D7's *What a write
 F152; the usage docstring), `SPEC.md` (text 10 but `split`, `plan_split` and "(*split first*)", F155; and the
 writer's sentences TD-092's B1 and B2 leave out, TD-092's round 1's F175: text 8's "Closing an item moves its file
 in the same write", "; a person reads the board through `board.py show`" and *The item id*'s "The writer draws the
-nonce …" sentence, and text 9's "; the writer moves it in the same write"), `fixtures/board_writer/` (but
+nonce …" sentence, and text 9's "; the writer moves it in the same write"; and text 8's *The readers take the
+`Board`* bullet's ", as `board.py`'s `who_answered(board, by)` does through `board_people()`", TD-092's round 1's
+F192), `fixtures/board_writer/` (but
 `split`, `split_exists`; `edit_moved` removed, `edit_newer_major` rewritten, F161), `tests/test_board_writer.py`
 rewritten (F149). **Records:** `item_record()` is untouched; the `list` cases (`list`, `list_v2`,
 `list_stub`) print B2's records. Done when: the precheck is green, every writer case passes, and *The search*'s B3
@@ -772,7 +774,8 @@ search finds its names only where it allows.
 trees, `tripwire()`, `lift_pr_verdict()`, `uncovered_decisions()`, each reading `_item_gate(item)` of a
 `BoardItem` where it read `_item_gate(it.text)`, D4; `lift_pr_verdict()` judging the changed set from the trees and
 `files` only for a path outside the board and the ledger, F153; `decision-no-lift` naming the item's id, F156),
-`SPEC.md` (text 7), `fixtures/verdict/`, `tests/test_ledgerboard.py`'s verdict tests (F149).
+`SPEC.md` (text 7, and text 8's *The readers take the `Board`* bullet's "and the merge gate's verdicts", which
+TD-092's B2 leaves out, TD-092's round 1's F192), `fixtures/verdict/`, `tests/test_ledgerboard.py`'s verdict tests (F149).
 **Records:** none change. Done when: the precheck is green, every verdict case passes, and *The search*'s B4 search
 finds its names only where it allows.
 
