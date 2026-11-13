@@ -747,7 +747,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
 
 **B1, the item file**, and **B2, reading** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *The builds* (2026-11-13 split).
 
-**B3, the writer.** D2's moves, D7's writer half, D8. Location: `ledgerboard/__init__.py` (`show_board()`, pure
+**B3, the writer.** D2's moves, D3's writer half (TD-092's plan, D3: `add`'s nonce drawn up to 8 times, `--id`
+and its refusals, `--today`; TD-092's round 1's F183), D7's writer half, D8. Location: `ledgerboard/__init__.py` (`show_board()`, pure
 over a `Board`, its bytes as D8 gives them; `parse_board()` keeping `detail_source`, D8; round 4's F54, round 5's
 F70), `ledgerboard/board.py` (`plan_add` by id, no
 `under`, `--doer`; `plan_edit` by id, with the move; `show`; `plan_fmt` over files; the v2 refusal; `--id`,
@@ -757,7 +758,10 @@ checked with `version_problem(board)`, `read()` keeping `version_problem(text)` 
 read and by `read_ledger()`; `--board` normalised; `items()`, `_gate()`, `_may_answer()`, `_decide_ledger()`,
 `_check_parts()`, `_id_notes()` (was `_line_notes()`), `add --said`'s Log line and `done --why` as D7's F127 list
 gives them, `_find()` and `_under()` gone; every output shape D7's *What a write prints* gives, `id` for `line`,
-F152; the usage docstring), `SPEC.md` (text 10 but `split`, `plan_split` and "(*split first*)", F155), `fixtures/board_writer/` (but
+F152; the usage docstring), `SPEC.md` (text 10 but `split`, `plan_split` and "(*split first*)", F155; and the
+writer's sentences TD-092's B1 and B2 leave out, TD-092's round 1's F175: text 8's "Closing an item moves its file
+in the same write", "; a person reads the board through `board.py show`" and *The item id*'s "The writer draws the
+nonce …" sentence, and text 9's "; the writer moves it in the same write"), `fixtures/board_writer/` (but
 `split`, `split_exists`; `edit_moved` removed, `edit_newer_major` rewritten, F161), `tests/test_board_writer.py`
 rewritten (F149). **Records:** `item_record()` is untouched; the `list` cases (`list`, `list_v2`,
 `list_stub`) print B2's records. Done when: the precheck is green, every writer case passes, and text 14's B3
