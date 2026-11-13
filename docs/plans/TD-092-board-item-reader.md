@@ -718,7 +718,9 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   written, as it reads the line's `raw`, `fields`, `words` and `context` (D4's *A closed v2 line*, round 3's F220): the date `CLOSED_RE` reads when it is a day (`_real_day()`;
   `2026-02-30` is not, so the line is a closed item with no readable `Closed:` date, which the split refuses, TD-070's plan, D11), and the why the
   text after a ` — ` that directly follows the date, trimmed, its final period dropped, None without one (round 9's
-  F160). **A `Closed:` date that is no day** (round 4's F231): `closed` is `(None, None)`, the why unread too, and
+  F160). **A `Closed:` date that is no day** (round 4's F231; date-shaped, as `CLOSED_RE` reads one, such as `2026-02-30`:
+  a `Closed:` with no date shape, `Closed: soon.`, is no field and stays in the words, as today, round 5's F236):
+  `closed` is `(None, None)`, the why unread too, and
   `fields` keeps `Closed` as written, a value not in its form (D4's *A v2 item's `fields`*: the line's text, trimmed,
   its one final `.` dropped), so `Closed: 2026-02-30 — lifted.` gives `("Closed", "2026-02-30 — lifted")`.
 - A v2 item's `Doer` field (round 1's F176; TD-070's plan, D11, round 7's F93, F98, round 9's F172) is carried as
@@ -1100,7 +1102,8 @@ board or in its archive)". After *The close rule*'s list, add:
 > `datetime.date` or None and the why a string or None, or None when open), `replies`, `detail`, `fields`, and `raw`,
 > the file's text as read; the dates are of `due`'s, `hide_until`'s and `decided`'s type, and a record writes each as
 > `YYYY-MM-DD`. `closed` is set from the path: under `archive/`, the `Closed:` value,
-> or `(None, None)` when there is none in its form; elsewhere, the `Closed:` value, or None. `item_record()` gives its
+> or `(None, None)` when there is none in its form; elsewhere, the `Closed:` value, or None, and `(None, None)` for a v2 closed line whose
+> `Closed:` date is no day (round 4's F231, round 5's F235). `item_record()` gives its
 > record (*Reading a board*).
 >
 > **Reading a board** (`load_board(path, ls, read, *, since=None)`) gives a `Board`: `form`, `path`, `major`,
