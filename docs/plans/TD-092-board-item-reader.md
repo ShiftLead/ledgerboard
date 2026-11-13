@@ -493,13 +493,13 @@ bullet, its numbered rules).
   3; on rule 6's empty `Board`, the stub's own). So a stub declaring a major newer than `BOARD_MAJOR` is refused as
   any newer major is, by `version_problem(board)`, as the module refuses a newer major today (`version_problem(text)`:
   "nothing was read"; `ids_held()` raises `Refused` for a file declaring one), whatever its directory's `README.md`
-  declares; and a stub over a `README.md` declaring 2 reads `major` 3.
+  declares; and a stub over a `README.md` declaring 2 reads `major` the stub's, the greater (3 for a stub declaring 3; round 6's F257).
 - **How `load_board()` tells them apart** (round 4's F229), in this order: `ls(path)` not None is a directory
   (`form` `"dir"`); else `read(path)` a text is a stub (it declares `Ledgerboard: 3` or newer and holds no items: the
   directory beside it, `"dir"`, or rule 6's empty `Board` when that is missing), a file declaring 3 or newer that
   holds items (rule 5, `"file"`, round 6's F246), or a v2 file (`"file"`); else the path is missing (an empty `Board`, `form` None). A missing
   `<stem>_archive.md` reads as an empty archive, as `load()` reads a missing archive, and is no problem; a stub whose
-  directory's `README.md` declares 2 is read as rule 4 says (`"dir"`, named under `README.md`), its `major` 3, the
+  directory's `README.md` declares 2 is read as rule 4 says (`"dir"`, named under `README.md`), its `major` the stub's, the
   greater of the two (round 5's F240).
 - **`ls`** lists each subdirectory with a trailing `/` (v3.0; `load()` and `entry_path()` ignore those names).
   Every `ls` passed to `load_board()` does so (round 4's F65, F234): `_dict_ls()`, the `ls` over a `{path:
@@ -1212,7 +1212,7 @@ board or in its archive)". After *The close rule*'s list, add:
 >   (declaring 3 or newer and holding no items), a file declaring 3 or newer that holds items (rule 5, `"file"`), or a v2 file
 >   (`"file"`); else the path is missing (an empty `Board`). A missing `<stem>_archive.md` reads as an empty
 >   archive, as `load()` reads a missing archive; a stub whose directory's `README.md` declares 2 is read as rule 4
->   says, its `major` 3, the stub's.
+>   says, its `major` the stub's, the greater.
 > - **The caller does the I/O**, as for `load()`: `ls(path)` returns the names directly in the directory `path`,
 >   each subdirectory's name followed by `/` (v3.0; `load()` ignores those), or None when `path` is not a
 >   directory; `read(path)` returns a file's text, or None. Every path a `Board` names is relative to the board's
