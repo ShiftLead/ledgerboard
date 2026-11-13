@@ -74,7 +74,8 @@ the line — is read only as the last item: its text runs to the end of the line
 is read. It holds as a decision by `<who>`, and is a retired item. The writers never write it: `new`
 (`entry_text()`) and `set` refuse a `Blocked by` value in the old form, and `set` refuses to add any gate
 to an entry whose `Blocked by` still holds it, whose text would swallow the gate: migrate it first,
-to `decision (<person>)` with its text in `**Ask:**`. v3.0 stops reading it.
+to `decision (<person>)` with its text in `**Ask:**`, which `migrate` does from v2.8 (*Migrating
+to v2.7*, rule 8). v3.0 stops reading it.
 
 **Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. Where
 v2.x still reads one, `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than
@@ -718,7 +719,10 @@ the header block.
   returned as given.
 - **The post-condition**, on an entry with `changes`: the migrated Status passes `status_problem()` for the
   entry's place, and the migrated entry's Log holds no problem the input's does not (*The Log*); any problem is a
-  stop. So it never writes a Status or a Log line `check()` rejects that was not there before it.
+  stop. So it never writes a Status or a Log line `check()` rejects that was not there before it. From v2.8 the
+  migrated entry also holds no `Taken by`, `Waits`, header `Resolved` or old decision form, and gains no
+  `ask-missing` or `gate-repeated` (`gate_repeats()`) the input did not have; any is a stop (`migrated entry still
+  holds <field>`, `migrated entry: ask-missing`, `migrated entry: gate-repeated`).
 - **An entry `canonical()` refuses** (a duplicate field, a non-field line in the header block, a Priority, Type,
   Blocked by or Part of line below the header block) is read as `entries()` reads it, leniently, and the rules
   applied to that reading: when none would change it, it is returned as given and listed (`canonical() refuses it:
@@ -750,8 +754,8 @@ the header block.
 - *No duplicates:* a Log line it would write whose date and words equal a line already in the Log is not written
   again.
 
-The rules apply in this order, the Status (1 or 2), then `Added` (3), then `Location` (4), each to the entry the
-one before it left.
+The rules apply in this order, the Status (1 or 2), then `Added` (3), `Location` (4), `Taken by` (5), `Waits` (6),
+a header `Resolved` (7) and the old decision form (8), each to the entry the one before it left.
 
 **1. The Status, an open entry**, the first branch that applies:
 
@@ -820,22 +824,70 @@ line written first in the Log moves the date `gate_age()` falls back to.
 first `**Done when:**`, `**Related:**` or Log, else at the end. An empty header `Location` is removed and nothing
 written. A non-empty header `Location` meeting a body `**Location:**` section is a **stop**.
 
-**5. What it leaves.** A `Waits` line, a `Taken by`, an old-form decision, every other field and section, and every
-Log line already there are left as they are. A Log is made at the end of the body when the entry has none and a line
-is written; a Log that is not last, or two Logs, is a stop on an entry with `changes`; an entry with none is
-returned as given. A `Status` line below the header block is no Status: the header gets `Open`, and the line is
-left and listed.
+The rules below read the entry rules 1–4 left. *A dated Log line* is one `log_lines()` gives a date that is a
+real date. *The filing date* (v2.8) is `Added` when its whole value is a real date, else the first dated Log
+line's date, else `today`; a line dated by it is placed before the first Log line dated on or after it, so lines
+of one date written by two rules stand in reverse rule order. *The gate-neutral date* is the first dated Log
+line's date (in file order), else `Added` when its whole value is a real date, else `today`; a line dated by it
+is placed after any line of an equal date (before the first line dated later). *The entry's date* is the
+gate-neutral date on an open entry whose `Blocked by` carries a gate (`gate_items()`, or the old decision form),
+and the filing date on any other. So rules 5–8 never move a gate's age (`gate_age()`) on an entry with a dated Log
+line or an `Added` whose whole value is a real date; on any other they may (and on an entry whose first Log line
+has an unreal date, `gate_age()` raises today, before and after).
+
+*Has an Ask* means the entry has an `Ask` header field or a body `**Ask:**` section, as `pickable()`'s
+`ask-missing` reads it.
+
+**5. `Taken by`** (v2.8). A header `Taken by` is removed and its line written as one plain Log line, `Taken by
+<value>`, the value whole, dated by the entry's date. An empty one is removed and nothing written.
+
+**6. `Waits`** (v2.8). On an archived entry a non-empty `Waits` is removed and its line written as one plain Log
+line, `Waits <value>`, dated by the entry's date. On an open entry a non-empty `Waits` is a **stop**: its gate is
+a person's or a session's to write (`until` or `event`, by `set`, which then removes the line). An empty `Waits`
+is removed and nothing written.
+
+**7. A header `Resolved`** (v2.8). It is removed from the header and written as the body section `**Resolved:**
+<value>`, before the Log, else at the end. An empty one is removed and nothing written. A non-empty header
+`Resolved` meeting a body `**Resolved:**` section is a **stop**.
+
+**8. The old decision form** (v2.8). *The old item* is the old form as *The ledger* reads it: from its
+`decision (` to the end of the `Blocked by` value, commas, parentheses and all (`parse_gates()`'s `old_form`).
+It is rewritten `decision (<who>)`, `decision` in lower case and `<who>` as `parse_gates()`'s `old_form` gives
+it, the items before it kept in their order; when `<who>` is
+not a person's name (`is_person()`, which a retired role passes), it is a **stop**. Its text, less its leading run
+of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`, placed as `edit` places a
+section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
+Log line, `Blocked by <the old item>`, dated by the entry's date. An empty text writes neither; on an open entry
+with no Ask, where `decision (<who>)` reads as a decision (not a retired role), it is a **stop**, since that
+leaves `check()`'s `ask-missing` error. When an item of the value as written, before the old item, is
+`decision (<who>)` for the same `<who>` (the holder compared alone and lowercased, as `gate_repeats()` compares
+decisions, so `decision(kim)` counts; a retired role included, though `gate_items()` omits it),
+it is a **stop**, since the rewrite would write the item twice (for a person, `check()`'s `gate-repeated` error). No `gate added`
+line is written.
+
+Stops are collected from every rule, 1 to 8, and with any the input is returned as given.
+
+**9. What it leaves.** Every other field and section, and every Log line already there, are left as they are. A
+Log is made at the end of the body when the entry has none and a line is written; a Log that is not last, or two
+Logs, is a stop on an entry with `changes`; an entry with none is returned as given. A `Status` line below the
+header block is no Status: the header gets `Open`, and the line is left and listed.
 
 **The words it returns.** `<Word>` is the word as written.
 - `changes`: `Status <old value> → <new Status>` (`(none)` for no or an empty Status); `Kind <old, or none> →
-  <new>`; `Added comment → Log`; `Added comment (empty) removed`; `Location → body`; `Location (empty) removed`.
+  <new>`; `Added comment → Log`; `Added comment (empty) removed`; `Location → body`; `Location (empty) removed`;
+  from v2.8 `Taken by → Log`, `Taken by (empty) removed`, `Waits → Log`, `Waits (empty) removed`, `Resolved → body`,
+  `Resolved (empty) removed`, `old decision form → Ask`, `old decision form → Log` and `old decision form (no
+  text)`.
 - `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved:
   Superseded by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`;
   `decided: <form>`; `canonical() refuses it: left alone`; `Status line below the header: left`.
 - `stops`: `refused: <why>`; `Superseded: by its own id`; `decided: nothing to answer`; `no date for the Status`;
   `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>: no archived form`; `Status <Word> on an open entry`;
   `Location in the header and the body`; `Log not last`; `migrated Status <value> still outside the set`;
-  `migrated Log: <problem>`.
+  `migrated Log: <problem>`; from v2.8 `Waits on an open entry`, `Resolved in the header and the body`, `old
+  decision form: <who> is not a person`, `old decision form: no text for its Ask`, `old decision form: <who> already
+  has a decision`, `migrated entry: ask-missing`, `migrated entry: gate-repeated` and `migrated entry still holds
+  <field>` (`<field>` one of `Taken by`, `Waits`, `Resolved`, `Blocked by`).
 
 ## The rank
 
@@ -1223,10 +1275,11 @@ datetime, taken as its UTC date. The carve-out needs every one of:
 boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
 names it. A `decision (<p>)` an open entry gains in the diff is refused (`decision-uncovered`) when this repo's
 board lists `<p>` on `People:` and no item on it covers the gate, and flagged (`decision-elsewhere`) when the board
-does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A new
-`decide` item on this repo's board (its key on no line of the base board) whose Context names a decision and none
-of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on this repo's
-own board alone, so they are the same on every machine.
+does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A
+decision a base entry held in the old form (*The ledger*) is not gained when the head writes it `decision (<who>)`
+(v2.8). A new `decide` item on this repo's board (its key on no line of the base board) whose Context names a
+decision and none of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on
+this repo's own board alone, so they are the same on every machine.
 
 ## Edits
 
@@ -1678,7 +1731,8 @@ retired, and `new` writes `Location` in the body. A v2.6 reader reads every entr
 were already its own; a body `**Location:**` was already a section), though its `canonical()` would place a
 `Waits` or a header `Location` back in its own order, so a consumer vendors v2.7 before it formats a ledger v2.7
 wrote. A repo takes v2.7 in one PR that vendors it and runs `migrate`. `migrate` stays through v2.x and goes in
-v3.0, whose precondition is that `migrate --plan` shows no entry with changes in every repo.
+v3.0, whose precondition is that, with the last v2.x, `migrate --plan` shows no entry with changes or stops in every
+repo (v2.8: its rules cover every old form, open and archived).
 
 **v2.7 leaves a shared item unanswered by a lift of one part** (*The board writer*, *The merge gate's
 verdicts*): `board.py decide --board-only` writes nothing while a listed entry still carries the gate, where
@@ -1729,6 +1783,14 @@ closes it.
 **v2.8 gives an archived entry a note** (*The ledger writer*): `ledger.py note` writes an archived entry whose
 Status is in the closed set in place, where v2.7 refused it, and refuses one whose Status is not (*run migrate
 first*). Nothing read changes, and no key moves.
+
+**v2.8 gives `migrate` the last old forms** (*Migrating to v2.7*, rules 5–8): it maps `Taken by`, `Waits`, a
+header `Resolved` and the old decision form, which v2.7's left. Nothing read changes: every line it writes is one
+v2.7 reads (a body section, a plain Log line, a `decision (<who>)`), and no key moves. One thing is read
+differently once a repo runs it: an old-form decision becomes `decision (<who>)`, which the gate sweep and
+`gate_age()` read as a gate, where they passed the old form over. `uncovered_decisions()` counts an old-form
+holder in the base as a decision already carried, so the rewrite is not a gained decision. A repo that ran
+v2.7's `migrate` runs v2.8's once more, as its own PR.
 
 ## Appendix: grammar
 

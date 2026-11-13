@@ -108,6 +108,10 @@
   "a new decision, its item filed with it": {
    "flags": [],
    "refusals": []
+  },
+  "migrate_old_form_not_gained": {
+   "flags": [],
+   "refusals": []
   }
  },
  "verdict": {

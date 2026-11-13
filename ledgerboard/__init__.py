@@ -4321,7 +4321,9 @@ def _migrate_log(sections: list[tuple[str | None, str]], lines: list[tuple[str, 
 def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: str | None = None,
                   kinds: Mapping[str, str] | None = None, decided: str | None = None) -> dict:
     """One entry migrated to v2.7's forms (SPEC *Migrating to v2.7*): its Status into the closed set, its Status
-    notes and an ``Added`` comment into its Log, a header ``Location`` into the body. Pure: ``archived`` says
+    notes and an ``Added`` comment into its Log, a header ``Location`` into the body; from v2.8 (rules 5–8,
+    ``_migrate_old_forms()``) a ``Taken by`` and an archived ``Waits`` into its Log, a header ``Resolved`` into the
+    body and the old decision form into ``decision (<who>)``, its text an ``**Ask:**`` or a Log line. Pure: ``archived`` says
     where the entry is, ``today`` is the UTC day, ``closed_date`` the caller's archiving date for it, ``kinds``
     the caller's map from an open stage word to a ``Kind`` value, ``decided`` the caller's answer to a Status
     the rules stop on (``resolved``, ``dropped``, ``superseded <id>``; ``open``). Returns ``{text, changes,
@@ -4508,6 +4510,9 @@ def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: 
             header = _with(header, "Location", None)
             sections.insert(_section_place(sections), ("Location:", f"**Location:** {location.strip()}"))
             changes.append("Location → body")
+    header, sections, more = _migrate_old_forms(header, sections, log, archived=archived, day=day,
+                                                changes=changes, stops=stops)
+    log += more
     if stops:
         return stopped()
     if not changes:
@@ -4528,7 +4533,141 @@ def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: 
     new_problems = [p for p in log_problems(out) if p not in before]
     if new_problems:
         return stopped(f"migrated Log: {new_problems[0][1]}")
+    left = _old_forms_left(text, out, archived=archived)
+    if left:
+        return stopped(*left)
     return {"text": out, "changes": changes, "listed": listed, "stops": []}
+
+
+OLD_FORM_TEXT_LEAD_RE = re.compile(r"^[—–\-:\s]+")  # the run an old decision's text loses as an Ask (v2.8)
+
+
+def _log_days(sections: list[tuple[str | None, str]]) -> list[str]:
+    """The real dates of the body's Log lines, in file order (every Log section's, in order)."""
+    out = []
+    for i in _keyed(sections, "log"):
+        for ln in _log_body_lines(sections[i][1]):
+            got = log_line(ln)
+            if got and got.get("date") and _real_day(got["date"]):
+                out.append(got["date"])
+    return out
+
+
+def _migrate_old_forms(header: list[tuple[str, str]], sections: list[tuple[str | None, str]],
+                       log: list[tuple[str, str, bool]], *, archived: bool, day: str, changes: list[str],
+                       stops: list[str]) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]],
+                                                  list[tuple[str, str, bool]]]:
+    """``migrate_entry()``'s rules 5–8 (v2.8, SPEC *Migrating to v2.7*): ``Taken by``, ``Waits``, a header
+    ``Resolved`` and the old decision form, over the entry rules 1–4 left (``header``, ``sections`` and the Log
+    lines ``log`` they will write). Returns the header, the sections and the Log lines these rules write;
+    ``changes`` and ``stops`` gain theirs. The lines are dated by the entry's date: on an open entry whose
+    Blocked by carries a gate, the gate-neutral date (the Log's first real date, else ``Added``, else ``day``;
+    placed after its equals), so ``gate_age()`` never moves; on any other, the filing date (``Added``, else the
+    Log's first real date, else ``day``; placed before the first line dated on or after it)."""
+    try:
+        after = _migrate_log(sections, log) if log else sections
+    except Refused:  # two Logs: rule 9's stop, made later; dates read from every Log section
+        after = sections
+    days = _log_days(after)
+    added = (_value(header, "added") or "").strip()
+    added = added if _real_day(added) else None
+    blocked = _value(header, "blocked by")
+    g = parse_gates(blocked)
+    gated = not archived and bool(gate_items(g) or g["old_form"])
+    if gated:
+        entry_day, first = (days[0] if days else added or day), False
+    else:
+        entry_day, first = (added or (days[0] if days else day)), True
+    out: list[tuple[str, str, bool]] = []
+
+    def logged(words: str) -> None:
+        out.append((entry_day, _log_text(words), first))
+
+    taken = _value(header, "taken by")
+    if taken is not None:
+        header = _with(header, "Taken by", None)
+        if taken.strip():
+            logged(f"Taken by {taken.strip()}")
+            changes.append("Taken by → Log")
+        else:
+            changes.append("Taken by (empty) removed")
+    waits = _value(header, "waits")
+    if waits is not None:
+        if not waits.strip():
+            header = _with(header, "Waits", None)
+            changes.append("Waits (empty) removed")
+        elif not archived:
+            stops.append("Waits on an open entry")
+        else:
+            header = _with(header, "Waits", None)
+            logged(f"Waits {waits.strip()}")
+            changes.append("Waits → Log")
+    resolved = _value(header, "resolved")
+    if resolved is not None:
+        if not resolved.strip():
+            header = _with(header, "Resolved", None)
+            changes.append("Resolved (empty) removed")
+        elif _keyed(sections, "resolved"):
+            stops.append("Resolved in the header and the body")
+        else:
+            header = _with(header, "Resolved", None)
+            sections = list(sections)
+            sections.insert(_before_log(sections), ("Resolved:", f"**Resolved:** {resolved.strip()}"))
+            changes.append("Resolved → body")
+    if g["old_form"]:
+        who, said = g["old_form"]
+        raw = (blocked or "").strip(" \t\r")
+        item = next(r["item"] for r in g["retired"] if r["kind"] == "old-form")
+        before = raw[: len(raw) - len(item)]
+        held = parse_gates(before)
+        holders = [w.lower() for w in held["decisions"]] + \
+            [r["holder"].lower() for r in held["retired"] if r["kind"] == "role"]
+        has_ask = _value(header, "ask") is not None or bool(_keyed(sections, "ask"))
+        words = OLD_FORM_TEXT_LEAD_RE.sub("", said)
+        role = who.lower() in RETIRED_ROLES
+        if not is_person(who):
+            stops.append(f"old decision form: {who} is not a person")
+        elif who.lower() in holders:
+            stops.append(f"old decision form: {who} already has a decision")
+        elif not words and not archived and not has_ask and not role:
+            stops.append("old decision form: no text for its Ask")
+        else:
+            header = _with(header, "Blocked by", f"{before}decision ({who})")
+            if not words:
+                changes.append("old decision form (no text)")
+            elif not has_ask:
+                sections = list(sections)
+                sections.insert(_section_place(sections), ("Ask:", f"**Ask:** {words}"))
+                changes.append("old decision form → Ask")
+            else:
+                logged(f"Blocked by {item}")
+                changes.append("old decision form → Log")
+    return header, sections, out
+
+
+def _old_forms_left(before: str, after: str, *, archived: bool) -> list[str]:
+    """``migrate_entry()``'s post-condition for rules 5–8 (v2.8): the stops the migrated entry ``after`` earns
+    by still holding one of the four forms, or by gaining an ``ask-missing`` or a ``gate-repeated`` the input
+    ``before`` did not have."""
+    out = []
+    e = entries(after)[0]
+    for key, name in (("taken by", "Taken by"), ("waits", "Waits"), ("resolved", "Resolved")):
+        if key in e["fields"]:
+            out.append(f"migrated entry still holds {name}")
+    g = parse_gates(e["blocked_raw"])
+    if g["old_form"]:
+        out.append("migrated entry still holds Blocked by")
+    b = entries(before.replace("\r\n", "\n").replace("\r", "\n"))[0]
+    was = parse_gates(b["blocked_raw"])
+
+    def ask_missing(entry: dict, gates: dict, text: str) -> bool:
+        return bool(gates["decisions"]) and "ask" not in entry["fields"] and not ASK_RE.search(text)
+
+    if not archived and ask_missing(e, g, after) and not ask_missing(b, was, before):
+        out.append("migrated entry: ask-missing")
+    if set(gate_repeats(g)) - set(gate_repeats(was)):
+        out.append("migrated entry: gate-repeated")
+    return out
 
 
 def _filed_line(filed: Mapping, what: str = "filed") -> str:
@@ -6580,12 +6719,25 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
     return flags
 
 
+def _held_old_form(text: str | None, gate: str) -> bool:
+    """The open entry ``text`` holds ``gate`` in the old form (v2.8): its holder written ``decision (<who>)``,
+    compared by ``_gate_key()``, so ``migrate``'s rewrite of it is no gained decision."""
+    if not text or not entries(text):
+        return False
+    e = entries(text)[0]
+    if first_word(e["fields"].get("status")) in ARCHIVED_WORDS:
+        return False
+    old = parse_gates(e["blocked_raw"])["old_form"]
+    return bool(old) and _gate_key(f"decision ({old[0]})") == _gate_key(gate)
+
+
 def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, str], boards: Sequence[Sequence],
                         repo: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """The merge gate's coverage check (v2.4, SPEC *The merge gate's verdicts*): ``(refusals, flags)``, each
     ``[(kind, text)]``. ``boards`` are the other repos' boards read (the sweep's tuples); this repo's own board is
     read from ``head_tree`` in place of any that names it. A `decision (<p>)` an open entry gains in the diff
-    is refused when this repo's board lists ``<p>`` on `People:` and no item on it covers the gate (covers(),
+    (one a base entry held in the old form, ``decision (<p>) <text>``, is not gained, v2.8) is refused when this
+    repo's board lists ``<p>`` on `People:` and no item on it covers the gate (covers(),
     state ``open`` or ``decided``), and flagged when the board does not list ``<p>``, since its coverage then
     depends on another repo's board, which not every machine reads. A new `decide` item on this repo's board
     whose Context names a decision and none of whose answers lifts (one of its `Lifts:`, `Go` when it has none,
@@ -6603,7 +6755,7 @@ def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, st
         htext = h_open[num]
         tid = _entries(htext)[0]["id"]
         for gate in _decisions(htext):
-            if _carried(b_open.get(num), gate) is not None:
+            if _carried(b_open.get(num), gate) is not None or _held_old_form(b_open.get(num), gate):
                 continue
             person = GATE_DECISION_RE.match(gate).group("who").strip()
             cov = [(b, s) for b, _, s in covers(htext, gate, reads, repo) if s in COVERING]
