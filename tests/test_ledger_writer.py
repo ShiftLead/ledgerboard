@@ -77,7 +77,6 @@ class Clock(unittest.TestCase):
             self.assertIn(f"- {day}: looked again\n", plan.changes[os.path.join(d, "TD-001.md")])
 
 
-
 ARCHIVED = ("## TD-005: The old exporter wrote the wrong header\n\n**Priority:** Low\n**Added:** 2025-12-01\n"
             "**Status:** {status}\n\n**Why:** the header named the wrong column.\n")
 
@@ -122,6 +121,7 @@ class ArchivedNote(unittest.TestCase):
             d, _ = self.archived(tmp, "Resolved 2025-12-20")
             with self.assertRaises(W.Unusable):
                 W.plan_edit(W.Ledger.open(d), "note", "TD-009", words="x", today="2026-01-15")
+
 
 class InProcess(unittest.TestCase):
     def test_the_resolver_is_a_callback(self):
