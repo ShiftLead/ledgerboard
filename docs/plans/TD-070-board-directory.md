@@ -16,11 +16,11 @@ F113) and two minor (applied), its re-check (R19) one minor (F116, rejected), an
 build-changing (F117–F123: the subject's session and head, prose after the first item at the split, `parse_item()`'s
 `Due` and `Kind` rules, `parts_problems()`' prefix, the `add` fixtures' ids, the `doer` board case, and
 `item_record()`'s keys from a v3 item) and five minor (F124–F128), all applied; F129, from TD-078's round-8 review,
-moves TD-075's B1 (TD-084) and TD-065's B1 (TD-083) out of B1's blocks, both merged. The closing fact-check (R21) raised nothing build-changing and seven minor (F130–F135), all applied, so the rounds end after the bought round with the design review's seven fixes read by no design review: the end-of-rounds item again, recommending **One more round**.
+moves TD-075's B1 (TD-084) and TD-065's B1 (TD-083) out of B1's blocks, both merged. The closing fact-check (R21) raised nothing build-changing and seven minor (F130–F136), six applied and F136 rejected, so the rounds end after the bought round with the design review's seven fixes read by no design review: the end-of-rounds item again, recommending **One more round**.
 Draft 1 turned the scope into the full design: its decisions, the exact `SPEC.md` text, the fixtures and the
 builds. Rounds: six ran, ending at the cap (round 6's design review still raised build-changing findings, F73–F76,
 now applied; no design review has read them). Build-changing per design review 12, 4, 3, 5, 3, 4, 2, 7 (round 8's R20); fact-checks 2, 2,
-1, 0, 0, 0, 1, 3 (round 8's R18: F111 rejected, F112, F113), round 6's closing fact-check 1, round 7's 4 and round 8's 0 (F81, `_real_day()` for a day's check), applied and read by no design
+1, 0, 0, 0, 1, 3 (one rejected; round 8's R18: F111 rejected, F112, F113), round 6's closing fact-check 1, round 7's 4 and round 8's 0 (F81, `_real_day()` for a day's check), applied and read by no design
 review with round 6's. Recurring topics: tie and list order (F14, F30, F32, F45), the build-by-build shims (F23, F33, F44, F53,
 F55), the dual-mode reader seam, a v2 line or a `BoardItem` and its file (F13, F23, F44, F55, F66, F109, F113, F117,
 F123, F124: round 8 ends it with *The builds*' table of every reader, its v3 source and its build), Doer and TD-065 (F18, F19, F29, F38, F46, F58, F68), each judged ended by round 6's design review (order by round 3's rule
