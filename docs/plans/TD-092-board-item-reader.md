@@ -1,6 +1,8 @@
 # TD-092: the board's item file, its id and the v2/v3 reader (TD-070's B1 and B2)
 
-**Status:** Draft 5, 2026-11-13 (session lb-designer): round 2's design review (R31) raised three build-changing
+**Status:** Draft 6, 2026-11-13 (session lb-designer): round 3's design review (R34) raised two build-changing
+findings (F220, F221) and two minor (F222, F223), all applied with the author's rulings (a closed v2 line read as
+written; one date reading, reversing F215's example). Draft 5: round 2's design review (R31) raised three build-changing
 findings (F206–F208) and four minor (F209–F212), all applied with the author's rulings. Draft 4: round 2's
 fact-check (R29) raised one build-changing finding (F196, `Board.path`) and six minor (F197–F202), all applied. Draft 3: round 1's design review (R28) raised three
 build-changing findings (F190–F192) and three minor (F193–F195), all applied with the author's rulings
@@ -113,7 +115,9 @@ The moves on close, and `README.md`'s stamps, stay in TD-070's plan, D2.
 (`ITEM_ID_RE`, `[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{8}`, matched with `fullmatch`, so no trailing newline and
 no non-ASCII digit passes, as `PART_ID_RE`'s `[0-9]` reads; round 1's F185; the date a real day). **One predicate
 says what an id is** (round 1's F195): `is_item_id(s)`, `ITEM_ID_RE`'s `fullmatch` and its date a real day
-(`_real_day()`). `item_id(added, nonce)` formats and refuses anything `is_item_id()` does not pass; `parse_item()`'s
+(`_real_day()`). `item_id(added: str, nonce: str)` formats them, `added` a `YYYY-MM-DD` string as `item_path()`'s
+`closed` is (round 3's F222), and raises `ValueError` for anything `is_item_id()` does not pass, as `item_path()`
+does; `parse_item()`'s
 `id` (D6) and rule 11's names read through it too, so `2026-02-30-abcd1234.md` is a name that is not an id. The
 module draws nothing. The writer half that follows is B3's
 (TD-070's plan, B3; round 1's F183): `board.py add` draws the nonce (`secrets.token_hex(4)`) and draws again,
@@ -207,10 +211,17 @@ and a close keep it.
   `parse_hide_until()` and `DUE_RE` find a field on a v2 line by its name (the trailer's readers after its `Due:`,
   `parse_parts()` after its `Context:`, `parse_hide_until()` after its `Due:` or else its `Context:`) and stay v2's. B1
   adds `parse_decided_value(value)`, giving `(label, date, by)` (`by` None when the value names no one) or None for a
-  value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by`;
+  value outside `<date>[ by <person>] — <label>`, which fills `decided` and `decided_by` (round 3's F223: `by` is a
+  person in the person grammar, `PERSON`, as `parse_decided_by()` reads one today, splitting off only a final `(by
+  <person>)` in that grammar and leaving any other `(by …)` in the label; the grammar holds no space, so the first `
+  — ` after it ends it, and a value whose text from `by ` to the first ` — ` is no person, `2026-11-12 by pat smith
+  — Go`, is outside the form, read as no answer and named under rule 14; the split never writes one, since v2's
+  `Go (by pat smith)` is all label and is written `2026-11-12 — Go (by pat smith)`);
   `parse_closed_value(value)`, giving `(date, why)` (`why` None for a bare date) or None outside `<date>[ — <why>]`,
   which fills `closed`; and `parse_answers_value(value)`, giving the written answers split on each bar not after a
-  `\`, `\|` read as a bar, each trimmed and none empty, which fills `answers`, `default` and `consequences` through
+  `\`, `\|` read as a bar, each trimmed, the empty ones dropped (round 3's F223: `Go | | No` and `Go | No |` read
+  `Go` and `No`, as `_raw_answers()` and `parse_lifts()` drop an empty piece today, so a value with one is in its
+  form and read, not absent), which fills `answers`, `default` and `consequences` through
   `split_answer()` as `_raw_answers()`' readers do, and `lifts` from a `Lifts` value of the same form. `Kind` is one
   of the five, `Due` and `Hide until` a `YYYY-MM-DD` day (`_real_day()`: the `ISO_DAY_RE` shape and a real date, since `date.fromisoformat()` alone also
   takes `20261108` and `2026-W45-3` on Python 3.11 and later), and `Parts` its ids
@@ -337,11 +348,19 @@ and a close keep it.
 - **A v2 item** is a `BoardItem` with every one of those fields filled by `parse_board()` from its line. The v2 half
   of `load_board()` is the v2 line reader as the last v2.x release has it, so whatever fields that reader returns
   (v2.8's `Doer:` among them) fill the `BoardItem` fields of the same name and `split_board()`
-  carries them into header fields of the same name. From it: `added` its date, `session` and `host` its head's,
+  carries them into header fields of the same name. From it: `added` its date (`ITEM_DATE_RE`'s, today's `_item_date()`, when a day; round 3's F221), `session` and `host` its head's,
   `context` its Context's value (without the final period) as `CONTEXT_RE` reads it over the line with
   `reply_span()` removed (round 1's F191, above), `closed` its `Closed:` (the why without its final
   period), `replies` its reply tails, `fields` its fields as `(name, value)` in their order, `words` its words
   (`item_words(line)`, D11), `text` (until B5) the line's text after its tick, trimmed, as today, and `raw` its line.
+  **A closed v2 line** (round 3's F220) is read by `parse_closed_items()`, which hands `parse_board()` a rewritten
+  line (its `[x]` made `[ ]`, the text from `Closed:` to the line's end cut, every other line blanked), so the line
+  `parse_board()` sees is not the line written. `parse_closed_items()` therefore fills `raw`, `closed`, `fields`,
+  `words` and `context` itself, from the original `[x]` line as written: `raw` that line, `closed` its `Closed:`
+  (D11), `fields` with its `Closed` in its place, `words` `item_words()` of it (so `Closed: 2026-01-10 lifted.`
+  leaves `lifted.` in the words, D11's span), and `context` as above over it. `text` stays the Closed-cut text after
+  the tick, as `_item_gate(it.text)` and today's readers read a closed item; the other fields (`added`, `session`,
+  `host`, `replies`, the id) read alike from either, since the cut takes only `Closed:` and what follows it.
   The readers that judge an item of either major read the fields, never the line: `_item_gate(item)` takes a
   `BoardItem` from B2 and reads its `context` (round 4's F66; a string, a v2 line's text after its tick, is still
   read as today until B5, for `closes()` given a line), and `_sweep_context()` reads `context`; `_item_date()` reads
@@ -422,7 +441,7 @@ bullet, its numbered rules).
   one and a closed one; reading them as one closed item is what `split_board()` writes, so the v2 read and its
   split's read give the same items (*Versions* says so). It differs from v2.7's within-one-file rule only for twins
   at different indents, which v2.7's key told apart.
-- **A v2 item's id** is its line's date, a hyphen, and `key_id()` of the key ShiftLead's `key()` hashes: `item_key()`
+- **A v2 item's id** is its line's date (`ITEM_DATE_RE`'s match, a day; D11's *One date reading*, round 3's F221), a hyphen, and `key_id()` of the key ShiftLead's `key()` hashes: `item_key()`
   of `- [ ] ` and the line's text after its tick, trimmed (D11 quotes `key()`). So it reads with the id its split
   file gets, and a twin's two lines read with one id. A line with no readable date (none, or one that is no day,
   `_real_day()`; round 9's F165) has id None. **None is no id** (round 2's F206): it equals no id, None included.
@@ -666,7 +685,8 @@ less two days, can come in a v3.x minor if the cost ever shows.
 and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reader reads.
 
 - A v2 item's
-  `closed` (B2) is `(date, why)` from its `Closed:`: the date `CLOSED_RE` reads when it is a day (`_real_day()`;
+  `closed` (B2) is `(date, why)` from its `Closed:`, which `parse_closed_items()` reads from the `- [x]` line as
+  written, as it reads the line's `raw`, `fields`, `words` and `context` (D4's *A closed v2 line*, round 3's F220): the date `CLOSED_RE` reads when it is a day (`_real_day()`;
   `2026-02-30` is not, so the line is a closed item with no readable `Closed:` date, which the split refuses, TD-070's plan, D11), and the why the
   text after a ` — ` that directly follows the date, trimmed, its final period dropped, None without one (round 9's
   F160).
@@ -681,23 +701,33 @@ and notes, the stub) is TD-070's plan's, D11; these are the pieces of it a reade
   (`— Say Go to X. Context: …` gives `## Say Go to X.`), and any words a hand edit left outside the fields kept. A
   bold head stays in the heading as written (`**Release v2.8**, then tag it`), where *The bold head* reads it.
   **The prefix** (round 2's F208) is one rule, whatever the head's shape: the tick (`ITEM_RE`'s or
-  `CLOSED_ITEM_RE`'s, `- [ ] ` or `- [x] `, its indent and spaces as they read them), then an optional kind word
-  (`KIND_RE`'s, so only before a date), then an optional date, then, immediately after the date, an optional one
-  parenthesised group (any `(…)` with no `)` inside: `(n/a)` and `(session …)` alike), then an optional ` — `:
+  `CLOSED_ITEM_RE`'s, `- [ ] ` or `- [x] `, its indent and spaces as they read them), then an optional word before
+  a date (`[A-Za-z]+\s+`, followed by a date, as `ITEM_DATE_RE` reads it; round 3's F221), then an optional date,
+  then, immediately after the date, an optional one parenthesised group (any `(…)` with no `)` inside: `(n/a)` and
+  `(session …)` alike), then an optional ` — `:
 
   ```python
-  ITEM_PREFIX_RE = re.compile(r"^\s*-\s*\[[ xX]\]\s+(?:(?:decide|act|look|watch|fyi)\s+(?=\d{4}-\d{2}-\d{2}\b))?"
-                              r"(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?", re.IGNORECASE)
+  ITEM_PREFIX_RE = re.compile(r"^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?"
+                              r"(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?")
   ```
 
+  No `re.IGNORECASE`: the word is `ITEM_DATE_RE`'s, which reads case as written, and `[A-Za-z]` under
+  `re.IGNORECASE` also matches `ſ` (U+017F) and the Kelvin sign. **One date reading** (round 3's F221, reopening
+  F206 and F215): a v2 line's `added` and its id's date are `ITEM_DATE_RE`'s match over its text after the tick,
+  trimmed (today's `_item_date()`), the date passing `_real_day()`; the prefix's word is the same `[A-Za-z]+\s+`, so
+  the prefix ends where that date's head ends, and since both read the text after the tick's whitespace, a leading
+  space cannot shift one reading from the other. The kind is still `KIND_RE`'s, so a word that is no kind is no
+  kind, yet is prefix, not words.
   Everything after its match is the words' source. Every part but the tick is optional, so the rule always matches,
   and a line whose head does not match (no date, a date with no group, an unclosed `(`) leaves the rest as words
   from wherever the rule stopped: `- [ ] 2026-11-11 — Ping sam.` gives `Ping sam.`, `- [ ] act 2026-11-11 (n/a) —
   Ping sam.` gives `Ping sam.`, and `- [ ] Ping sam.` gives `Ping sam.` (a group not after a date is words:
   `- [ ] (later) Ping sam.` gives `(later) Ping sam.`); and `- [ ] act (n/a) — Ping sam.` gives the whole `act (n/a) — Ping sam.`, since v2 reads no kind
-  and no head on a line with no date, `KIND_RE` and `HEAD_RE` each needing one. A word before the date that is no
-  kind is words too, as `KIND_RE` reads no kind there: `- [ ] Foo 2026-11-11 (session x) — Ping.` gives
-  `Foo 2026-11-11 (session x) — Ping.`, though `HEAD_RE` reads a head there; round 3's F215).
+  and no head on a line with no date, `KIND_RE` and `HEAD_RE` each needing one. A word before the date that is no kind is prefix, as `ITEM_DATE_RE`
+  reads the date after it: `- [ ] Foo 2026-11-11 (session x) — Ping.` gives `Ping.`, `added` 2026-11-11 and `kind`
+  None (round 3's F221, reversing F215's example, which kept the whole as words while the date was read as
+  `added`). Two words before a date are no head: `- [ ] Foo bar 2026-11-11 — Ping.` gives the whole `Foo bar
+  2026-11-11 — Ping.` and `added` None, which `ITEM_DATE_RE` does not match either.
   **The span** (round 6's F80), defined by how the v2 reader finds each field and the replies on the line after its
   prefix: each field's span runs from its name to its value's end as its reader takes it, `Context` to where
   `CONTEXT_RE` ends it over the line with `reply_span()` removed (the next field's name, the reply's start, or the
@@ -803,7 +833,7 @@ A row whose build names B3, B4 or B5 beside B1 or B2 is shared: its later part i
 | function | reads today | a v3 item's source | build |
 |---|---|---|---|
 | `BoardItem` | — | gains `id`, `path`, `words`, `added`, `session`, `host`, `context`, `closed`, `replies`, `fields`, `raw` (D4); `text` `""` | B1; `text` gone B5 (`detail_source` is B3's, TD-070's plan; F194) |
-| `parse_board()`, `parse_closed_items()`, `detail_block()`, `item_key()`, `is_item()`, `is_open_item()` | a v2 line | none: the v2 half of `load_board()` (D6) | B2 fills the new fields; stay v2's |
+| `parse_board()`, `parse_closed_items()`, `detail_block()`, `item_key()`, `is_item()`, `is_open_item()` | a v2 line | none: the v2 half of `load_board()` (D6) | B2 fills the new fields (`parse_closed_items()` a closed line's `raw`, `closed`, `fields`, `words` and `context` from the line as written, its `text` the cut line's; round 3's F220); stay v2's |
 | `parse_answers()`, `parse_default()`, `parse_consequences()`, `parse_decided()`, `parse_decided_by()`, `parse_lifts()`, `parse_parts()`, `parse_hide_until()`, `parse_doer()`, `DUE_RE` | a v2 line | `parse_item()`'s value readers (D4) | B1; stay v2's |
 | `item_head()` | `.text`'s head | `BoardItem.session`, `.host` (`Session`) | B2 (F123) |
 | `item_refs()` | `CONTEXT_RE` over `.text` | the same result, its body now `context_refs()` over `CONTEXT_RE`'s `ctx` (round 2's F205), giving that text what it gives today; no record reads it (round 2's F199) | B2 (F123) |
@@ -820,7 +850,7 @@ A row whose build names B3, B4 or B5 beside B1 or B2 is shared: its later part i
 | `decide_lift()` | `parse_board(line)`, `_item_gate(item.text)` | an item file through `parse_item()`, or a `BoardItem` | B2 (F124) |
 | `parts_problems()` | `CONTEXT_RE.search(_gate_body(item.text))`, then `_parts_fault()` | `BoardItem.context` | B2 (F124); `item:` prefix (F120) |
 | `_sweep_context()`, `_sweep_head()` | `it.text` | `context`; `words`, for a v2 item too, so a head phrase only in a Context or a reply no longer counts (round 2's F210) | B2 |
-| `_item_date()` | `ITEM_DATE_RE` over `it.text` | `added` | B2 |
+| `_item_date()` | `ITEM_DATE_RE` over `it.text` | `added`, which for a v2 item is that same match, a day (round 3's F221) | B2 |
 | `_read_boards()`, `covers()`, `sweep()` | `parse_board()` over texts, `lines[it.line - 1]`, `item_key(r["line"])` | `load_board()`'s `Board`s, ids; an undated item never in `to_close`; texts still keys until B5 (round 2's F206) | B2 |
 | `_answers_owing()`, `_audit_satisfied()`, `_sweep_closes()` | `_item_gate(it.text)` | `_item_gate(item)` | B2 |
 | `edit_line()`, `item_problem()`, `canonical_item()`, `item_line()` (its read-back `written()`), `decided_line()`, `archive_closed()` | a v2 line or board | `edit_item()`, `item_file_problem()`, `canonical_item_file()`, `item_file()`, `decided_file()`; none | B1 adds; B5 removes |
@@ -963,7 +993,8 @@ board or in its archive)". After *The close rule*'s list, add:
 >   the board through `board.py show`.
 >
 > **The item id** is `YYYY-MM-DD-<8 hex>`: the item's `Added` date, a hyphen, and eight lower-case hex digits
-> (`item_id(added, nonce)`, refused for anything else, a date that is no day of the calendar among it).
+> (`item_id(added, nonce)`, `added` a `YYYY-MM-DD` string and `nonce` a string, which raises `ValueError` for
+> anything that is no id, a date that is no day of the calendar among it).
 > `is_item_id(s)` says whether a string is an id: the shape, matched whole, and its date a day of the calendar, so
 > `2026-02-30-abcd1234` is none. `item_path(id, closed=None)` gives an item's path, `closed` its `Closed:` date as
 > `YYYY-MM-DD`, or None when it is open, and raises `ValueError` for an `id` that is no id, or for a `closed` that
@@ -995,14 +1026,16 @@ board or in its archive)". After *The close rule*'s list, add:
 >     undated; on an `fyi`, a `Due` is ignored, and flagged (`fyi_due`), as on a v2 line;
 >   - `Answers`, `Lifts` — as on a v2 line, without the final period;
 >   - `Decided` — `<date>[ by <person>] — <label>`: the date and who answered first, so the label runs to the line's
->     end and holds any words. `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
+>     end and holds any words; `<person>` is a name in the person grammar, as in a v2 `(by <person>)`, so a value
+>     whose text from `by ` to the first ` — ` is no person is outside the form. `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
 >     form, and `parse_item()` reads it into `decided` and `decided_by`; `parse_decided()` and `parse_decided_by()`
 >     read a v2 line's;
 >   - `Closed` — `<date>` or `<date> — <why>`, read by `parse_closed_value(value)` as `(date, why)`, or None outside
 >     that form.
 >
 >   `Answers` and `Lifts` values are read by `parse_answers_value(value)`: the answers split on each bar not after a
->   `\`, `\|` read as a bar, each trimmed (`split_answer()` then reads an answer's label, mark and consequence).
+>   `\`, `\|` read as a bar, each trimmed, an empty one dropped as on a v2 line (`Go | | No` offers `Go` and `No`)
+>   (`split_answer()` then reads an answer's label, mark and consequence).
 >   Each value reader reads the bare value the header line holds; the v2 readers (`parse_decided()`,
 >   `parse_answers()`, `parse_lifts()` and the rest) find a field on a v2 line and read nothing else.
 >
@@ -1064,11 +1097,18 @@ board or in its archive)". After *The close rule*'s list, add:
 >   lines, never with a dated line's id, and no by-id read or write names it (`to_close`, *The gate sweep*). Its
 >   `BoardItem` carries every field a v3 item does that the line holds, its words (`item_words()`: every piece of
 >   the line after its prefix outside the spans its fields and replies are read from, a field's span with the `.`
->   ending it, joined by one space) as `words` and the line as `raw`. The prefix is the tick, then an optional kind
->   word (one followed by a date), then an optional date, then an optional one parenthesised group right after the
->   date (any `(…)` with no `)` inside, `(n/a)` and `(session …)` alike), then an optional ` — `
->   (`^\s*-\s*\[[ xX]\]\s+(?:(?:decide|act|look|watch|fyi)\s+(?=\d{4}-\d{2}-\d{2}\b))?(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?`,
->   ignoring case); what a line's head does not match is words, from wherever the prefix stopped.
+>   ending it, joined by one space) as `words` and the line as `raw`; a closed line's `raw`, `closed`, `fields`,
+>   `words` and `context` are read from the `- [x]` line as written, its `Closed:` among them (*A closed item*). The
+>   line's date, which gives its `added` and its id's date, is the date the line's text after its tick, trimmed,
+>   opens with, after at most one word of ASCII letters and whitespace (`^(?:[A-Za-z]+\s+)?(\d{4}-\d{2}-\d{2})\b`),
+>   when it is a day of the calendar; its kind is that word only when it is one of the five. The prefix is the tick,
+>   then an optional word of ASCII letters followed by a date, then an optional date, then an optional one
+>   parenthesised group right after the date (any `(…)` with no `)` inside, `(n/a)` and `(session …)` alike), then
+>   an optional ` — `
+>   (`^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?(?:\d{4}-\d{2}-\d{2}\b(?:\s*\([^)]*\))?)?(?:\s*—\s)?`,
+>   case as written), so it ends where the date's head ends whether or not the word is a kind (`- [ ] Foo
+>   2026-11-11 (session x) — Ping.` has the words `Ping.`, the date 2026-11-11 and no kind); what a line's head does
+>   not match is words, from wherever the prefix stopped.
 > - **The stub**, a file that declares `Ledgerboard: 3` and holds no item, is read as the directory beside it, its
 >   name without `.md`.
 > - **The caller does the I/O**, as for `load()`: `ls(path)` returns the names directly in the directory `path`,
@@ -1378,7 +1418,8 @@ tagged with its build (round 6's F77):
   and anywhere in the `README.md` of a board read from a directory"; *`Answered by:`*'s "It is read as `People:` is" then holds for
   both. B2.
 - *A closed item*: "(`parse_closed_items(content)`, v2.4, of a board or its archive …)" gains after it "On a v3
-  board a closed item is a file under `archive/` with its `Closed:` (*Reading a board*)." B2.
+  board a closed item is a file under `archive/` with its `Closed:` (*Reading a board*)." and, after that, "Its `raw`, `closed`, `fields`, `words` and `context` (v3.0) are read from the `- [x]` line
+  as written; only its `text` is the cut line's (round 3's F220)." B2.
 - *The decide lift*: `decide_lift(item_line, entries, …)` becomes `decide_lift(item, entries, …)`, `item` an item
   file's text or a `BoardItem` (v3.0; a v2 line before it), and "the base item line" becomes "the base item". B2.
 
@@ -1415,7 +1456,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     `**due:**` and `**hide-until:**` read as `Due` and `Hide until`; a repeated field (the first wins); an unknown
     `**Owner:**` field (ignored, in `fields`); `Decided:` with and without `by`, and a label ending `(by Friday)`
     read whole; `Closed:` with and without a why; a `Decided:` and a `Closed:` not in their form (not decided,
-    open); an `act` with `**Doer:** acme/widgets` and one with `**Doer:** team ops` (`doer` in its fields); a Log
+    open), and a `Decided:` of `2026-11-12 by pat smith — Go` (no person: not decided; round 3's F223); an
+    `**Answers:** Go (default) | | No |`, an empty piece and a trailing bar, read as `answers` `["Go", "No"]` and
+    `default` `"Go"`, as v2 reads the line (round 3's F223); an `act` with `**Doer:** acme/widgets` and one with `**Doer:** team ops` (`doer` in its fields); a Log
     line in another shape and one with empty words (no reply); a CRLF file; a file with no heading (None, and its
     problem in `board_dir`); a `## ` heading followed by a non-field line (None: D7's rule wants a header field
     next; round 9's F144); round 8's F119: `**Kind:** ACT` (an `act`), a `Due` of `2026-02-30` and one of `soon`
@@ -1447,7 +1490,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     with one head and a marked form on an open `decide` (and neither faulted on a decided file), a Log not last, a body line that is no bullet (the messages pinned);
   - `canonical`: reordered and respelled fields rewritten, an unknown field placed after the known ones, a CRLF file
     normalised; refused: a header line that is no field, a repeated field;
-  - `ids`: `item_id()` accepting `2026-11-11` and `3f9a2c1d`, refusing `2026-02-30`, `3F9A2C1D` and seven digits;
+  - `ids`: `item_id()` accepting `"2026-11-11"` and `"3f9a2c1d"`, and raising `ValueError` (round 3's F222; the
+    runner's `{"raises": "ValueError"}`) for an `added` of `"2026-02-30"`, a nonce of `"3F9A2C1D"` and one of seven digits;
     `is_item_id()` (round 1's F195) passing `2026-11-11-3f9a2c1d` and failing `2026-02-30-abcd1234`, an upper-case
     nonce, a trailing newline and a non-ASCII digit; `item_path()` open and closed, `closed` a `YYYY-MM-DD` string
     (`archive/2026-11/<id>.md` for a close on `"2026-11-30"`, `archive/2026-12/` on `"2026-12-01"`), and raising
@@ -1470,7 +1514,16 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   undated closed twin, read as one closed item with `id` `null`, beside an undated open line of another key, read
   open with `id` `null`), a new `words_prefix` (round 2's F208: a date-only head, `- [ ] 2026-11-11 — Ping sam.`, an
   `(n/a)` head, `- [ ] act 2026-11-11 (n/a) — Ping sam.`, and a line with no head, `- [ ] Ping sam.`, each record's
-  `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`), and a new
+  `text` `"Ping sam."`, and `- [ ] (later) Ping sam.`, whose `text` is `"(later) Ping sam."`; round 3's F221: `- [ ]
+  Foo 2026-11-11 (session x) — Ping.`, whose `text` is `"Ping."`, `added` `"2026-11-11"`, `kind` `null` and `id`
+  `"2026-11-11-<8 hex>"`, its date part `2026-11-11`), a new `closed_words` (round 3's F220: `- [x] act 2026-01-05
+  (session w-9) — Rotate the key. Context: TD-1. Closed: 2026-01-10 lifted.`, whose closed record's `text` is
+  `"Rotate the key. lifted."` and `closed` `{"date": "2026-01-10", "why": null}`, and `- [x] fyi 2026-01-06
+  (session w-9) — Read the notes. Context: TD-2. Closed: 2026-01-12 — read them.`, `text` `"Read the notes."` and
+  `closed` `{"date": "2026-01-12", "why": "read them"}`; its expected JSON also holds each closed item's `raw`, the
+  `- [x]` line as written, and `fields` as the runner's `item_fields()` prints them, the first's ending `["Closed",
+  "2026-01-10"]` and the second's `["Closed", "2026-01-12 — read them"]`, each after `Kind`, `Added`, `Session` and
+  `Context`), and a new
   `reply_ref`, round 1's F191: an `fyi` line `Context: TD-1.` with a reply naming `TD-9`, whose record's `refs` is
   `["TD-1"]` and `context` `"TD-1"`, the reply in `replies` alone; the split directories, `<case>.v3/` beside each case that splits (`twins_across.v3/` beside its directory; not `undated_twins` or `words_prefix`, whose undated lines the split refuses, round 3's F217), and `board_v3_case` are TD-070's plan's, B5): The v2 cases' JSONs carry v2.8's `doer` already, are left by B1, and are regenerated at B2:
   `board_case` reads through `load_board()`, its records gain `id`, `path`, `added`, `context` and `closed` and keep
@@ -1590,9 +1643,10 @@ each build below names the expected JSONs whose records it regenerates. **Each b
 section *The search* (after text 14), for that build's names; B5's is the full one (round 1's F181).
 
 **B1, the item file.** D3, D4, D7's module half. Location: `ledgerboard/__init__.py` (`ITEM_ID_RE`, `is_item_id()`
-(read by `item_id()` and `parse_item()`'s `id`, round 1's F195), `item_id()`, `key_id()`, `item_path()` (`closed` a
+(read by `item_id()` and `parse_item()`'s `id`, round 1's F195), `item_id()` (`added` and `nonce` strings, `ValueError`
+for anything that is no id, round 3's F222), `key_id()`, `item_path()` (`closed` a
 `YYYY-MM-DD` string, `ValueError` for a non-id, F195, and for a `closed` failing `_real_day()`, round 2's F202), `parse_item()` (filling `words` with the heading, and
-`closed` from its path, F195), `BoardItem`'s new fields (`added` and `closed`'s date `datetime.date`, round 2's F207),
+`closed` from its path, F195; its `Answers` dropping an empty piece and its `Decided` `by` a person, round 3's F223), `BoardItem`'s new fields (`added` and `closed`'s date `datetime.date`, round 2's F207),
 `BoardItem.doer`'s v3 reading through v2.8's `doer_value()` (the field and the record's `doer` are v2.8's), `item_file()`
 with `doer`,
 `decided_file()`, `edit_item()`, `item_file_problem()`, `canonical_item_file()`, `subject()` gaining `id=None` (None
@@ -1626,7 +1680,9 @@ precheck is green, every fixture above passes, and *The search*'s B1 search find
 readers, the order, `board_problems()`' refusal and `board_dir_problems()`' checks turn, `major` for the version
 check alone (round 1's F190), and `path`, the path `load_board()` was given (round 2's F196), `load_board()` (`since` reading its own month, F195; a
 `datetime.date | None`, ignored by a `"file"` board, round 2's F212), `item_words()` (its prefix `ITEM_PREFIX_RE`,
-round 2's F208), the
+round 2's F208, its word before the date `ITEM_DATE_RE`'s and `added` and the id's date `ITEM_DATE_RE`'s match, a
+day, round 3's F221), `parse_closed_items()` filling a closed line's `raw`, `closed`, `fields`, `words` and `context`
+from the line as written, `text` the cut line's (round 3's F220), the
 twin rule across board and archive, the stub's reading, the duplicate-id read (an undated line matched by its key
 with the other undated lines alone, never by id, and never in a `Board`-form `to_close`; a text-form `sweep()` still
 giving keys; round 2's F206), `Board.problems`,
@@ -1656,7 +1712,7 @@ and its *The readers take the `Board`* bullet without "and the merge gate's verd
 its *Damage*, its *The item id*'s v2-id sentence (round 2's F201), its `parse_item()`
 paragraph's `item_record()` sentence and *The item file*'s `board_dir_problems()` clauses, 9's *gate* and *snapshot* paragraphs, 11, 14's reader items, the *`Context:`* one among them, F191),
 `fixtures/board/` (regenerated, `twins_across` a case directory, round 2's F209, `undated_twins`, F206,
-`words_prefix`, F208, `reply_ref`, F191), `fixtures/board_dir/`, `fixtures/item/`'s `gate` and `strings`,
+`words_prefix`, F208 and round 3's F221, `closed_words`, round 3's F220, `reply_ref`, F191), `fixtures/board_dir/`, `fixtures/item/`'s `gate` and `strings`,
 `fixtures/sweep/` (`undated_close`, F206, `head_in_reply`, F210), `fixtures/lift/`, `fixtures/run.py` (`fs_ls`, `board_dir_case` with `case.json`, F158, `board_case` taking a case directory, F209, `sweep_cases`,
 `lift_cases`; the runner's two reads of `BoardItem.text` move off it, so B5's removal changes no expected JSON:
 `lift_cases`' `closed_items` prints `words`, and `sweep_cases`' `covers` the item's id).
