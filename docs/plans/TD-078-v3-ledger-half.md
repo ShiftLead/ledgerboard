@@ -665,8 +665,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its v3.0 vendor PR's cadence change entry points a roster repo at the remodel procedure below, which names the
-    two pins (D7) and so merges after that PR, since it names a commit vendoring v3.0; its PR vendoring the last v2.x minor merges before the v3.0 vendor PR, since D5's check in the
+  - its v3.0 vendor PR's cadence change entry points a roster repo at the remodel procedure below; the procedure,
+    which names the two pins (D7), merges after that PR, since it names a commit vendoring v3.0; its PR vendoring the last v2.x minor merges before the v3.0 vendor PR, since D5's check in the
     v3.0 vendor PR runs under the minor, so a first pin exists to name;
   - its v3.0 vendor PR's tests read a roster-shaped fixture (a v1 ledger, old forms, a single-file board) without
     error, since its v3.0 tools still read an un-remodelled roster repo's ledger and board through the cross-repo
