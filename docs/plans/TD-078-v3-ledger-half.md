@@ -181,8 +181,10 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   reads it today); the error is for the whole old item (from its `decision (` to the value's end, as
   text 1 rule 8 defines it, commas and all), its text naming that item, beside the unreadable items' own flags on
   an open entry (one per comma-split piece, as `parse_gates()` splits any value). One private helper finds it,
-  `_old_form_item(value)` (TD-096): the value split at commas as `parse_gates()` splits it, the first piece that
-  `GATE_DECISION_RE` matches with non-blank text after the match opens the old item, which runs from that piece's
+  `_old_form_item(value)` (TD-096), with a prefix pattern of its own, `OLD_FORM_HEAD_RE` (today's `GATE_DECISION_RE`
+  unchanged, `^decision[ \t]*\((?P<who>[^()]*)\)`), since `GATE_DECISION_RE` itself becomes the end-anchored
+  whole-item test (F113): the value split at commas as `parse_gates()` splits it, the first piece that
+  `OLD_FORM_HEAD_RE` matches with non-blank text after the match opens the old item, which runs from that piece's
   start to the value's end; a piece that does not open with `decision (` (`TD-1 decision (b) x`, a `decision (` mid
   piece) opens none, and is an unreadable item alone; no such piece, `None`.
 - **`migrate` goes:** `migrate_entry()`, `migrate_subject()` and the helpers only they use (round 8's F112:
@@ -236,14 +238,15 @@ the commands, their order and their commit points are agent-cadence's remodel pr
 one is an agent-cadence wrapper's (`bump`, `ledger.py --split`, `migrate`'s git dating, `board_edit.py`), tested
 there and changed without a ledgerboard release.
 
-- **The last v2.x pin.** The first bump moves the pin to the commit agent-cadence's v3.0 vendor PR names, with the
-  minor's number (*Consumers*): a commit already on agent-cadence's `main` when named, which vendors the last v2.x
-  minor (v2.8, tagged here 2026-11-13, #281, unless a v2.9 is cut before TD-070's B1 merges, D3), and which the
-  remodel procedure's test passes on: from the squash commit of the PR that vendored that minor to the last before
-  the v3.0 vendor PR, the newest such. Named once merged and never moved, no reader computes it from where `main`
-  stood at a merge (F126), and the commands the remodel runs under it are the ones the procedure was tested
-  against: the second bump cannot mend a wrapper at the first pin. **`migrate` stays usable
-  through it after v3.0 removes it:** a pin is a commit on agent-cadence's `main`, which stays, so `agent-cadence
+- **The two pins are the procedure's to name.** agent-cadence's remodel procedure (*Consumers*), at its fixed path
+  on `main`, names both: the first, a commit on agent-cadence's `main` that vendors the last v2.x minor (v2.8,
+  tagged here 2026-11-13, #281, unless a v2.9 is cut before TD-070's B1 merges, D3), with the minor's number; the
+  second, a commit that vendors v3.0 (or a later v3.x). Its test runs the procedure's commands at each named commit,
+  in a fixture checkout, and a later agent-cadence PR whose test passes at a newer commit may re-name either, so a
+  wrapper defect at the first pin is mended by naming a newer one, never by the second bump. A remodel reads the
+  pins when it starts, from a merged file: no reader computes one from where `main` stood at a merge (F126). The
+  procedure merges, naming both, before any roster remodel starts. **`migrate` stays usable
+  through the first pin after v3.0 removes it:** a pin is a commit on agent-cadence's `main`, which stays, so `agent-cadence
   run ledger.py migrate` under that pin runs the last v2.x's `migrate` whatever v3.0 has removed. Nothing in
   ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
 - **What the PR shows between the bumps** — the precondition, met per repo (D5), taken under the last v2.x pin
@@ -280,12 +283,12 @@ the rewritten decisions need no board item in that PR: two remodels where Paul a
 owed anyway. (b) v3.0 keeping the old-form base-side count for a roster repo's rewrite: a v3.0 reader carrying a
 retired form's meaning for one migration, which D4 rules out. (c) Keeping `migrate` in v3.0 for the roster repos:
 the old forms' code would stay in every v3.x reader for a run each roster repo makes once, under a pin that already
-has it. (d) The last commit before agent-cadence's v3.0 vendor PR merges, read literally from Paul's note ("the last
-agent-cadence that vendors v2.8"): known only once that PR has merged, so the entry that names it would race its own
-merge (F126); or the vendoring PR's own squash commit (rounds 9–12): fixed, but frozen with whatever wrapper defect
-it carries, which the second bump cannot mend (round 13). D7 takes the newest commit already on `main` when the v3.0
-vendor PR names it that still vendors the minor and passes the procedure's test: the latest agent-cadence the note
-asks for, fixed once named.
+has it. (d) A pin fixed in agent-cadence's v3.0 vendor PR: the last commit before that PR merges, read literally from
+Paul's note ("the last agent-cadence that vendors v2.8"), is known only once it has merged, so the entry would race
+its own merge (F126); the vendoring PR's own squash commit (rounds 9–12), or the newest passing commit when named
+(round 13), is fixed but frozen with whatever wrapper defect it carries, which the second bump cannot mend (F194,
+round 14). The procedure's file names the pins and a passing PR may re-name them: the latest agent-cadence the note
+asks for that the procedure has tested, fixed for each remodel when it starts.
 (e) The remodel's commands, in order, in this plan (D7 as rounds 9–11 had it): every build-changing finding on them
 (F142, F153, F154, F162, and round 11's) was an agent-cadence wrapper's argument form, side effect or commit point,
 which ledgerboard cannot check from its tree and which moves with agent-cadence; so this plan keeps the predicate and
@@ -430,9 +433,9 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > rather than unknown: a retired field — `Waits`, `Taken by`, a header `Resolved` or a header `Location` — is an
 > error (`retired`) on every entry, open or archived, of a ledger that declares major 2 or more, whether or not the
 > edit changed the entry (never `standing`), and ℹ on a v1 ledger; so is a `Blocked by` item in the old decision
-> form (*The old form*, above), which is also an unreadable item, and so an error on an open entry of a v1 ledger too (ℹ on an archived one there, whose
-> unreadable item no reader flags; standing ℹ, as any unreadable item is, on an untouched entry when `check()` is given
-> a base); another retired item in `Blocked by` is ℹ and keeps the block;
+> form (*The old form*, above), which is also an unreadable item, and so an error on an open entry of a v1 ledger too (standing ℹ, as any unreadable
+> item is, on an untouched open entry when `check()` is given a base), and ℹ on an archived one there, whose unreadable
+> item no reader flags; another retired item in `Blocked by` is ℹ and keeps the block;
 > and a Status outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0
 > reads no such form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for
 > `Waits` and `Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header
@@ -507,8 +510,8 @@ ending `note`'s refusal prints from v3.0.
 > `parse_gates()`'s record loses `old_form`, and `parse_blocked()` names no holder for it (its pieces are in the
 > third list); `judge_takes()` loses `accept_taken_by`; `canonical()` places no
 > `Taken by`; and `migrate`, `migrate_entry()` and `migrate_subject()` are gone, while `subject_kind()` still names a
-> migrate subject; and `uncovered_decisions()` and `tripwire()` carry no old-form holder from the base, so an old
-> form rewritten `decision (<who>)` is a gained decision, owed a covering board item. A v2 ledger that met the precondition (*v2.8*, above) reads exactly as under v2.8, and declares
+> migrate subject; and `uncovered_decisions()` counts no old-form holder in the base (`tripwire()` never read one),
+> so an old form rewritten `decision (<who>)` is a gained decision, owed a covering board item. A v2 ledger that met the precondition (*v2.8*, above) reads exactly as under v2.8, and declares
 > no new major. One that did not is not misread: each old form is an error that names it (a retired field ℹ on a
 > v1 ledger, *Retired words*; the old decision form an error there on an open entry, as an unreadable item, and ℹ on an
 > archived one).
@@ -635,7 +638,8 @@ with the code, and the precheck green.
   old-form holder; `test_ledger_writer.py`'s `Migrate` class; removed or rewritten; round 8's F112, F122), and
   `fixtures/lift/` and `fixtures/ledger_edit/`'s expected `old_form` keys regenerated. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
   its last build, B5), so v3.0's ledger removals land after its board half and no v2.x release can follow them.
-  Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with `main`'s module, a cheap guard; if
+  Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with the last v2.x minor's module (its
+  tag's tree, since by then `main` carries TD-070's builds past it), a cheap guard; if
   entries filed since B3 show changes, a re-run of B3's command lands first as its own PR. B4's PR states that run.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
@@ -661,10 +665,12 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its v3.0 vendor PR's cadence change entry names the pin a roster repo's remodel bumps to first, to run the last
-    v2.x minor's `migrate` (D7), and that minor's number: the newest commit on its `main` when named that vendors the
-    minor and on which the remodel procedure's test passes (its PR vendoring the minor merges before the v3.0 vendor
-    PR, since D5's check in the v3.0 vendor PR runs under the minor, so such a commit exists when the entry names it);
+  - its v3.0 vendor PR's cadence change entry points a roster repo at the remodel procedure below, which names the
+    two pins (D7); its PR vendoring the last v2.x minor merges before the v3.0 vendor PR, since D5's check in the
+    v3.0 vendor PR runs under the minor, so a first pin exists to name;
+  - its v3.0 vendor PR's tests read a roster-shaped fixture (a v1 ledger, old forms, a single-file board) without
+    error, since its v3.0 tools still read an un-remodelled roster repo's ledger and board through the cross-repo
+    resolver and the attention view, which D5's "untouched" does not cover;
   - **a roster repo's remodel procedure** (D7), beside its `cadence.md` §2.12 and §9.19, which a roster session
     follows: the commands, their order and their commit points for the one PR, superseding for it §2.12's
     "`--split` as its own PR" and `migrate` as a PR of its own. What rounds 9–11 of this design found it must get
@@ -686,8 +692,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     check D7 names is taken at a commit the procedure fixes. It is read without the repo's pin: a roster session's
     pinned tree predates it, and its §2.12 there still says the opposite, so the procedure lives at a fixed path on
     agent-cadence's `main`, read from there (not through `agent-cadence path`), named in the ledger entry or board
-    item that starts each roster remodel, and it overrides that pin's §2.12 for the one PR. Its test runs its
-    commands against the commit the first bump names, in a fixture checkout, as well as on `main`. Filed through agent-cadence's question seat with its v3.0 vendor entry;
+    item that starts each roster remodel, and it overrides that pin's §2.12 for the one PR. It names the two
+    pins, and its test runs its commands at each, in a fixture checkout, as well as on `main` (D7). Filed through agent-cadence's question seat with its v3.0 vendor entry;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
