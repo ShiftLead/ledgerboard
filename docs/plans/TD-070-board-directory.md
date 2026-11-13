@@ -189,16 +189,17 @@ and a close keep it.
   `Decided` is `<date>[ by <person>] — <label>`; `Closed` is `<date>[ — <why>]`.
 - **`Doer`** is a v3 header field, defined wholly here: on an `act` only, who should do its step, `<repo>` (a repo
   name whose last part does not end in `.`, text 13's `doer-repo` and `doer-part`) or `team <team>` (`<team>` a
-  person's name; `team` alone names the repo `team`). Its reader is `parse_doer_value(value)` (round 5's F68), new
-  in B1: it reads a bare value, as the header field holds it (no final period, no line around
-  it), and gives `("repo" | "team", name, value)` or None for a value outside the form. It reads a team as TD-065's
-  reader does (round 6's F79): `team`, a run of spaces or tabs, and a person's name, so `team  ops` reads as the
+  person's name; `team` alone names the repo `team`). Its reader is v2.8's `doer_value(value)` (TD-065's, round 5's F68), which B1
+  reuses rather than adding a second reader (round 8's F112): it reads a bare value, as the header field holds it (no
+  final period, no line around it), and gives `("repo" | "team", name)` or None for a value outside the form;
+  `parse_item()` adds the value as written, so a v3 item's `BoardItem.doer` is `(kind, name, value)`, the shape v2.8's
+  `parse_doer()` gives. It reads a team (round 6's F79): `team`, a run of spaces or tabs, and a person's name, so `team  ops` reads as the
   team `ops`, its `value` as written; `item_file_problem()` and `board_dir_problems()` (rule 14) fault any spelling
   but one space, and the writer writes one. `BoardItem.doer` is that
   tuple for a v3 item, and `item_record()`'s `doer` a dict of it (below), or None. TD-065's `parse_doer(text)`, in
-  v2.8 (D12), stays a v2-line function (it finds ` Doer:` on a line and reads to the field's final period), which the
-  v2 half of `load_board()` uses for a v2 item; neither reader calls the other. TD-065's build merges before B1
-  starts (D12).
+  v2.8 (D12), stays a v2-line function (it finds ` Doer:` on a line, reads to the field's final period and calls
+  `doer_value()`), which the v2 half of `load_board()` uses for a v2 item. TD-065's build has merged (TD-083,
+  5b036e4; D12).
 - **A value is a whole line**, so it holds any words, field names among them: the field-name refusals end, and so
   does reading where a Context ends.
 - **A header-block line that is no field** (round 3's F51) does not end the block, which runs from the heading's
@@ -227,7 +228,7 @@ and a close keep it.
   of the five, `Due` and `Hide until` a `YYYY-MM-DD` day (`_real_day()`: the `ISO_DAY_RE` shape and a real date, since `date.fromisoformat()` alone also
   takes `20261108` and `2026-W45-3` on Python 3.11 and later), and `Parts` its ids
   (`entry-id`s, read with `REF_TD_RE` as `parse_parts()` reads its ids), each read from the value by `parse_item()`; `Doer` by
-  `parse_doer_value()`.
+  `doer_value()`, the value added.
 - **A value not in its form** (round 3's F51, round 6's F76), for `Decided`, `Closed`, `Kind`, `Hide until`, `Parts`
   or `Doer`, is kept (in `fields`, its line byte for byte) and read as the field absent: a `Decided` or `Closed`
   with no date first, or a date that is no day, reads as no answer, or no close (the item not decided, or, outside
@@ -463,7 +464,7 @@ any kind but `act` or outside its form, a result that does not read back) and dr
 for a file; since no key rests on a file's spelling, `canonical_item_file()` rewrites any field.
 `item_file_problem()`'s messages are plain sentences, each opening with its rule's tag as `item_problem()`'s do; this
 plan fixes the rules, B1 writes the words, and the fixtures pin them.
-- **TD-075's answer forms carry over** (round 7's F90; TD-075's B1 merges before B1, D12): `item_file()` refuses on a
+- **TD-075's answer forms carry over** (round 7's F90; TD-075's B1 has merged, TD-084, D12): `item_file()` refuses on a
   `decide` two forms with one head and a `default` naming a form, as `item_line()` does; `decided_file()` writes no
   ` (default)` mark on a form, as `decided_line()` does, its words written as given; `item_file_problem()` faults
   both on an open `decide` with no `Decided`, as `item_problem()` does, and nothing on a decided or closed file;
@@ -473,8 +474,10 @@ plan fixes the rules, B1 writes the words, and the fixtures pin them.
   has it before `edit_line()`. Every reader of an item's answers (`closes()`, `decide_lift()`,
   `_sweep_closes()`, `_answers_owing()`, `_answered_within()`, `uncovered_decisions()`, `edit_item()`'s `close`,
   `board.py`'s `_decide_ledger()`, and `item_file()`'s own check that some answer lifts) passes `_lifting(label, lifts, offered)` the item's offered labels —
-  `BoardItem.answers`, already labels, where it holds a `BoardItem`, else `parse_item(text).answers` (`parse_answers()` reads a v2 line only)
-  (TD-075's D5); none compares an answer to `Lifts` itself.
+  `BoardItem.answers`, already labels, where it holds a `BoardItem`; `parse_item(text).answers` where it holds an
+  item file's text; and `parse_answers(text)` where it holds a v2 line's text, as `closes()` given a string,
+  `plan_edit()`'s fill and `_decide_ledger()` do until B5 (round 8's F113; `parse_item()` finds no heading on a v2
+  line) (TD-075's D5); none compares an answer to `Lifts` itself.
 
 **The gate**, `board_problems(board, old)`, judges each open item of `board` whose id no item of `old` (open or
 closed) has, as `(path, problem)`. It refuses only when `board` is a v2 board; `old` may be either major (the split
@@ -632,17 +635,18 @@ ledger half (TD-078), landed when no open PR edits the board (each such PR is re
 
 **D12. The release: v3.0, and v2.8 before it.** v3.0 is a major (*Versions* text 12). It reads v2 boards and writes
 v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else it carries, is Paul's. The order:
-- **v2.8 is released before B1 merges.** Past the tag v2.7, `main` carries two changes to `ledgerboard/`, `SPEC.md`
-  and `fixtures/` (`git log v2.7..origin/main`): TD-079 (TD-068's B1, PR #240: `set --title` retitles an entry,
-  and `edit` and `set` refuse names that belong elsewhere, `SPEC.md`'s v2.8 text) and TD-080 (PR #242:
-  `misplaced_names()`'s note for two Title sections names the heading). TD-073 is v2.7's (its commit is an ancestor
+- **v2.8 is released before B1 merges.** Past the tag v2.7, `main` carries four changes to `ledgerboard/`, `SPEC.md`
+  and `fixtures/` (`git log v2.7..origin/main`, 2026-11-13): TD-079 (TD-068's B1, PR #240: `set --title` retitles
+  an entry, and `edit` and `set` refuse names that belong elsewhere, `SPEC.md`'s v2.8 text), TD-080 (PR #242:
+  `misplaced_names()`'s note for two Title sections names the heading), TD-083 (TD-065's B1, PR #253, 5b036e4:
+  `Doer:` on the act line) and TD-084 (TD-075's B1, PR #254, e42fc66: an offered `<head>:` answer is a form). TD-073 is v2.7's (its commit is an ancestor
   of the tag). Whatever `main` carries past v2.7 when B1 is ready is released as v2.8 before B1 merges: a
   precondition of B1. The release itself is Paul's; the board's act for it stands open (its words still name
   TD-073 and a fold into v2.7, which the tag has overtaken).
 - **No v2.x release after B1 merges**, and no tooling to release from a branch: `release.sh` cuts from `origin/main`
   and stays so. A v2.x fix wanted after B1 merges goes into v3.0.
 - **TD-065 ships in v2.8** (Paul's Go on TD-065's design, 2026-11-12, which settles round 5's F68 precondition):
-  its build merges before B1 starts, so it is in v2.8, which is released before B1 merges. `Doer` is also this
+  its build has merged (TD-083, 5b036e4), so it is in v2.8, which is released before B1 merges. `Doer` is also this
   design's own v3 header field (D4, text 8, text 13). A v2 line can carry `Doer: <value>.`: TD-065's
   `parse_doer(text)` stays the v2-line reader the v2 half of `load_board()` uses, and at the split (B5) the v2 half
   carries a v2 line's doer into the header field `Doer` (`split_board()` writes a v2 item's `fields`, D4). Text 14's
@@ -652,7 +656,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   *The open item line* already defines `doer-repo` and `doer-part`, with the bodies text 13 gives them, so B1 moves
   those two productions from that block into text 13's rather than adding them (a production is defined once:
   `tests/test_grammar.py`'s `ebnf()` asserts it), and TD-065's `doer` production reads them there. B1 lands
-  `parse_doer_value(value)`, `BoardItem.doer`'s v3 reading, `item_file(doer=)`, the header field and text 13's
+  `BoardItem.doer`'s v3 reading through v2.8's `doer_value()`, `item_file(doer=)`, the header field and text 13's
   `doer-field`. No v2.x release follows B1, so nothing of TD-065 lands after it.
 - **TD-078's open question**, whether its archived-entry writer route "ships in a v2.x minor first", has the same
   answer: in a v2.x minor only as part of v2.8, released before B1 merges; otherwise it ships in v3.0. *(Amended 2026-11-12, TD-078's
@@ -887,7 +891,7 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 >   - `Parts` — a `decide`'s snapshot, `TD-15, TD-16`;
 >   - `Doer` — on an `act` only, who should do its step: `<repo>`, a repo whose last part does not end in `.`
 >     (*Appendix: grammar*, `doer-repo`), or `team <team>`, `<team>` a person's name; `Doer: team` alone names the
->     repo `team`. `parse_doer_value(value)` reads it as `("repo" | "team", name, value)`, or None outside that form,
+>     repo `team`. `doer_value(value)` reads it as `("repo" | "team", name)`, or None outside that form,
 >     reading a run of spaces or tabs after `team` as one space (`item_file_problem()` faults that spelling);
 >   - `Due`, `Hide until` — a date each; an unreadable `Due` is reported, never silently undated;
 >   - `Answers`, `Lifts` — as on a v2 line, without the final period;
@@ -1311,7 +1315,7 @@ becomes *The open item line (v2.3; a v2 board's, read only from v3.0)*. After it
 > `item-label`, as its consequence split is: the productions accept every form as a label, and a fill is a
 > `Decided` text, which they accept as any (v2.8). An `item-label` holds no ` — ` and does not end in ` (default)`; a `reply-by` is at most
 > 40 characters and ends in no whitespace; a `date` is a day of the calendar. A `doer-field` names a team only after
-> the word `team` and one space, so `**Doer:** team` names the repo `team` (`parse_doer_value()` also reads a run of
+> the word `team` and one space, so `**Doer:** team` names the repo `team` (`doer_value()` also reads a run of
 > spaces or tabs there, a spelling `item_file_problem()` faults). A `doer-repo` is a `repo` whose last
 > part, `doer-part`, is a `repo-part` that does not end in `.`. Every other production is the one above it of the
 > same name (`date`, `digit`, `char`, `nonspace`, `head-name`, `entry-id`, `repo`, `repo-part`, `person`,
@@ -1332,7 +1336,7 @@ tagged with its build (round 6's F77):
   part of the item key" becomes "On a v2 line it is part of the item key"; "`item_line(doer=)` and `board.py add
   --doer` write it" becomes "`item_file(doer=)` (v3.0; `item_line(doer=)` before it) and `board.py add --doer`
   write it"; and it gains at its end "In an item file (v3.0) it is the header field `Doer` (*The item file*), a bare
-  value read by `parse_doer_value()`; `parse_doer()` reads a v2 line's." Its last sentence is B1's, landing with
+  value read by `doer_value()`; `parse_doer()` reads a v2 line's." Its last sentence is B1's, landing with
   the header field; the two substitutions are B5's, with the writer items.
 - *Trailing fields*, `Lifts:`: "It is part of the item key" becomes "On a v2 line it is part of the item key";
   "`item_line(lifts=)` refuses one and `item_problem()` faults one" becomes "`item_file(lifts=)` refuses one and
@@ -1474,7 +1478,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `closed_undated` (a `[x]` line with no readable `Closed:` date), `doer_spacing` (`Doer: team  ops.`),
   `doer_not_act` (a `decide` carrying `Doer: acme.`).
 - **`fixtures/board_writer/`**: new cases over a v3 directory: `add_v3`, `add_id_given`, `add_id_taken` (exit 1),
-  `add_id_wrong_date` (exit 1), `add_said`, `add_decided`, `add_doer` (an `act` with `--doer`), `add_via_stub`
+  `add_id_wrong_date` (exit 1), `add_said`, `add_via_stub`
   (`--board` the stub's path: the file written in the directory beside it), `snooze_id`, `due_id`, `done_moves` (the
   file under `archive/<month>/`), `decide_close_moves`, `decide_work_order` (stays open), `reply_id`,
   `edit_no_such_id` (exit 1), `edit_closed` (exit 1), `write_v2_refused` (exit 1; its message gains *split first*
@@ -1485,7 +1489,9 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   B5, `split` and `split_exists` (exit 1). Each existing case is rewritten over a directory (`--id` for
   `--line`/`--expect`), or removed where its rule went (`archive`, `archive_new_file`, `archive_none`,
   `add_empty_section`, `add_fyi_no_heading`, `add_refused_field`); `add_detail_recommended_doubled` is rewritten,
-  its refusal standing. The runner's `writer_case` needs no change: `tree()` reads nested files.
+  its refusal standing; v2.8's `add_decided` and Doer cases (`add_doer`, `add_doer_repo`, `add_doer_decide`,
+  `add_doer_decided`, their refusals standing) are rewritten over a directory, and `fmt_doer` becomes `fmt_v3`'s
+  Doer case (round 8's F115). The runner's `writer_case` needs no change: `tree()` reads nested files.
 - **`fixtures/verdict/`**: the shared base tree holds a v3 board; new cases `v3_lift_open` (a work order, stays
   open), `v3_lift_closes` (moved to `archive/`; the case's file list names the two paths, no rename, and the verdict
   comes from the trees), `v3_lift_two_items` (review), `v3_lift_wrong_month` (review), `v3_other_repo`,
@@ -1507,8 +1513,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   reaches (`date`, `digit`, `char`, `nonspace`, `head-name`, `entry-id`, `repo`, `repo-part`, `person`, `person-part`,
   `answer-sep`, `label-start`, `label-char`, `doer-repo`, `doer-part`, and any other `names_used()` gives), each with
   an accepting and a refusing fixture: among them a context holding `Due:` (accepted),
-  `**Decided:** 2026-11-12 by pat — Go (by Friday)` (accepted), `**Doer:** team ops` and `**Doer:** acme/widgets`
-  (accepted), `**Doer:** acme.` (refused), a field out of order and a reply-by holding `:` (refused).
+  `**Decided:** 2026-11-12 by pat — Go (by Friday)` (accepted), `**Doer:** team ops`, `**Doer:** acme/widgets` and
+  `**Doer:** .github` (accepted), `**Doer:** acme.` (refused), a field out of order and a reply-by holding `:` (refused).
 - **`fixtures/edit/cases.json`'s groups**, each placed: `compose`, `edits`, `item_problems`, `canonical_items` and
   `archive_subjects` retire with the v2 writers (B5); `subjects`, `subject_kinds` and `edit_actions` move to
   `item/`'s `subjects` (B1); `board_problems` moves to `item/`'s `gate`, over `Board`s (B2); `item_keys` stays (the
@@ -1529,7 +1535,7 @@ new start.
 
 Each is filed `Part of: TD-070` on Paul's Go after the rounds, and lands its SPEC text, code and fixtures together.
 **Preconditions of B1** (D12): TD-065's build has merged (Paul's Go, 2026-11-12), and so have TD-078's B1 and B2
-and TD-075's B1; and whatever `main` carries past v2.7 (today TD-079 and TD-080, then those builds) is released as
+and TD-075's B1; and whatever `main` carries past v2.7 (today TD-079, TD-080, TD-083 and TD-084, then TD-078's builds) is released as
 v2.8, the last v2.x minor, before B1 merges, Paul's `decision (paul)` saying he has cut it. No release is cut between B1 and B5. Each build
 leaves `main` green: where a later build retires a v2 name an earlier build would break, the earlier build keeps it
 working (a shim) and B5 removes the shim. **What a record shows** changes at B2 and B5 alone (D4, round
@@ -1539,7 +1545,7 @@ each build below names the expected JSONs whose records it regenerates. **Each b
 
 **B1, the item file.** D3, D4, D7's module half. Location: `ledgerboard/__init__.py` (`ITEM_ID_RE`, `item_id()`,
 `key_id()`, `item_path()`, `parse_item()` (filling `words` with the heading), `BoardItem`'s new fields,
-`parse_doer_value()`, `BoardItem.doer`'s v3 reading (the field and the record's `doer` are v2.8's), `item_file()`
+`BoardItem.doer`'s v3 reading through v2.8's `doer_value()` (the field and the record's `doer` are v2.8's), `item_file()`
 with `doer`,
 `decided_file()`, `edit_item()`, `item_file_problem()`, `canonical_item_file()`, `subject()` gaining `id=None` (None
 gives the v2 subject the v2 writers still call), `subject_id()`, `bold_head()` reading a heading), `SPEC.md` (text
@@ -1551,7 +1557,7 @@ the build lands*, round 4's F59, round 6's F77); text 14's *bold head* bullet is
 **Records:** `item_record()`'s keys do not change at B1: its `doer` key is v2.8's already (TD-065's build), and B1
 regenerates no record (D12).
 `fixtures/edit/expected.json` changes only by the groups that move to `item/` and `bold_heads`' heading case.
-**`Doer`:** B1 lands the v3 field (D4, D12: `parse_doer_value()`, text 8's *The item file*, text 13's `doer-field`,
+**`Doer`:** B1 lands the v3 field (D4, D12: v2.8's `doer_value()` reused, text 8's *The item file*, text 13's `doer-field`,
 and text 14's `Doer:` bullet's last sentence). `BoardItem.doer` and the record's `doer` are v2.8's and stay, and
 `doer-repo` and `doer-part` move from *The open item line*'s block into text 13's (a production is defined once).
 Done when: TD-065's, TD-075's and TD-078's builds named in the preconditions have merged, the last v2.x minor (v2.8, or v2.9, D12) is tagged, the
