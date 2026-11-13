@@ -372,9 +372,7 @@ The `## Needs` audit stands for "a service account appends what the person must 
 work", which the kind states (`watch` is a session's own re-check). So no `**Section:**` field: agent-cadence's
 audit reads the appended files instead (its line in *Consumers*), and `add --under` goes.
 
-**D6. Reading (S5).** In this plan's own prose (not the SPEC text, which says *a board read from a directory* or
-*from a file*, round 2's F201), a *v3 board* means `form` `"dir"` and a *v2 board* or *v2 file* `form` `"file"`,
-whatever its `major` (round 2's F204). `load_board(path, ls, read, *, since=None)` gives a `Board`: `form`, `path`, `major`,
+**D6. Reading (S5).** `load_board(path, ls, read, *, since=None)` gives a `Board`: `form`, `path`, `major`,
 `preamble` (`README.md`'s text, or a v2 board's text before its first item), `items` (the open items), `closed`
 (every closed item read, the archive's among them), each a `BoardItem` with its `id`, and `problems` (D6's last
 bullet, its numbered rules).
@@ -384,8 +382,9 @@ bullet, its numbered rules).
   is `"dir"` with `major` 2 (rule 4), a file declaring 3 is `"file"` with `major` 3 (rule 5). So everything that
   depends on how the board is laid out is defined on `form`: the preamble readers (below), *The board's order*,
   `board_problems()`' refusal (D7's *The gate*) and `board_dir_problems()`' checks (D11); `major` serves the version
-  check alone (*The board's major*). Where this plan says "a v3 board" of a read, it means `form` `"dir"`, and "a v2
-  board" `form` `"file"`.
+  check alone (*The board's major*). Where this plan's prose (not the SPEC text, which says *read from a directory* or *from a
+  file*) says "a v3 board" of a read, it means `form` `"dir"`, and "a v2 board" or "a v2 file" `form` `"file"`,
+  whatever its `major` (round 2's F204).
 - **`path`** (round 2's F196) is the path `load_board()` was given, as given: the board file, or the directory (a
   stub's path when it was given the stub), and on an empty `Board` (`form` None) the missing path. It names the
   board file in the preamble readers' pairs (below); every other path a `Board` names stays relative to the board's
