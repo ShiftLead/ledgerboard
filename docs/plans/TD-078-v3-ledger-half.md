@@ -129,12 +129,12 @@ one minor; the Consumers lines say *the last v2.x minor*. TD-070's D12, where it
 its B1, reads as that minor. *(TD-075's B1 joined this rule on 2026-11-12 and left it in round 8, once it had
 merged.)*
 
-`Blocked by` the three builds alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12
+`Blocked by` the two builds alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12
 allows no v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask:
 *Is the last v2.x minor tagged, holding TD-078's B1 and B2, with nothing on `main` past that tag under
 `ledgerboard/`, `SPEC.md` or `fixtures/`?* — lifted by Paul's answer once he has cut it (written by whichever of
 TD-070's and TD-078's build filings comes last, with its board item; TD-070's plan's D12 says the same from its round
-8, TD-085). The release is Paul's.
+8, TD-085's F129). The release is Paul's.
 
 v3.0's ledger removals (D4) are one build, merged after TD-070's last build so that v3.0's removals land
 together, then v3.0's release (Paul's) with TD-070's half.
@@ -172,7 +172,8 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   is, for `check()`, whose error the writer's refusal rule (an error the ledger before did not have) refuses; and
   `lift_gate()` and `reassign_gate()` refuse it as a gate the entry does not carry. `parse_blocked()` keeps its
   three lists, but the old item's holder leaves the second (decision holders) and its comma-split pieces join the
-  third as unreadable items; its docstring and *The ledger*'s consumer sentence say so (text 12; round 8's F114). A person's name still compares
+  third as unreadable items; its docstring says so, and so does text 12 (round 8's F114); *Versions*' v2.4 paragraph, which says
+  `parse_blocked()` keeps its three lists, stands as history. A person's name still compares
   in any case (`_gate_key`). So that it is named wherever it stands, `check()`'s retired records (above) include,
   on every entry open or archived, each `Blocked by` item that opens with `decision (<who>)` and has text after
   it, as *the old decision form*: one error per value, since the old item is the value's first `decision (`
@@ -182,7 +183,8 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   an open entry (one per comma-split piece, as `parse_gates()` splits any value).
 - **`migrate` goes:** `migrate_entry()`, `migrate_subject()` and the helpers only they use (round 8's F112:
   `MIGRATE_SUBJECT_RE` stays, since `subject_kind()` and `tripwire()` read old `ledger: migrate` subjects; so do
-  `_real_day()`, `_status_in_set()`, `_entry_problem()` and `_lenient_parts()`, which other code calls), `ledger.py migrate`, and
+  `_real_day()`, `_status_in_set()` and `_entry_problem()`, which other code calls; `_lenient_parts()`, which only
+  `migrate_entry()` calls, goes, and `status_problem()`'s docstring stops naming it), `ledger.py migrate`, and
   `fixtures/migrate/`'s `migrate_entry` group and the `migrate_*` writer cases. `status_problem()` stays (the
   closed Status set is v3.0's too), with its message's new ending (text 10), and its cases move to
   `fixtures/status/cases.json` (*Fixtures*). The grammar appendix's `added` start symbol, judged today by
@@ -472,7 +474,8 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   a `status` group in `run.py`;
 - `fixtures/grammar/`: the `added` verdict judged by `_real_day()` (text 9), its cases unchanged; the refused
   cases' `why` (today `migrate_entry()`'s reason, e.g. *not a date*) becomes null, so `expected.json` is
-  regenerated (round 8's F118);
+  regenerated (round 8's F118), and `run.py`'s `grammar_cases` guard, which reports *missing* when the module lacks
+  `migrate_entry`, tests `_real_day` instead (F123);
 - `fixtures/ledger/`'s check cases gain `retired_waits_archived`, `retired_taken_by_open`,
   `retired_resolved_header`, `retired_location_header`, `retired_taken_by_archived` (each an error on a ledger no
   edit touched), `retired_old_form_open` (two errors: the retired record and the unreadable item),
@@ -534,7 +537,9 @@ with the code, and the precheck green.
   `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed; `note`'s refusal of an
   archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
   `fixtures/run.py`, `SPEC.md` (texts 6–12), the fixtures above, `tests/` (`test_ledgerboard.py`'s migrate cases,
-  its `accept_taken_by` case and its `migrate_subject` test, removed or rewritten; round 8's F112). **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
+  its `accept_taken_by` case, its `migrate_subject` test and `test_parse_blocked_keeps_every_block_for_its_callers`'s
+  old-form holder; `test_ledger_writer.py`'s `Migrate` class; removed or rewritten; round 8's F112, F122), and
+  `fixtures/lift/` and `fixtures/ledger_edit/`'s expected `old_form` keys regenerated. **Blocked by** B1, B2, B3 and TD-070 (the design entry archives with
   its last build, B5), so v3.0's ledger removals land after its board half and no v2.x release can follow them.
   Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with `main`'s module, a cheap guard; if
   entries filed since B3 show changes, a re-run of B3's command lands first as its own PR. B4's PR states that run.
