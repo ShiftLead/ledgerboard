@@ -234,7 +234,10 @@ pin.
    (agent-cadence tags no release per vendored minor). Before running anything, the remodel reads the first line
    of the pinned tree's vendored `files/scripts/ledgerboard/__init__.py` (`# ledgerboard v<x.y> sha256:…`) and goes
    on only when its `v<x.y>` is that minor, so an agent-cadence that carried an older
-   ledgerboard there cannot run an older `migrate` unseen. Under that pin the remodel does target design §7.3's steps, the
+   ledgerboard there cannot run an older `migrate` unseen. The minor's number comes from the same cadence change
+   entry, which names it beside the commit (v2.8, or v2.9 should D3's rule have made it so). **A ledger still in
+   one file (v1)** is split into a v2 directory first, under the same pin (`ledger.py split`): the writers, `migrate`
+   among them, refuse a v1 file (*split first*). Then, under that pin, the remodel does target design §7.3's steps, the
    judgment ones first: each open `Waits` becomes its gate through `set` (rule 6 stops on an open `Waits`), and each
    open old-form decision's `<who>` is checked (rule 8 stops on one that is neither a person nor a retired role), and
    any other stop `migrate --plan` lists is answered the same way (rule 7's, rule 8's others, an archived Status
@@ -244,15 +247,26 @@ pin.
    `main`, which stays, so `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's
    `migrate` whatever v3.0 has removed. Nothing in ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
 2. **The check between the bumps**, run under the last v2.x pin at that bump's commit, its output in the PR body:
-   `ledger.py migrate --plan --release <the minor>` shows no entry with changes or stops (D5's check), and
-   `ledger.py --check` reports no error. That is the precondition, met per repo.
+   the ledger is a v2 directory, `ledger.py migrate --plan --release <the minor>` shows no entry with changes or
+   stops (D5's check), and `ledger.py --check` reports no error. That is the precondition, met per repo. It is the
+   PR's evidence, not a graded row: the merge gate reads the PR's base and head alone, and the squash drops the
+   commit between. At the head, v3.0's retired errors (D4, on a v2 ledger) refuse any old form the check missed.
 3. **The v3.0 pin.** The pin moves to a commit of agent-cadence's `main` that vendors v3.0, given to
    `agent-cadence bump <commit>`, and the remodel does v3.0's
    steps for a consumer there, the board's split among them (TD-070's second part, TD-095, designs it).
 
-**The merge gate grades the PR at its head, under the v3.0 pin**, which reads no old form (D4): B4 removes
-`uncovered_decisions()`'s old-form base-side count, so a decision rule 8 rewrote reads as gained. The remodel gives
-each one a board item in the same PR. The gate sweep owes it one in any case, since the old form hid it (D1). The
+**The merge gate grades the PR at its head, under the v3.0 pin**, run from the PR's own worktree: `agent-cadence
+run` reads the pin in the checkout it runs in, so a run from the repo's main checkout, or its hooks, still use the
+old pin until the PR merges. That gate reads no old form (D4). `check()` grades what the head holds, reading the
+base only to tell a standing finding from one the edit made, and `tripwire()` and `uncovered_decisions()` read the
+base through its decisions, where an old-form item is unreadable and so unseen: removing one trips nothing, and a
+decision rule 8 rewrote reads as gained, since B4 removes `uncovered_decisions()`'s old-form base-side count. The
+remodel gives each one a board item in the same PR, one that covers the gate (its Context `TD-n decision (<who>)`),
+written by the `board.py` of the pin current at that step (the v2.x pin's before the split, the v3.0 pin's after),
+on a board that already carries its `People:` line (target design §7.2 step 0's roster step), else the gate only
+flags `decision-elsewhere` where it would refuse. The gate sweep owes such an item in any case, since the old form
+hid it (D1). The board's steps under the first bump (`People:`, `fmt`'s key rule) and its split under the second
+land in this one PR; TD-095's migration covers a split PR whose base board predates v2.3 (its Fix). The
 roster repos' own counts are their remodels' to take: no roster ledger is counted here.
 
 *Alternatives weighed.* (a) Two PRs, the first merged under the last v2.x pin, so v2.8's gate grades the rewrite and
@@ -260,7 +274,10 @@ the rewritten decisions need no board item in that PR: two remodels where Paul a
 owed anyway. (b) v3.0 keeping the old-form base-side count for a roster repo's rewrite: a v3.0 reader carrying a
 retired form's meaning for one migration, which D4 rules out. (c) Keeping `migrate` in v3.0 for the roster repos:
 the old forms' code would stay in every v3.x reader for a run each roster repo makes once, under a pin that already
-has it.
+has it. (d) The last commit before agent-cadence's v3.0 vendor PR, as Paul's note words it ("the last agent-cadence that
+vendors v2.8"), in place of the vendoring PR's own commit: it would carry agent-cadence's later fixes, but it is
+known only once the v3.0 vendor PR has merged, so the entry that names it would race its own merge (F126). The
+vendoring PR's commit is fixed and carries the same `migrate`; the second bump brings every later fix.
 
 ## The `SPEC.md` text
 
@@ -382,8 +399,8 @@ with changes or stops in every repo (v2.8: its rules cover every old form, open 
 > `migrate` stays through v2.x and goes in v3.0, whose precondition is that, with the last v2.x, `migrate --plan`
 > shows no entry with changes or stops in every ledger that takes v3.0 when it is cut (v2.8: its rules cover every
 > old form, open and archived). A ledger whose repo stays on an older v2.x is untouched by v3.0 until that repo takes
-> it: it runs the last v2.x's `migrate` first, with a tool that still carries it, and takes v3.0 once the same
-> `migrate --plan` shows nothing.
+> it: it runs the last v2.x's `migrate` first, with a tool that still carries it (its rules are that release's
+> `SPEC.md`'s, *Migrating to v2.7*), and takes v3.0 once the same `migrate --plan` shows nothing.
 
 **Text 6 (B4), *The ledger*, *The old form*, replaced whole:**
 
@@ -477,7 +494,8 @@ ending `note`'s refusal prints from v3.0.
 > third list); `judge_takes()` loses `accept_taken_by`; `canonical()` places no
 > `Taken by`; and `migrate`, `migrate_entry()` and `migrate_subject()` are gone, while `subject_kind()` still names a
 > migrate subject. A v2 ledger that met the precondition (*v2.8*, above) reads exactly as under v2.8, and declares
-> no new major. One that did not is not misread: each old form is an error that names it.
+> no new major. One that did not is not misread: each old form is an error that names it (ℹ on a v1 ledger,
+> *Retired words*).
 
 ## Fixtures
 
@@ -621,7 +639,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its v3.0 vendor PR's cadence change entry names the commit its PR vendoring the last v2.x minor landed on `main`:
+  - its v3.0 vendor PR's cadence change entry names the commit its PR vendoring the last v2.x minor landed on `main`,
+    and that minor's number:
     the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7); that PR merges before the
     v3.0 vendor PR, since D5's check in the v3.0 vendor PR runs under the minor, so the commit exists when the entry names it;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
