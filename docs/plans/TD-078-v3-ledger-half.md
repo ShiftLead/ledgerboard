@@ -226,14 +226,19 @@ precondition reads the same under v3.0. A ledger that declares `Ledgerboard: 3` 
 remodel (target design §7.2 step 6, amended). When its own team picks it up again, after v3.0 is cut and both
 consumers vendor it, it takes one remodel: one session and one PR, by its own team, in two bumps of its agent-cadence
 pin.
-1. **The last v2.x pin.** The pin moves to the agent-cadence commit that vendors the last v2.x minor (v2.8): the
-   last commit on agent-cadence's `main` before its v3.0 vendor PR merges, which that PR's cadence change entry
-   names (agent-cadence's line, *Consumers*). Under that pin the remodel does target design §7.3's steps, the
+1. **The last v2.x pin.** The pin moves to the last agent-cadence release whose vendored ledgerboard is the last
+   v2.x minor (v2.8): a tag, fixed once cut, which agent-cadence's v3.0 vendor PR names in its cadence change entry
+   (agent-cadence's line, *Consumers*), so no reader computes it from where `main` stood at a merge. Before running
+   anything, the remodel reads the pinned tree's vendored release header (its vendored `ledgerboard/__init__.py`
+   opens `# ledgerboard v<x.y>`) and goes on only when it names that minor, so an agent-cadence that carried an older
+   ledgerboard there cannot run an older `migrate` unseen. Under that pin the remodel does target design §7.3's steps, the
    judgment ones first: each open `Waits` becomes its gate through `set` (rule 6 stops on an open `Waits`), and each
-   open old-form decision's `<who>` is checked (rule 8 stops on one that is neither a person nor a retired role).
+   open old-form decision's `<who>` is checked (rule 8 stops on one that is neither a person nor a retired role), and
+   any other stop `migrate --plan` lists is answered the same way (rule 7's, rule 8's others, an archived Status
+   outside the set, which takes `--as`).
    Then `ledger.py migrate --release <the minor>` runs v2.7's rules and v2.8's in one pass, and each stop is
-   answered in the PR. **`migrate` stays usable for this after v3.0 removes it:** a pin is a commit, and a commit on
-   agent-cadence's `main` stays, so `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's
+   answered in the PR. **`migrate` stays usable for this after v3.0 removes it:** a pin names a tagged release, which
+   stays, so `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's
    `migrate` whatever v3.0 has removed. Nothing in ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
 2. **The check between the bumps**, run under the last v2.x pin at that bump's commit, its output in the PR body:
    `ledger.py migrate --plan --release <the minor>` shows no entry with changes or stops (D5's check), and
@@ -256,7 +261,7 @@ has it.
 ## The `SPEC.md` text
 
 Each text says where it lands and what it replaces. Texts 1–5 are B1's and B2's (the last v2.x minor, written
-here as v2.8); texts 6–12 are B4's (v3.0).
+here as v2.8); text 5′ and texts 6–12 are B4's (v3.0).
 
 **Text 1 (B2), *Migrating to v2.7*, rule 5 replaced.** The paragraph "**5. What it leaves.** A `Waits` line, a
 `Taken by`, an old-form decision, every other field and section, and every Log line already there are left as they
@@ -612,8 +617,9 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its v3.0 vendor PR's cadence change entry names the last commit on its `main` that vendors the last v2.x minor:
-    the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7);
+  - its v3.0 vendor PR's cadence change entry names its last release (a tag) whose vendored ledgerboard is the last
+    v2.x minor: the pin a roster repo's remodel bumps to first, to run that minor's `migrate` (D7); the release that
+    vendors that minor is cut before the v3.0 vendor PR merges, so the tag exists when the entry names it;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
