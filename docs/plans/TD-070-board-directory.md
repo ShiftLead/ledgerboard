@@ -157,9 +157,10 @@ Each of `board.py`'s helpers that reads the board or an item (round 8's F127, ea
   `{"fixed": [<id>…], "refused": [{"id", "why"}]}` and its stderr line for a file it keeps `<id>: kept: <why>`
   where it printed `line <n>: kept: <why>`; `list`'s plain line is `<id>\t<due tag or ->\t<text>` where it printed
   the line number (`-` for a v2 item with no id); a note's stderr line is `<id>: ℹ <note>` (text 10).
-  `people_problems()` and `answered_by_problems()` of a `Board` keep their `(line, problem)` shape, `line` the
-  1-based line in `README.md` (a v3 board) or the board file (a v2 one), 0 for a missing line; `board_problems()`
-  names each as `("README.md", problem)` on a v3 board;
+  `people_problems()` and `answered_by_problems()` of a `Board` give `(path, problem)` pairs (TD-092's plan, D6;
+  round 2's F196 there): the path `README.md` on a v3 board and `Board.path`'s basename on a v2 one, a missing
+  `People:` or `Answered by:` line named under that path with today's message; `board_problems()` names each as
+  `("README.md", problem)` on a v3 board;
 - `who_answered(board, by)`, `_may_answer(board, gate, by)` and `_decide_ledger()`'s `board_people()` and
   `answered_by()` take the `Board`, never `README.md`'s text: given a string, `board_people()` reads it as a v2
   board's and stops at its first `- [ ]` or `- [x]` line (`ANY_ITEM_RE`), which on a README is prose (D6);
