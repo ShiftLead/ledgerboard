@@ -229,8 +229,8 @@ pin (`docs/cadence.toml`'s `ref`, a full commit). Its steps, in this order, each
 (`agent-cadence run` reads the pin of the checkout it runs in; the repo's main checkout and its hooks keep the old
 pin until the PR merges):
 
-1. **Clear the way.** Open PRs that edit the ledger or the board land or close first (cadence.md §2.12 asks it
-   before a split); the team does no other work until the remodel merges (target design §7.3, *Who merges*), so
+1. **Clear the way.** Open PRs that edit the ledger land or close first (cadence.md §2.12 asks it before a split),
+   and so do those that edit the board (this design's, for the board's steps 7 and 9); the team does no other work until the remodel merges (target design §7.3, *Who merges*), so
    nothing new reaches `main` under the old forms while it is open.
 2. **Bump to the last v2.x pin**: the commit agent-cadence's PR vendoring the last v2.x minor (v2.8) landed on
    `main` (its squash commit), which agent-cadence's v3.0 vendor PR names in its cadence change entry with the
@@ -247,21 +247,24 @@ pin until the PR merges):
    from the day git added its `docs/ledger/archive/` file, which after a committed split is the split's day for
    every entry. Uncommitted, git gives none, so each such entry is a stop, answered with `--closed-dates` from the
    v1 archive file's history (the day the commit that added the entry's heading landed) or with `--as`; the PR lists
-   each date so read.
+   each date so read. Then **what `canonical()` refuses**: `ledger.py fmt --check` names each entry it refuses (a
+   duplicate field, a field below the header block), and each is put right by hand now, the PR saying which, since
+   `set`, `edit` and `migrate` each read an entry through `canonical()` and refuse or stop on such an entry.
 4. **The judgment steps** (target design §7.3), on the open entries, through the writers: each open old-form
-   decision whose `<who>` is neither a person nor a retired role is decided (rule 8 stops on it); an entry holding
+   decision whose `<who>` is neither a person nor a retired role has its holder put right by hand in the header (no
+   writer changes an old form's holder; rule 8 stops on it), which step 6's `fmt` then checks; an entry holding
    both an open `Waits` and the old form has its old form rewritten first, its text written with `edit --section
    Ask` and the item replaced by `decision (<who>)` with `set`, since a gate is not added beside the old form; then
    each open `Waits` becomes its gate through `set` (rule 6 stops on an open `Waits`).
 5. **`migrate`**: `ledger.py migrate --plan --release <the minor>`, then without `--plan`: v2.7's rules and v2.8's in
    one pass, every stop answered in the PR (rule 7's, rule 8's others, an archived Status outside the set, which
-   takes `--as`, step 3's dates). **`migrate` stays usable for this after v3.0 removes it:** a pin is a commit on
+   takes `--as`, step 3's dates, and a `refused:` one step 3 missed). **`migrate` stays usable for this after v3.0 removes it:** a pin is a commit on
    agent-cadence's `main`, which stays, so `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's
    `migrate` whatever v3.0 has removed; nothing in ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
 6. **`fmt`**: `ledger.py fmt --check`, then `ledger.py fmt`. `split` copies entries as written and `migrate` leaves
    an entry it does not change as given, and the merge gate's `ledger` row fails every new or changed entry file
-   that is not canonical, which after a split is every one; an entry `canonical()` refuses (a duplicate field, a
-   field below the header block) is put right by hand first, and the PR says which.
+   that is not canonical: after a split every entry file is new, so any not canonical fails; what `canonical()`
+   refuses was put right in step 3.
 7. **The board under that pin**: its `People:` line (a preamble line no writer writes, typed once, target design
    §7.2 step 0's roster step), then `agent-cadence run board_edit.py fmt` (the key rule, §7.3).
 8. **The check between the bumps**, at this point's commit, under that pin, its output in the PR body with §7.3's
@@ -273,14 +276,14 @@ pin until the PR merges):
 9. **Bump to the v3.0 pin**: a commit of agent-cadence's `main` that vendors v3.0, given to `agent-cadence bump
    <commit>`; then v3.0's steps for a consumer there, the board's split among them (TD-070's second part, TD-095,
    designs it, a split PR whose base board predates v2.3 included).
-10. **A board item for each decision step 5 rewrote**, under the v3.0 pin's writer, after the split:
+10. **A board item for each decision steps 4 and 5 wrote**, from an old form or a `Waits`, under the v3.0 pin's writer, after the split:
    `agent-cadence run board_edit.py add --kind decide --context "TD-n decision (<who>)" --answer <a> --answer <b>
    --lift <a> …`, its Context naming the entry and the gate so that it covers it.
 
 **The merge gate grades the PR at its head, under the v3.0 pin**, which reads no old form (D4). `check()` grades what
 the head holds, reading the base only to tell a standing finding from one the edit made; `tripwire()` reads the base
 through `_decisions()`, and `uncovered_decisions()` through `_carried()`, which sees no old form once B4 removes
-`_held_old_form()`, so an old-form item is unseen: removing one trips nothing, and a decision rule 8 rewrote reads as
+`_held_old_form()`, so an old-form item is unseen: removing one trips nothing, and a decision rule 8 or step 4 wrote reads as
 gained. Step 10's items answer that: a gained decision whose person the board's `People:` lists, with no covering
 item, is refused (`decision-uncovered`); one whose person it does not list is flagged (`decision-elsewhere`). The
 gate sweep owes such an item in any case, since the old form hid it (D1). Should an old form still reach the head
@@ -440,7 +443,7 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > rather than unknown: a retired field — `Waits`, `Taken by`, a header `Resolved` or a header `Location` — is an
 > error (`retired`) on every entry, open or archived, of a ledger that declares major 2 or more, whether or not the
 > edit changed the entry (never `standing`), and ℹ on a v1 ledger; so is a `Blocked by` item in the old decision
-> form (*The old form*, above), which is also an unreadable item; another retired item in `Blocked by` is ℹ and keeps the block;
+> form (*The old form*, above), which is also an unreadable item, and so an error on a v1 ledger too; another retired item in `Blocked by` is ℹ and keeps the block;
 > and a Status outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0
 > reads no such form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for
 > `Waits` and `Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header
