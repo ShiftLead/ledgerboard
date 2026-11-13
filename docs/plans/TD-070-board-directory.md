@@ -311,7 +311,13 @@ on an `fyi` are all carried. The rule, for each:
   `In-flight`, a `Format:` line, the carried lines among them), then each rule-14 finding `board_dir_problems()`
   makes of the files (over `_dict_ls()`), at the line of the field it names, found by the field's name in the
   item's `fields` (the first header line whose name `field_key()` reads as that field; round 9's F173), in its
-  order. `board.py split` prints
+  order. **A head holding more than session and host** (TD-092's round 5's F238): a v2 line whose head group holds
+  text after its session and host (`(session s-1 on host-a, branch x)`'s `, branch x`) loses that text at the
+  split, since no v2 reader reads it into a field (TD-092's plan, D11's prefix), so the notes list it as a carried
+  shape's note, at the item's `Session` line (or, with no `Session`, its heading), naming the text lost, so a person
+  sees the loss. The written files no longer hold that text, so the note is made from the v2 line (its `raw`), which
+  the notes' input must reach: how (the split's own result carrying it, or `split_board_notes()` taking the v2
+  texts) is B5's design. `board.py split` prints
   them as warnings (`warnings` in `--json`).
 
 **The key a consumer persisted** (ShiftLead's `key()`, `key_id()`, an indented line and a `[x]` line) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
@@ -446,7 +452,9 @@ base item's file" (round 4's F60; a lift on a v2 board has taken review at (b)).
 >   the item's kind. Its body is the detail block with its common
 >   indent removed; its replies are its Log. Its heading is `item_words()` of the line: every word the v2 reader
 >   reads as no field, no reply and no part of the prefix (the text, and any words a hand edit left outside the
->   fields), in their order, verbatim but for runs of whitespace collapsed to one space, so no word is lost and no
+>   fields), in their order, verbatim but for runs of whitespace collapsed to one space, so no word of the line outside its head is lost (a
+>   head's text after its session and host, which no v2 reader reads, is not carried, and `split_board_notes()`
+>   names it) and no
 >   period is added or removed; a bold head stays in it as written.
 > - `README.md` is the board's text before its first item, with `Ledgerboard: 3` under its title (any
 >   `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
@@ -550,7 +558,10 @@ board's directory.
 
 **12. *Versions*, after the last v2.x paragraph** (the last minor's, v2.8's, released before B1 merges, D12; on
 `main` today "v2.8 gives `migrate` the last old forms", TD-089's, after TD-088's "v2.8 gives an archived entry a
-note": round 9's F159), add:
+note": round 9's F159), add. **It builds on TD-092's text 15** (TD-092's round 5's F241): B2 lands that
+*Versions* paragraph first, naming what a v2 board reads differently from B2 on and that a board declaring 3 is
+readable, so this paragraph follows it, and at B5 its "It reads a v2 board differently" sentence is reconciled with
+that paragraph rather than repeating it:
 
 > **v3.0 makes the board a directory** (*The board as a directory*, *Edits*, *The board writer*, *The merge gate's
 > verdicts*): one file per item, named by its id, in `docs/user_attention/` with `README.md` and
