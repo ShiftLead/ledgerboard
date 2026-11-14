@@ -194,8 +194,10 @@ directory the stub reads as (D6); any other place would leave a stub reading as 
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377; round 4's F420):* a repo's board
 splits in the change that makes its own tooling v3.0 (text 12; D12's order: agent-cadence's in its vendor PR, ShiftLead's in its sync PR,
-each other pinning repo's in its pin bump, all by the end of the UTC day after agent-cadence's merged; round 4's F420), landed when no open PR
-edits the board and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
+this repo's in its pin bump, these by the end of the UTC day after agent-cadence's merged, and a roster repo's in
+its own pin bump when TD-100 has it bump; round 4's F420, round 5's F444), landed when no open PR edits the board
+(a notices PR another repo's sweep or `set` left open on it is closed first, and refiled by that tool on the
+directory once the split lands; round 5's F445) and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
 PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
 
@@ -266,8 +268,9 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   their repo bumps they read a split board as empty: a sweep there sees no covering item and can file a duplicate
   on its own board, and a `set` there logs `no board item` for a decision the split board holds. ShiftLead's
   v2.x `gatesweep` and `workorders` read agent-cadence's split board as empty between (1) and (2), which (2)'s
-  readiness keeps short. **The default** (the author's, put to the person as a steer): (2), and each (3) of the
-  three repos' rollout (this repo's own bump among them), land by the end of the UTC day after (1) merged, so that
+  readiness keeps short. **The default** (the author's, put to the person as a steer): (2), and of (3) this repo's
+  own bump (the one pinning repo in the three repos' rollout; each other pinning repo follows when TD-100 has it
+  bump; F444), land by the end of the UTC day after (1) merged, so that
   is the window; a roster repo bumps when TD-100 has it do so, on v2.x tooling and a v2 board until then (TD-078's
   D5 and D7; round 5's F434); a duplicate an old-pin sweep files in it
   (ShiftLead's v2.x `gatesweep` among them) is closed by hand, and the rollout's entry says so. The alternatives
@@ -292,7 +295,9 @@ board is split.
 
 - **agent-cadence**:
   - vendor v3.0, its ledger first meeting TD-078's D5, and split its own `docs/user_attention.md` with `board.py
-    split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board and no unpushed
+    split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board (a notices PR
+    another repo's sweep or `set` left open on it is closed first, and refiled by that tool on the directory once
+    the split lands; round 5's F445) and no unpushed
     board commit is held; `gate_sweep.py`'s skip of a board it cannot write names the split, and `ledger.py set`'s
     reassign or override refuses a target board still v2, both files put back, naming that repo's split (D12;
     round 3's F400, F408; round 5's F429);
@@ -300,9 +305,15 @@ board is split.
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
     `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
     `load_board()` lists subdirectories with `/` (its `git_io` `ls` lists files alone, which reads a directory
-    board's `archive/` as empty; round 3's F406);
+    board's `archive/` as empty; round 3's F406); and its own-board dedupe of a *lift was closed* item (`asked`,
+    :421-424, from `parse_board()` and `parse_closed_items()` over `BOARD_PATH` and `BOARD_ARCHIVE_PATH` text, by
+    `it.text` and `CONTEXT_RE`), which over the stub would read nothing and refile the item every run, reads the
+    loaded `Board`'s open and archived items' `context` instead (round 5's F442);
   - `scripts/ledger.py`'s `covers()` and `board_people()` callers pass the `Board` `load_board()` gives, never text,
-    read with an `ls` that lists subdirectories (F394, F406); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
+    read with an `ls` that lists subdirectories (F394, F406); its own-board reads and edits by line and by text go
+    to the item and its id (round 5's F443): `LB._item_gate(it.text)` (:1457-1468, :1687) becomes `_item_gate(it)`
+    on the `BoardItem`, which the module already takes, and each `plan_edit(…, item.line, item.text[:40], …)`
+    (:1490, :1595, :1652) becomes `board.py`'s `plan_edit(board, action, item.id, …)` (TD-095's D7); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
     finds none outside the vendored module;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split); and
     it edits through `board.py`'s `plan_edit()`, not the module's `edit_item()` alone, so a v2 board draws D7's
@@ -332,7 +343,7 @@ board is split.
     (round 4's F421).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
   - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), its ledger first
-    meeting TD-078's D5, landed when no open PR
+    meeting TD-078's D5, landed as D11 says when no open PR
     edits the board and no unpushed board commit is held, and merged only when what reads the board is v3.0 code
     running: where a ShiftLead component runs from a deploy rather than the checkout, the deploy follows the merge
     at once, and the entry says which do (round 3's F411); the sync PR is worked while agent-cadence's vendor PR is
