@@ -317,9 +317,13 @@ spans the tree's tests too: a test moves with the script it tests, and the entry
 rewrites or retires (`tests/test_parity.sh`'s `parse_board` and `item_key` uses, :95-130, :193, among them; F472).
 **The grep finds what parses text, not every caller that hands a file's text on**, so the done-when also has a
 behavioural half (round 7's F475): the vendor PR splits agent-cadence's own board, and before and after that split
-each reader runs over it — `nudge_user_attention.py` in its daily mode, `--report` and `--report --fetch`,
-`list_sessions.py`, `gate_sweep.py` without `--apply` (its dry-run plan; F480) and the cadence check's board row — and prints the same items, due
-dates and stamps from the directory as it did from the v2 file (ids for line numbers aside); a reader that prints
+each reader runs over it and is held to what it prints (round 8's F486): `nudge_user_attention.py` in its daily mode
+and `--report`, and `list_sessions.py`, print the same items, due dates and stamps from the directory as from the v2
+file, ids for line numbers aside and `list_sessions.py`'s item text being `item.words` where it was the whole line;
+`gate_sweep.py` without `--apply` (its dry-run plan; F480), which reads `origin/<default>`'s board and so runs once
+the split has merged, against a run just before it on the same day, prints the same plan, its `to_close` paired by
+item rather than by key or id; `--report --fetch`, whose origin is still the v2 file while the PR is open, runs
+after the merge and reads *matches*; and the cadence check's board row passes on both trees. A reader that prints
 less after the split still reads text, whatever the grep says. ShiftLead's entry carries the same pair over its own
 board (`workorders`, `gatesweep`, the Inbox). The lines below are the inventory known at design time, each with the form its
 replacement takes where the rule alone leaves a choice (what a check keeps or retires, what a function returns); the
@@ -365,7 +369,7 @@ consumer's, in its own repo.
   - `nudge_user_attention.py`: show an item from its `words` and `replies`, and its refs from
     `context_refs(item.context)`, where it reads `item.text` (empty on a v3 item, gone at v3.0; round 2's F395);
     `needing()` (:243-252, `parse_board(content)` keyed on `it.line`) and the local roster read
-    (`read_board()`, :1614-1618, over `root/"docs"/"user_attention.md"`, :1545, :1576) go through `load_board()`,
+    (`read_board()`, :1614-1618, over `root/"docs"/"user_attention.md"`, built at :1545 and :1549; round 8's F488) go through `load_board()`,
     `needing()` keyed on the id, another roster repo's board being v2 or a directory (round 7's F470), and with it
     the daily nudge's own read (:1942, `needing(checked(board.read_text(...)))`) and the `--fetch` origin-versus-local comparison at :1017 (F475, F482); the stamps
     reader, `sweep_note()` and `sweep_note_for(content)` (:667-740, :795, called at :1656, :1822, by `SWEEP_RE` and
@@ -390,8 +394,12 @@ consumer's, in its own repo.
     with those templates, which the v3 seed `README.md` does not carry, and its `ARCHIVE_AT` check (:128-130), which
     also reads cadence.md and the procedure, goes with `ARCHIVE_AT`, those docs' archive wording rewritten in the
     vendor PR (F484) (the item file's forms are the module's, pinned by its fixtures);
-    its `Kinds:` check alone stays, reading the seed `README.md`'s `Kinds:` line against `KINDS` (F457, F459,
-    round 7's F478);
+    its `Kinds:` check alone stays, reduced to comparing a `Kinds:` line against `KINDS` (its per-kind probe,
+    built from the `Format:` example through `parse_board`, goes with both), over `BOARDS` (:25) rewritten to the
+    seed's `docs/user_attention/README.md` and agent-cadence's own board's `README.md` (the split carries the v2
+    head, its `Kinds:` line among it, into the README; never the stub, which has none); and the archive-wording
+    check's three files shrink to two, cadence.md and the procedure, the seed's wording going with the v2 seed
+    (F457, F459, round 7's F478, round 8's F490);
   - its cadence check (`check_cadence.py`): its existing board row, `row_board` (:2161, TD-206), is rewritten,
     not joined by a second (round 6's F454). Beside the ledger row (which reads the PR's ledger through
     `ledger_pair_at()` and fails on `v2_problems()`'s faults), it reads the head's board through `load_board()` and
@@ -403,10 +411,10 @@ consumer's, in its own repo.
     reads the `Board`: `_people_check()` `board_people(board)` and `people_problems(board)`, its *touched* test
     comparing the base's and head's `README.md` `People:` line; `_decided_check()` each item's `decided` and
     `decided_by`; `gate_answer()` (:2081) takes two `BoardItem`s, base and head paired by id, and tests `decided`
-    gained and `_item_gate(item)[1]`; `board_gate_answers()` (:2104-2117) pairs by id over the two `Board`s, still
+    gained or changed (with `decided_by`, as :2101 does; round 8's F489) and `_item_gate(item)[1]`; `board_gate_answers()` (:2104-2117) pairs by id over the two `Board`s, still
     the pre-filter ahead of B4's `lift_pr_verdict()` in `row_lift_pr()` (:2457); and `_appends_gate_answer()`
     (:2520-2523) `_item_gate(item)` on each `BoardItem` the commit's added item files give, read through
-    `load_board()` at the commit where it parsed the diff's added lines (`_board_diff`, :2511; F479) (the closing fact-check's F460, F461). `_direct_rules()`
+    `load_board()` at the commit where it parsed the diff's added lines (`_board_diff()`, defined at :1678, called at :2512; F479, round 8's F488) (the closing fact-check's F460, F461). `_direct_rules()`
     (:2060-2066), which calls `board_change_problems()`, goes with it; `classify_direct()` and its `gate_answer()`
     call (:2149) are TD-095's, whose rule (item files added directly, each with a `Due:`) replaces it (F462). The
     done-when's grep covers each name that goes; `precheck.py` runs the repo's own command and reads no board;
@@ -421,12 +429,19 @@ consumer's, in its own repo.
     before the board test; round 5's F428, F435, F436); cadence.md
     §3, §4.3 and §4.4, `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton
     (no `Format:` line for the item line, no sections, closing archives) change in the vendor PR, beside the split
-    (round 4's F421). The seed `adopt` writes (`sync.sh`'s `SEED_FILES`, :110-112, the README's SEED row) is a v3 board,
+    (round 4's F421). The seed `adopt` writes (`sync.sh`'s `SEED_FILES`, :110-120, its board entry :111, the README's SEED row) is a v3 board,
     two static seed files and no Python (F483): a new entry, `docs/user_attention/README.md` (the skeleton,
     `Ledgerboard: 3` under its title, its `Kinds:` line kept), and at `docs/user_attention.md` a fixed stub, the
     bytes `board_stub()` gives for the skeleton's title and the name `user_attention`, so the path a hook passes on reads the directory and a
-    new repo's board takes v3.0's writers from its first item; `launcher/words.py`'s `adopt` check of the board's
-    text (`texts[BOARD]`, `SKIP_BOARD`, :965-1025) reads the directory's `README.md` (round 7's F476).
+    new repo's board takes v3.0's writers from its first item. The two are one seed (round 8's F487): the README entry
+    follows the stub's in `SEED_FILES`, and the seed loop (`launcher/words.py`, :1163-1195) writes the README only
+    where it writes the stub, so a repo that keeps its v2 `docs/user_attention.md` (an existing file, or one named in
+    `skip-seed`) gets no stray `docs/user_attention/README.md` beside it, and `skip-seed`'s board name covers both.
+    `launcher/words.py`'s `adopt` check of the board (`texts[BOARD]`, `SKIP_BOARD`, :965-1025): the `SKIP_BOARD` scan
+    (:1022-1025) reads the directory's `README.md` (round 7's F476), and the board leaves `_format_problems()`'s
+    text loop (:1007-1015), whose `version_problem(texts[f])` reads a text against `FORMAT_MAJOR` 2 and would refuse
+    the stub's and the README's `Ledgerboard: 3`, in `adopt` and `--migrate` both: the board's version is checked
+    by `version_problem(load_board(...))` instead (round 8's F485).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
   - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), its ledger first
     meeting TD-078's D5, landed as D11 says when no open PR
