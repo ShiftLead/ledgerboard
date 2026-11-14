@@ -69,35 +69,37 @@ archive, or another repo's entry the reader cannot resolve keeps the block. Each
 `blocked_by` lists what holds it: its open ids, then its gates that hold, then each item that keeps the
 block unread. A written `**Pickable:**` line is only a field.
 
-**The old form** `decision (<who>) <text>` — a decision followed by anything but a comma or the end of
-the line — is read only as the last item: its text runs to the end of the line, so nothing after it
-is read. It holds as a decision by `<who>`, and is a retired item. The writers never write it: `new`
-(`entry_text()`) and `set` refuse a `Blocked by` value in the old form, and `set` refuses to add any gate
-to an entry whose `Blocked by` still holds it, whose text would swallow the gate: migrate it first,
-to `decision (<person>)` with its text in `**Ask:**`, which `migrate` does from v2.8 (*Migrating
-to v2.7*, rule 8). v3.0 stops reading it.
+**The old form** `decision (<who>) <text>` — a decision followed by anything but a comma or the end of the
+line — was read by v2 as a decision by `<who>`. v3.0 does not read it: it is an unreadable item, which keeps the
+block, names no holder, and is an error. Its replacement is `decision (<person>)` with the text in `**Ask:**`.
 
-**Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. Where
-v2.x still reads one, `check()` names it *retired* (ℹ, `retired`) with what replaces it, rather than
-unknown — except a Status word, which from v2.7 is an error (*The closed Status set*):
+**Retired words** (v2.4). A retired word is never reused for a new meaning; the list grows only. v3.0 reads no
+retired field, and no `Blocked by` item in the old decision form, for its old meaning; a retired item in `Blocked
+by` is read as before. `check()` names each it meets *retired*, with what replaces it, rather than unknown: a
+retired field — `Waits`, `Taken by`, a header `Resolved` or a header `Location` — is an error (`retired`) on every
+entry, open or archived, of a ledger that declares major 2 or more, whether or not the edit changed the entry
+(never `standing`), and ℹ on a v1 ledger; so is a `Blocked by` item in the old decision form (*The old form*,
+above), which is also an unreadable item, and so an error on an open entry of a v1 ledger too (standing ℹ, as any
+unreadable item is, on an untouched open entry when `check()` is given a base), and ℹ on an archived one there,
+whose unreadable item no reader flags; another retired item in `Blocked by` is ℹ and keeps the block; and a Status
+outside the closed set is an error (*The closed Status set*). A retired error's text ends *v3.0 reads no such
+form: on an open entry* followed by its field's cure — *remove it with `set` (an empty value)* for `Waits` and
+`Taken by`; *move its value with `edit --section Location`, then remove it with `set`* for a header `Location`;
+the same with `--section Resolved` for a header `Resolved`; *write its text with `edit --section Ask`, then rewrite
+it `decision (<person>)` with `set`* for the old decision form — then *; on an archived one by hand, then
+`ledger.py fmt TD-n`*. That `set` adds a decision v3.0 did not read before, so it logs `gate added`, the gate's age
+starts that day, and the merge gate wants a board item for it, as for any decision gained. The retired words, with
+what replaces each:
 - the fields `Waits` (a gate: `until` or `event`), `Taken by` (`Id take`), `Resolved` as a header field
   (the `**Resolved:**` body line of an archived entry) and, from v2.7, `Location` as a header field (the
   `**Location:**` body section);
-- in `Blocked by`, the gate `hold` (`decision (<person>)` with an Ask), the old form above, and a role in
+- in `Blocked by`, the gate `hold` (`decision (<person>)` with an Ask) and a role in
   `decision (…)`, reserved by name — today `designer`. A retired gate keeps the block, and a retired
   decision is still a decision by its holder;
 - the Status words `Designed`, `Built`, `Partly`, `Live` and `In` (`Open`, the stage in `Kind`), and `Done`,
   `Moved` and `OBE` (`Resolved`, `Superseded` or `Dropped`; on an open entry, archive it or `Open`). From v2.7 a
   Status outside the closed set is an error (*The closed Status set*), whose text still names a retired word with
-  what replaces it; `migrate` maps each (*Migrating to v2.7*).
-
-**A new `Waits` line is an error** (v2.7). Every wait now has a gate form — a date as `until YYYY-MM-DD`,
-an event as `event (<name>)` with its Event section, a `host-log` check among them (*Events*) — so a `Waits`
-line an edit writes is a mistake. Given the ledger before the edit, `check()` grades the retired `Waits` field
-an error (kind `retired`, field `waits`) on an entry whose `Waits` line the edit added or whose text it
-changed, naming the gate form to write. A `Waits` line the edit left as it was keeps its ℹ, on a changed
-entry as on an untouched one, and with no ledger before the edit every `Waits` line is ℹ.
-A header `Location` line is graded the same way from v2.7, naming the `**Location:**` body section.
+  what replaces it; v2.x's `migrate` mapped each.
 
 **Events** (v2.4). An `event (<name>)` gate pairs with an **Event section** in the entry's body, which
 says what is waited for and how a host tells it happened:
@@ -443,7 +445,7 @@ push are the consumer's; what the text means is the module's:
   None for a commit that is not a take (another subject, a range that runs backwards, or one wider than 100 ids —
   the writers take at most 10; an id of more than nine digits is not read). A field's name is read as written,
   lower-case, the first of a name wins, and a `take` that is not 32 lower-case hex digits is left out.
-- `judge_takes(new_ids, takes, entries, branch, default, accept_taken_by=False)` is the merge gate's judgement
+- `judge_takes(new_ids, takes, entries, branch, default)` is the merge gate's judgement
   of the ids a change adds, as `(fails, warns)` of `(kind, text)`. `takes` are every take the counter holds,
   each `parse_take()`'s record with its commit's `sha` and `date`, all kept, so an id given twice is judged
   against both. With no takes, nothing is judged.
@@ -452,10 +454,7 @@ push are the consumer's; what the text means is the module's:
   - An id's `Id take` is judged alone wherever it is present. The nonce of any take that gave the id passes: a
     range's for each of its ids, either take of an id given twice. `id-take` (fail): the nonce of another id's
     take, naming both ids, or of no take.
-  - No `Id take` is `id-no-take` (fail), unless `accept_taken_by`, the consumer's flag while its writers still
-    write `Taken by`: then a `Taken by` naming a giving take's `by` warns `id-no-take`, one naming another fails
-    `id-taken-by`, and none warns `id-no-taken-by` when a giving take has a `by` and the ledger declares no
-    `Fields:` vocabulary, whose check would refuse the field. An entry's nonce is compared exactly.
+  - No `Id take` is `id-no-take` (fail). An entry's nonce is compared exactly.
   - An id whose entry is in none of `entries` is judged only as `id-untaken` or `id-before-counter`.
   - `id-branch` (warn): the take names a branch that is neither `default` nor `branch`. `id-by-unhashed` (warn):
     its `by` is a bare session id or an email address.
@@ -486,11 +485,11 @@ tell an entry it would have written from one it would not. A reader reads either
 **Canonical form** (`canonical(text)`): line endings normalised to `\n` first, then
 - the heading (its title stripped);
 - one blank line;
-- the header block in this order: `Priority, Type, Added, Owner, Kind, Status, Taken by, Id take, Blocked by,
+- the header block in this order: `Priority, Type, Added, Owner, Kind, Status, Id take, Blocked by,
   Part of`, each spelled so. Then any other field, spelled as the file spells it, in the file's order — a
   `Waits` or a header `Location` among them (v2.7). A place in the order is a rendering rule, not a declaration:
-  `Owner`, `Kind` and `Taken by` are not the format's own fields. A header `Resolved` is not in the order and is
-  kept where the other fields put it;
+  `Owner` and `Kind` are not the format's own fields; a retired field (*Retired words*) is kept where the other
+  fields put it;
 - one blank line;
 - the body byte for byte, with its leading and trailing blank lines dropped and one trailing
   newline.
@@ -513,7 +512,7 @@ title that is empty or more than one line, a field that would not read back as o
 twice, and sections that would not read back as given (a section's paragraph that opens in bold
 would start a section of its own). From v2.8 it also refuses a field named `Title` or `Log`, and a section named
 `Title` or a header name (*edit*, below), the ledger's `Fields:` names given as `declared_fields`. A `Blocked by` is written as the writers write it (*The ledger*):
-its ids, then its gates in their order; the old form is refused. With `filed` (v2.4: `today`, `who`, `session`, `words`, and
+its ids, then its gates in their order. With `filed` (v2.4: `today`, `who`, `session`, `words`, and
 optionally `while`), it writes the entry's Log: the `filed by` line, then one `gate added: <gate>` line
 for each gate its `Blocked by` is filed with, in their order, so a gate ages from the day it was filed. A filed entry's `Added` is the date
 alone and its Status, if given, is `Open`, since their words go in the Log; either otherwise is
@@ -571,7 +570,7 @@ them. An entry `canonical()` refuses is not read for it. `check()` reads the Log
     head is followed by the end, whitespace or a `:`. So `In progress`, `Open, held`, `**Open** x`,
     `Resolved 2026-10-03.` and `Open 2026-01-01T10:00` are prose, and nothing is lifted from them.
   - The tail becomes **one** Log line, verbatim (a date inside it stays prose), dated by the Status's
-    date, else the `**Resolved:**` line's (or an older `Resolved` header field's), else `Added`'s. Each `— was:` segment becomes its own `was:
+    date, else the `**Resolved:**` line's, else `Added`'s. Each `— was:` segment becomes its own `was:
     <Status>` line, dated by its own date or the same fallbacks.
   - The lines go in among the Log's by date, after any line of an equal date, and the Status is left
     as `<Word>[.] [YYYY-MM-DD] [by <id>]`.
@@ -587,8 +586,7 @@ only `**Resolved:**` section. The pointer names the doc, test or code that now c
 and is optional, as is the PR (with no PR, the parenthesis is left out). An entry archived with
 nothing lasting to move keeps its Fix and has the line after it. An entry overtaken by another has
 the Status `Superseded YYYY-MM-DD by TD-n` (`… by TD-n: why` before v2.4), and its Why and Fix stay as written. A `Resolved`
-header field is the older form of the line: readers still read it, and the writers move it into
-the body.
+header field, the older form of the line, is a retired error (v3.0).
 
 **The closed Status set** (v2.7). An entry's Status is `Open` in the ledger, and in the archive `Resolved
 YYYY-MM-DD`, `Superseded YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD`, exactly as the
@@ -596,9 +594,13 @@ writers write them: nothing before or after, one space between parts, a real dat
 an error on every entry, open or archived, of a ledger that declares major 2 (`status`, `status_problem()`), never
 standing, with or without `old`; on a v1 ledger it is ℹ. Its text names the form the entry's place takes and
 the value's first word when it has one, with what replaces a retired or misplaced word, never the whole value, and
-ends *run migrate, which maps it, lists it, or names what a person decides*. It replaces v2.4's ℹ `retired` on an
+ends *v3.0 reads no other form: on an open entry write `Open` with `set`, on an archived one by hand, then
+`ledger.py fmt TD-n`*. It replaces v2.4's ℹ `retired` on an
 open entry's Status word. What a reader reads of an archived blocker's Status (*Superseded and dropped*) is
-unchanged, so another repo that has not migrated still reads as before.
+unchanged, so another repo that has not migrated still reads as before. `status_problem(text, *, archived)` gives the problem of
+one entry's Status against the four forms (*The closed Status set*), or None: `Open` in the ledger; `Resolved YYYY-MM-DD`, `Superseded
+YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD` in the archive, exactly as the writers write
+them — nothing before or after, one space between parts, a real date.
 
 **Edits** (`edit_entry(text, action, *, today, …)`, one of `ENTRY_ACTIONS`) take one entry's text
 and return it in canonical form. Each is refused for an entry `canonical()` refuses (a v1 ledger:
@@ -610,18 +612,15 @@ an argument the action does not take is refused (`today` is taken by `note`, `ar
 require it, and from v2.5 by `set` and `edit`, which require it only to date a gate or (v2.8) a retitle). What a field's value means (a
 vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs on the result.
 - **set** (`fields`): sets each field, in its place, or adds it where the order puts it; an empty value removes
-  it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order;
-  it is refused in the old form, and when it adds a gate to an entry whose `Blocked by` still holds the
-  old form. A value holding an item the grammar does not read is written as given, for `check()`.
+  it. A value is one line. A `Blocked by` (v2.4) is written with its ids, then its gates in their order. A value
+  holding an item the grammar does not read is written as given, for `check()`.
   From v2.5, `set` takes an optional `today`, and a `Blocked by` that adds a gate the entry did not carry
   needs it: it also appends `gate added: <gate>` to the Log for each, in the order the gates are written,
   dated `today`, making the Log at the end of the body if there is none (a Log that is not last is
   refused, as for `note`; the Status's notes are not lifted). A gate it keeps is not logged again, and a gate the value names twice is
   logged once, as first written. **The
-  gates the entry carried** are its `gate_items()` plus, when its `Blocked by` holds the old form, that
-  form's holder as `decision (<holder>)`, compared by `_gate_key` (a person's name in any case). So
-  migrating the old form logs nothing, and `Decision (kim)` rewritten `decision (Kim)` is kept. The old
-  form's refusals come before the refusal for a missing `today`.
+  gates the entry carried** are its `gate_items()`, compared by `_gate_key` (a person's name in any case), so
+  `Decision (kim)` rewritten `decision (Kim)` is kept.
   From v2.8 `set` takes `title`, which replaces the heading's title, and `fields` may then be empty. The new title
   is stripped and refused when empty, more than one line, or holding `\r` or `<!--`. One equal to the entry's title
   as read changes nothing. Any other is written `## TD-n: <title>` and logs `retitled:
@@ -650,16 +649,15 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   `**Resolved:**` line, since nothing replaces it). A superseded or dropped entry keeps its Why and Fix.
   The caller asks `archive_plan()` first, and rewires the dependents it names in the same change. `pr` is the forge's number or None; with None, a pointer holding `#<digits>` is refused,
   since a reader would take that for the PR.
-  - An earlier `**Resolved:**` section is replaced, never doubled, and a `Resolved` header field is
-    removed.
+  - An earlier `**Resolved:**` section is replaced, never doubled, and an entry holding a `Resolved` header field
+    is refused (*move it with `edit --section Resolved`, then remove it with `set`*).
   - With no section named exactly Fix, the line goes at the end of the body, before the Log, and a
     qualified Fix lead is left alone.
   - A missing Status is added.
   - It is refused if two sections are named Fix.
 - **reopen** (`why`): lifts the Status's notes, then sets Status to `Open` and logs `reopened —
   <why>`. The `**Resolved:**` section stays as history, and the caller writes a new Fix with `edit`.
-  A `Resolved` header field moves into a `**Resolved:**` section before the Log, never deleted. An
-  entry with both is refused: a person merges them. (Before v2.4 the Status became `Open YYYY-MM-DD:
+  (Before v2.4 the Status became `Open YYYY-MM-DD:
   why — was: <old Status>`.)
 - **renumber** (`new`) rewrites the heading's id to another number; Log lines are history, and keep
   theirs. **rename_ref** (`old`, `new`) rewrites that id in `Blocked by`, `Part of` and a `filed by`
@@ -687,8 +685,8 @@ shape exactly, and anything else is refused:
   read from the entry's `**Event (<name>):**` section, never passed in. `by` is the host's token.
 - **`until D`:** none of them; `today` must have reached D.
 
-A waiting-only answer (*The board*) is refused, as is a gate the entry does not carry, an archived entry, and a
-decision still in the old form (*migrate it first*). **The reassign** (`reassign_gate(text, frm, to, *, by,
+A waiting-only answer (*The board*) is refused, as is a gate the entry does not carry and an archived entry.
+**The reassign** (`reassign_gate(text, frm, to, *, by,
 why, today)`) replaces `decision (<frm>)` by `decision (<to>)` and logs `gate reassigned: decision (<frm>) →
 decision (<to>) — by <by>; <why>`, which resets the gate's age. It is refused for the same person in another
 case, an entry that does not carry `frm`'s decision or already carries `to`'s, and an empty why. Who may run a
@@ -699,196 +697,6 @@ Moving a file into `archive/` or back, and the relative links that move with it,
 
 **A change to the canonical form is a minor release**: each consumer reformats its entries once,
 when it takes that release.
-
-## Migrating to v2.7
-
-`migrate_entry(text, *, archived, today, closed_date=None, kinds=None, decided=None)` takes one entry's text (as
-`canonical()` takes it), whether the entry is in the archive, the UTC day (`today`, as `edit_entry()` takes it), the
-entry's archiving date if the caller has one (`closed_date`), a caller's map from a stage word to a `Kind` value
-(`kinds`, its keys compared in lower case), and the caller's decision for a Status the rules below stop on
-(`decided`: `resolved`, `dropped` or `superseded <id>` for an archived entry, `open` for an open one). It reads
-nothing else and returns `{text, changes, listed, stops}`. `status_problem(text, *, archived)` gives the problem of
-one entry's Status against the four forms (*The closed Status set*), or None: `Open` in the ledger; `Resolved YYYY-MM-DD`, `Superseded
-YYYY-MM-DD by <id>` (`TD-n` or `<repo>#TD-n`) or `Dropped YYYY-MM-DD` in the archive, exactly as the writers write
-them — nothing before or after, one space between parts, a real date. It reads the Status `entries()` reads, from
-the header block.
-
-- **Every difference is a change.** Each text difference it makes has at least one `changes` word, except the
-  canonical reorder of an entry it changed, so an entry with `changes` empty is one it left alone.
-- **Unchanged is byte for byte.** An entry that needs no change is returned as given, even where `canonical()`
-  would reorder it: a reorder is `fmt`'s. A changed entry is returned in canonical form. With a stop, the input is
-  returned as given.
-- **The post-condition**, on an entry with `changes`: the migrated Status passes `status_problem()` for the
-  entry's place, and the migrated entry's Log holds no problem the input's does not (*The Log*); any problem is a
-  stop. So it never writes a Status or a Log line `check()` rejects that was not there before it. From v2.8 the
-  migrated entry also holds no `Taken by`, `Waits`, header `Resolved` or old decision form, and gains no
-  `ask-missing` or `gate-repeated` (`gate_repeats()`) the input did not have; any is a stop (`migrated entry still
-  holds <field>`, `migrated entry: ask-missing`, `migrated entry: gate-repeated`).
-- **An entry `canonical()` refuses** (a duplicate field, a non-field line in the header block, a Priority, Type,
-  Blocked by or Part of line below the header block) is read as `entries()` reads it, leniently, and the rules
-  applied to that reading: when none would change it, it is returned as given and listed (`canonical() refuses it:
-  left alone`); when one would, it is the stop `refused: <why>`. Stops are collected first, and a stop always wins.
-  Text that is not one entry is always the stop `refused: <why>`.
-- Run on its own output, without `decided`, it changes nothing.
-
-**Terms.**
-- *A real date* is a `YYYY-MM-DD` that is a calendar day (`2026-02-30` is not). Every rule that looks for a date
-  passes over one that is not real to its next source, except *Lifting*.
-- *The head reads* when the Status head grammar of *The Log* matches the value and any date it holds is real: *the
-  head* is the text it matched (word, date, `by <id>`), *the tail* what follows up to the first ` — was: `, and *the
-  segments* each ` — was: ` part.
-- *The first part* is the value before its first ` — was: `. Every search for an id or a date in the text is a
-  search of the first part only.
-- *An id* is `TD-n` or `<repo>#TD-n` standing alone: the character before it is none of a letter, a digit, `_`,
-  `-`, `/` or `#`, and the character after it none of those, nor a `.` followed by a letter. Ids are matched longest
-  first (`acme#TD-5` is one id), and an id named twice counts once.
-- *The word* is the value's first word as written, with `*`, `_` and backquotes stripped from its ends and a trailing
-  `.` or `:` dropped (`Resolved` from `**Resolved**`, `Resolved**` from `**Resolved**.`); rules compare it in lower case.
-- *Lifting* moves the tail into one Log line, dated by the head's date, else the `**Resolved:**` line's, else
-  `Added`'s, and each segment into one `was:` line, dated by its own head's date, else the same fallbacks; each goes
-  in among the Log by date, after any line of an equal date (before the first line dated later). It lifts only when
-  every date the lift would use is a real date; otherwise it lifts nothing from the whole value, and the value is
-  treated as **a head that does not read**.
-- *Its new form takes only its head* when the date and any `by <id>` the new Status keeps come from the head. A
-  value whose new form takes anything from beyond its head (an id in the tail, `BY` in upper case, a date found only
-  in the text) is treated as a head that does not read.
-- *No duplicates:* a Log line it would write whose date and words equal a line already in the Log is not written
-  again.
-
-The rules apply in this order, the Status (1 or 2), then `Added` (3), `Location` (4), `Taken by` (5), `Waits` (6),
-a header `Resolved` (7) and the old decision form (8), each to the entry the one before it left.
-
-**1. The Status, an open entry**, the first branch that applies:
-
-1. The value is exactly `Open` → unchanged.
-2. No Status, or an empty one → `Open`, no Log line; listed.
-3. The word is a stage word (`designed`, `built`, `partly`, `live`, `in`) → when the head reads, the tail and
-   segments are lifted, then the head is written as one `was: <head>` line; when it does not (`In progress`), the
-   whole value is one `was: <value>` line. That line is dated by the head's date; when the head does not read, by the
-   first real date in the first part (listed), then the `**Resolved:**` line's, else `Added`'s, else `today`. The
-   Status becomes `Open`. When the word is a key of `kinds`, `Kind` is set to its value; when `Kind` held another
-   value, compared whole as written, a Log line `Kind <old> → <new> (migrate)` is written, dated `today`, after any
-   line of an equal date. With no key for it, `Kind` is left as it is and the entry is listed.
-4. The head reads and its word is `Open` (`Open 2026-10-01: noted`, `Open.`) → the tail and segments are lifted and
-   the Status becomes `Open`. The head is also written as one `was: <head>` line, dated as in branch 3, unless the
-   head is `Open` or `Open D` and a tail was lifted.
-5. The word, with its `*`s stripped, is an archived one (`resolved`, `superseded`, `dropped`, `done`, `moved`,
-   `obe`) → **stop**: the entry may be finished work the ledger forgot to archive. `decided` `open` answers it:
-   `Open`, the whole value one `was: <value>` line dated as in branch 3.
-6. Anything else (prose, a bold lead, `Open, held`) → the whole value is one `was: <value>` line dated as in branch
-   3, and the Status becomes `Open`; listed.
-
-**2. The Status, an archived entry.** A Status that passes `status_problem()` is unchanged. Otherwise, first the
-closing date `D`: the head's date, else the `**Resolved:**` line's (or an older `Resolved` header field's), else
-`closed_date`, else the first real date in the first part (listed); with none, **stop**. Then the word (every stop
-that applies is returned, the date's first):
-
-| The Status | Becomes |
-|---|---|
-| word `resolved`, `done`, `built` or `designed` | `Resolved D` |
-| word `superseded`, its first part naming `by <id>` (`by` in any case) | `Superseded D by <the first such id>`; **stop** when that id is the entry's own. A `Superseded D by <own id>` already in the set is unchanged |
-| word `superseded`, naming no `by <id>` | **stop** |
-| word `moved`, its first part naming exactly one id once the entry's own is set aside (a bare `TD-n` of its number) | `Superseded D by <that id, as written>`, listed |
-| word `moved`, naming no id once its own is set aside | `Dropped D`, listed |
-| word `moved`, naming two ids or more | **stop** |
-| word `obe` or `dropped`, or a value beginning `Won't fix` or `Wont fix` (any case) | `Dropped D` |
-| anything else (`Open`, `Partly`, prose, a bold lead whose word is none of the above, no Status) | **stop** |
-
-**A stop on the word is a decision for a person**, given back as `decided`: `resolved`, `dropped` or `superseded
-<id>` sets that form, dated `D`, and the whole old value is kept as one `was: <value>` line (none when it is empty
-or absent). `decided` does not answer a missing date: that is `closed_date`'s. A `decided` `superseded <own id>` is
-the stop `refused: superseded by its own id`. A `decided` given for an entry that does not stop on its word, or of
-the other place's shapes, is the stop `decided: nothing to answer`, so a stale decision never passes silently; one
-outside the four shapes, or a `kinds` key or value that is not one line of text, is the stop `refused: <why>`.
-
-Then the text: when the head reads and the new form takes only its head, the head is rewritten to the new form, the
-tail lifted dated `D` and each segment as *Lifting* says, and the old head, when it differs from the new Status,
-written as one `was: <old head>` line dated `D` after the lifted lines. Otherwise nothing is lifted: the whole value
-is one `was: <value>` line dated `D`.
-
-So `Done 2026-10-03: shipped — was: Designed 2026-09-30` becomes `Resolved 2026-10-03`, with the Log lines, in order,
-`2026-09-30: was: Designed 2026-09-30`, `2026-10-03: shipped` and `2026-10-03: was: Done 2026-10-03`; `Resolved
-2026-10-12.` with no `**Resolved:**` line and no `closed_date` becomes `Resolved 2026-10-12` with `2026-10-12: was:
-Resolved 2026-10-12.` and the listing `date 2026-10-12 read from the Status's text`; and `Superseded 2026-01-10 BY
-TD-302.` becomes `Superseded 2026-01-10 by TD-302` with `2026-01-10: was: Superseded 2026-01-10 BY TD-302.`.
-
-**3. `Added`.** A value that is a real date, whitespace, then a comment becomes the bare date, and the comment one
-plain Log line, verbatim, dated by that date and placed before the first line dated on or after it. Its surrounding
-parentheses, when it is wholly wrapped in one pair (its first `(` closes at its last `)`: `(a (b))` is wrapped, `(a)
-(b)` is not), are dropped, then its surrounding whitespace; a comment left empty writes no line. A comment that would
-begin with a Log writer's prefix is written `note: <comment>`. It is never a `filed by` line. A bare real date is
-unchanged; any other value (no real date first, or a date with no whitespace after it) is left alone and listed. A
-line written first in the Log moves the date `gate_age()` falls back to.
-
-**4. `Location`.** A header `Location` is removed from the header and written as the body section `**Location:**
-<value>`, placed as `edit --section` places a section the body lacks: after the first `**Why:**`, else before the
-first `**Done when:**`, `**Related:**` or Log, else at the end. An empty header `Location` is removed and nothing
-written. A non-empty header `Location` meeting a body `**Location:**` section is a **stop**.
-
-The rules below read the entry rules 1–4 left. *A dated Log line* is one `log_lines()` gives a date that is a
-real date. *The filing date* (v2.8) is `Added` when its whole value is a real date, else the first dated Log
-line's date, else `today`; a line dated by it is placed before the first Log line dated on or after it, so lines
-of one date written by two rules stand in reverse rule order. *The gate-neutral date* is the first dated Log
-line's date (in file order), else `Added` when its whole value is a real date, else `today`; a line dated by it
-is placed after any line of an equal date (before the first line dated later). *The entry's date* is the
-gate-neutral date on an open entry whose `Blocked by` carries a gate (`gate_items()`, or the old decision form),
-and the filing date on any other. So rules 5–8 never move a gate's age (`gate_age()`) on an entry with a dated Log
-line or an `Added` whose whole value is a real date; on any other they may (and on an entry whose first Log line
-has an unreal date, `gate_age()` raises today, before and after).
-
-*Has an Ask* means the entry has an `Ask` header field or a body `**Ask:**` section, as `pickable()`'s
-`ask-missing` reads it.
-
-**5. `Taken by`** (v2.8). A header `Taken by` is removed and its line written as one plain Log line, `Taken by
-<value>`, the value whole, dated by the entry's date. An empty one is removed and nothing written.
-
-**6. `Waits`** (v2.8). On an archived entry a non-empty `Waits` is removed and its line written as one plain Log
-line, `Waits <value>`, dated by the entry's date. On an open entry a non-empty `Waits` is a **stop**: its gate is
-a person's or a session's to write (`until` or `event`, by `set`, which then removes the line). An empty `Waits`
-is removed and nothing written.
-
-**7. A header `Resolved`** (v2.8). It is removed from the header and written as the body section `**Resolved:**
-<value>`, before the Log, else at the end. An empty one is removed and nothing written. A non-empty header
-`Resolved` meeting a body `**Resolved:**` section is a **stop**.
-
-**8. The old decision form** (v2.8). *The old item* is the old form as *The ledger* reads it: from its
-`decision (` to the end of the `Blocked by` value, commas, parentheses and all (`parse_gates()`'s `old_form`).
-It is rewritten `decision (<who>)`, `decision` in lower case and `<who>` as `parse_gates()`'s `old_form` gives
-it, the items before it kept in their order; when `<who>` is
-not a person's name (`is_person()`, which a retired role passes), it is a **stop**. Its text, less its leading run
-of `—`, `–`, `-`, `:` and whitespace, is written as the body section `**Ask:** <text>`, placed as `edit` places a
-section the body lacks, when the entry has no Ask; when it has one, the old item, whole, is written as one plain
-Log line, `Blocked by <the old item>`, dated by the entry's date. An empty text writes neither; on an open entry
-with no Ask, where `decision (<who>)` reads as a decision (not a retired role), it is a **stop**, since that
-leaves `check()`'s `ask-missing` error. When an item of the value as written, before the old item, is
-`decision (<who>)` for the same `<who>` (the holder compared alone and lowercased, as `gate_repeats()` compares
-decisions, so `decision(kim)` counts; a retired role included, though `gate_items()` omits it),
-it is a **stop**, since the rewrite would write the item twice (for a person, `check()`'s `gate-repeated` error). No `gate added`
-line is written.
-
-Stops are collected from every rule, 1 to 8, and with any the input is returned as given.
-
-**9. What it leaves.** Every other field and section, and every Log line already there, are left as they are. A
-Log is made at the end of the body when the entry has none and a line is written; a Log that is not last, or two
-Logs, is a stop on an entry with `changes`; an entry with none is returned as given. A `Status` line below the
-header block is no Status: the header gets `Open`, and the line is left and listed.
-
-**The words it returns.** `<Word>` is the word as written.
-- `changes`: `Status <old value> → <new Status>` (`(none)` for no or an empty Status); `Kind <old, or none> →
-  <new>`; `Added comment → Log`; `Added comment (empty) removed`; `Location → body`; `Location (empty) removed`;
-  from v2.8 `Taken by → Log`, `Taken by (empty) removed`, `Waits → Log`, `Waits (empty) removed`, `Resolved → body`,
-  `Resolved (empty) removed`, `old decision form → Ask`, `old decision form → Log` and `old decision form (no
-  text)`.
-- `listed`: `stage word <Word>: Kind not set`; `no Status: set to Open`; `Status <Word> set to Open`; `Moved:
-  Superseded by <id>`; `Moved: Dropped`; `date <D> read from the Status's text`; `Added <value>: not a date`;
-  `decided: <form>`; `canonical() refuses it: left alone`; `Status line below the header: left`.
-- `stops`: `refused: <why>`; `Superseded: by its own id`; `decided: nothing to answer`; `no date for the Status`;
-  `Superseded: no by <id>`; `Moved: <n> ids`; `Status <Word>: no archived form`; `Status <Word> on an open entry`;
-  `Location in the header and the body`; `Log not last`; `migrated Status <value> still outside the set`;
-  `migrated Log: <problem>`; from v2.8 `Waits on an open entry`, `Resolved in the header and the body`, `old
-  decision form: <who> is not a person`, `old decision form: no text for its Ask`, `old decision form: <who> already
-  has a decision`, `migrated entry: ask-missing`, `migrated entry: gate-repeated` and `migrated entry still holds
-  <field>` (`<field>` one of `Taken by`, `Waits`, `Resolved`, `Blocked by`).
 
 ## The rank
 
@@ -1294,7 +1102,7 @@ says `Answered by: any` and lists `by`, and the covering item's head `Decided:` 
 `tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`, `tripwire-no-board-item`, `tripwire-shared`,
 `tripwire-shared-decided` (v2.7) and `tripwire-board`.
 Exempt are an entry the diff archives and the one-time migrate commit, known by its subject alone, `ledger:
-migrate v<release> (<n> entries)` (`migrate_subject()`; `subject_kind()` names it `migrate`). The tripwire is
+migrate v<release> (<n> entries)` (written by v2.x's `migrate`; `subject_kind()` still names it `migrate`). The tripwire is
 forgeable, and says so: a well-formed hand edit passes it, and review is the backstop.
 
 `lift_pr_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` returns `{carve_out,
@@ -1344,9 +1152,7 @@ bytes (`lift-board-line`).
 boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
 names it. A `decision (<p>)` an open entry gains in the diff is refused (`decision-uncovered`) when this repo's
 board lists `<p>` on `People:` and no item on it covers the gate, and flagged (`decision-elsewhere`) when the board
-does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A
-decision a base entry held in the old form (*The ledger*) is not gained when the head writes it `decision (<who>)`
-(v2.8). A new `decide` item on this repo's board (its id on no base item: open, or closed in an archive file the tree holds) whose Context names a
+does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A new `decide` item on this repo's board (its id on no base item: open, or closed in an archive file the tree holds) whose Context names a
 decision and none of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on
 this repo's own board alone, so they are the same on every machine.
 
@@ -1943,8 +1749,8 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   title, where `--title ""` is a usage error; `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
   one; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
-  Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*run
-  migrate first*); `set` and `edit` take an archived entry only once reopened. From v2.5 `set` and `edit`
+  Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*The
+  closed Status set*'s cure); `set` and `edit` take an archived entry only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
   section `edit` makes a new `host-log` wait;
 - **the `set` route's gates** — a `set` whose `--blocked-by` drops a `decision (<p>)` the entry carries lifts it
@@ -1952,7 +1758,7 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   `--board <repo>`, `--no-board-item`, `--shared-item`; or anyone, with `--override "<why>"`. One that swaps one
   decision for another reassigns it (`reassign_gate()`), with `--by` and `--why`. Who may run either (a session a
   person started) is the caller's to check; the writer records `by`. These flags on a `set` that drops no
-  decision are a usage error, and a decision still in the old form is not dropped by `set` (*migrate it first*);
+  decision are a usage error;
 - **`lift TD-n --gate "<gate>" --by <who>`** — one gate lifted (`lift_gate()`, *Lifting a gate*), its inputs one
   shape exactly: a decision with `--answer` and at most one board flag (with `--people P,…` and `--answered-by
   any`, anyone listed may answer); an event with `--answer` and `--people`, or with a host's `--evidence`; `until`
@@ -1987,40 +1793,7 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   span or a fenced block are left (an indented code block is read as prose), and paths are compared as text: a
   link that named no file before names none after. `--why` is required and not empty;
 - **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
-  an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing;
-- **`migrate [TD-n …] --release <x.y>`** (v2.7) — `migrate_entry()` (*Migrating to v2.7*) over each entry named,
-  else every entry, open and archived, of a v2 directory, the archived ones with `archived=True`; a v1 file is
-  unusable (*split first*). It takes `--ledger`, `--today` and `--json`, and neither `--base` nor `--resolved`
-  (it reads no other repo): either is a usage error.
-  - `--release`: `<major>.<minor>`, each one to nine digits, checked before the ledger is read.
-  - `--closed-dates FILE`: a JSON object from `TD-n` to a real `YYYY-MM-DD`, the caller's archiving dates; keys
-    are matched by number (`TD-58` and `TD-058` are one key; two keys for one number are a usage error), and a key
-    naming no entry the run reads is ignored. A `TD-n` named on the command line that the ledger and its archive
-    do not hold is a usage error.
-  - `--stage-kind WORD=KIND` (repeatable): the `kinds` map, `WORD` one of the open Status words *Retired words*
-    lists, each once in any case, `KIND` one line of text. A `KIND` outside a `Fields:` ledger's declared `Kind`
-    vocabulary is not refused: the caller's `--check` on the result names it.
-  - `--as TD-n=FORM` (repeatable, matched by number): `decided` for that entry — `resolved`, `dropped`,
-    `superseded <id>` or `open`; another form, an id not among the entries the run reads, or one id given twice,
-    is a usage error.
-  - **Any stop anywhere stops the run**, a refused entry's included: exit 1, nothing written, one line per stopped
-    entry, `TD-n: <stop>; <stop>`; with `--json` or `--plan`, the one object `{"plan": {}, "entries": …,
-    "reblocked": {}}`. Otherwise every changed file is written as one write.
-  - `--plan` writes nothing and prints one JSON object: `subject`, `plan` (each path and its new text), `entries`
-    (each entry changed, listed or stopped, to its `{changes, listed, stops}`) and `reblocked`; `--json` with
-    `--dry-run` prints the same. `--dry-run` prints the entries as text, entry by entry, or `nothing to migrate`
-    when no entry has `changes` (its `listed` still printed). `--plan` and `--dry-run` together are a usage error.
-  - **`reblocked`**: for every blocker id of every open entry, its chain's end state (`open`, `resolved`,
-    `dropped`, `unknown-status`, `unknown`, `unresolved`, `cycle`; *Superseded and dropped*) over the ledger before
-    and after the migration, chains through unchanged archived entries included; each open entry for which a
-    blocker's released-ness flips (released is `resolved`) maps to `[{blocker, before, after}]`. A change that keeps
-    the block is not listed. It is a listing, never a stop, `{}` when empty and on a stop; `--dry-run` prints it
-    after the entries when it is not empty. Another repo's blockers are not resolved here.
-  - A write prints the paths it changed, or with `--json` the one object with `entries` and `reblocked` added. Its
-    `subject` is `migrate_subject(<--release>, <the count of entries it changed>)`, the caller's one commit;
-    nothing changed is exit 0, `subject` null.
-  - Unlike the other writes it is not refused for a `check()` error the ledger before it did not have: it writes
-    the ledger `check()` will grade, and the caller runs `--check` on the result.
+  an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
 
 **A write is refused** when the ledger after it has a `check()` error the ledger before it does not, both checked
 against one `old`: the ledger text of `--base`, else of the ledger as it stands. So a fault already there never
@@ -2029,8 +1802,7 @@ the consumer judges beside it (the id against its counter, a wait written in pro
 it judges on the `--plan`.
 
 A ledger write prints the paths it changed, or one JSON object with `--json` (`subject` is null: a ledger edit has
-no commit subject of its own, so the caller names its commit — except `migrate`'s, which names
-`migrate_subject()`). `--plan` prints the changes as JSON (each path and
+no commit subject of its own, so the caller names its commit). `--plan` prints the changes as JSON (each path and
 its new text, `null` for a file removed) and writes nothing. A write of several files is both or neither, as the board writer's is. The caller
 passes what lies outside the files: the id, who filed the entry, the date (`--today`, else the UTC clock: every
 ledger date is the UTC date) and the state of other repos' entries — in-process the `resolve` callback, on the
@@ -2200,7 +1972,7 @@ Nothing read changes, and a ledger whose `Waits` lines no edit touches checks as
 once per answer, an `act` says the lift is owed, in place of `Go | Not yet`, and closes once nothing is owed. A
 gate lifted and re-added (its Log says so) is asked at once, as before.
 
-**v2.7 closes the Status set and ships `migrate`** (*The closed Status set*, *Migrating to v2.7*): a Status
+**v2.7 closes the Status set and ships `migrate`** (*The closed Status set*; *Migrating to v2.7*, removed in v3.0): a Status
 outside `Open`, `Resolved D`, `Superseded D by <id>` and `Dropped D`, or in the wrong place, is an error on every
 entry of a v2 ledger, where v2.4 to v2.6 noted a retired open word ℹ and read the rest; `migrate_entry()` and
 `ledger.py migrate` map the old forms. The header order loses `Waits` and `Location`, a header `Location` is
@@ -2209,7 +1981,8 @@ were already its own; a body `**Location:**` was already a section), though its 
 `Waits` or a header `Location` back in its own order, so a consumer vendors v2.7 before it formats a ledger v2.7
 wrote. A repo takes v2.7 in one PR that vendors it and runs `migrate`. `migrate` stays through v2.x and goes in
 v3.0, whose precondition is that, with the last v2.x, `migrate --plan` shows no entry with changes or stops in every
-repo (v2.8: its rules cover every old form, open and archived).
+ledger whose repo vendors v3.0 when it is cut (v2.8: its rules cover every old form, open and archived). A ledger whose
+repo stays on an older v2.x is untouched by v3.0 until that repo vendors it.
 
 **v2.7 leaves a shared item unanswered by a lift of one part** (*The board writer*, *The merge gate's
 verdicts*): `board.py decide --board-only` writes nothing while a listed entry still carries the gate, where
@@ -2261,7 +2034,7 @@ closes it.
 Status is in the closed set in place, where v2.7 refused it, and refuses one whose Status is not (*run migrate
 first*). Nothing read changes, and no key moves.
 
-**v2.8 gives `migrate` the last old forms** (*Migrating to v2.7*, rules 5–8): it maps `Taken by`, `Waits`, a
+**v2.8 gives `migrate` the last old forms** (*Migrating to v2.7*, rules 5–8, removed in v3.0): it maps `Taken by`, `Waits`, a
 header `Resolved` and the old decision form, which v2.7's left. Nothing read changes: every line it writes is one
 v2.7 reads (a body section, a plain Log line, a `decision (<who>)`), and no key moves. One thing is read
 differently once a repo runs it: an old-form decision becomes `decision (<who>)`, which the gate sweep and
@@ -2320,6 +2093,17 @@ such repo moves, its v2.x readers that check nothing read the split board as emp
 duplicate item, closed by hand). Within v3.x the same holds for a field: a later minor's field is faulted by an
 older v3 gate, so **a consumer writes a new field only once every reader of the board runs that release**.
 `Ledgerboard: 3` on a ledger means nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
+
+**v3.0's ledger** reads no old form (*Retired words*): `Waits`, `Taken by`, a header `Resolved` and a header
+`Location` are retired errors on every entry, open or archived; the old decision form is an unreadable item;
+`parse_gates()`'s record loses `old_form`, and `parse_blocked()` names no holder for it (its pieces are in the
+third list); `judge_takes()` loses `accept_taken_by`; `canonical()` places no
+`Taken by`; and `migrate`, `migrate_entry()` and `migrate_subject()` are gone, while `subject_kind()` still names a
+migrate subject; and `uncovered_decisions()` counts no old-form holder in the base (`tripwire()` never read one),
+so an old form rewritten `decision (<who>)` is a gained decision, owed a covering board item. A v2 ledger that met the precondition (*v2.8*, above) reads exactly as under v2.8, and declares
+no new major. One that did not is not misread: each old form is an error that names it (a retired field ℹ on a
+v1 ledger, *Retired words*; the old decision form an error there on an open entry, as an unreadable item, and ℹ on an
+archived one).
 
 ## Appendix: grammar
 
@@ -2551,8 +2335,7 @@ closed Status set*, *The Log*):
 - `log-line`: a Log line `log_line()` reads as one of the writers' fixed shapes, never `malformed` nor None;
 - `header-block`: an entry's header block, `canonical()` refusing nothing in `## TD-1: x`, a blank line and the
   block;
-- `added`: an `Added` value `migrate_entry()` leaves alone, with no `changes` and nothing `listed`, on an open
-  entry carrying it beside `**Status:** Open`.
+- `added`: an `Added` value that is a real date, whole.
 
 ```ebnf
 status-open       ::= "Open"
@@ -2592,7 +2375,7 @@ grammar's `digit` is ASCII alone (the writers write ASCII). The reader drops the
 a field's value, and a `\r` that ends a line; a lone `\r` inside a header line ends that line, and an HTML
 comment left open there is refused, so neither is a field line `canonical()` takes. A header block names each field once, and a Priority, Type, Blocked by or Part of line below
 it is one `canonical()` refuses, since `entries()` would lift it; the order of the fields is a rendering rule, not a
-grammar one (*the canonical form*). Their cases are in `fixtures/migrate/` and `ledger_edit/check/status_*`. A
+grammar one (*the canonical form*). Their cases are in `fixtures/status/`, `fixtures/grammar/` and `ledger_edit/check/status_*`. A
 `log-line` fixture is a writer's shape only: any other words after the date are a note, which the judge accepts
 and no production does, so the refusing side is a line `log_line()` reads as `malformed` (a writer's prefix out of
 its shape) or does not read (no `- `, a bad date). A quoted label or words run to the line's last `"`.

@@ -204,7 +204,8 @@ def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
     a decision: an ``until`` or ``event`` gate (v2.4) as the writers write it, and a retired or
     unreadable item as written —
     so a caller that reads the three as before keeps every block. A retired ``decision (designer)``
-    and the old form's holder are decision holders."""
+    is a decision holder; the old decision form ``decision (<who>) <text>`` (v3.0) names no holder, and its
+    comma-split pieces are unreadable items, in the third list."""
     g = parse_gates(raw)
     who = g["decisions"] + [r["holder"] for r in g["retired"] if r["kind"] != "gate"]
     rest = [f"until {d}" for d in g["until"]] + [f"event ({n})" for n in g["events"]] + \
@@ -214,7 +215,9 @@ def parse_blocked(raw: str) -> tuple[list[str], list[str], list[str]]:
 
 # The gates of `Blocked by` (v2.4, SPEC *The ledger*): after the ids, `decision (<person>)`,
 # `until YYYY-MM-DD` and `event (<name>)`. The words are read in any case and written lower.
-GATE_DECISION_RE = re.compile(r"^decision[ \t]*\((?P<who>[^()]*)\)", re.IGNORECASE)
+GATE_DECISION_RE = re.compile(r"^decision[ \t]*\((?P<who>[^()]*)\)\Z", re.IGNORECASE)  # a whole item (v3.0)
+# The old decision form's head (v2's GATE_DECISION_RE, a prefix): what _old_form_item() finds (v3.0).
+OLD_FORM_HEAD_RE = re.compile(r"^decision[ \t]*\((?P<who>[^()]*)\)", re.IGNORECASE)
 GATE_UNTIL_RE = re.compile(r"^until[ \t]+(?P<date>\S+)$", re.IGNORECASE)
 GATE_EVENT_RE = re.compile(r"^event[ \t]*\((?P<name>[^()]*)\)$", re.IGNORECASE)
 EVENT_NAME_RE = re.compile(r"[a-z0-9-]+")
@@ -224,43 +227,33 @@ RETIRED_ROLES = ("designer",)  # a role in `decision (…)`, reserved by name (S
 RETIRED_FIELDS = {"waits": "a gate in Blocked by — until YYYY-MM-DD or event (<name>)",
                   "taken by": "Id take, the counter take's nonce",
                   "resolved": "the **Resolved:** body line of an archived entry",
-                  "location": "the **Location:** body section — run migrate, which moves it"}  # a header Location (v2.7)
-WAITS_WRITTEN = ("a new or changed Waits line — the field is retired and no reader takes it as a gate; write the "
-                 "wait in Blocked by as until YYYY-MM-DD, or as event (<name>) with its **Event (<name>):** section "
-                 "(SPEC *Retired words*)")  # check()'s error on a Waits line an edit wrote (v2.7)
-LOCATION_WRITTEN = ("a new or changed Location line — the header field is retired; write the **Location:** body "
-                    "section, or run migrate, which moves it (SPEC *Retired words*)")  # the same, for a header Location (v2.7)
-WRITTEN_RETIRED = {"waits": WAITS_WRITTEN, "location": LOCATION_WRITTEN}  # check()'s error on a retired line an edit wrote
+                  "location": "the **Location:** body section"}  # a header Location (v2.7)
+# A retired error's cure on an open entry (v3.0, SPEC *Retired words*), by field; the old decision form's last.
+RETIRED_CURES = {"waits": "remove it with set (an empty value)", "taken by": "remove it with set (an empty value)",
+                 "location": "move its value with edit --section Location, then remove it with set",
+                 "resolved": "move its value with edit --section Resolved, then remove it with set",
+                 "old-form": "write its text with edit --section Ask, then rewrite it decision (<person>) with set"}
 RETIRED_GATES = {"hold": "decision (<person>), with an **Ask:**"}
-OLD_FORM_REPLACES = "decision (<person>), with the text in an **Ask:** section"
 
 
 def parse_gates(raw: str | None) -> dict:
     """One Blocked by value read (v2.4, SPEC *The ledger*): ``{ids, decisions, until, events, retired,
-    old_form, bad}``, each in the order written.
+    bad}``, each in the order written.
 
     - ``ids``: ``TD-n`` and ``<repo>#TD-n`` items; ``decisions``: each ``decision (<person>)``'s person;
       ``until``: each ``until YYYY-MM-DD``'s date (a real day); ``events``: each ``event (<name>)``'s name,
       ``[a-z0-9-]+``. The words ``decision``, ``until`` and ``event`` are read in any case.
-    - ``old_form``: ``(holder, text)`` for the old form ``decision (<who>) <text>``, read only as the last
-      item: a decision followed by anything but a comma or the end runs to the end of the line, which is
-      its text (so it is last by construction). Else None.
     - ``retired``: ``[{item, replace, kind, holder}]``, each retired item with what replaces it: ``kind``
-      ``old-form`` (and its ``holder``), ``role`` (a role in ``decision (…)``, its ``holder``) or ``gate``
-      (``hold``; ``holder`` None).
-    - ``bad``: every other item, as written. An empty item between commas is skipped.
+      ``role`` (a role in ``decision (…)``, its ``holder``) or ``gate`` (``hold``; ``holder`` None).
+    - ``bad``: every other item, as written. An empty item between commas is skipped. The old decision form
+      ``decision (<who>) <text>`` (v3.0) is read as no decision: each of its comma-split pieces is here.
     A retired or unreadable item keeps the block; ``pickable()`` reads the rest."""
-    out: dict = {"ids": [], "decisions": [], "until": [], "events": [], "retired": [], "old_form": None, "bad": []}
+    out: dict = {"ids": [], "decisions": [], "until": [], "events": [], "retired": [], "bad": []}
     rest = (raw or "").strip(" \t\r")  # a CRLF file's line ending is no part of the value
     while rest:
         m = GATE_ITEM_SEP_RE.search(rest)
         item, after = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
         d = GATE_DECISION_RE.match(item)
-        if d and item[d.end():].strip(" \t"):  # the old form: its text runs to the end of the line
-            who, text = d.group("who").strip(" \t"), rest[d.end():].strip(" \t")
-            out["old_form"] = (who, text)
-            out["retired"].append({"item": rest, "replace": OLD_FORM_REPLACES, "kind": "old-form", "holder": who})
-            break
         rest = after
         if not item:
             continue
@@ -281,6 +274,21 @@ def parse_gates(raw: str | None) -> dict:
         else:
             out["bad"].append(item)
     return out
+
+
+def _old_form_item(value: str | None) -> str | None:
+    """The old decision form's item in a Blocked by value (v3.0, SPEC *Retired words*), or None: the value split
+    at commas as ``parse_gates()`` splits it, the first piece ``OLD_FORM_HEAD_RE`` matches with non-blank text
+    after the match opens it, and it runs from that piece's start to the value's end, commas and all."""
+    rest = (value or "").strip(" \t\r")
+    while rest:
+        m = GATE_ITEM_SEP_RE.search(rest)
+        item, after = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
+        d = OLD_FORM_HEAD_RE.match(item)
+        if d and item[d.end():].strip(" \t"):
+            return rest
+        rest = after
+    return None
 
 
 def _real_day(text: str | None) -> bool:
@@ -313,23 +321,11 @@ def gate_repeats(g: Mapping) -> list[str]:
     return out
 
 
-def _written_blocked(value: str, current: str | None = None) -> str:
+def _written_blocked(value: str) -> str:
     """A Blocked by value as a writer writes it (v2.4, SPEC *The ledger*): its ids in the order written,
     then its gates in the canonical order (``gate_items()``); a value holding an item the grammar does
-    not read is written as given, for ``check()`` to flag. Raises Refused for the old form, which is read
-    but never written, and for a gate added to an entry whose ``current`` value still holds the old form,
-    whose text would swallow it."""
+    not read (the old decision form among them, v3.0) is written as given, for ``check()`` to flag."""
     g = parse_gates(value)
-    if g["old_form"]:
-        raise Refused(f"Blocked by in the old form (decision ({g['old_form'][0]}) with text after it) is read "
-                      "but never written — write decision (<person>) and put the text in an **Ask:** section")
-    was = parse_gates(current)
-    if was["old_form"]:
-        had = {_gate_key(x) for x in gate_items(was)} | {_gate_key(f"decision ({was['old_form'][0]})")}
-        added = [x for x in gate_items(g) if _gate_key(x) not in had]
-        if added:
-            raise Refused(f"the entry's Blocked by is in the old form, whose text would swallow {added[0]} — "
-                          "migrate it first: set decision (<person>) alone, with its text in an **Ask:** section")
     if g["bad"] or g["retired"]:
         return value
     return ", ".join(g["ids"] + gate_items(g))
@@ -629,10 +625,6 @@ def pickable(ledger: str, archive: str, resolve: Resolve | None = None, undeclar
             said = "has no Priority" if prio == "?" else f"Priority {prio!r} is not High, Medium or Low"
             flags.add(f"ℹ {e['id']}: {said} — read after Low; write High, Medium or Low",
                       e["id"], "priority", "priority")
-        for key in e["fields"]:
-            if key in RETIRED_FIELDS:
-                flags.add(f"ℹ {e['id']}: the {key.capitalize()} field is retired — write "
-                          f"{RETIRED_FIELDS[key]} (SPEC *Retired words*)", e["id"], key, "retired")
         etype = (e["type_raw"] or TYPES[0]).lower()
         for key in e["below"]:
             flags.add(f"ℹ {e['id']}: its {key.capitalize()} line is below the header block — "
@@ -820,10 +812,10 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     add ``event-section``, ``event-check``, ``event-ungated`` and (v2.5) ``event-undated`` (``event_problems()``, given
     each entry's old text when ``old`` is given), scoped the same way, and
     ``gate-reassigned-often`` (info) for a decision reassigned more than twice to reach it (``reassigns()``).
-    Also with ``old`` (v2.7): the retired ``Waits`` field is an error on an entry whose Waits line the edit added
-    or changed (SPEC *Retired words*), and stays information where the line is as it was. Last (v2.7), each
+    Last (v2.7), each
     entry's ``status`` (``_status_records()``): a Status outside the closed set, an error on every entry of a v2
-    ledger, open or archived, with or without ``old``, never standing. From v2.8, ``misplaced-name`` (ℹ, never an
+    ledger, open or archived, with or without ``old``, never standing; then (v3.0) each entry's ``retired``
+    (``_retired_records()``): a retired field or the old decision form, likewise. From v2.8, ``misplaced-name`` (ℹ, never an
     error, scoped by the entry's whole text): ``misplaced_names()`` of each open entry, the ledger's ``Fields:`` names
     its declared ones. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
@@ -853,13 +845,11 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
                 recs.append({"level": "info", "id": tid, "field": "blocked by", "kind": "gate-reassigned-often",
                              "text": f"ℹ {tid}: {gate} was reassigned {n} times — is the decision stuck?",
                              "standing": False})
-    statuses = _status_records(ledger, archive)
+    statuses = _status_records(ledger, archive) + _retired_records(ledger, archive)
     if old is None:
         return recs + statuses
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
-    written = {(e["id"], k) for e in entries(ledger) for k in WRITTEN_RETIRED  # v2.7: a Waits or header Location
-               if k in e["fields"] and before.get(e["id"], {}).get(k) != e["fields"][k]}  # line this edit added or changed
     rewritten = {t for t, x in texts.items() if old_texts.get(t) != x}  # a Log flag's scope: the whole entry
     decl_changed = declarations(old) != declarations(ledger)
     for r in recs:
@@ -869,8 +859,6 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
             r["standing"], r["level"] = True, "info"
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
-        elif r["kind"] == "retired" and (r["id"], r["field"]) in written:
-            r["level"], r["text"] = "error", f"ℹ {r['id']}: {WRITTEN_RETIRED[r['field']]}"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
     return recs + _left_with_open_parts(old, ledger) + statuses
 
@@ -886,6 +874,33 @@ def _status_records(ledger: str, archive: str) -> list[dict]:
             if why:
                 out.append({"level": level, "id": tid, "field": "status", "kind": "status", "standing": False,
                             "text": f"{'⚠' if level == 'error' else 'ℹ'} {tid}: {why}"})
+    return out
+
+
+def _retired_records(ledger: str, archive: str) -> list[dict]:
+    """``retired`` (v3.0, SPEC *Retired words*): over each entry of the ledger, then of the archive, in file order,
+    each retired field it holds — ``Waits``, ``Taken by``, a header ``Resolved``, a header ``Location`` — then the
+    old decision form in its ``Blocked by`` (``_old_form_item()``): an error on a ledger that declares major 2, ℹ
+    on a v1 ledger, never standing."""
+    level = "error" if format_major(ledger) >= 2 else "info"
+    mark = "⚠" if level == "error" else "ℹ"
+    out = []
+    for text in (ledger, archive):
+        for tid, one in _entry_texts(text).items():
+            found = entries(one)
+            if not found:
+                continue
+            e = found[0]
+            said = [(key, f"the {key.capitalize()} field is retired — write {RETIRED_FIELDS[key]}", RETIRED_CURES[key])
+                    for key in e["fields"] if key in RETIRED_FIELDS]
+            item = _old_form_item(e["blocked_raw"])
+            if item is not None:
+                said.append(("blocked by", f"Blocked by item {item!r} is in the old decision form — write "
+                             "decision (<person>), with the text in an **Ask:** section", RETIRED_CURES["old-form"]))
+            for key, what, cure in said:
+                out.append({"level": level, "id": tid, "field": key, "kind": "retired", "standing": False,
+                            "text": f"{mark} {tid}: {what} (SPEC *Retired words*); v3.0 reads no such form: on an "
+                                    f"open entry {cure}; on an archived one by hand, then ledger.py fmt TD-n"})
     return out
 
 
@@ -2615,14 +2630,6 @@ def queue_subject(tool: str, action: str, ids: list[str]) -> str:
     return f"queue: {action} {', '.join(sorted(set(ids), key=_num))} ({tool})"
 
 
-def migrate_subject(release: str, n: int) -> str:
-    """The one-time migrate commit's subject, ``ledger: migrate v<release> (<n> entries)`` (v2.4)."""
-    out = f"ledger: migrate v{release} ({n} entries)"
-    if isinstance(n, bool) or not isinstance(n, int) or not MIGRATE_SUBJECT_RE.match(out):
-        raise Refused(f"a migrate subject names a release (2.4) and a whole count, not {release!r} and {n!r}")
-    return out
-
-
 def subject_kind(line: str) -> str | None:
     """`edit`, `append` or `archive` for a board write's commit subject, `queue` for a rank file write's (or a PR
     title carrying one), `migrate` for the ledger's one-time migrate commit (v2.4); None otherwise."""
@@ -4318,10 +4325,9 @@ def _dict_ls(files: Mapping[str, str]) -> Ls:
 # ---------------------------------------------------------------------------------------------
 
 # The canonical header order (SPEC *Ledger entries and their edits*), spelled as written there; any
-# other field follows in the file's order — a Waits or a header Location among them (v2.7). A place
-# here is a rendering rule, not a declaration: Owner, Kind and Taken by are not CADENCE_FIELDS.
-ENTRY_ORDER = ("Priority", "Type", "Added", "Owner", "Kind", "Status", "Taken by", "Id take",
-               "Blocked by", "Part of")
+# other field follows in the file's order — a retired field among them (v3.0). A place here is a
+# rendering rule, not a declaration: Owner and Kind are not CADENCE_FIELDS.
+ENTRY_ORDER = ("Priority", "Type", "Added", "Owner", "Kind", "Status", "Id take", "Blocked by", "Part of")
 LEAD_RE = re.compile(r"^\*\*(?P<lead>[^*\n]+?)\*\*")  # a section's lead: its first paragraph's bold opening
 FENCE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}(?=[^`]*$)|~{3,})(?P<info>.*)$")  # a code fence's line: no lead inside one
 
@@ -4652,16 +4658,13 @@ def _keyed(sections: list[tuple[str | None, str]], key: str) -> list[int]:
 
 def _one_copy(value: str) -> str:
     """A Blocked by value with each id named once: a later copy of an id (a local one by number, another
-    repo's by ``ref_key``) dropped with its comma; the rest, gates and the old form's text among it, as written."""
+    repo's by ``ref_key``) dropped with its comma; the rest, gates and unreadable items among it, as written."""
     g = parse_gates(value)
     keys = [f"#{_num(x)}" if "#" not in x else ref_key(x) for x in g["ids"]]
     if len(set(keys)) == len(keys):
         return value
     out, seen, rest = [], set(), value.strip(" \t")
     while rest:
-        if GATE_DECISION_RE.match(rest) and parse_gates(rest)["old_form"]:
-            out.append(rest)  # the old form runs to the end of the line
-            break
         m = GATE_ITEM_SEP_RE.search(rest)
         item, rest = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
         if ID_ITEM_RE.match(item) or XREPO_ITEM_RE.match(item):
@@ -4984,9 +4987,9 @@ def _log_insert(sections: list[tuple[str | None, str]], lines: list[tuple[str, s
 
 
 def _fallback_day(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]) -> str | None:
-    """The date an undated Status note takes: the ``**Resolved:**`` line's (or the older header field's),
-    else Added's."""
-    for text in [sections[i][1] for i in _keyed(sections, "resolved")] + [_value(header, "resolved") or ""]:
+    """The date an undated Status note takes: the ``**Resolved:**`` line's, else Added's (v3.0: a header
+    ``Resolved``, a retired error, is not read)."""
+    for text in [sections[i][1] for i in _keyed(sections, "resolved")]:
         m = ISO_DAY_RE.search(text)
         if m:
             return m.group(0)
@@ -5048,7 +5051,7 @@ def status_notes_to_log(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------------------------
-# v2.7: the closed Status set and migrate (SPEC *Migrating to v2.7*)
+# v2.7: the closed Status set (SPEC *The closed Status set*; v2.x's migrate, removed in v3.0)
 # ---------------------------------------------------------------------------------------------
 
 STAGE_WORDS = ("designed", "built", "partly", "live", "in")  # an open entry's retired stage words
@@ -5062,14 +5065,8 @@ STATUS_REPLACES = {False: {**{w: "Open, the stage in Kind" for w in STAGE_WORDS}
                           **{w: "Resolved, Superseded or Dropped" for w in ("partly", "live", "in")}}}
 STATUS_FORMS = {False: "an open entry's Status is Open alone",
                 True: "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D"}
-STATUS_REMEDY = "run migrate, which maps it, lists it, or names what a person decides"
-# An id standing alone in a Status's text (v2.7): not inside a longer token, not followed by `.<letter>`.
-ID_ALONE = rf"(?<![A-Za-z0-9_/#-])(?:{REPO}#)?TD-\d+(?![A-Za-z0-9_/#-])(?!\.[A-Za-z])"
-ID_ALONE_RE = re.compile(ID_ALONE)
-BY_ID_RE = re.compile(rf"(?<![A-Za-z0-9_])(?i:by)[ \t]+(?P<id>{ID_ALONE})")
-DAY_IN_TEXT_RE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
-MIGRATE_DECIDED_RE = re.compile(rf"(?P<form>resolved|dropped|open|superseded (?P<id>(?:{REPO}#)?TD-\d+))")
-WONT_FIX_RE = re.compile(r"wo(?:n'|n)t fix", re.IGNORECASE)
+STATUS_REMEDY = ("v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then "
+                 "ledger.py fmt TD-n")
 
 
 def _status_in_set(value: str | None, archived: bool) -> bool:
@@ -5080,11 +5077,11 @@ def _status_in_set(value: str | None, archived: bool) -> bool:
 
 
 def status_problem(text: str, *, archived: bool) -> str | None:
-    """The problem of one entry's Status against the four forms (v2.7, SPEC *Migrating to v2.7*), or None:
+    """The problem of one entry's Status against the four forms (v2.7, SPEC *The closed Status set*), or None:
     ``Open`` in the ledger; ``Resolved D``, ``Superseded D by <id>`` or ``Dropped D`` in the archive, exactly as
     the writers write them. The Status is the one ``entries()`` reads, from the header block. The sentence names
     the form the entry's place takes and the value's first word, never the whole value. A CRLF line end is
-    read as LF, as ``_lenient_parts()`` reads it."""
+    read as LF."""
     found = entries(text.replace("\r\n", "\n").replace("\r", "\n"))
     if not found:
         return None
@@ -5108,479 +5105,6 @@ def status_problem(text: str, *, archived: bool) -> str | None:
     return f"{STATUS_FORMS[archived]} — {detail} — {STATUS_REMEDY}"
 
 
-def _lenient_parts(text: str) -> tuple[re.Match, list[tuple[str, str]], str]:
-    """``_entry_parts()``'s reading of an entry ``canonical()`` refuses, as ``entries()`` reads it: a header line
-    that is not a field passed over, a repeated field's first kept. ``text`` is one entry (``_entry_problem()``)."""
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    lines = text.split("\n")
-    i = 1
-    while i < len(lines) and not lines[i].strip():
-        i += 1
-    header, seen = [], set()
-    while i < len(lines) and lines[i].strip():
-        m = FIELD_RE.match(lines[i])
-        if m and field_key(m.group(1)) not in seen:
-            seen.add(field_key(m.group(1)))
-            header.append((m.group(1), m.group(2)))
-        i += 1
-    j = len(lines)
-    while j > i and not lines[j - 1].strip():
-        j -= 1
-    while i < j and not lines[i].strip():
-        i += 1
-    return HEADING_RE.match(text), header, "\n".join(lines[i:j])
-
-
-def _first_real_day(text: str | None) -> str | None:
-    """The first date in ``text`` that is a calendar day."""
-    return next((d for d in DAY_IN_TEXT_RE.findall(text or "") if _real_day(d)), None)
-
-
-def _closing_source(header: list[tuple[str, str]], sections: list[tuple[str | None, str]]) -> str | None:
-    """The ``**Resolved:**`` line's date (or an older ``Resolved`` header field's), when it is a real day."""
-    for text in [sections[i][1] for i in _keyed(sections, "resolved")] + [_value(header, "resolved") or ""]:
-        m = ISO_DAY_RE.search(text)
-        if m:
-            return m.group(0) if _real_day(m.group(0)) else None
-    return None
-
-
-def _added_day(header: list[tuple[str, str]]) -> str | None:
-    m = ISO_DAY_RE.search(_value(header, "added") or "")
-    return m.group(0) if m and _real_day(m.group(0)) else None
-
-
-def _migrate_lift(value: str, header: list[tuple[str, str]], sections: list[tuple[str | None, str]]
-                  ) -> tuple[re.Match, str, list[tuple[str, str]], bool] | None:
-    """(the head's match, the head, the lines the lift writes, whether a tail is among them) when the head reads and every date the lift
-    would use is a real day; else None, and the value is read as a head that does not read."""
-    m = STATUS_HEAD_RE.match(value)
-    if not m or m.group("word").lower() not in STATUS_WORDS or (m.group("date") and not _real_day(m.group("date"))):
-        return None
-    tail, *was = value[m.end():].split(WAS_CUT)
-    tail = tail.strip()
-    if tail.startswith(":"):
-        tail = tail[1:].strip()
-    fallback = _fallback_day(header, sections)
-    lines = [(m.group("date") or fallback, _log_text(tail))] if tail else []
-    for w in (w.strip() for w in was):
-        if w:
-            inner = STATUS_HEAD_RE.match(w)
-            lines.append(((inner and inner.group("date")) or fallback, f"was: {w}"))
-    if any(not _real_day(d) for d, _ in lines):
-        return None
-    return m, value[:m.end()].rstrip(), lines, bool(tail)
-
-
-def _ids_alone(text: str) -> list[str]:
-    """The ids standing alone in ``text``, in order, each once (a local id by its number)."""
-    out, seen = [], set()
-    for x in ID_ALONE_RE.findall(text):
-        key = ref_key(x) if "#" in x else f"#{_num(x)}"
-        if key not in seen:
-            seen.add(key)
-            out.append(x)
-    return out
-
-
-def _is_own(x: str, tid: str) -> bool:
-    return "#" not in x and _num(x) == _num(tid)
-
-
-def _wrapped(comment: str) -> bool:
-    """``comment`` is wholly wrapped in one pair of parentheses: its first ``(`` closes at its last ``)``."""
-    if not (comment.startswith("(") and comment.endswith(")")):
-        return False
-    depth = 0
-    for k, ch in enumerate(comment):
-        depth += (ch == "(") - (ch == ")")
-        if depth == 0:
-            return k == len(comment) - 1
-    return False
-
-
-def _migrate_log(sections: list[tuple[str | None, str]], lines: list[tuple[str, str, bool]]
-                 ) -> list[tuple[str | None, str]]:
-    """``sections`` with ``lines`` ([(date, words, first)]) in the Log, made at the end when there is none: each
-    by date, after any line of an equal date, or (``first``) before the first line dated on or after its own.
-    A line whose date and words are already in the Log is not written again."""
-    sections = list(sections)
-    at = _log_section(sections)
-    if at is None:
-        sections.append((LOG_LEAD, f"**{LOG_LEAD}**"))
-        at = len(sections) - 1
-    lead, _, rest = sections[at][1].partition("\n")
-    have = [ln for ln in rest.split("\n") if ln.strip()]
-    there = {ln.rstrip() for ln in _log_body_lines(sections[at][1])}
-    for day, words, first in lines:
-        new = f"- {day}: {words}"
-        if new in there:
-            continue
-        there.add(new)
-        pos, last = len(have), None
-        for i, ln in enumerate(have):
-            m = LOG_LINE_RE.match(ln)
-            last = m.group("date") if m else last
-            if last is not None and (last >= day if first else last > day):
-                pos = i
-                break
-        have.insert(pos, new)
-    sections[at] = (sections[at][0], "\n".join([lead, *have]))
-    return sections
-
-
-def migrate_entry(text: str, *, archived: bool, today: date | str, closed_date: str | None = None,
-                  kinds: Mapping[str, str] | None = None, decided: str | None = None) -> dict:
-    """One entry migrated to v2.7's forms (SPEC *Migrating to v2.7*): its Status into the closed set, its Status
-    notes and an ``Added`` comment into its Log, a header ``Location`` into the body; from v2.8 (rules 5–8,
-    ``_migrate_old_forms()``) a ``Taken by`` and an archived ``Waits`` into its Log, a header ``Resolved`` into the
-    body and the old decision form into ``decision (<who>)``, its text an ``**Ask:**`` or a Log line. Pure: ``archived`` says
-    where the entry is, ``today`` is the UTC day, ``closed_date`` the caller's archiving date for it, ``kinds``
-    the caller's map from an open stage word to a ``Kind`` value, ``decided`` the caller's answer to a Status
-    the rules stop on (``resolved``, ``dropped``, ``superseded <id>``; ``open``). Returns ``{text, changes,
-    listed, stops}``: an entry with no change is returned byte for byte, a changed one in canonical form, and
-    with a stop the input is returned as given. Never raises for the entry's text."""
-    changes: list[str] = []
-    listed: list[str] = []
-    stops: list[str] = []
-
-    def stopped(*why: str) -> dict:
-        return {"text": text, "changes": [], "listed": listed, "stops": [*stops, *why]}
-
-    why = _entry_problem(text.replace("\r\n", "\n").replace("\r", "\n"))
-    if why:
-        return stopped(f"refused: {why}")
-    try:
-        day = utc_day(today, "today")
-    except Refused as e:
-        return stopped(f"refused: {e}")
-    if decided is not None and not (isinstance(decided, str) and MIGRATE_DECIDED_RE.fullmatch(decided)):
-        return stopped(f"refused: decided is resolved, dropped, superseded <id> or open, not {decided!r}")
-    if kinds is not None:
-        if not isinstance(kinds, Mapping):
-            return stopped("refused: kinds is a map from a stage word to a Kind value")
-        for k, v in kinds.items():
-            for what, x in (("key", k), ("value", v)):
-                if not isinstance(x, str) or not x.strip() or "\n" in x or "\r" in x:
-                    return stopped(f"refused: a kinds {what} is one line of text, not {x!r}")
-    kinds = {k.strip().lower(): v.strip() for k, v in (kinds or {}).items()}
-    try:
-        canonical(text)
-        refused = None
-    except Refused as e:
-        refused = str(e)
-    m, header, body = _lenient_parts(text)
-    tid = m.group(1)
-    sections = _entry_sections(body)
-    if any((f := FIELD_RE.match(ln)) and field_key(f.group(1)) == "status" for ln in body.split("\n")):
-        listed.append("Status line below the header: left")
-    log: list[tuple[str, str, bool]] = []
-    value = _value(header, "status")
-    said = (value or "").strip()
-    word = _status_word(said)
-    key = first_word(said)
-    first_part = said.split(WAS_CUT)[0]
-    answered = False
-
-    def text_day() -> str | None:
-        found = _first_real_day(first_part)
-        if found:
-            listed.append(f"date {found} read from the Status's text")
-        return found
-
-    if not archived:
-        lift = _migrate_lift(said, header, sections) if said else None
-
-        def was_day() -> str:
-            head_day = lift[0].group("date") if lift else None
-            return head_day or (None if lift else text_day()) or _closing_source(header, sections) \
-                or _added_day(header) or day
-
-        new = "Open"
-        if said == "Open":
-            new = None
-        elif not said:
-            listed.append("no Status: set to Open")
-        elif key in STAGE_WORDS:
-            if lift:
-                log += [(d, w, False) for d, w in lift[2]]
-                log.append((was_day(), f"was: {lift[1]}", False))
-            else:
-                log.append((was_day(), f"was: {said}", False))
-            if key in kinds:
-                old_kind = _value(header, "kind")
-                if old_kind != kinds[key]:
-                    changes.append(f"Kind {old_kind if old_kind else 'none'} → {kinds[key]}")
-                    if old_kind:
-                        log.append((day, f"Kind {old_kind} → {kinds[key]} (migrate)", False))
-                    header = _with(header, "Kind", kinds[key])
-            else:
-                listed.append(f"stage word {word}: Kind not set")
-        elif lift and lift[0].group("word").lower() == "open":
-            log += [(d, w, False) for d, w in lift[2]]
-            bare = lift[0].group("by") is None and not lift[1].endswith(".")  # `Open` or `Open D`
-            if not (bare and lift[3]):  # a lifted tail carries the date; anything else of the head is kept
-                log.append((was_day(), f"was: {lift[1]}", False))
-        elif key.replace("*", "") in ARCHIVED_WORDS:
-            if decided != "open":
-                stops.append(f"Status {word} on an open entry")
-            else:
-                answered = True
-                listed.append("decided: open")
-                log.append((was_day(), f"was: {said}", False))
-        else:
-            listed.append(f"Status {word} set to Open")
-            log.append((was_day(), f"was: {said}", False))
-        if decided is not None and not answered:
-            stops.append("decided: nothing to answer")
-        if new is not None and not stops:
-            changes.insert(0, f"Status {said or '(none)'} → Open")
-            header = _with(header, "Status", "Open")
-    elif _status_in_set(said, True):
-        if decided is not None:
-            stops.append("decided: nothing to answer")
-    else:
-        head_m = STATUS_HEAD_RE.match(said)
-        head_day = head_m.group("date") if (head_m and head_m.group("word").lower() in STATUS_WORDS
-                                            and _real_day(head_m.group("date"))) else None  # a head that reads
-        real_closed = closed_date if isinstance(closed_date, str) and _real_day(closed_date) else None
-        closing = head_day or _closing_source(header, sections) or real_closed or text_day()
-        if not closing:
-            stops.append("no date for the Status")
-        new_word, new_by, word_stop = None, None, None
-        if key in ("resolved", "done", "built", "designed"):
-            new_word = "Resolved"
-        elif key == "superseded":
-            by = BY_ID_RE.search(first_part)
-            if not by:
-                word_stop = "Superseded: no by <id>"
-            elif _is_own(by.group("id"), tid):
-                word_stop = "Superseded: by its own id"
-            else:
-                new_word, new_by = "Superseded", by.group("id")
-        elif key == "moved":
-            ids = [x for x in _ids_alone(first_part) if not _is_own(x, tid)]
-            if len(ids) > 1:
-                word_stop = f"Moved: {len(ids)} ids"
-            elif ids:
-                new_word, new_by = "Superseded", ids[0]
-                listed.append(f"Moved: Superseded by {ids[0]}")
-            else:
-                new_word = "Dropped"
-                listed.append("Moved: Dropped")
-        elif key in ("obe", "dropped") or WONT_FIX_RE.match(said):
-            new_word = "Dropped"
-        else:
-            word_stop = f"Status {word or '(none)'}: no archived form"
-        if decided is not None:
-            got = MIGRATE_DECIDED_RE.fullmatch(decided)
-            if word_stop is None or got.group("form") == "open":
-                stops.append("decided: nothing to answer")
-            elif got.group("id") and _is_own(got.group("id"), tid):
-                word_stop = "refused: superseded by its own id"  # in place of the stop it would answer
-            else:
-                answered, word_stop = True, None
-                new_word, new_by = got.group("form").split(" ")[0].capitalize(), got.group("id")
-                listed.append(f"decided: {decided}")
-        if word_stop:
-            stops.append(word_stop)
-        if not stops:
-            new = f"{new_word} {closing}" + (f" by {new_by}" if new_by else "")
-            lift = None if answered else _migrate_lift(said, header, sections) if said else None
-            if lift and closing == head_day and (new_by is None or new_by == lift[0].group("by")):
-                log += [(d, w, False) for d, w in lift[2]]
-                if lift[1] != new:
-                    log.append((closing, f"was: {lift[1]}", False))
-            elif said:
-                log.append((closing, f"was: {said}", False))
-            changes.insert(0, f"Status {said or '(none)'} → {new}")
-            header = _with(header, "Status", new)
-    added = _value(header, "added")
-    if added is not None:
-        a = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(\s+(.*))?", added.strip(), re.DOTALL)
-        if a and _real_day(a.group(1)) and a.group(2):
-            comment = a.group(3).strip()
-            if _wrapped(comment):
-                comment = comment[1:-1].strip()
-            if comment:
-                log.append((a.group(1), _log_text(comment), True))
-                changes.append("Added comment → Log")
-            else:
-                changes.append("Added comment (empty) removed")
-            header = _with(header, "Added", a.group(1))
-        elif not (a and _real_day(a.group(1))):
-            listed.append(f"Added {added.strip()}: not a date")
-    location = _value(header, "location")
-    if location is not None:
-        if not location.strip():
-            header = _with(header, "Location", None)
-            changes.append("Location (empty) removed")
-        elif _keyed(sections, "location"):
-            stops.append("Location in the header and the body")
-        else:
-            header = _with(header, "Location", None)
-            sections.insert(_section_place(sections), ("Location:", f"**Location:** {location.strip()}"))
-            changes.append("Location → body")
-    header, sections, more = _migrate_old_forms(header, sections, log, archived=archived, day=day,
-                                                changes=changes, stops=stops)
-    log += more
-    if stops:
-        return stopped()
-    if not changes:
-        if refused:
-            listed.append("canonical() refuses it: left alone")
-        return {"text": text, "changes": [], "listed": listed, "stops": []}
-    if refused:
-        return stopped(f"refused: {refused}")
-    before = log_problems(text)
-    if any(k == "log-not-last" for k, _ in before):
-        return stopped("Log not last")
-    if log:
-        sections = _migrate_log(sections, log)
-    out = canonical(_render(tid, m.group(3), header, "\n\n".join(t for _, t in sections)))
-    after_status = entries(out)[0]["fields"].get("status")
-    if status_problem(out, archived=archived):
-        return stopped(f"migrated Status {after_status} still outside the set")
-    new_problems = [p for p in log_problems(out) if p not in before]
-    if new_problems:
-        return stopped(f"migrated Log: {new_problems[0][1]}")
-    left = _old_forms_left(text, out, archived=archived)
-    if left:
-        return stopped(*left)
-    return {"text": out, "changes": changes, "listed": listed, "stops": []}
-
-
-OLD_FORM_TEXT_LEAD_RE = re.compile(r"^[—–\-:\s]+")  # the run an old decision's text loses as an Ask (v2.8)
-
-
-def _log_days(sections: list[tuple[str | None, str]]) -> list[str]:
-    """The real dates of the body's Log lines, in file order (every Log section's, in order)."""
-    out = []
-    for i in _keyed(sections, "log"):
-        for ln in _log_body_lines(sections[i][1]):
-            got = log_line(ln)
-            if got and got.get("date") and _real_day(got["date"]):
-                out.append(got["date"])
-    return out
-
-
-def _migrate_old_forms(header: list[tuple[str, str]], sections: list[tuple[str | None, str]],
-                       log: list[tuple[str, str, bool]], *, archived: bool, day: str, changes: list[str],
-                       stops: list[str]) -> tuple[list[tuple[str, str]], list[tuple[str | None, str]],
-                                                  list[tuple[str, str, bool]]]:
-    """``migrate_entry()``'s rules 5–8 (v2.8, SPEC *Migrating to v2.7*): ``Taken by``, ``Waits``, a header
-    ``Resolved`` and the old decision form, over the entry rules 1–4 left (``header``, ``sections`` and the Log
-    lines ``log`` they will write). Returns the header, the sections and the Log lines these rules write;
-    ``changes`` and ``stops`` gain theirs. The lines are dated by the entry's date: on an open entry whose
-    Blocked by carries a gate, the gate-neutral date (the Log's first real date, else ``Added``, else ``day``;
-    placed after its equals), so ``gate_age()`` never moves; on any other, the filing date (``Added``, else the
-    Log's first real date, else ``day``; placed before the first line dated on or after it)."""
-    try:
-        after = _migrate_log(sections, log) if log else sections
-    except Refused:  # two Logs: rule 9's stop, made later; dates read from every Log section
-        after = sections
-    days = _log_days(after)
-    added = (_value(header, "added") or "").strip()
-    added = added if _real_day(added) else None
-    blocked = _value(header, "blocked by")
-    g = parse_gates(blocked)
-    gated = not archived and bool(gate_items(g) or g["old_form"])
-    if gated:
-        entry_day, first = (days[0] if days else added or day), False
-    else:
-        entry_day, first = (added or (days[0] if days else day)), True
-    out: list[tuple[str, str, bool]] = []
-
-    def logged(words: str) -> None:
-        out.append((entry_day, _log_text(words), first))
-
-    taken = _value(header, "taken by")
-    if taken is not None:
-        header = _with(header, "Taken by", None)
-        if taken.strip():
-            logged(f"Taken by {taken.strip()}")
-            changes.append("Taken by → Log")
-        else:
-            changes.append("Taken by (empty) removed")
-    waits = _value(header, "waits")
-    if waits is not None:
-        if not waits.strip():
-            header = _with(header, "Waits", None)
-            changes.append("Waits (empty) removed")
-        elif not archived:
-            stops.append("Waits on an open entry")
-        else:
-            header = _with(header, "Waits", None)
-            logged(f"Waits {waits.strip()}")
-            changes.append("Waits → Log")
-    resolved = _value(header, "resolved")
-    if resolved is not None:
-        if not resolved.strip():
-            header = _with(header, "Resolved", None)
-            changes.append("Resolved (empty) removed")
-        elif _keyed(sections, "resolved"):
-            stops.append("Resolved in the header and the body")
-        else:
-            header = _with(header, "Resolved", None)
-            sections = list(sections)
-            sections.insert(_before_log(sections), ("Resolved:", f"**Resolved:** {resolved.strip()}"))
-            changes.append("Resolved → body")
-    if g["old_form"]:
-        who, said = g["old_form"]
-        raw = (blocked or "").strip(" \t\r")
-        item = next(r["item"] for r in g["retired"] if r["kind"] == "old-form")
-        before = raw[: len(raw) - len(item)]
-        held = parse_gates(before)
-        holders = [w.lower() for w in held["decisions"]] + \
-            [r["holder"].lower() for r in held["retired"] if r["kind"] == "role"]
-        has_ask = _value(header, "ask") is not None or bool(_keyed(sections, "ask"))
-        words = OLD_FORM_TEXT_LEAD_RE.sub("", said)
-        role = who.lower() in RETIRED_ROLES
-        if not is_person(who):
-            stops.append(f"old decision form: {who} is not a person")
-        elif who.lower() in holders:
-            stops.append(f"old decision form: {who} already has a decision")
-        elif not words and not archived and not has_ask and not role:
-            stops.append("old decision form: no text for its Ask")
-        else:
-            header = _with(header, "Blocked by", f"{before}decision ({who})")
-            if not words:
-                changes.append("old decision form (no text)")
-            elif not has_ask:
-                sections = list(sections)
-                sections.insert(_section_place(sections), ("Ask:", f"**Ask:** {words}"))
-                changes.append("old decision form → Ask")
-            else:
-                logged(f"Blocked by {item}")
-                changes.append("old decision form → Log")
-    return header, sections, out
-
-
-def _old_forms_left(before: str, after: str, *, archived: bool) -> list[str]:
-    """``migrate_entry()``'s post-condition for rules 5–8 (v2.8): the stops the migrated entry ``after`` earns
-    by still holding one of the four forms, or by gaining an ``ask-missing`` or a ``gate-repeated`` the input
-    ``before`` did not have."""
-    out = []
-    e = entries(after)[0]
-    for key, name in (("taken by", "Taken by"), ("waits", "Waits"), ("resolved", "Resolved")):
-        if key in e["fields"]:
-            out.append(f"migrated entry still holds {name}")
-    g = parse_gates(e["blocked_raw"])
-    if g["old_form"]:
-        out.append("migrated entry still holds Blocked by")
-    b = entries(before.replace("\r\n", "\n").replace("\r", "\n"))[0]
-    was = parse_gates(b["blocked_raw"])
-
-    def ask_missing(entry: dict, gates: dict, text: str) -> bool:
-        return bool(gates["decisions"]) and "ask" not in entry["fields"] and not ASK_RE.search(text)
-
-    if not archived and ask_missing(e, g, after) and not ask_missing(b, was, before):
-        out.append("migrated entry: ask-missing")
-    if set(gate_repeats(g)) - set(gate_repeats(was)):
-        out.append("migrated entry: gate-repeated")
-    return out
-
-
 def _filed_line(filed: Mapping, what: str = "filed") -> str:
     """``filed by <who>, session <s>[, while <id>]: "<words>"`` from {who, session, words, while}."""
     who, session, w = (str(filed.get(k) or "") for k in ("who", "session", "while"))
@@ -5600,7 +5124,7 @@ def _before_log(sections: list[tuple[str | None, str]]) -> int:
 
 
 def _section_place(sections: list[tuple[str | None, str]]) -> int:
-    """Where a section the body lacks goes (``edit``'s rule, and ``migrate``'s for a Location): after the first
+    """Where a section the body lacks goes (``edit``'s rule): after the first
     Why, else before the first Done when, Related or Log, else at the end."""
     why_at = _keyed(sections, "why")
     ends = sorted(_keyed(sections, "done when") + _keyed(sections, "related") + _keyed(sections, "log"))
@@ -5630,8 +5154,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     edits (SPEC *Ledger entries and their edits*; from v2.4 note, archive and reopen write the Log):
 
     - ``set`` (``fields``: {name: value}; an empty value removes the field); a Blocked by (v2.4) is
-      written with its ids first, then its gates in the canonical order, and refused in the old form,
-      or when it adds a gate to an entry whose Blocked by still holds the old form; from v2.5 each gate
+      written with its ids first, then its gates in the canonical order; from v2.5 each gate
       it adds that the entry did not carry is logged ``- <today>: gate added: <gate>`` in that order;
       from v2.8 ``title`` replaces the heading's title (``fields`` may then be empty), logged ``- <today>:
       retitled: was "<old title>"`` ahead of any gate added line, and a non-empty ``Title`` or ``Log`` field is
@@ -5650,12 +5173,12 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       Status's notes lifted (one it cannot read copied whole into a ``was:`` line), then the archived
       form — Status ``Resolved <today>`` and Fix replaced by ``**Resolved:** <today> (PR #<pr>) —
       <pointer>`` (after the whole Fix with ``as_is``; before the Log when no section is named exactly
-      Fix), any earlier ``**Resolved:**`` section and header ``Resolved`` removed, and the Log line
+      Fix), any earlier ``**Resolved:**`` section removed, and the Log line
       ``archived: Resolved — <why>``; or Status ``Superseded <today> by <id>`` and ``archived:
-      Superseded — <why>``, with the rest kept;
+      Superseded — <why>``, with the rest kept; refused (v3.0) for an entry holding a header ``Resolved``,
+      a retired error;
     - ``reopen`` (``why``): the Status lifted as for archive, then ``Open``, and the Log line
-      ``reopened — <why>``; a header ``Resolved`` moves to a ``**Resolved:**`` section before the Log;
-      refused when the entry has both;
+      ``reopened — <why>``; a header ``Resolved`` is left where it is (v3.0: a retired error);
     - ``renumber`` (``new``): the heading's id; ``rename_ref`` (``old``, ``new``): that id rewritten in
       Blocked by, Part of and a Log ``filed by`` line's ``while``; a Blocked by that then names an id twice
       keeps its first copy (v2.4).
@@ -5715,10 +5238,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 raise Refused(_misplaced_field_refusal(name))
             if field_key(name) == "blocked by":
                 current = _value(header, "blocked by")
-                value = _written_blocked(value, current)
-                was = parse_gates(current)
-                had = {_gate_key(x) for x in gate_items(was)} | (
-                    {_gate_key(f"decision ({was['old_form'][0]})")} if was["old_form"] else set())
+                value = _written_blocked(value)
+                had = {_gate_key(x) for x in gate_items(parse_gates(current))}
                 added = []
                 for x in gate_items(parse_gates(value)):  # a gate named twice is logged once, as first written
                     if _gate_key(x) not in had:
@@ -5789,6 +5310,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         body_changed = True
     elif action == "archive":
         said = _one_line("the archive's why", why)
+        if _value(header, "resolved") is not None:  # v3.0: a retired error, never written beside a body line
+            raise Refused("it holds a Resolved header field, a retired error (v3.0) — move it with edit --section "
+                          "Resolved, then remove it with set")
         if dropped:
             if pr is not None or pointer is not None or as_is or superseded_by is not None:
                 raise Refused("a dropped entry keeps its Why and Fix, and nothing replaces it: no pr, pointer, "
@@ -5814,7 +5338,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 raise Refused("with no PR, the pointer may not hold #<digits>: a reader would take it for the PR")
             line = f"**Resolved:** {day}{f' (PR #{pr})' if pr is not None else ''}{f' — {ptr}' if ptr else ''}"
             header, sections = _status_to_log(header, sections, day)
-            header = _with(_with(header, "Status", f"Resolved {day}"), "Resolved", None)
+            header = _with(header, "Status", f"Resolved {day}")
             sections = [s for i, s in enumerate(sections) if i not in _keyed(sections, "resolved")]
             fix = _keyed(sections, "fix")
             if len(fix) > 1:
@@ -5829,14 +5353,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             body_changed = True
     elif action == "reopen":
         said = _one_line("the reopen's why", why)
-        held = _value(header, "resolved")
-        if held is not None and _keyed(sections, "resolved"):
-            raise Refused("it has both a Resolved field and a **Resolved:** section — merge them by hand, then reopen")
         header, sections = _status_to_log(header, sections, day)
         header = _with(header, "Status", "Open")
-        if held is not None:
-            header = _with(header, "Resolved", None)
-            sections.insert(_before_log(sections), ("Resolved:", f"**Resolved:** {held}".rstrip()))
         sections = _log_insert(sections, [(day, f"reopened — {said}")], by_date=False)
         body_changed = True
     elif action == "renumber":
@@ -5964,7 +5482,7 @@ def _take_named(t: Mapping) -> str:
 
 
 def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Iterable[str], branch: str | None,
-                default: str, accept_taken_by: bool = False) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+                default: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """The merge gate's judgement of each new id against the counter's takes (v2.4, SPEC *The next id*):
     (fails, warns), each a list of (kind, text). ``takes`` are every take the counter holds, each a record
     of ``ids``, ``sha``, ``date``, ``by``, ``branch``, ``host`` and ``take`` (parse_take()'s, with the commit's
@@ -5975,10 +5493,8 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
       (warn): one below it.
     - An id's ``Id take`` is judged alone wherever it is present: the nonce of any take that gave it passes
       (a range's for each of its ids; either take of an id given twice); ``id-take`` (fail): a nonce of
-      another id's take (naming both ids) or of no take. A missing one is ``id-no-take`` (fail), unless
-      ``accept_taken_by`` (the consumer's transition): then a ``Taken by`` naming a giving take's ``by`` warns
-      ``id-no-take``, one naming another fails ``id-taken-by``, and none warns ``id-no-taken-by`` when a giving
-      take has a ``by`` and the ledger declares no ``Fields:`` vocabulary (whose check would refuse the field).
+      another id's take (naming both ids) or of no take. A missing one is ``id-no-take`` (fail), whatever
+      else the entry says (v3.0: a ``Taken by`` is no take).
     - An id whose entry is in none of ``entries`` is not judged past ``id-untaken``.
     - ``id-branch`` (warn): the take names a branch that is neither ``default`` nor ``branch``;
       ``id-by-unhashed`` (warn): its ``by`` is a bare session id or an email address.
@@ -6010,8 +5526,7 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
     for t in texts:
         for e in _entries(t):
             fields.setdefault(_num(e["id"]), e["fields"])
-    vocab = bool(texts) and bool(declared(texts[0])[0])  # a Fields: line refuses Taken by, so none is asked for
-    wrong, missing, legacy, mismatch, untagged, elsewhere, unhashed = [], [], [], [], [], [], []
+    wrong, missing, elsewhere, unhashed = [], [], [], []
     for n in (n for n in new if n in gave and n in fields):  # an id with no entry given is not judged
         mine = gave[n]
         f = fields.get(n, {})
@@ -6030,19 +5545,8 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
                 else:
                     wrong.append(f"{_tid(n)}'s Id take names no take the counter holds — {_tid(n)} was handed out "
                                  f"by {'; '.join(map(_take_named, mine))}")
-        elif not accept_taken_by:
-            missing.append(f"{_tid(n)} (handed out by {'; '.join(map(_take_named, mine))})")
         else:
-            said = first_word(f.get("taken by"))
-            hit = [t for t in mine if said and first_word(t.get("by")) == said]
-            if hit:
-                used = hit
-                legacy.append(_tid(n))
-            elif said:
-                handed = ", ".join(dict.fromkeys((t.get("by") or "unknown") for t in mine))
-                mismatch.append(f"{_tid(n)} was handed to {handed}, not {said}")
-            elif any(t.get("by") for t in mine) and not vocab:
-                untagged.append(_tid(n))
+            missing.append(f"{_tid(n)} (handed out by {'; '.join(map(_take_named, mine))})")
         if any((t.get("branch") or "").strip() and (t.get("branch") or "").strip() not in (default, branch or "")
                for t in used):
             elsewhere.append(f"{_tid(n)} ({', '.join(dict.fromkeys(str(t.get('branch')).strip() for t in used))})")
@@ -6052,15 +5556,6 @@ def judge_takes(new_ids: Iterable[int], takes: Iterable[Mapping], entries: Itera
         fails.append(("id-take", "; ".join(wrong) + " — write the Id take of the take that gave this id"))
     if missing:
         fails.append(("id-no-take", f"no **Id take:** on {', '.join(missing)} — write its take's nonce in the header"))
-    if mismatch:
-        fails.append(("id-taken-by", "; ".join(mismatch) + " — an id is the session's the counter handed it to; "
-                      "take this entry its own"))
-    if legacy:
-        warns.append(("id-no-take", f"a matching **Taken by:** but no **Id take:** on {', '.join(legacy)} — write its "
-                      "take's nonce in the header"))
-    if untagged:
-        warns.append(("id-no-taken-by", f"no **Id take:** or **Taken by:** on {', '.join(untagged)} — write its "
-                      "take's nonce in the header"))
     if elsewhere:
         warns.append(("id-branch", f"taken for another branch: {', '.join(elsewhere)}"))
     if unhashed:
@@ -6101,15 +5596,11 @@ def _one_gate(gate: object) -> str:
 
 
 def _blocked_items(raw: str | None) -> list[str]:
-    """One Blocked by value's items as written, in order; the old form's last item runs to the line's end."""
+    """One Blocked by value's items as written, in order, split at commas as ``parse_gates()`` splits it."""
     out, rest = [], (raw or "").strip(" \t\r")
     while rest:
         m = GATE_ITEM_SEP_RE.search(rest)
         item, after = (rest[: m.start()], rest[m.end():]) if m else (rest, "")
-        d = GATE_DECISION_RE.match(item)
-        if d and item[d.end():].strip(" \t"):
-            out.append(rest)
-            break
         if item:
             out.append(item)
         rest = after
@@ -6120,7 +5611,7 @@ def _item_gate_key(item: str) -> str | None:
     """The canonical key of one Blocked by item that is a readable gate, else None."""
     g = parse_gates(item)
     items = gate_items(g)
-    return _gate_key(items[0]) if len(items) == 1 and not g["old_form"] else None
+    return _gate_key(items[0]) if len(items) == 1 else None
 
 
 def _carried(text: str | None, gate: str) -> str | None:
@@ -6163,10 +5654,6 @@ def _without(text: str, gate: str) -> tuple[str, str | None]:
     e = entries(text)[0]
     key = _gate_key(gate)
     items = _blocked_items(e["blocked_raw"])
-    old = parse_gates(e["blocked_raw"])["old_form"]
-    if old and _gate_key(f"decision ({old[0]})") == key:
-        raise Refused(f"the entry's Blocked by holds {gate} in the old form — migrate it first: set "
-                      "decision (<person>) alone, with its text in an **Ask:** section")
     at = next((i for i, x in enumerate(items) if _item_gate_key(x) == key), None)
     if at is None:
         raise Refused(f"{e['id']} does not carry {gate}")
@@ -6308,16 +5795,12 @@ def reassign_gate(text: str, frm: str, to: str, *, by: str, why: str, today: dat
     said = _one_line("the reassign's why", why)
     if not said:
         raise Refused("a reassign needs its why")
-    old = parse_gates(entries(text)[0]["blocked_raw"])["old_form"] if entries(text) else None
-    if old and old[0].lower() == a.lower():
-        raise Refused(f"the entry's Blocked by holds decision ({a}) in the old form — migrate it first: set "
-                      "decision (<person>) alone, with its text in an **Ask:** section")
     if not entries(text) or _carried(text, f"decision ({a})") is None:
         raise Refused(f"the entry does not carry decision ({a}) on an open entry")
     if _carried(text, f"decision ({b})") is not None:
         raise Refused(f"the entry already waits on decision ({b}) — lift decision ({a}) instead")
     written, value = _without(text, f"decision ({a})")
-    value = _written_blocked(", ".join(x for x in (value, f"decision ({b})") if x), entries(text)[0]["blocked_raw"])
+    value = _written_blocked(", ".join(x for x in (value, f"decision ({b})") if x))
     return _logged(text, "reassign", value, [f"gate reassigned: {written} → decision ({b}) — by {by}; {said}"], day)
 
 
@@ -7640,24 +7123,12 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
     return flags
 
 
-def _held_old_form(text: str | None, gate: str) -> bool:
-    """The open entry ``text`` holds ``gate`` in the old form (v2.8): its holder written ``decision (<who>)``,
-    compared by ``_gate_key()``, so ``migrate``'s rewrite of it is no gained decision."""
-    if not text or not entries(text):
-        return False
-    e = entries(text)[0]
-    if first_word(e["fields"].get("status")) in ARCHIVED_WORDS:
-        return False
-    old = parse_gates(e["blocked_raw"])["old_form"]
-    return bool(old) and _gate_key(f"decision ({old[0]})") == _gate_key(gate)
-
-
 def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, str], boards: Sequence[Sequence],
                         repo: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """The merge gate's coverage check (v2.4, SPEC *The merge gate's verdicts*): ``(refusals, flags)``, each
     ``[(kind, text)]``. ``boards`` are the other repos' boards read (the sweep's triples); this repo's own board is
     read from ``head_tree`` in place of any that names it. A `decision (<p>)` an open entry gains in the diff
-    (one a base entry held in the old form, ``decision (<p>) <text>``, is not gained, v2.8) is refused when this
+    (v3.0: one a base entry held in the old form, ``decision (<p>) <text>``, is gained) is refused when this
     repo's board lists ``<p>`` on `People:` and no item on it covers the gate (covers(),
     state ``open`` or ``decided``), and flagged when the board does not list ``<p>``, since its coverage then
     depends on another repo's board, which not every machine reads. A new `decide` item on this repo's board
@@ -7678,7 +7149,7 @@ def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, st
         htext = h_open[num]
         tid = _entries(htext)[0]["id"]
         for gate in _decisions(htext):
-            if _carried(b_open.get(num), gate) is not None or _held_old_form(b_open.get(num), gate):
+            if _carried(b_open.get(num), gate) is not None:
                 continue
             person = GATE_DECISION_RE.match(gate).group("who").strip()
             cov = [(b, s) for b, _, s in covers(htext, gate, reads, repo) if s in COVERING]

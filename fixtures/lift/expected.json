@@ -404,7 +404,7 @@
    "refused": "TD-502 does not carry decision (pat)"
   },
   "old_form_refused": {
-   "refused": "the entry's Blocked by holds decision (pat) in the old form — migrate it first: set decision (<person>) alone, with its text in an **Ask:** section"
+   "refused": "TD-560 does not carry decision (pat)"
   },
   "override": {
    "ok": "## TD-500: A parent waiting on its go\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n\n**Why:** the design is still being shaped.\n\n**Ask:** say go once the parts read right.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file the parent\"\n- 2026-01-02: gate added: decision (Pat)\n- 2026-01-15: gate lifted: decision (Pat) — by sam; override: pat is away for a month\n"
@@ -442,7 +442,7 @@
    "refused": "the entry does not carry decision (pat) on an open entry"
   },
   "old_form_refused": {
-   "refused": "the entry's Blocked by holds decision (pat) in the old form — migrate it first: set decision (<person>) alone, with its text in an **Ask:** section"
+   "refused": "the entry does not carry decision (pat) on an open entry"
   },
   "reassign": {
    "ok": "## TD-500: A parent waiting on its go\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** decision (sam)\n\n**Why:** the design is still being shaped.\n\n**Ask:** say go once the parts read right.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file the parent\"\n- 2026-01-02: gate added: decision (Pat)\n- 2026-01-15: gate reassigned: decision (Pat) → decision (sam) — by pat; pat is away this month\n"
