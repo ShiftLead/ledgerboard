@@ -72,9 +72,11 @@ on an `fyi` are all carried. The rule, for each:
   last 8 digits;
 - **a twin's closed line and its detail block supply every field and the body**; the open twin is read for nothing,
   as v2 reads it; where its detail block differs from the closed twin's, `split_board_notes()` names it at the
-  item's heading, `open twin's detail not carried`, and where its line differs from the closed twin's but for the
-  close (a reply, a `Due` or a `Hide until` the closed line lacks: its `raw` against the closed line's less its
-  `Decided` and `Closed`), `open twin's line not carried` (round 2's F396), so a person sees what the read never showed (round 1's F378);
+  item's heading, `open twin's detail not carried`, and where the open twin holds a reply, a `Due` or a `Hide
+  until` the closed line lacks or holds otherwise, `open twin's line not carried` (round 2's F396; round 3's F402:
+  the reply spans, compared as text with whitespace collapsed, and the two fields' values as the v2 reader reads
+  them, never the raw lines, which differ on every twin by the tick, a period and the close; an open twin with less
+  than the closed line, or the same, draws no note), so a person sees what the read never showed (round 1's F378);
 - **the archive's own prose** (round 1's F378): its text before its first item (its title and any note) is not
   carried, since `README.md` is the board's, and `split_board_notes()` lists each of its non-blank lines but the `#
   ` title, `archive preamble not carried`; a line after its first item that is no item, no detail block's line and
@@ -183,9 +185,10 @@ F75): it always writes the directory beside the board, named the board's name le
 directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files)` names
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
-once its own tooling and both consumers run v3.0 (text 12; D12's order, ShiftLead's in its sync PR and each other
-pinning repo's in its pin bump), landed when no open PR edits the board and no session holds an unpushed board
-commit (`board_edit.py` commits to the default branch directly; round 2's F397): a v2 edit that lands after is
+once its own tooling and both consumers run v3.0 (text 12; D12's order: ShiftLead's in its sync PR, agent-cadence's
+in a PR of its own right after, each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
+edits the board and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
+PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
 
 **`board.py split`** (*rebased on TD-095*: its D7's gate, options and output, which B5 extends). `split` takes
@@ -196,9 +199,10 @@ redone with `board.py` on the directory.
 being optional; round 1's F353), `parser()` gains the `--archive` argument again (F380), and the usage docstring
 says so. Its
 gate is the reverse of a write's, checked in this order, each exit 1 and before anything is written (round 1's
-F380): `<board>: a v3 stub whose directory is missing` (`form` None, the stub's major 3 and its problem; round 2's
-F399); `<board>: no such board` (`form` None); `version_problem(board)`, as after every read (a major newer than 3,
-F360); `<board>: already a v3 board` (`form` `"dir"`: the stub or the directory, `--board docs/user_attention`
+F380): `version_problem(board)`, as after every read (a major newer than 3, a stub's among them; F360, round 3's
+F403); `<board>: a v3 stub whose directory is missing` (`form` None, a declared major and a problem; round 2's
+F399; B3's writes keep their own `no such board` for it, TD-095's D7, `split` naming it since a split is what a
+person would try there); `<board>: no such board` (`form` None); `<board>: already a v3 board` (`form` `"dir"`: the stub or the directory, `--board docs/user_attention`
 among them; F371); `<board>: not a v2 board file (.md)` for a `--board` not ending `.md`, whose stub would read as a
 missing directory (F365); `<archive>: no such file` (F379); then
 `split_board()`'s own refusals as `<board>: <why>` (`not a v2 board: declares Ledgerboard: <n>` among them); then
@@ -226,15 +230,24 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
   TD-100 designs). A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose
   board is still v2 has no board writer: bump and split together leave no such repo but agent-cadence between (1)
-  and (3), a window named here and kept short (its board then takes no `board.py` or `board_edit.py` write; an
-  item that cannot wait is a hand edit to the v2 file, which the v3 reader reads). A board's readers are its own
+  and (3), a window named here and kept short (round 3's F400): its own board then takes no write from any of its
+  writers, `board.py`, `board_edit.py`, `gate_sweep.py`'s filings and closes and `ledger.py set`'s board half (each
+  goes through `board.py`'s `plan_add()` or `plan_edit()` and so meets D7's gate, and the vendor PR makes each skip a
+  v2 target with a message naming the split rather than fail), so a decision lifted there waits for step 3 for its
+  board half, and an item that cannot wait is a hand edit to the v2 file, which the v3 reader reads. A board's readers are its own
   repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
   session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0, and the consumers
   that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split,
-  and `nudge_user_attention.py` run from another roster repo under that repo's pin. That last, until its repo
-  bumps, refuses a split board if it checks the version and else reads it as empty: a display, never a write, and
-  accepted as the rollout's one transient; no split waits on every roster pin. Each consumer entry carries the
-  line for its step above.
+  and agent-cadence's scripts run from another roster repo under that repo's pin. Of those, `nudge_user_attention.py`
+  checks the version and refuses a split board, a display; but `gate_sweep.py` and `ledger.py set`'s `_boards()`
+  read another repo's board as text with no version check (round 3's F401), so until their repo bumps they read a
+  split board as empty: a sweep there sees no covering item and can file a duplicate on its own board, and a `set`
+  there logs `no board item` for a decision the split board holds. **The default** (the author's, put to the
+  person as a steer): every pinning repo's bump-and-split lands within one day, steps 1 to 4 together, so the
+  window is that day; a duplicate an old-pin sweep files in it is closed by hand, and the rollout's entry says so.
+  The alternatives are each worse on another axis: holding every split until the last roster repo bumps leaves each
+  bumped repo with no board writer (F393), and a v2.x patch that refuses a stub breaks D12's no-v2.x-release rule.
+  Each consumer entry carries the line for its step above.
 
 ## Consumers
 
@@ -252,14 +265,20 @@ board is split.
 - **agent-cadence**:
   - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
     own right after ShiftLead's sync (D12's step 3), landed when no open PR edits the board and no unpushed board
-    commit is held; between its vendor PR and that split its board takes no writer's write (D12's window);
+    commit is held; between its vendor PR and that split its board takes no writer's write (D12's window): its
+    writers, `gate_sweep.py` and `ledger.py set` among them, skip a v2 target with a message naming the split
+    (round 3's F400);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
-    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`;
-  - `scripts/ledger.py`'s `covers()` and `board_people()` callers pass the `Board` `load_board()` gives, never text
-    (F394); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
+    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
+    `load_board()` lists subdirectories with `/` (its `git_io` `ls` lists files alone, which reads a directory
+    board's `archive/` as empty; round 3's F406);
+  - `scripts/ledger.py`'s `covers()` and `board_people()` callers pass the `Board` `load_board()` gives, never text,
+    read with an `ls` that lists subdirectories (F394, F406); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
     finds none outside the vendored module;
-  - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
+  - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split); and
+    it edits through `board.py`'s `plan_edit()`, not the module's `edit_item()` alone, so a v2 board draws D7's
+    `not a v3 board: a v2 board (split first: board.py split)`, not a missing file (round 3's F404);
   - `nudge_user_attention.py`: show an item from its `words` and `replies`, and its refs from
     `context_refs(item.context)`, where it reads `item.text` (empty on a v3 item, gone at v3.0; round 2's F395);
     read boards through `load_board()` (its own checkout's directory; another repo's
@@ -475,8 +494,9 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3 repo as the stub, which declares
 > `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer refuses it unread, and a reader
 > that checks nothing reads an empty board, so a repo splits its board only once every reader that writes to it or
-> acts on it runs v3.0: its own tooling and the consumers that read it from elsewhere (a v2.x reader that only shows
-> another repo's board is the one exception, until its own repo moves to v3.0; round 2's F393).
+> acts on it runs v3.0: its own tooling and the consumers that read it from elsewhere. A v2.x reader in another repo
+> that checks nothing reads it as empty until that repo moves to v3.0, so the repos that read each other's boards
+> move together.
 > Within v3.x the same holds for a field: a later minor's field is faulted by an older v3 gate, so **a consumer
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
 > nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
