@@ -817,6 +817,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     (`parse_closed_items()`, kept) stays; `expected.json` regenerates with the same verdicts, but for
     `answered_by`'s `problems`, which become `[path, problem]`, the path the one-file map's name where a line
     number stood (`answered_by_problems()` of a `Board`; F374).
+  - **`fixtures/grammar/`** (B5's step, Paul's answer to the build's steer, 2026-11-14): its `item-line` start, with
+    its cases and expected verdicts, is deleted, since `item_problem()`, the open item line's judge, goes and no module
+    function then gives a verdict to hold. SPEC keeps the `item-line` EBNF as the v2 line's description, which v3.x
+    still reads; `tests/test_grammar.py` names it in `V2_READ_ONLY`, the productions its coverage test exempts.
 - **Retired**: `fixtures/archive/` (with `archive_closed()`), and `fixtures/edit/cases.json`'s groups `compose`,
   `edits`, `item_problems`, `canonical_items` and `archive_subjects` (B5; TD-092's plan places the rest).
 - **The runner** (`fixtures/run.py`, every build's kinds) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
@@ -830,6 +834,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   items back runs over the fixture boards that split, every `fixtures/board/` case with a `.v3/` (F147; not `undated_twins`
   or `words_prefix`, TD-092's F213, nor `closed_no_day`, TD-092's F231), and
   each accepted `board_split` case, never a refused one.
+  `tests/test_grammar.py` gains `V2_READ_ONLY = {"item-line"}`, exempting the v2 line's production from its test that
+  every grammar start has fixture cases (*Fixtures*, `fixtures/grammar/`'s B5 step; Paul, 2026-11-14), which amends
+  TD-092's plan's word that it is unchanged in code.
 - `tests/test_ledger_writer.py` and `tests/test_release.py` change in no build.
 
 ## The builds
