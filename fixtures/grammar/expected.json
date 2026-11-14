@@ -577,6 +577,378 @@
    }
   ]
  },
+ "item-file": {
+  "added-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "added: 'soon' is not a date as YYYY-MM-DD"
+   }
+  ],
+  "answer-sep": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "answers: an empty answer between bars; answers: each answer has its own label"
+   }
+  ],
+  "answers-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "header: written `**Answers:** <value>`, one space after the name and none at the line's end, not '**Answers:**Go | No'"
+   }
+  ],
+  "body-line": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "body: 'Plain prose line.' is no detail bullet (`- ` at column 0, or nested under one)"
+   }
+  ],
+  "char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "header: 'more words' is no field"
+   }
+  ],
+  "closed-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "closed: `Closed` is `<date>` or `<date> — <why>`"
+   }
+  ],
+  "context-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "context: empty, or opening or ending in whitespace"
+   }
+  ],
+  "date": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "added: '2026-11-1' is not a date as YYYY-MM-DD"
+   }
+  ],
+  "decided-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+   }
+  ],
+  "digit": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "added: '2026-11-1١' is not a date as YYYY-MM-DD"
+   }
+  ],
+  "doer-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "doer: written `team <name>`, one space after `team`"
+   }
+  ],
+  "doer-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "doer: `Doer` names a repo, `<repo>` not ending in `.`, or a team, `team <name>`"
+   }
+  ],
+  "doer-repo": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "doer: `Doer` names a repo, `<repo>` not ending in `.`, or a team, `team <name>`"
+   }
+  ],
+  "due-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "due: 'soon' is not a date as YYYY-MM-DD"
+   }
+  ],
+  "entry-id": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "parts: `Parts` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `"
+   }
+  ],
+  "head-name": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "session: 'w-9 on host;a' is not `<name>` or `<name> on <host>`"
+   }
+  ],
+  "hide-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "hide: 'later' is not a date as YYYY-MM-DD"
+   }
+  ],
+  "item-answer": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "header: written `**Answers:** <value>`, one space after the name and none at the line's end, not '**Answers:**  Go | No'"
+   }
+  ],
+  "item-body": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "body: the detail block is one part, with no blank line inside it"
+   }
+  ],
+  "item-file": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "file: ends in one newline"
+   }
+  ],
+  "item-header": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+   }
+  ],
+  "item-label": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "answers: an empty answer between bars; answers: each answer has its own label"
+   }
+  ],
+  "item-log": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "log: `**Log:**` holds a reply or more"
+   }
+  ],
+  "item-text": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "heading: the file opens `## <text>`, the text neither empty nor opening or ending in whitespace"
+   }
+  ],
+  "kind-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "kind: 'banana' is not a kind: one of decide, act, look, watch, fyi, in lower case"
+   }
+  ],
+  "label-char": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "header: 'it' is no field"
+   }
+  ],
+  "label-start": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "answers: an empty answer between bars; answers: each answer has its own label"
+   }
+  ],
+  "lifts-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "lifts: `Lifts` names one or more of the answers"
+   }
+  ],
+  "nonspace": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "context: empty, or opening or ending in whitespace"
+   }
+  ],
+  "parts-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "parts: `Parts` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `"
+   }
+  ],
+  "person": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+   }
+  ],
+  "person-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+   }
+  ],
+  "reply-by": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "log: '- 2026-11-12: a:b: words' is no reply, `- YYYY-MM-DD: <name>: <words>`"
+   }
+  ],
+  "reply-line": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "log: '- 2026-11-12 pat: words' is no reply, `- YYYY-MM-DD: <name>: <words>`"
+   }
+  ],
+  "repo": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "parts: `Parts` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `"
+   }
+  ],
+  "repo-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "parts: `Parts` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `"
+   }
+  ],
+  "session-field": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": "session: 'w 9' is not `<name>` or `<name> on <host>`"
+   }
+  ]
+ },
  "item-line": {
   "act-item": [
    {

@@ -7,7 +7,8 @@ A **ledger** (``docs/technical_debt.md``) is a file of ``## TD-NNN: title`` entr
 header block of ``**Name:** value`` fields, a summary table, and an archive beside it — or, from
 v2, a directory of one ``TD-NNN.md`` per entry (``docs/ledger/``) that ``load()`` reads as the same text. A **board**
 (``docs/user_attention.md``) is a file of ``- [ ] [kind] YYYY-MM-DD (session …) — text`` items with
-trailing ``Due:``/``Answers:``/``Decided:`` fields, reply tails and a detail block.
+trailing ``Due:``/``Answers:``/``Decided:`` fields, reply tails and a detail block; from v3.0 an item is also a
+file of its own (``## <words>``, a header block, a detail block and a Log), named by its id.
 
 Everything here is a pure function over text: no git, no network, no file system, no roster.
 What a caller needs from outside the text is passed in — the cross-repo resolver of
@@ -17,12 +18,14 @@ neither keeps a second parser of either format.
 Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived pickable, ``check``); the rank
 (cards, keys, the rank file, the pick order); the board
 (items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
-subject of a write and its parser); line predicates for diff walkers; ledger entries and their writers
+subject of a write and its parser); the board's item file (v3.0: its id, ``parse_item``, ``item_file``,
+``edit_item``, ``item_file_problem``, ``canonical_item_file``); line predicates for diff walkers; ledger entries and their writers
 (``canonical``, ``entry_text``, ``edit_entry``, v2.2; the Log, v2.4); the format version.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -1549,6 +1552,18 @@ class BoardItem:
     lifts: list[str] | None = None  # `Lifts:` (v2.3): the answers that lift; None means `Go`
     parts: list[str] = field(default_factory=list)  # `Parts:` (v2.3): the parts a parent's question asks about
     doer: tuple[str, str, str] | None = None  # `Doer:` (v2.8): (kind, name, text), who should do an act's step
+    # v3.0's item file (parse_item()); a v2 item keeps these defaults until the reader fills them (B2).
+    id: str | None = None  # `YYYY-MM-DD-<8 hex>`, from the file's name; None when it is no id
+    path: str = ""  # the file's path relative to the board's directory; "" for a v2 item
+    words: str = ""  # the item's words: an item file's heading
+    added: date | None = None  # `Added`, a day; None when absent or no day
+    session: str | None = None  # `Session`'s name, None for none
+    host: str | None = None  # `Session`'s host, after its ` on `
+    context: str | None = None  # `Context`'s value; None when it has none
+    closed: tuple[date | None, str | None] | None = None  # (date, why) of `Closed`; None while open
+    replies: list[tuple[str, str, str]] = field(default_factory=list)  # (by, YYYY-MM-DD, words), the Log's
+    fields: list[tuple[str, str]] = field(default_factory=list)  # every header field as written, in order
+    raw: str = ""  # an item file's text as read, every byte
 
     def hidden(self, today: date) -> bool:
         """Left out of what needs the person today: a `Hide until:` still ahead. A decided item is a session's
@@ -1655,7 +1670,12 @@ def _item_gate(text: str) -> tuple[str | None, str | None]:
     """(the one entry ref, the one gate) an item's Context names, each None when it names none or more
     than one."""
     c = CONTEXT_RE.search(_gate_body(text))
-    ctx = c.group("ctx") if c else ""
+    return _context_gate(c.group("ctx") if c else "")
+
+
+def _context_gate(ctx: str) -> tuple[str | None, str | None]:
+    """(the one entry ref, the one gate) a bare Context value names (v3.0: an item file's header value, or a
+    v2 line's Context words), each None when it names none or more than one."""
     refs = list(dict.fromkeys(ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)))
     gates = list(dict.fromkeys(" ".join(g.group(0).split()) for g in CONTEXT_ANY_GATE_RE.finditer(ctx)))
     ref = next((x.group(0) for x in REF_TD_RE.finditer(ctx)), None) if len(refs) == 1 else None
@@ -1906,10 +1926,11 @@ def edit_head(text: str) -> str:
     return what if len(what) <= EDIT_HEAD_CHARS else what[: EDIT_HEAD_CHARS - 1] + "…"
 
 
-def bold_head(text: str) -> str | None:
+def bold_head(text: str, heading: bool = False) -> str | None:
     """The item's bold head — its first `**…**` run, whitespace collapsed — or None. A reply's
-    words are the person's, never the head; the fallback and any clipping are the caller's."""
-    span = reply_span(text)
+    words are the person's, never the head; the fallback and any clipping are the caller's. With ``heading``
+    (v3.0) ``text`` is an item's words, an item file's heading, read whole: no reply is cut from it."""
+    span = None if heading else reply_span(text)
     if span:
         text = text[: span[0]] + text[span[1] :]
     m = BOLD_RE.search(text)
@@ -2198,16 +2219,17 @@ DATE_ONLY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 HEAD_NAME_BAD_RE = re.compile(r"[\s`,;)]")  # what would end a head's name early, as HEAD_RE reads it
 
 
-def _item_words(value: object, what: str) -> str:
+def _item_words(value: object, what: str, *, field_names: bool = True) -> str:
     """`value` with its whitespace collapsed; refused when empty, more than one line, or carrying
-    a field's name (the reader would read it as the field; the refusal names the first one, as written)."""
+    a field's name (the reader would read it as the field; the refusal names the first one, as written). With
+    ``field_names`` False (v3.0, an item file's value, a line of its own) a field's name is words."""
     raw = str(value if value is not None else "").strip()
     if len(raw.splitlines()) > 1:
         raise Refused(f"{what} is one line: put the rest on that line")
     words = " ".join(raw.split())
     if not words:
         raise Refused(f"{what} is empty")
-    if (f := WRITER_FIELD_RE.search(words)):
+    if field_names and (f := WRITER_FIELD_RE.search(words)):
         raise Refused(f"{what} carries a field's name ({f.group(0)}) — the reader would read it as the field; "
                       "say it in other words")
     return words
@@ -2225,9 +2247,11 @@ def _civil_date(value: object, what: str) -> str:
     raise Refused(f"{what} as YYYY-MM-DD, not {value!r}")
 
 
-def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
+def _detail_lines(detail: Mapping, label: str | None, *, file: bool = False) -> list[str]:
     """The detail block's lines from `detail`'s parts: each part a bullet two spaces in, its
-    further strings nested bullets four in. `label` opens Recommended (a decide's default)."""
+    further strings nested bullets four in. `label` opens Recommended (a decide's default). With ``file``
+    (v3.0, an item file's body) each part is at column 0, its nested bullets two in, and a field's name is words."""
+    fn = not file
     if not isinstance(detail, Mapping):
         raise Refused("detail is a mapping of the block's parts")
     unknown = sorted(str(k) for k in detail if k not in DETAIL_KEYS)
@@ -2247,7 +2271,7 @@ def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
         values = [value] if isinstance(value, str) else list(value)
         if not values:
             raise Refused(f"the detail block's {part} is empty")
-        said = _item_words(values[0], f"the detail block's {part}")
+        said = _item_words(values[0], f"the detail block's {part}", field_names=fn)
         words = _sentence(said)
         if part == "recommended":
             lead = f"{label}{CONSEQUENCE_SEP.rstrip()}".casefold() if label is not None else None
@@ -2257,22 +2281,23 @@ def _detail_lines(detail: Mapping, label: str | None) -> list[str]:
             if label is not None:
                 words = f"{label}{CONSEQUENCE_SEP}{words}"
             if "otherwise" in detail:
-                other = _item_words(detail["otherwise"], "the detail block's otherwise")
+                other = _item_words(detail["otherwise"], "the detail block's otherwise", field_names=fn)
                 words += f" **Otherwise:** {_sentence(other)}"
         out.append(f"  - **{part.capitalize()}:** {words}")
-        out += [f"    - {_item_words(v, f'a nested bullet under {part}')}" for v in values[1:]]
-    return out
+        out += [f"    - {_item_words(v, f'a nested bullet under {part}', field_names=fn)}" for v in values[1:]]
+    return [ln[2:] for ln in out] if file else out
 
 
-def _answer_parts(answers: object) -> list[tuple[str, str]]:
+def _answer_parts(answers: object, *, file: bool = False) -> list[tuple[str, str]]:
     """Each offered answer as (label, consequence), whitespace collapsed; refused where the reader
-    would read it otherwise."""
+    would read it otherwise. With ``file`` (v3.0, an item file's `Answers` line) a field's name and a reply's
+    shape are words."""
     if not isinstance(answers, (list, tuple)) or not all(isinstance(a, str) for a in answers):
         raise Refused("answers is a list of strings, one answer each")
     parts = []
     for a in answers:
-        said = _item_words(a, "an answer")
-        if REPLY_TAIL_RE.search(said):
+        said = _item_words(a, "an answer", field_names=not file)
+        if not file and REPLY_TAIL_RE.search(said):
             raise Refused("an answer's consequence may not read as a reply (` — <name>, <date>: `) — "
                           "say it in other words")
         label, sep, cons = said.partition(CONSEQUENCE_SEP)
@@ -3041,15 +3066,28 @@ LEGACY_APPEND_SUBJECT_RES = (
 
 
 def subject(tool: str, action: str, text: str, *, to: date | str | None = None, answer: str | None = None,
-            session: str | None = None) -> str:
+            session: str | None = None, id: str | None = None) -> str:
     """The one-line commit subject of a board write by `tool`: an edit of `text` (an item's text,
-    the line without its `- [ ]`) or an `append` of it. `session` defaults to the one the item names."""
+    the line without its `- [ ]`) or an `append` of it. `session` defaults to the one the item names.
+
+    With ``id`` (v3.0) `text` is the item's words (an item file's heading) and the subject carries the id after
+    the action: the head is the words, every `*` dropped and whitespace collapsed, clipped to 60 characters, never
+    cut at a ` — ` or a field's name; `session` is the caller's, else `n/a` (the caller passes the item's
+    `Session` name when it has none of its own). With None it is the v2 subject, unchanged."""
     if action not in (*EDIT_ACTIONS, "append"):
         raise Refused(f"unknown action {action}")
     if action in ("snooze", "due") and not to:
         raise Refused(f"a {action} needs its date")
     what = (f" to {to.isoformat() if isinstance(to, date) else to}" if action in ("snooze", "due")
             else f": {' '.join((answer or '').split())}" if action == "decide" else "")
+    if id is not None:
+        if not is_item_id(id):
+            raise Refused(f"an item's id is YYYY-MM-DD-<8 hex>, a day of the calendar, not {id!r}")
+        head = " ".join(str(text or "").replace("*", "").split())
+        if not head:
+            raise Refused("the item's words are empty")
+        head = head if len(head) <= EDIT_HEAD_CHARS else head[: EDIT_HEAD_CHARS - 1] + "…"
+        return f"{tool}: {action} {id} {head}{what} (session {session or 'n/a'})"
     sm = SESSION_RE.search(text)
     who = session or (sm.group(1) if sm else "n/a")
     return f"{tool}: {action} {edit_head(text)}{what} (session {who})"
@@ -3097,6 +3135,729 @@ def edit_action(line: str) -> str | None:
     if subject_kind(line) != "edit":
         return None
     return EDIT_SUBJECT_RE.match(line).group("action")
+
+
+# v3.0: the id an edit's or an append's subject carries after its action.
+SUBJECT_ID_RE = re.compile(r"^\S+: (?:snooze|due|done|decide|reply|append) "
+                           r"(?P<id>[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{8}) .+ \(session [^)]+\)$")
+
+
+def subject_id(line: str) -> str | None:
+    """The item id a board write's commit subject carries (v3.0), or None: a v2 subject, a legacy append, an
+    archive, or any other line."""
+    m = SUBJECT_ID_RE.match(line) if subject_kind(line) in ("edit", "append") else None
+    return m.group("id") if m and is_item_id(m.group("id")) else None
+
+
+# ---------------------------------------------------------------------------------------------
+# The board's item file (v3.0): one item, its id, read, composed, edited and judged
+# ---------------------------------------------------------------------------------------------
+
+ITEM_ID_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{8}")  # an item's id, matched whole: Added, a nonce
+ITEM_NONCE_RE = re.compile(r"[0-9a-f]{8}")  # the id's eight lower-case hex digits
+# An item file's header fields, in the order the writers write them.
+ITEM_FIELDS = ("Kind", "Added", "Session", "Context", "Parts", "Doer", "Due", "Hide until", "Answers", "Lifts",
+               "Decided", "Closed")
+ITEM_FIELD_KEYS = {field_key(n): n for n in ITEM_FIELDS}  # a name as field_key() folds it, to its spelling
+ITEM_LOG_LEAD = "**Log:**"  # the Log's lead, a line of its own: the file's last part
+# A Log line that is a reply: `- YYYY-MM-DD: <name>: <words>`, the name holding no `:`, at most 40 characters.
+ITEM_REPLY_RE = re.compile(r"- (?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2}): (?P<by>[^\s:](?:[^:]{0,38}[^\s:])?): (?P<words>.*)")
+ITEM_ENTRY_ID_RE = re.compile(rf"(?:{REPO}#)?TD-[0-9]+")  # a `Parts` id, as the grammar's entry-id
+ITEM_SESSION_RE = re.compile(r"[^ \t`,;()]+(?: on [^ \t`,;()]+)?")  # `<name>` or `<name> on <host>`
+# The whitespace an item-text neither opens nor ends with (the grammar's `nonspace` excludes it).
+ITEM_SPACE = "\t\n\x0b\x0c\r\x1c\x1d\x1e\x1f \x85\xa0         " \
+             "       　"
+
+
+def is_item_id(s: object) -> bool:
+    """Whether ``s`` is an item's id (v3.0): `YYYY-MM-DD-<8 hex>`, matched whole, its date a day of the calendar
+    (`2026-02-30-abcd1234` is none)."""
+    return isinstance(s, str) and ITEM_ID_RE.fullmatch(s) is not None and _real_day(s[:10])
+
+
+def item_id(added: str, nonce: str) -> str:
+    """The id of an item added on ``added`` (`YYYY-MM-DD`) with ``nonce`` (eight lower-case hex digits), v3.0;
+    ValueError for anything that is no id. The module draws no nonce: the writer does."""
+    if not isinstance(added, str) or not isinstance(nonce, str) or not _real_day(added) \
+            or not ITEM_NONCE_RE.fullmatch(nonce) or not is_item_id(f"{added}-{nonce}"):
+        raise ValueError(f"an item's id is a day as YYYY-MM-DD and eight lower-case hex digits, not {added!r} "
+                         f"and {nonce!r}")
+    return f"{added}-{nonce}"
+
+
+def key_id(key: str) -> str:
+    """The first 8 lower-case hex digits of the SHA-256 of ``key``'s UTF-8 bytes (v3.0): a v2 item's id is its
+    line's date and this of its item key, which a consumer that persisted a hash of the key finds in it."""
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
+
+
+def item_path(id: str, closed: str | None = None) -> str:
+    """An item file's path in the board's directory (v3.0): `<id>.md` while open, and
+    `archive/<YYYY-MM>/<id>.md` for ``closed``, its `Closed:` date as `YYYY-MM-DD`. ValueError for an ``id`` that
+    is no id and for a ``closed`` that is no day of the calendar in that form."""
+    if not is_item_id(id):
+        raise ValueError(f"an item's id is YYYY-MM-DD-<8 hex>, a day of the calendar, not {id!r}")
+    if closed is None:
+        return f"{id}.md"
+    if not isinstance(closed, str) or not _real_day(closed):
+        raise ValueError(f"a Closed: date is a day as YYYY-MM-DD, not {closed!r}")
+    return f"archive/{closed[:7]}/{id}.md"
+
+
+def parse_decided_value(value: str) -> tuple[str, date, str | None] | None:
+    """An item file's `Decided` value, `<date>[ by <person>] — <label>`, as (label, date, by), ``by`` None when it
+    names no one; None outside that form (v3.0). The person is only the `by <person>` before the first ` — `: the
+    label runs to the line's end and is never split on a trailing `(by …)`."""
+    head, sep, label = str(value).partition(CONSEQUENCE_SEP)
+    label = label.strip(" \t")
+    day, by_sep, by = head.partition(" by ")
+    if not sep or not label or not _real_day(day) or (by_sep and not is_person(by)):
+        return None
+    return label, date.fromisoformat(day), by if by_sep else None
+
+
+def parse_closed_value(value: str) -> tuple[date, str | None] | None:
+    """An item file's `Closed` value, `<date>` or `<date> — <why>`, as (date, why), ``why`` None for a bare date;
+    None outside that form (v3.0)."""
+    day, sep, why = str(value).partition(CONSEQUENCE_SEP)
+    why = why.strip(" \t")
+    if not _real_day(day) or (sep and not why):
+        return None
+    return date.fromisoformat(day), why or None
+
+
+def parse_answers_value(value: str) -> list[str]:
+    """An item file's `Answers` (or `Lifts`) value as its written answers (v3.0): split on each bar not after a
+    `\\`, `\\|` read as a bar, each trimmed, an empty one dropped (`Go | | No` offers `Go` and `No`)."""
+    pieces = (a.replace("\\|", "|").strip() for a in ANSWER_SPLIT_RE.split(str(value)))
+    return [a for a in pieces if a]
+
+
+def _item_layout(text: str) -> tuple[list[str], list[str], int, int, int, int | None] | None:
+    """An item file cut at `\\n` alone (``_lf_lines()``): (its lines with their endings, the same without them, its
+    one trailing `\\r` dropped too, the heading's index, the header block's first and end index, the `**Log:**`
+    lead's index or None), or None when the text is no item file: its first non-blank line does not open `## `,
+    or the next non-blank line is no header field."""
+    raw = _lf_lines(text)
+    bare = [ln.removesuffix("\n").removesuffix("\r") for ln in raw]
+
+    def blank(i: int) -> bool:
+        return not bare[i].strip(" \t")
+    h = next((i for i in range(len(bare)) if not blank(i)), None)
+    if h is None or not bare[h].startswith("## "):
+        return None
+    a = next((i for i in range(h + 1, len(bare)) if not blank(i)), None)
+    if a is None or not FIELD_RE.match(bare[a]):
+        return None
+    b = a
+    while b < len(bare) and not blank(b):
+        b += 1
+    log = next((i for i in range(b, len(bare)) if bare[i].rstrip(" \t") == ITEM_LOG_LEAD), None)
+    return raw, bare, h, a, b, log
+
+
+def _item_reply(line: str) -> tuple[str, str, str] | None:
+    """A Log line read as a reply, (by, YYYY-MM-DD, words), or None: another shape, or empty words."""
+    m = ITEM_REPLY_RE.fullmatch(line)
+    words = m.group("words").strip(" \t") if m else ""
+    return (m.group("by"), m.group("date"), words) if words else None
+
+
+def parse_item(text: str, path: str = "") -> BoardItem | None:
+    """One item file (v3.0, SPEC *The board as a directory*) as a BoardItem, or None when the text is no item
+    file. ``path`` is the file's path relative to the board's directory: its name gives the ``id`` (None when its
+    stem is no id) and its place the ``closed``: under `archive/` the `Closed:` value, or (None, None) with none
+    in its form; elsewhere the `Closed:` value, or None (open). Each header value is read bare by its own reader;
+    one not in its form is kept in ``fields`` and read as the field absent, but `Due`, which is ``bad_due``. A
+    field is read on any kind. ``text`` is ``""`` and ``line`` 0, as for no v2 line."""
+    lay = _item_layout(text)
+    if lay is None:
+        return None
+    _, bare, h, a, b, log = lay
+    fields: list[tuple[str, str]] = []
+    got: dict[str, str] = {}
+    for ln in bare[a:b]:
+        m = FIELD_RE.match(ln)
+        if m:
+            fields.append((m.group(1), m.group(2)))
+            got.setdefault(field_key(m.group(1)), m.group(2))  # the first of a name wins
+
+    def day(name: str) -> date | None:
+        v = got.get(field_key(name))
+        return date.fromisoformat(v) if v is not None and _real_day(v) else None
+    kind = (got.get("kind") or "").lower()
+    kind = kind if kind in KINDS else None
+    due, bad = day("Due"), None
+    if "due" in got and due is None:
+        bad = got["due"]
+    fyi_due = kind == "fyi" and (due is not None or bad is not None)
+    if kind == "fyi":
+        due, bad = None, None  # an fyi is never due
+    raw_answers = parse_answers_value(got["answers"]) if "answers" in got else []
+    split = [split_answer(x) for x in raw_answers]
+    marked = [lbl for lbl, _, mk in split if mk]
+    parts: list[str] = []
+    if "parts" in got and all(ITEM_ENTRY_ID_RE.fullmatch(x) for x in got["parts"].split(", ")):
+        for x in got["parts"].split(", "):
+            if ref_key(x) not in {ref_key(o) for o in parts}:
+                parts.append(x)
+    doer = doer_value(got["doer"]) if "doer" in got else None
+    decided = parse_decided_value(got["decided"]) if "decided" in got else None
+    closed = parse_closed_value(got["closed"]) if "closed" in got else None
+    if str(path).startswith(f"{LEDGER_ARCHIVE}/"):
+        closed = closed or (None, None)
+    session, _, host = (got.get("session") or "").partition(" on ")
+    name = str(path).rsplit("/", 1)[-1]
+    stem = name.removesuffix(".md") if name.endswith(".md") else None
+    end = log if log is not None else len(bare)
+    detail = bare[b:end]
+    while detail and not detail[0].strip(" \t"):
+        detail.pop(0)
+    while detail and not detail[-1].strip(" \t"):
+        detail.pop()
+    replies = [r for r in (_item_reply(ln) for ln in bare[log + 1:]) if r] if log is not None else []
+    return BoardItem(
+        text="", due=due, answers=[lbl for lbl, _, _ in split], default=marked[0] if len(marked) == 1 else None,
+        consequences=[c for _, c, _ in split], decided=decided[:2] if decided else None,
+        decided_by=decided[2] if decided else None, bad_due=bad, kind=kind, fyi_due=fyi_due, detail=detail,
+        hide_until=day("Hide until"), lifts=parse_answers_value(got["lifts"]) if "lifts" in got else None,
+        parts=parts, doer=(*doer, got["doer"]) if doer else None,
+        id=stem if is_item_id(stem) else None, path=str(path), words=bare[h][3:].strip(" \t"), added=day("Added"),
+        session=session or None, host=host or None, context=got.get("context"), closed=closed, replies=replies,
+        fields=fields, raw=text)
+
+
+def _item_read(it: BoardItem) -> tuple:
+    """What a reader reads of an item file, every attribute but its spelling (``fields``, ``raw``), its place
+    (``id``, ``path``) and its ``closed`` (an edit's own), for a read-back to compare."""
+    return (it.words, it.kind, it.added, it.session, it.host, it.context, it.parts, it.doer, it.due, it.bad_due,
+            it.fyi_due, it.hide_until, it.answers, it.consequences, it.default, it.lifts, it.decided, it.decided_by,
+            it.detail, it.replies)
+
+
+def _item_value(value: object, what: str, *, empty: bool = False) -> str:
+    """``value`` as an item file's value (v3.0): whitespace collapsed, one line; refused when it is more than one
+    line, or empty unless ``empty``. A field's name is words: the value is a line of its own."""
+    raw = str(value if value is not None else "").strip()
+    if len(raw.splitlines()) > 1:
+        raise Refused(f"{what} is one line: put the rest on that line")
+    words = " ".join(raw.split())
+    if not words and not empty:
+        raise Refused(f"{what} is empty")
+    return words
+
+
+def _item_render(heading: str, header: list[tuple[str, str]], body: list[str], log: list[str] | None = None) -> str:
+    """An item file from its parts, `\\n`-ended, one blank line between them; ``log`` None for no Log."""
+    parts = [f"## {heading}", "\n".join(f"**{n}:** {v}" for n, v in header)]
+    parts += ["\n".join(body)] if body else []
+    parts += ["\n".join([ITEM_LOG_LEAD, *log])] if log is not None else []
+    return "\n\n".join(parts) + "\n"
+
+
+def _written_answer(lbl: str, cons: str, marked: bool) -> str:
+    """One answer as an `Answers` value writes it: the label, its mark, its consequence; a bar as `\\|`."""
+    return (lbl.replace("|", "\\|") + (" (default)" if marked else "")
+            + (CONSEQUENCE_SEP + cons.replace("|", "\\|") if cons else ""))
+
+
+def item_file(text: str, due: str | None, today: str, session: str | None, host: str | None,
+              context: str | None, *, kind: str | None = None, answers: list[str] | None = None,
+              default: int | None = None, detail: Mapping | None = None, hide_until: str | None = None,
+              lifts: list[str] | None = None, parts: list[str] | None = None, doer: str | None = None) -> str:
+    """A new item file (v3.0, SPEC *Edits (v3.0)*), `\\n`-ended: `## <text>`, a blank line, the header block
+    (`Kind` when given, `Added: <today>`, `Session` when there is one, `Context`, then `Parts`, `Doer`, `Due`,
+    `Hide until`, `Answers` and `Lifts` as given) and, after a blank line, the detail block at column 0. It takes
+    ``item_line()``'s arguments and keeps its refusals that still mean something (a value of more than one line, a
+    host with no session, a kind's rules, the `Parts` and `Lifts` rules, a look's fixed pair, a doubled
+    Recommended label, a doer off an act or outside its form, a result that does not read back), but no field's
+    name is refused anywhere: each value is a line of its own. No period is added to the text."""
+    if kind is not None and kind not in KINDS:
+        raise Refused(f"a kind is one of {', '.join(KINDS)}, not {kind!r}")
+    if parts is not None:
+        if kind != "decide":
+            raise Refused(f"only a decide lists its parts (parts), not {_a_kind(kind)}")
+        if not isinstance(parts, (list, tuple)):
+            raise Refused(f"parts is a list of ids, not {type(parts).__name__}")
+        parts = list(parts)
+    want_doer = None
+    if doer is not None:
+        if kind != "act":
+            raise Refused(f"only an act names who does its step (doer), not {_a_kind(kind)}")
+        got_doer = doer_value(doer) if isinstance(doer, str) else None
+        if got_doer is None or (got_doer[0] == "team" and doer != f"team {got_doer[1]}"):
+            raise Refused(f"a doer is a repo, `<repo>` not ending in `.`, or a team, `team <name>` with one space, "
+                          f"not {doer!r}")
+        want_doer = (*got_doer, doer)
+    words = _item_value(text, "an item's text")
+    today = _civil_date(today, "today is written")
+    if kind == "fyi":
+        if due is not None:
+            raise Refused("an fyi carries no Due date — give due as None")
+    elif due is None:
+        raise Refused(f"{_a_kind(kind)} needs its Due date")
+    else:
+        due = _civil_date(due, "an item's Due date is written")
+    if host is not None and session is None:
+        raise Refused("a host is written only with its session: give the session too")
+    for what, name in (("session", session), ("host", host)):
+        if name is not None and (not str(name) or HEAD_NAME_BAD_RE.search(str(name))):
+            raise Refused(f"a {what} name holds no whitespace and none of ` , ; ) — not {name!r}")
+    ctx = _item_value(context, "the context", empty=True).removesuffix(".").rstrip() or "none"
+    if parts is not None:
+        fault = _parts_fault(ctx, parts)
+        if fault is not None:
+            raise Refused(fault)
+        parts = sorted(parts, key=_num)
+
+    offered = _answer_parts(answers, file=True) if answers is not None else []
+    if kind == "decide":
+        if len(offered) < 2:
+            raise Refused("a decide offers two or more answers")
+        if default is not None and (type(default) is not int or not 0 <= default < len(offered)):
+            raise Refused(f"default is the index of one of the {len(offered)} answers, not {default!r}")
+        if (two := _two_forms_one_head([lbl for lbl, _ in offered])) is not None:
+            raise Refused(f"two answers are forms with one head, {two}: a fill could not say which")
+        if default is not None and is_form(offered[default][0]):
+            raise Refused("a form cannot be the default: pressing it sends no words")
+        missing = [p for p in DECIDE_NEEDS if p not in (detail or {})]
+        if missing:
+            raise Refused(f"a decide needs its detail block's {', '.join(missing)}")
+    elif kind == "look":
+        if answers is not None:
+            raise Refused("a look's answers are the writer's (Works | Not right: <what>): give none")
+        if default is not None and (type(default) is not int or default != 0):
+            raise Refused("a look's default is 0 (Works), or None")
+        offered = [(a, "") for a in LIVE_LOOK_ANSWERS]
+    else:
+        if answers is not None:
+            raise Refused(f"{_a_kind(kind)} carries no answers: a question with answers is a decide")
+        if default is not None:
+            raise Refused("default marks one of a decide's or a look's answers: there are none")
+
+    lifted: list[str] = []
+    if lifts is not None:
+        if kind != "decide":
+            raise Refused("only a decide names the answers that lift (lifts)")
+        by_label = {lbl.lower(): lbl for lbl, _ in offered}
+        for x in lifts:
+            name = " ".join(str(x or "").split())
+            if name.lower() not in by_label:
+                raise Refused(f"a lifting answer is one of the item's answers, not {name!r}")
+            if by_label[name.lower()] in lifted:
+                raise Refused(f"{name!r} is named twice among the lifting answers")
+            lifted.append(by_label[name.lower()])
+        if not lifted:
+            raise Refused("lifts names one or more of the answers, or is None (`Go`)")
+        if [x.lower() for x in lifted] == ["go"]:
+            lifted = []  # `Go` alone is what no Lifts means: it is not written
+    if kind == "decide" and (lifted or lifts is not None or CONTEXT_ANY_GATE_RE.search(ctx)) \
+            and len({ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)}) != 1:
+        raise Refused("a decide that lifts a gate names exactly one entry in its context")
+    waits = [x for x in lifted if waiting_only(x)]
+    if waits:
+        raise Refused(f"{waits[0]!r} only keeps the gate waiting — it never lifts (v2.4)")
+    label = offered[default][0] if offered and default is not None else None
+    body = _detail_lines(detail, label if kind == "decide" else None, file=True) if detail is not None else []
+    if parts is not None and not any(_lifting(lbl, lifted or None, [x for x, _ in offered]) for lbl, _ in offered):
+        raise Refused("a decide with parts offers an answer that lifts (Go, or one named in lifts): "
+                      "a snapshot no answer lifts is a question no press can act on")
+    if hide_until is not None:
+        hide_until = _civil_date(hide_until, "hide_until")
+
+    header = [("Kind", kind)] if kind else []
+    header.append(("Added", today))
+    if session is not None:
+        header.append(("Session", f"{session}{f' on {host}' if host is not None else ''}"))
+    header.append(("Context", ctx))
+    header += [("Parts", ", ".join(parts))] if parts else []
+    header += [("Doer", doer)] if doer is not None else []
+    header += [("Due", due)] if due is not None else []
+    header += [("Hide until", hide_until)] if hide_until is not None else []
+    if offered:
+        header.append(("Answers", " | ".join(_written_answer(lbl, c, i == default) for i, (lbl, c) in enumerate(offered))))
+    if lifted:
+        header.append(("Lifts", " | ".join(x.replace("|", "\\|") for x in lifted)))
+    new = _item_render(words, header, body)
+
+    got = parse_item(new)
+    if got is None or (got.words, got.kind, got.added and got.added.isoformat(), got.session, got.host, got.context,
+                       got.due and got.due.isoformat(), got.answers, got.consequences, got.default, got.detail,
+                       got.hide_until and got.hide_until.isoformat(), got.lifts, got.parts, got.doer) \
+            != (words, kind, today, session, host, ctx, due, [lbl for lbl, _ in offered], [c for _, c in offered],
+                label, body, hide_until, lifted or None, parts or [], want_doer) \
+            or got.decided is not None or got.closed is not None or got.replies or got.fyi_due or got.bad_due \
+            or [n for n, _ in got.fields] != [n for n, _ in header]:
+        raise Refused("the board's reader would not read this item back as meant — rephrase it")
+    return new
+
+
+def decided_file(title: str, ref: str, answers: list[str], default: int | None, words: str, today: str,
+                 by: str | None = None) -> str:
+    """A new item file already decided (v3.0), for a person's answer given elsewhere (on a ledger entry):
+    `## <title>`, a `decide` with no `Session`, its `Context` the ref, `Due` today, its `Answers` (a form written
+    unmarked, its words as given) and `Decided: <today>[ by <by>] — <words>`. It takes ``decided_line()``'s
+    arguments; refused for empty words, a value of more than one line, a ``by`` outside the person grammar, or a
+    file the reader would not read back. An answer ending in `(by …)` is words."""
+    today = _civil_date(today, "today is written")
+    ref = _item_value(ref, "the ref")
+    head = _item_value(title, "the title", empty=True) or ref
+    said = _item_value(words, "a decision's words") if str(words or "").strip() else ""
+    if not said:
+        raise Refused("a decision needs its words: one of the entry's answers, or what you typed")
+    by = " ".join(str(by or "").split()) or None
+    if by is not None and not is_person(by):
+        raise Refused(f"who answered, {by!r}, is not a person's name (letters, digits, `_`, `-`, dot-separated)")
+    opts = []
+    for i, a in enumerate(answers or ()):
+        if not str(a).strip():
+            continue
+        label, cons, _ = split_answer(_item_value(a, "an answer"))
+        opts.append(_written_answer(label, cons, i == default and not is_form(label)))  # v2.8: no mark on a form
+    header = [("Kind", "decide"), ("Added", today), ("Context", ref), ("Due", today)]
+    header += [("Answers", " | ".join(opts))] if opts else []
+    header.append(("Decided", f"{today}{f' by {by}' if by else ''} — {said}"))
+    new = _item_render(head, header, [])
+    got = parse_item(new)
+    if got is None or got.decided != (said, date.fromisoformat(today)) or got.decided_by != by:
+        raise Refused(f"the board's reader would not read back 'Decided: {said}': say it in other words")
+    if got.context != ref or got.words != head or got.session is not None or got.kind != "decide":
+        raise Refused(f"the board's reader would not read back 'Context: {ref}' on this entry's item")
+    return new
+
+
+def edit_item(text: str, action: str, *, to: date | None = None, answer: str | None = None,
+              why: str | None = None, reply: str | None = None, by: str | None = None,
+              today: date | None = None, close: bool = False) -> str:
+    """The open item file ``text`` after ``action`` (v3.0, SPEC *Edits (v3.0)*): snooze (`Hide until` set to
+    ``to``), due (`Due` set to ``to``), done (`Closed: <today>[ — <why>]`), decide (`Decided: <today>[ by <by>] —
+    <answer>`, a form's fill written as its fill; with ``close``, on an item whose Context names a gate, also
+    `Closed: <today> — kept waiting` or `— lifted`), reply (`- <today>: <by>: <reply>` appended to the Log, which it
+    opens after the body when there is none). A field set that is there is rewritten in place; one added goes
+    right after the last known field before it in the header order, or first in the header block. The line added
+    or rewritten ends as the file's first line does; every other byte is kept. Raises Refused for a closed item
+    and for any result the reader would not read back as meant."""
+    today = today or date.today()  # noqa: DTZ011  # a civil date, as the readers use
+    lay = _item_layout(text)
+    it = parse_item(text)
+    if lay is None or it is None:
+        raise Refused("the text is not an item file")
+    if it.closed is not None:
+        raise Refused("the item is closed: an edit changes an open item")
+    if close and action != "decide":
+        raise Refused("only a decide closes the item it answers (close)")
+    raw, bare, _, a, b, _ = lay
+    eol = "\r\n" if raw[0].endswith("\r\n") else "\n"
+    lines = list(raw)
+
+    def ended(i: int) -> None:  # a line something now follows ends as the file's lines do
+        if not lines[i].endswith("\n"):
+            lines[i] += eol
+
+    def put(name: str, value: str) -> None:
+        nonlocal b
+        order = ITEM_FIELDS.index(name)
+        at, after = None, None
+        for i in range(a, b):
+            m = FIELD_RE.match(bare[i])
+            known = ITEM_FIELD_KEYS.get(field_key(m.group(1))) if m else None
+            if known == name and at is None:
+                at = i
+            elif known is not None and ITEM_FIELDS.index(known) < order \
+                    and (after is None or ITEM_FIELDS.index(known) >= after[1]):
+                after = (i, ITEM_FIELDS.index(known))
+        new_line = f"**{name}:** {value}"
+        if at is not None:
+            lines[at] = new_line + (eol if lines[at].endswith("\n") else "")
+            bare[at] = new_line
+            return
+        i = after[0] + 1 if after else a
+        if i > 0:
+            ended(i - 1)
+        lines.insert(i, new_line + eol)
+        bare.insert(i, new_line)
+        b += 1
+
+    if action in ("snooze", "due"):
+        if to is None:
+            raise Refused(f"a {action} needs its date")
+        put("Hide until" if action == "snooze" else "Due", to.isoformat())
+    elif action == "done":
+        why = _item_value(why, "why", empty=True)
+        put("Closed", f"{today.isoformat()}{f' — {why}' if why else ''}")
+    elif action == "decide":
+        answer = _item_value(answer, "the answer", empty=True)
+        if not answer:
+            raise Refused("the answer is empty")
+        answer = fill_form(answer, it.answers) or answer  # v2.8: a form's fill, the head as offered
+        by = " ".join((by or "").split()) or None
+        if by is not None and not is_person(by):
+            raise Refused(f"who answered, {by!r}, is not a person's name (letters, digits, `_`, `-`, dot-separated)")
+        put("Decided", f"{today.isoformat()}{f' by {by}' if by else ''} — {answer}")
+        reason = None
+        if close:  # v2.4: the answer closes the item in the same write
+            if _context_gate(it.context or "")[1] is None:
+                raise Refused("only an item whose Context names a gate is closed by its answer")
+            reason = "kept waiting" if waiting_only(answer) else "lifted" if _lifting(answer, it.lifts, it.answers) \
+                else None
+            if reason is None:
+                raise Refused(f"{answer!r} neither lifts nor only keeps waiting — a work order stays open")
+            put("Closed", f"{today.isoformat()} — {reason}")
+    elif action == "reply":
+        words = _item_value(reply, "the reply", empty=True)
+        who = " ".join((by or "").split())
+        if not words:
+            raise Refused("the reply is empty — a reply needs its words")
+        if not who or ":" in who or len(who) > 40:
+            raise Refused(f"who replied is a name of at most 40 characters holding no `:`, not {who!r}")
+        last = max(i for i in range(len(bare)) if bare[i].strip(" \t"))
+        ended(last)
+        add = [f"- {today.isoformat()}: {who}: {words}{eol}"]
+        if lay[5] is None:
+            add = [eol, f"{ITEM_LOG_LEAD}{eol}", *add]
+        lines[last + 1:last + 1] = add
+    else:
+        raise Refused(f"unknown action {action}")
+
+    new = "".join(lines)
+    got = parse_item(new)
+    want = {"snooze": {"hide_until": to}, "due": {"due": to, "bad_due": None}, "done": {}, "decide": {},
+            "reply": {}}[action]
+    if action == "decide":
+        want = {"decided": (answer, today), "decided_by": by}
+    if action == "reply":
+        want = {"replies": [*it.replies, (who, today.isoformat(), words)]}
+    meant = _item_read(_dc_replace(it, **want))
+    closed = {"done": (today, why or None), "decide": (today, reason) if close else None}.get(action)
+    if got is None or _item_read(got) != meant or got.closed != closed:
+        raise Refused(f"the reader would not read the item back after the {action} with its other fields "
+                      "unchanged — rephrase it")
+    return new
+
+
+def item_file_problem(text: str) -> str | None:
+    """Why ``text`` is not an item file in the form the writers write (v3.0, SPEC *The form the writers write*),
+    or None: a `## ` heading and one blank line; a header block of known fields, each once, in their order,
+    spelled `**Name:** value` with one space; each value in its form; a kind's rules (a decided file may carry
+    any answers or none); a body of detail bullets; a Log, when there is one, last and holding replies alone;
+    one blank line between the parts and one `\\n` at the end. Each problem opens with its rule's tag; several
+    are joined by `; `. It never judges the detail block's words."""
+    if not text.endswith("\n") or text.endswith("\n\n"):
+        return "file: ends in one newline"
+    lines = text[:-1].split("\n")
+    if any(ln.endswith("\r") for ln in lines):
+        return "file: each line ends in `\\n` alone"
+    problems: list[str] = []
+    if not lines[0].startswith("## ") or not _item_text_ok(lines[0][3:]):
+        problems.append("heading: the file opens `## <text>`, the text neither empty nor opening or ending in "
+                        "whitespace")
+    if len(lines) < 3 or lines[1] != "" or not lines[2]:
+        return "; ".join([*problems, "heading: one blank line, then the header block"])
+    b = 2
+    while b < len(lines) and lines[b]:
+        b += 1
+    seen: dict[str, str] = {}
+    last = -1
+    for ln in lines[2:b]:
+        m = FIELD_RE.match(ln)
+        if m is None:
+            problems.append(f"header: {ln!r} is no field")
+            continue
+        name = ITEM_FIELD_KEYS.get(field_key(m.group(1)))
+        if name is None:
+            problems.append(f"header: {m.group(1)} is no field of an item file")
+            continue
+        if name in seen:
+            problems.append(f"header: {name} stands twice")
+            continue
+        seen[name] = m.group(2)
+        if ln != f"**{name}:** {m.group(2)}":
+            problems.append(f"header: written `**{name}:** <value>`, one space after the name and none at the "
+                            f"line's end, not {ln!r}")
+        if ITEM_FIELDS.index(name) < last:
+            problems.append(f"header: {name} stands after {ITEM_FIELDS[last]}; the fields' order is "
+                            f"{', '.join(ITEM_FIELDS)}")
+        last = max(last, ITEM_FIELDS.index(name))
+    problems += _item_values_problems(seen)
+    rest = lines[b:]
+    chunks: list[list[str]] = []
+    for i, ln in enumerate(rest):
+        if ln == "":
+            if i + 1 < len(rest) and rest[i + 1] == "":
+                problems.append("file: one blank line between the parts")
+            chunks.append([])
+        else:
+            chunks[-1].append(ln)
+    chunks = [c for c in chunks if c]
+    logs = [i for i, c in enumerate(chunks) if c[0] == ITEM_LOG_LEAD]
+    if logs and logs[0] != len(chunks) - 1:
+        problems.append("log: the Log is the file's last part")
+    for c in chunks[: logs[0] if logs else len(chunks)]:
+        bad = [ln for ln in c if not re.fullmatch(r" *- .*", ln)]
+        if bad:
+            problems.append(f"body: {bad[0]!r} is no detail bullet (`- ` at column 0, or nested under one)")
+    if len(chunks[: logs[0] if logs else len(chunks)]) > 1:
+        problems.append("body: the detail block is one part, with no blank line inside it")
+    for i in logs:
+        replies = chunks[i][1:]
+        if not replies:
+            problems.append("log: `**Log:**` holds a reply or more")
+        for ln in replies:
+            r = _item_reply(ln)
+            if r is None or not _real_day(r[1]) or ln != f"- {r[1]}: {r[0]}: {r[2]}" or not _item_text_ok(r[2]):
+                problems.append(f"log: {ln!r} is no reply, `- YYYY-MM-DD: <name>: <words>`")
+    return "; ".join(dict.fromkeys(problems)) or None
+
+
+def _item_text_ok(s: str) -> bool:
+    """``s`` is an item-text: not empty, opening and ending in no whitespace (the grammar's `nonspace`)."""
+    return bool(s) and s[0] not in ITEM_SPACE and s[-1] not in ITEM_SPACE
+
+
+def _item_values_problems(seen: Mapping[str, str]) -> list[str]:
+    """The faults of an item file's header values (v3.0), ``seen`` each known field's first value: each value in
+    its form, and a kind's rules as ``item_problem()`` judges a line's."""
+    out: list[str] = []
+    kind_s = seen.get("Kind")
+    kind = kind_s.lower() if kind_s is not None and kind_s.lower() in KINDS else None
+    decided = "Decided" in seen
+    if kind_s is not None:
+        if kind is None:
+            out.append(f"kind: {kind_s!r} is not a kind: one of {', '.join(KINDS)}, in lower case")
+        elif kind_s != kind:
+            out.append(f"kind: {kind_s!r} is written in lower case")
+    if "Added" not in seen:
+        out.append("added: no `Added`")
+    elif not _real_day(seen["Added"]):
+        out.append(f"added: {seen['Added']!r} is not a date as YYYY-MM-DD")
+    if "Session" in seen and not ITEM_SESSION_RE.fullmatch(seen["Session"]):
+        out.append(f"session: {seen['Session']!r} is not `<name>` or `<name> on <host>`")
+    if "Context" not in seen:
+        out.append("context: no `Context`")
+    elif not _item_text_ok(seen["Context"]):
+        out.append("context: empty, or opening or ending in whitespace")
+    ctx = seen.get("Context", "")
+    if "Parts" in seen:
+        ids = seen["Parts"].split(", ")
+        if kind != "decide":
+            out.append(f"parts: {_a_kind(kind)} carries no `Parts`: only a decide asks about a parent's parts")
+        if not all(ITEM_ENTRY_ID_RE.fullmatch(x) for x in ids):
+            out.append("parts: `Parts` lists entry ids, `TD-n` or `<repo>#TD-n`, separated by `, `")
+        elif len({ref_key(x) for x in ids}) != len(ids):
+            out.append("parts: an id stands twice")
+    if "Doer" in seen:
+        got = doer_value(seen["Doer"])
+        if kind != "act":
+            out.append(f"doer: {_a_kind(kind)} carries no `Doer`: only an act names who does its step")
+        if got is None:
+            out.append("doer: `Doer` names a repo, `<repo>` not ending in `.`, or a team, `team <name>`")
+        elif got[0] == "team" and seen["Doer"] != f"team {got[1]}":
+            out.append("doer: written `team <name>`, one space after `team`")
+    if kind == "fyi":
+        if "Due" in seen:
+            out.append("due: an fyi carries no `Due`")
+    elif "Due" not in seen:
+        out.append("due: no `Due` (every kind but fyi carries one)")
+    elif not _real_day(seen["Due"]):
+        out.append(f"due: {seen['Due']!r} is not a date as YYYY-MM-DD")
+    if "Hide until" in seen and not _real_day(seen["Hide until"]):
+        out.append(f"hide: {seen['Hide until']!r} is not a date as YYYY-MM-DD")
+    raw = seen.get("Answers")
+    pieces = ANSWER_SPLIT_RE.split(raw) if raw is not None else []
+    offered = [split_answer(x.replace("\\|", "|").strip()) for x in pieces]
+    if raw is not None and not all(x.strip() for x in pieces):
+        out.append("answers: an empty answer between bars")
+    marks = sum(mk for _, _, mk in offered)
+    if decided or "Closed" in seen:  # the form rules bind an open decide with no Decided alone (TD-075)
+        if marks > 1:
+            out.append("answers: more than one marked ` (default)`")
+    elif kind == "decide":
+        labels = [lb for lb, _, _ in offered]
+        if len(offered) < 2:
+            out.append("answers: a decide carries two or more answers")
+        elif len(set(labels)) != len(labels) or not all(labels):
+            out.append("answers: each answer has its own label")
+        if marks > 1:
+            out.append("answers: more than one marked ` (default)`")
+        if (two := _two_forms_one_head(labels)) is not None:
+            out.append(f"answers: two answers are forms with one head, {two}: a fill could not say which")
+        if any(mk and is_form(lb) for lb, _, mk in offered):
+            out.append("answers: a form cannot be the default: pressing it sends no words")
+    elif kind == "look":
+        if raw not in tuple(x for x in LOOK_ANSWERS):
+            out.append("answers: a look carries exactly `Works | Not right: <what>`, `Works` marked ` (default)` or "
+                       "not")
+    elif raw is not None:
+        out.append(f"answers: {_a_kind(kind)} carries no answers: a question with answers is a decide")
+    if "Lifts" in seen:
+        named = parse_answers_value(seen["Lifts"])
+        labels = {lb.lower() for lb, _, _ in offered}
+        if kind != "decide":
+            out.append(f"lifts: {_a_kind(kind)} carries no `Lifts`: only a decide's answer lifts")
+        if not named or not all(x.strip() for x in ANSWER_SPLIT_RE.split(seen["Lifts"])):
+            out.append("lifts: `Lifts` names one or more of the answers")
+        elif [x.lower() for x in named] == ["go"]:
+            out.append("lifts: `Lifts: Go` is what no `Lifts` means: leave it out")
+        else:
+            off = [x for x in named if x.lower() not in labels]
+            if off:
+                out.append(f"lifts: not one of the item's answers: {', '.join(off)}")
+            if len({x.lower() for x in named}) != len(named):
+                out.append("lifts: an answer stands twice")
+            waits = [x for x in named if waiting_only(x)]
+            if waits:
+                out.append(f"lifts: {', '.join(waits)} only keeps the gate waiting — it never lifts")
+    if kind == "decide" and ("Parts" in seen or "Lifts" in seen or CONTEXT_ANY_GATE_RE.search(ctx)) \
+            and len({ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)}) != 1:
+        out.append("context: a decide that lifts a gate names exactly one entry in its Context")
+    if decided:
+        d = parse_decided_value(seen["Decided"])
+        if d is None or seen["Decided"] != f"{d[1].isoformat()}{f' by {d[2]}' if d[2] else ''} — {d[0]}" \
+                or not _item_text_ok(d[0]):
+            out.append("decided: `Decided` is `<date>[ by <person>] — <label>`")
+    if "Closed" in seen:
+        c = parse_closed_value(seen["Closed"])
+        if c is None or seen["Closed"] != f"{c[0].isoformat()}{f' — {c[1]}' if c[1] else ''}" \
+                or (c[1] is not None and not _item_text_ok(c[1])):
+            out.append("closed: `Closed` is `<date>` or `<date> — <why>`")
+    return out
+
+
+def canonical_item_file(text: str) -> str:
+    """``text``, an item file, rewritten into the form the writers write (v3.0): line endings `\\n`, the known
+    fields in their order and spelled so (`Kind` in lower case), any other field after them in the file's order,
+    one blank line between the parts and one newline at the end. No key rests on a file's spelling, so it rewrites
+    any field. Refused for no item file, for a header block it would have to lose or repeat a line of (a line that
+    is no field, a repeated field), and for a result that would not read back as the same item. Idempotent."""
+    lay = _item_layout(text)
+    it = parse_item(text)
+    if lay is None or it is None:
+        raise Refused("the text is not an item file")
+    _, bare, h, a, b, log = lay
+    known: dict[str, str] = {}
+    other: list[tuple[str, str]] = []
+    keys: set[str] = set()
+    for ln in bare[a:b]:
+        m = FIELD_RE.match(ln)
+        if m is None:
+            raise Refused(f"header: {ln!r} is no field: make it one, or move it out of the header block")
+        name = ITEM_FIELD_KEYS.get(field_key(m.group(1)))
+        if field_key(m.group(1)) in keys:
+            raise Refused(f"header: {m.group(1)} stands twice: keep one")
+        keys.add(field_key(m.group(1)))
+        if name is None:
+            other.append((m.group(1), m.group(2)))
+        else:
+            known[name] = m.group(2).lower() if name == "Kind" else m.group(2)
+    header = [(n, known[n]) for n in ITEM_FIELDS if n in known] + other
+    logged = [ln for ln in bare[log + 1:] if ln.strip(" \t")] if log is not None else None
+    new = _item_render(it.words, header, it.detail, logged)
+    if new == text:
+        return text
+    got = parse_item(new)
+    if got is None or _item_read(got) != _item_read(it) or got.closed != it.closed:
+        raise Refused("the rewrite would change what the reader reads: fix the file by hand")
+    return new
 
 
 # ---------------------------------------------------------------------------------------------

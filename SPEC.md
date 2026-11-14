@@ -1027,7 +1027,8 @@ on any kind, and never inside a reply's words; `item_problem()` faults it on any
 The reader reads it as it reads `Parts:`, any spacing and an absent period included, which `item_problem()`
 faults. It is part of the item key, and no edit changes it: a step for another doer is another item.
 What resolving it means, and what a press on it does, are the consumer's. `item_line(doer=)` and
-`board.py add --doer` write it.
+`board.py add --doer` write it. In an item file (v3.0) it is the header field `Doer` (*The item file*), a bare
+value read by `doer_value()`; `parse_doer()` reads a v2 line's.
 
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
 line's end, in this order:
@@ -1070,7 +1071,7 @@ line's end, in this order:
 **The bold head** — an item's first `**…**` run, whitespace collapsed, read outside its replies'
 words (its fields' are read: a bold answer with no bold before it is the head), is its title where it
 has one. A blank run (`** **`) is none. A line with none has no bold head; what stands in for it is the
-consumer's.
+consumer's. In an item file (v3.0) it is read from the heading, as from a line; a heading with no bold run has none.
 
 **Replies** — ` — <name>, YYYY-MM-DD: <words>` after the `Due:` (and its `Hide until:`) and ahead of the trailing fields,
 any number in a row. A reply's words never carry `Context:`, `Hide until:`, `Answers:`, `Decided:` or `Closed:`,
@@ -1281,6 +1282,100 @@ decision a base entry held in the old form (*The ledger*) is not gained when the
 decision and none of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on
 this repo's own board alone, so they are the same on every machine.
 
+## The board as a directory (v3.0)
+
+A v2 board is one file that every new item is written into at one place, so two changes that each add an item
+conflict, and an item's identity is its text (*The item key*). **A v3 board is a directory** (by convention
+`docs/user_attention/`) with one file per item, named by the item's id:
+
+```
+docs/user_attention/
+  README.md                  # the opening prose, then the preamble lines: Ledgerboard: 3, People:, …
+  2026-11-11-3f9a2c1d.md     # one open item
+  archive/
+    2026-11/
+      2026-10-30-0b7e41aa.md # a closed item, filed under the month of its Closed: date
+```
+
+- **An open item** is a file `<id>.md` directly in the directory; **a closed one** is `archive/<YYYY-MM>/<id>.md`,
+  `<YYYY-MM>` its `Closed:` date's month (`item_path(id, closed=None)`, `closed` that date). Any other file is not
+  an item. No item's file is deleted.
+
+**The item id** is `YYYY-MM-DD-<8 hex>`: the item's `Added` date, a hyphen, and eight lower-case hex digits
+(`item_id(added, nonce)`, `added` a `YYYY-MM-DD` string and `nonce` a string, which raises `ValueError` for
+anything that is no id, a date that is no day of the calendar among it).
+`is_item_id(s)` says whether a string is an id: the shape, matched whole, and its date a day of the calendar, so
+`2026-02-30-abcd1234` is none. `item_path(id, closed=None)` gives an item's path, `closed` its `Closed:` date as
+`YYYY-MM-DD`, or None when it is open, and raises `ValueError` for an `id` that is no id, or for a `closed` that
+is no day of the calendar in that form. `key_id(key)` is the first 8 lower-case hex digits of the SHA-256 of the
+key's UTF-8 bytes.
+No writers coordinate: two items added on one day share an id about once in four billion pairs, and two changes
+that add one id conflict as two files at one path. An id never changes.
+
+**The item file** is a small entry, in the grammar of *Ledger entries and their edits*:
+- **The heading** is `## <text>`, the item's words (`BoardItem.words`): one line, any words, no field. Its first
+  bold run is the item's bold head (*The bold head*).
+- **The header block** is the `**Name:** value` lines from the first non-blank line after the heading (the
+  writers leave one blank line there; a file with none still reads), up to the next blank line, read as an
+  entry's are: a name compared by `field_key()`, which ignores case and reads `-`, `_` and any run of
+  whitespace as one space; the spaces and tabs at a value's ends dropped; and the first of a name winning. A value
+  is the whole line: it holds any words, a field's name among them. The fields, in the order the writers write
+  them, each meaning what *The board* says:
+  - `Kind` — `decide`, `act`, `look`, `watch` or `fyi`, read ignoring case; none is the kindless to-do;
+  - `Added` — the date the item was added, its id's date;
+  - `Session` — `<name>` or `<name> on <host>`, the v2 head; none for `n/a`, and none on a decided file
+    (`decided_file()`, the v2 `(person)` head);
+  - `Context` — what the item refers to, its refs read as a v2 Context's are; `none` for nothing;
+  - `Parts` — a `decide`'s snapshot, `TD-15, TD-16`;
+  - `Doer` — on an `act` only, who should do its step: `<repo>`, a repo whose last part does not end in `.`
+    (*Appendix: grammar*, `doer-repo`), or `team <team>`, `<team>` a person's name; `Doer: team` alone names the
+    repo `team`. `doer_value(value)` reads it as `("repo" | "team", name)`, or None outside that form,
+    reading a run of spaces or tabs after `team` as one space (`item_file_problem()` faults that spelling);
+  - `Due`, `Hide until` — a date each; a `Due` that is no day is reported as written (`bad_due`; an empty one as
+    `""`, which a reader tests as present, `bad_due` not None), never silently undated; on an `fyi`, a `Due` is ignored, and flagged (`fyi_due`), as on a v2 line;
+  - `Answers`, `Lifts` — as on a v2 line, without the final period;
+  - `Decided` — `<date>[ by <person>] — <label>`: the date and who answered first, so the label runs to the line's
+    end and holds any words; `<person>` is a name in the person grammar, as in a v2 `(by <person>)`, so a value
+    whose text from `by ` to the first ` — ` is no person is outside the form. The label is never split on a
+    trailing `(by …)`: the person is only the `by <person>` before ` — ` (`2026-11-12 — Go (by pat)` is decided
+    `Go (by pat)`, by no one). `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
+    form, and `parse_item()` reads it into `decided` and `decided_by`; `parse_decided()` and `parse_decided_by()`
+    read a v2 line's;
+  - `Closed` — `<date>` or `<date> — <why>`, read by `parse_closed_value(value)` as `(date, why)`, or None outside
+    that form.
+
+  `Answers` and `Lifts` values are read by `parse_answers_value(value)`: the answers split on each bar not after a
+  `\`, `\|` read as a bar, each trimmed, an empty one dropped as on a v2 line (`Go | | No` offers `Go` and `No`)
+  (`split_answer()` then reads an answer's label, mark and consequence).
+  Each value reader reads the bare value the header line holds; the v2 readers (`parse_decided()`,
+  `parse_answers()`, `parse_lifts()` and the rest) find a field on a v2 line and read nothing else.
+
+  A line in the header block that is no field does not end it: it is in no field, and every edit keeps it byte for
+  byte. A value not in its form, for `Decided`, `Closed`, `Kind`, `Hide
+  until`, `Parts` or `Doer`, is kept, and read as the field absent: no answer, no close, no kind (so a to-do,
+  shown), not hidden, no parts, no doer. A `Due` not in its form is reported, as
+  *The board* says. A field on a kind that does not take it (`Parts` or `Lifts` off a `decide`, `Doer` off an
+  `act`, `Answers` on a kind that takes none) is read as written, as a v2 line's is; `item_file_problem()` faults
+  it. A file is cut into lines at `\n` alone, a line's `\r` before it dropped,
+  so no other line-break character ends a value. A field the reader does not
+  know is kept: it is in `BoardItem.fields` (every header field as written, in its order), every edit keeps its
+  line byte for byte, and `item_file_problem()` faults it. A later v3 minor that adds a field changes nothing an
+  older v3 reader reads of the others; an older v3 gate faults an item carrying it.
+- **The body** is the detail block (*The detail block*): the lines after the header block up to the Log, leading
+  and trailing blank lines dropped (`BoardItem.detail`). No edit touches it.
+- **The Log** is the body's last section, led `**Log:**`, one line per reply, `- YYYY-MM-DD: <name>: <words>`,
+  oldest first. `<name>` holds no `:` and is at most 40 characters; `<words>` are not empty. A Log line in another
+  shape is kept, and read as no reply.
+
+`parse_item(text, path="")` reads one file as a `BoardItem`: its `id` from the path's name (`is_item_id()` of its
+stem; None when it is not one), `path`, its `words` (the heading's text), its fields, each value through its reader above (`kind`,
+`due`, `hide_until`, `parts`, `answers`, `default`, `consequences`, `lifts`, `decided` and `decided_by`),
+`added` (a `datetime.date`, or None), `session` and `host`, `context`, `doer`, `closed` (`(date, why)`, the date a
+`datetime.date` or None and the why a string or None, or None when open), `replies`, `detail`, `fields`, and `raw`,
+the file's text as read; the dates are of `due`'s, `hide_until`'s and `decided`'s type, and a record writes each as
+`YYYY-MM-DD`. `closed` is set from the path: under `archive/`, the `Closed:` value,
+or `(None, None)` when there is none in its form; elsewhere, the `Closed:` value, or None.
+
 ## Edits
 
 Every edit rewrites one open item line and nothing else, and is refused unless the reader reads
@@ -1357,6 +1452,90 @@ new item — the head is the item's text after its prefix, before its fields, bo
 read as appends.
 The archive's subject is `<tool>: archive <n> closed items (session <name>)` (`archive_subject()`), `<n>` the closed items moved.
 `subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write, above) `queue`.
+
+## Edits (v3.0)
+
+Every edit rewrites one open item file, by one header line set or one Log line appended, and nothing else, and is
+refused unless the reader reads back exactly what was meant (`edit_item(text, action, *, to, answer, why, reply,
+by, today, close)`, v3.0). A field it adds goes right after the last known field that precedes it in the header
+order (any unknown field between them stays where it is), or first in the header block when none does; a field it
+sets that is there is rewritten in place. A line it adds or rewrites ends as the file's first line does (`\r\n` or
+`\n`); every other byte is kept. An edit of a closed item is refused.
+- **snooze** hides the item: it sets its `Hide until:` and leaves its `Due:` alone;
+- **due** sets the item's `Due:`, the real deadline;
+- **done** sets `Closed: <today>`, or `Closed: <today> — <why>`;
+- **decide** sets `Decided: <today> — <answer>`, or with `by` `Decided: <today> by <by> — <answer>`, replacing an
+  earlier one. It refuses a `by` that is not a person's name. With `close`, on an item whose Context names a
+  gate, it also sets `Closed: <today> — kept waiting` for a waiting-only answer or `Closed: <today> — lifted` for a
+  lifting one, and refuses any other answer (`closes()` says when to pass it). An answer that fills one of the
+  item's forms is written as its fill, the head as offered (v2.8); one that is a form as offered, unfilled, is
+  refused (*<head> needs its words*);
+- **reply** appends `- <today>: <by>: <words>` to the Log, opening a `**Log:**` section after the body when there is
+  none. It refuses a `by` holding `:` or of more than 40 characters, and empty or blank words.
+
+An edit that closes the item gives a file whose place is `item_path(id, closed)`.
+
+**A new item** (`item_file(text, due, today, session, host, context, *, kind, answers, default, detail,
+hide_until, lifts, parts, doer)`, v3.0) is one file: `## <text>`, a blank line, the header block (`Kind` when
+given, `Added: <today>`, `Session` when there is a session, `Context`, then `Parts`, `Doer`, `Due`, `Hide until`,
+`Answers` and `Lifts` as given), and, after a blank line, the detail block. The text is trimmed and not empty, and
+no period is added. An empty context is `none`. `Session` is `<session>` or `<session> on <host>`. `Lifts` is
+written only when it names answers other than `Go` alone (each one of its answers, once, written as its answer
+spells it). A `doer` is refused on any kind but `act`, and outside its form. A decide's `parts` (v2.6) are written
+ordered by number, separated by `, `, each as given, and are refused on any kind but `decide`, for an empty list,
+for an id that is not `TD-` and 1 to 18 ASCII digits, for an id that shares its number with another or with the
+Context's entry, unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`,
+with nothing after the gate, and unless one of its answers lifts. What a kind takes:
+- a `decide` carries two or more distinct answers, at most one marked ` (default)` and never a form (v2.8), no two
+  forms with one head (v2.8), and a detail block; `decided_file()` writes no mark on a form, its `default` naming
+  one written unmarked;
+- a `look` carries exactly `Answers: Works | Not right: <what>`, which the writer writes itself, `Works` marked
+  ` (default)` only when the caller asks;
+- an `fyi` carries no `Due`, and every other kind carries one;
+- no kind but `decide` and `look` carries answers.
+
+These are the writer's rules. The reader still reads whatever a file carries. An answer is written `<label>` or
+`<label> — <consequence>`, with the mark on the label.
+
+The **detail block** is composed from named parts, in the order `Context`, `Question`, `Caveats`, `Recommended`.
+Each part is one bullet at column 0, ``- **<Part>:** <words>``, with any further lines as nested bullets under it,
+indented two spaces. On a `decide` with a default, Recommended opens with that default's label and ` — `, which
+the writer adds: a `recommended` whose words already open with that label and ` — ` (whitespace collapsed, the
+label compared ignoring case) is refused, naming the prefix (TD-069). An `Otherwise` text follows the Recommended
+words on the same bullet as ``**Otherwise:** <words>``. A `decide` needs Context, Question and Recommended. No
+writer touches the block afterwards.
+
+The writer refuses a text, a context, an answer, a detail value or a reply's words that is more than one line; a
+date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the
+item meant, its body included. From v3.0 it refuses no field's name in any of them, nor an answer ending in
+`(by …)`: each value is a line of its own.
+
+An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with no `Session`
+(`decided_file(title, ref, answers, default, words, today, by=None)`): `## <title>`, its `Context` the ref, `Due`
+today, its `Answers`, and `Decided: <today>[ by <by>] — <words>`, with **decide**'s refusals.
+
+**The form the writers write** (v3.0) is a file `item_file()` or `decided_file()` composed, as it stands after any
+snooze, due, decide or reply. `item_file_problem(text)` names why a file is not in that form, or gives None, in a
+plain sentence opening with its rule's tag: a `## ` heading and one blank line; a header block of known fields,
+each once, in their order, spelled `**Name:** value` with one space; each value in its form (*Appendix: grammar*,
+*The item file*); a kind's rules (*A new item*; a decided file may carry any answers or none, and the form rules bind an open `decide`
+with no `Decided` alone); a body of detail
+bullets; a Log, when there is one, last and holding replies alone; one blank line between the parts and one
+newline at the end. It never judges the detail block's words. `canonical_item_file(text)` rewrites a file into
+that form: line endings normalised to `\n`, the known fields in their order and spelled so, any other field after
+them in the file's order, one blank line between parts. It refuses a header block it would have to lose or repeat
+a line of (a line that is no field, a repeated field), and its result reads back the same item. No key rests on a
+file's spelling, so it rewrites any field.
+
+**The commit subject of a board write** is one line: `<tool>: <action> <id> <head>[ to <date> | : <answer>]
+(session <name>)` for the five edits, and `<tool>: append <id> <head> (session <name>)` for a new item (v3.0). The
+head is the item's words (its heading), every `*` dropped and whitespace collapsed, at most 60 characters, never
+cut at a ` — ` or a field's name; `<name>` is the caller's session, else the item's `Session` name, else `n/a`; a
+reply's words never appear. `subject_id(line)` reads the id back, or None. `edit_action()`
+reads the action back (v2.3). Subjects written before v3.0 still read: a v2 edit's and append's, with no id; those
+written before v1 by one consumer (`shiftlead: board|answer <head> (from <ref>)`, `shiftlead: board decide <ref>
+(person)`), as appends; and `<tool>: archive <n> closed items (session <name>)`, which no v3 writer writes.
+`subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write) `queue`.
 
 ## The board writer (v2.3)
 
@@ -1794,7 +1973,7 @@ v2.7's `migrate` runs v2.8's once more, as its own PR.
 
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; v3.0: the item file; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -1829,10 +2008,6 @@ entry-id       ::= ( repo "#" )? "TD-" digit+
 repo           ::= repo-part ( "/" repo-part )*
 repo-part      ::= [A-Za-z0-9_] [A-Za-z0-9_.-]* | "." [A-Za-z0-9_-] [A-Za-z0-9_.-]* | ".." [A-Za-z0-9_.-]+
 doer           ::= " Doer: " ( doer-repo | "team " person ) "."
-doer-repo      ::= ( repo-part "/" )* doer-part
-doer-part      ::= [A-Za-z0-9_] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
-                 | "." [A-Za-z0-9_-] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
-                 | ".." [A-Za-z0-9_.-]* [A-Za-z0-9_-]
 due            ::= " Due: " date "."
 hide           ::= " Hide until: " date "."
 reply          ::= " — " reply-name ", " date ": " char*
@@ -1879,7 +2054,56 @@ carries `Parts:` or `Lifts:`, names exactly one entry in its Context.
 
 A `Doer:` (v2.8) names a team only after the word `team` and one space; `Doer: team.` names the repo `team`. A
 doer's repo is a `repo` whose last component does not end in `.` (`doer-repo`, its last part `doer-part`, which is
-`repo-part` without a final `.`), so the period that ends the field is never the name's.
+`repo-part` without a final `.`; both defined under *The item file (v3.0)*), so the period that ends the field is never the name's.
+
+### The item file (v3.0)
+
+An item file as the writers write it (*The form the writers write*): a text `item_file_problem()` gives None for.
+
+```ebnf
+item-file      ::= "## " item-text #xA #xA item-header ( #xA #xA item-body )? ( #xA #xA item-log )? #xA
+item-text      ::= nonspace ( char* nonspace )?
+item-header    ::= ( kind-field #xA )? added-field ( #xA session-field )? #xA context-field ( #xA parts-field )?
+                   ( #xA doer-field )? ( #xA due-field )? ( #xA hide-field )? ( #xA answers-field )?
+                   ( #xA lifts-field )? ( #xA decided-field )? ( #xA closed-field )?
+kind-field     ::= "**Kind:** " ( "decide" | "act" | "look" | "watch" | "fyi" )
+added-field    ::= "**Added:** " date
+session-field  ::= "**Session:** " head-name ( " on " head-name )?
+context-field  ::= "**Context:** " item-text
+parts-field    ::= "**Parts:** " entry-id ( ", " entry-id )*
+doer-field     ::= "**Doer:** " ( doer-repo | "team " person )
+doer-repo      ::= ( repo-part "/" )* doer-part
+doer-part      ::= [A-Za-z0-9_] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | "." [A-Za-z0-9_-] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
+                 | ".." [A-Za-z0-9_.-]* [A-Za-z0-9_-]
+due-field      ::= "**Due:** " date
+hide-field     ::= "**Hide until:** " date
+answers-field  ::= "**Answers:** " item-answer ( answer-sep item-answer )*
+lifts-field    ::= "**Lifts:** " item-label ( answer-sep item-label )*
+decided-field  ::= "**Decided:** " date ( " by " person )? " — " item-text
+closed-field   ::= "**Closed:** " date ( " — " item-text )?
+item-answer    ::= item-label " (default)"? ( " — " char* )?
+item-label     ::= label-start label-char*
+item-body      ::= body-line ( #xA body-line )*
+body-line      ::= " "* "- " char*
+item-log       ::= "**Log:**" ( #xA reply-line )+
+reply-line     ::= "- " date ": " reply-by ": " item-text
+reply-by       ::= [^#x20#x9:#xA] [^:#xA]*
+```
+
+`item-header` gives the fields' order, each at most once, with `added-field` and `context-field` always. What the
+productions leave to prose: `parts-field` only on a `decide`, `doer-field` only on an `act`; a
+`due-field` on every kind but `fyi`; answers as *A new item* says a kind takes them, and a `lifts-field` only on
+a `decide`, each label one of its answers once and never `Go` alone; a decided file has no `session-field` and may
+carry any answers or none. Which labels are forms (*The board*, the `Answers:` bullet) is a reading of an
+`item-label`, as its consequence split is: the productions accept every form as a label, and a fill is a
+`Decided` text, which they accept as any (v2.8). An `item-label` holds no ` — ` and does not end in ` (default)`; a `reply-by` is at most
+40 characters and ends in no whitespace; a `date` is a day of the calendar. A `doer-field` names a team only after
+the word `team` and one space, so `**Doer:** team` names the repo `team` (`doer_value()` also reads a run of
+spaces or tabs there, a spelling `item_file_problem()` faults). A `doer-repo` is a `repo` whose last
+part, `doer-part`, is a `repo-part` that does not end in `.`. Every other production is the one above it of the
+same name (`date`, `digit`, `char`, `nonspace`, `head-name`, `entry-id`, `repo`, `repo-part`, `person`,
+`person-part`, `answer-sep`, `label-start`, `label-char`).
 
 ### `Blocked by` (v2.4)
 

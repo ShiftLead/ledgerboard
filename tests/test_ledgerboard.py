@@ -37,7 +37,9 @@ class Purity(unittest.TestCase):
         tree = ast.parse((ROOT / "ledgerboard" / "__init__.py").read_text(encoding="utf-8"))
         names = {a.name.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
         names |= {n.module.split(".")[0] for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
-        self.assertLessEqual(names, {"__future__", "logging", "re", "collections", "dataclasses", "datetime", "typing"})
+        # hashlib (v3.0): key_id()'s SHA-256, a function of the text alone
+        self.assertLessEqual(names, {"__future__", "hashlib", "logging", "re", "collections", "dataclasses", "datetime",
+                                     "typing"})
 
     def test_stdlib_only_and_no_shebang(self):
         first = (ROOT / "ledgerboard" / "__init__.py").read_text(encoding="utf-8").splitlines()[:3]

@@ -28,22 +28,28 @@ Fixtures, each an invented input and its expected JSON:
   writes from the v1 texts, and ``load()`` of it gives the same ``<case>.json`` (v2.0).
 - ``board/<case>.md`` → ``<case>.json``: every open item's ``item_record()`` at ``TODAY``, plus
   ``item_key()`` of every item line and ``closed_items()``, and ``needs_you()`` at ``TODAY`` and ``board_people()`` (v2.3).
-- ``edit/cases.json`` → ``edit/expected.json``: ``edit_line()``, ``subject()``, ``subject_kind()``,
+- ``edit/cases.json`` → ``edit/expected.json``: ``edit_line()``,
   ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
-  ``bold_head()``, ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
+  ``bold_head()`` (from v3.0 a heading too, read whole), ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
   ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2), and ``respace()`` (v2.3), and
   ``split_notes()`` of a README and ``item_notes()`` of a line at the file's ``today`` (v2.4); an answer's
   consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
   ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
   ``today`` in place of the file's (v2.3); ``item_problem()``, ``canonical_item()`` and ``board_problems()``
-  (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``edit_action()``, ``item_key()`` of lines
+  (v2.3), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``item_key()`` of lines
   that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
   and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
   ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate; and ``item_line(parts=)`` (v2.6):
   the snapshot written in number order, spelled as given, and each of its refusals; and ``Doer:`` (v2.8): read,
   faulted and kept through every edit, ``item_line(doer=)`` and its refusals; and answer forms (v2.8):
   ``is_form()``, ``form_head()`` and ``fill_form()``, a fill written by ``decide``, and the two new refusals.
+- ``item/cases.json`` → ``item/expected.json`` (v3.0): the board's item file — ``parse_item()`` of each file at its
+  path, printed as ``item_attrs()`` and ``item_fields()``; ``item_file()`` and ``decided_file()``, every file they write
+  judged by ``item_file_problem()``; ``edit_item()`` of each edit; ``item_file_problem()`` and ``canonical_item_file()``;
+  the ids (``item_id()``, ``is_item_id()``, ``item_path()``, ``key_id()``, a raised ValueError recorded as
+  ``{"raises": "ValueError"}``); and the commit subjects of a board write, v2 and v3 — ``subject()`` with and
+  without ``id``, ``subject_kind()``, ``edit_action()`` and ``subject_id()`` (``edit/``'s subject groups, moved here).
 - ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
   boards; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
   ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
@@ -92,7 +98,7 @@ Fixtures, each an invented input and its expected JSON:
   nothing; and ``status_problem()`` of each form, in its place and out of it.
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
-  ``item_problem()`` of an item line, ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
+  ``item_problem()`` of an item line, ``item_file_problem()`` of a whole item file (v3.0), ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
   whose ``person`` productions hold a person's name), ``parse_event_section()`` of an Event section (v2.4).
   ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
 - ``origins/cases.json`` → ``origins/expected.json`` (v2.4): repos and origins — ``origin_key()`` and
@@ -491,18 +497,12 @@ def archive_case(L, md: Path) -> dict:
 
 def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     today = date.fromisoformat(spec["today"])
-    out: dict = {"edits": {}, "subjects": [], "subject_kinds": {}, "compose": [], "predicates": {}, "versions": []}
+    out: dict = {"edits": {}, "compose": [], "predicates": {}, "versions": []}
     for c in spec["edits"]:
         to = date.fromisoformat(c["to"]) if c.get("to") else None
         out["edits"][c["name"]] = _refused(lambda c=c, to=to: L.edit_line(
             c["line"], c["action"], to=to, answer=c.get("answer"), why=c.get("why"),
             reply=c.get("reply"), by=c.get("by"), today=today, **({"close": True} if c.get("close") else {})))
-    for c in spec["subjects"]:
-        out["subjects"].append(_refused(lambda c=c: L.subject(
-            c["tool"], c["action"], c["text"], to=c.get("to"), answer=c.get("answer"), session=c.get("session"))))
-    for s in spec["subject_kinds"]:
-        out["subject_kinds"][s] = L.subject_kind(s)
-    out["edit_actions"] = {s: L.edit_action(s) for s in spec.get("edit_actions", [])}  # v2.3
     out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
     for c in spec["compose"]:
         if c["fn"] == "item_line":
@@ -525,7 +525,9 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                  "is_sweep_stamp": L.is_stamp(ln, ("Swept", "Swept-deep"))}
     for t in spec["versions"]:
         out["versions"].append({"major": L.format_major(t), "problem": L.version_problem(t)})
-    out["bold_heads"] = {t: L.bold_head(t) for t in spec["bold_heads"]}
+    out["bold_heads"] = {(f"heading: {t['heading']}" if isinstance(t, dict) else t):
+                         (L.bold_head(t["heading"], heading=True) if isinstance(t, dict) else L.bold_head(t))
+                         for t in spec["bold_heads"]}  # v3.0: a heading, read whole
     out["not_right_forms"] = {a: L.is_not_right_form(a) for a in spec["not_right_forms"]}
     out["not_right_fills"] = {c["name"]: _refused(lambda c=c: L.fill_not_right(c["said"], c["offered"]))
                               for c in spec["not_right_fills"]}
@@ -555,6 +557,88 @@ def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     out["components"] = {f: L.components(L.entries((root / f).read_text(encoding="utf-8")))
                          for f in spec["components"]}
     return out
+
+
+def item_fields(item) -> list[list[str]]:
+    """A BoardItem's header fields (v3.0), ``BoardItem.fields`` as ``[name, value]`` pairs, in order."""
+    return [[n, v] for n, v in item.fields]
+
+
+def item_attrs(item) -> dict:
+    """The attributes of a BoardItem that ``item/``'s ``parse`` case names (v3.0): each date ``YYYY-MM-DD``, each
+    tuple a list (``decided`` ``[label, date]``, ``closed`` ``[date, why]``, ``doer`` ``[kind, name, text]``, each
+    reply ``[by, date, words]``), None as null."""
+    def day(d):
+        return d.isoformat() if d is not None else None
+    return {"id": item.id, "words": item.words, "kind": item.kind, "added": day(item.added), "due": day(item.due),
+            "bad_due": item.bad_due, "fyi_due": item.fyi_due, "hide_until": day(item.hide_until),
+            "context": item.context, "answers": item.answers, "default": item.default,
+            "decided": [item.decided[0], day(item.decided[1])] if item.decided else None,
+            "decided_by": item.decided_by, "doer": list(item.doer) if item.doer else None, "parts": item.parts,
+            "replies": [list(r) for r in item.replies],
+            "closed": [day(item.closed[0]), item.closed[1]] if item.closed is not None else None}
+
+
+def _raises(fn):
+    """``{"ok": fn()}``, or ``{"raises": "ValueError"}`` when it raises one (v3.0: an id, a path)."""
+    try:
+        return {"ok": fn()}
+    except ValueError:
+        return {"raises": "ValueError"}
+
+
+def item_cases(L, spec: dict) -> dict:
+    """The board's item file (v3.0): ``parse_item()`` of each file at its path, as ``item_attrs()`` and
+    ``item_fields()``; ``item_file()`` and ``decided_file()`` of each compose case, and ``item_file_problem()`` of each
+    file they write; ``edit_item()`` of each edit; ``item_file_problem()`` and ``canonical_item_file()`` of each file;
+    the ids (``item_id()``, ``is_item_id()``, ``item_path()``, ``key_id()``); and the commit subjects of a board write,
+    v2 and v3 (``subject()``, ``subject_kind()``, ``edit_action()``, ``subject_id()``)."""
+    if not hasattr(L, "parse_item"):  # a module older than v3.0
+        return {"missing": "the module has no parse_item — older than v3.0"}
+    today = date.fromisoformat(spec["today"])
+
+    def parsed(c):
+        it = L.parse_item(c["text"], c["path"])
+        return None if it is None else {"attrs": item_attrs(it), "fields": item_fields(it)}
+
+    def compose(c):
+        if c["fn"] == "item_file":
+            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts", "doer")
+                  if k in c}
+            return _refused(lambda: L.item_file(c["text"], c["due"], c.get("today", spec["today"]), c["session"],
+                                                c["host"], c["context"], **kw))
+        by = {"by": c["by"]} if "by" in c else {}
+        return _refused(lambda: L.decided_file(c["title"], c["ref"], c["answers"], c["default"], c["words"],
+                                               spec["today"], **by))
+
+    def edit(c):
+        to = date.fromisoformat(c["to"]) if c.get("to") else None
+        return _refused(lambda: L.edit_item(c["text"], c["action"], to=to, answer=c.get("answer"), why=c.get("why"),
+                                            reply=c.get("reply"), by=c.get("by"), today=today,
+                                            close=bool(c.get("close"))))
+    composed = {c["name"]: compose(c) for c in spec["compose"]}
+    ids, subj = spec["ids"], spec["subjects"]
+    return {
+        "parse": {c["name"]: parsed(c) for c in spec["parse"]},
+        "compose": composed,
+        "written": {n: L.item_file_problem(r["ok"]) for n, r in composed.items() if "ok" in r},
+        "edits": {c["name"]: edit(c) for c in spec["edits"]},
+        "problems": {c["name"]: L.item_file_problem(c["text"]) for c in spec["problems"]},
+        "canonical": {c["name"]: _refused(lambda c=c: L.canonical_item_file(c["text"])) for c in spec["canonical"]},
+        "ids": {"item_id": [_raises(lambda a=a, n=n: L.item_id(a, n)) for a, n in ids["item_id"]],
+                "is_item_id": {s: L.is_item_id(s) for s in ids["is_item_id"]},
+                "item_path": [_raises(lambda i=i, d=d: L.item_path(i, d)) for i, d in ids["item_path"]],
+                "key_id": [{"key_id": L.key_id(L.item_key("- [ ] " + c["text"])),
+                            "as_persisted": L.key_id(L.item_key("- [ ] " + c["text"])) == c["hex"]}
+                           for c in ids["key_id"]]},
+        "subjects": {
+            "subjects": [_refused(lambda c=c: L.subject(
+                c["tool"], c["action"], c["text"], to=c.get("to"), answer=c.get("answer"), session=c.get("session"),
+                **({"id": c["id"]} if "id" in c else {}))) for c in subj["subjects"]],
+            "subject_kinds": {s: L.subject_kind(s) for s in subj["subject_kinds"]},
+            "edit_actions": {s: L.edit_action(s) for s in subj["edit_actions"]},  # v2.3
+            "subject_ids": {s: L.subject_id(s) for s in subj["subject_ids"]}},
+    }
 
 
 def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
@@ -845,7 +929,7 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 def grammar_cases(L, spec: dict) -> dict:
     """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
-    ``item_problem()``, a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4),
+    ``item_problem()``, an item file's ``item_file_problem()`` (v3.0), a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4),
     and (v2.7) a Status value's ``status_problem()``, a Log line's ``log_line()``, a header block's ``canonical()``
     and an ``Added`` value's ``migrate_entry()``."""
     if not hasattr(L, "parse_gates"):  # a module older than v2.4: this case fails, the others still run
@@ -865,6 +949,7 @@ def grammar_cases(L, spec: dict) -> dict:
         "added": lambda s: _added_verdict(L.migrate_entry(f"## TD-1: x\n\n**Added:** {s}\n**Status:** Open\n",
                                                           archived=False, today=TODAY)),
         "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
+        "item-file": lambda s: _why(L.item_file_problem(s)),  # v3.0: a whole item file
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
         "event-section": lambda s: (L.parse_event_section(s)["problem"] is None, L.parse_event_section(s)["problem"]),
@@ -1001,6 +1086,8 @@ def cases(L, root: Path):
         yield md.with_name(md.name.removesuffix(".board.md") + ".json"), archive_case(L, md)
     spec = json.loads((root / "edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "edit" / "expected.json", edit_cases(L, spec, root)
+    spec = json.loads((root / "item" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "item" / "expected.json", item_cases(L, spec)  # v3.0
     if hasattr(L, "__path__"):  # the writers ship in the package; a single module file has none
         for case in sorted(p for p in (root / "board_writer").glob("*") if p.is_dir()):
             yield case, writer_case(L, case)
