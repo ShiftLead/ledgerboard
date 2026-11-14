@@ -38,8 +38,10 @@ field, sections, listing the archive's months, the stub). Three are this part's 
   (round 2: waiting for every roster pin leaves each bumped repo with no board writer, since v3.0's writers refuse
   a v2 board). A v2.x reader that checks no version reads a stub as an empty
   board, and both consumers read other repos' boards (ShiftLead's `gatesweep` and `workorders`, agent-cadence's
-  `nudge_user_attention.py`), so a split in agent-cadence's vendor PR would empty its board for ShiftLead's sweep
-  until ShiftLead synced. The third (D12).
+  `nudge_user_attention.py`), so a split in agent-cadence's vendor PR empties its board for ShiftLead's sweep
+  until ShiftLead syncs. The third, every repo in its own bump (D12; round 4's F420 puts agent-cadence's split back
+  in its vendor PR: the old-pin readers of every other repo take that same risk, and a separate split PR left
+  agent-cadence with no board writer until it merged).
 - **`board.py split` under TD-095's write gate**: a gate exemption for `split` alone, or `split` as a separate
   tool. One `board.py` keeps one `--board` normalisation, one usage and one JSON shape; `split` is the one action
   whose gate is the reverse (it needs a v2 board), so it has its own gate (D11, *`board.py split`*).
@@ -125,7 +127,8 @@ on an `fyi` are all carried. The rule, for each:
 - **lines after the first item that are no item** (round 8's F118). On a v2 board, a line after the first item that
   is no item, no detail block's line and not blank (a placeholder `- (none)`, as this repo's board holds under `##
   In-flight`, or a note a hand edit left) is prose no reader reads. The split loses none of it: each such line is
-  carried, in order, to the end of `README.md`, after one blank line, together with each `## ` heading after the
+  carried, in order, to the end of `README.md`, after one blank line (its relative links gaining `../` by the
+  preamble's rule, the file having moved one directory down; round 4's F422), together with each `## ` heading after the
   first item that stands above a carried line (with no carried line under it, a heading is dropped, as the heading
   nearest the first item is); one blank line separates the groups. `split_board_notes()` then lists them as it
   lists any README line (an `In-flight` heading among its names), for the caller to keep or delete. It refuses a
@@ -189,9 +192,9 @@ item of the input names (an `Added` or a `Closed` date), so hidden, overdue and 
 F75): it always writes the directory beside the board, named the board's name less `.md`, since that is the one
 directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files, board, archive="")` names
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
-`key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
-once its own tooling and both consumers run v3.0 (text 12; D12's order: ShiftLead's in its sync PR, agent-cadence's
-in a PR of its own right after, or by the end of the UTC day after its vendor PR merged if the sync has not (D12, round 3's F409), each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
+`key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377; round 4's F420):* a repo's board
+splits in the change that makes its own tooling v3.0 (text 12; D12's order: agent-cadence's in its vendor PR, ShiftLead's in its sync PR,
+each other pinning repo's in its pin bump, all by the end of the UTC day after agent-cadence's merged; round 4's F420), landed when no open PR
 edits the board and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
 PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
@@ -229,40 +232,42 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
 - **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (B3, TD-103, #306,
   then B4, TD-104, #307); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
   B1 to B4 are merged.
-- **After v3.0, in this order** (round 1's F376, F377; round 2's F393, F398): (1) agent-cadence vendors v3.0, no
-  split; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR; (3) agent-cadence splits
-  its own board, in a PR of its own, at once after (2), or by the end of the UTC day after (1) merged if (2) has not (below); (4) each other repo that pins agent-cadence, this repo
-  among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
-  TD-100 designs). The ledger's precondition is TD-078's D5, not B5's (round 3's F412, round 4's F414): it binds
-  ledgerboard, agent-cadence and ShiftLead, met when `ledger.py migrate --plan --release <x.y>`, run with the last
-  v2.x, prints no entry holding `changes` or `stops`; agent-cadence runs it in (1) and ShiftLead in (2), each before
-  vendoring, and ledgerboard's is B4's guard run before v3.0 is cut. A roster repo's ledger in (4) is TD-100's
-  (TD-078's D7). (2) is worked while (1) is in review, so
-  it is ready to merge when (1) merges; and (3) waits for (2), but not past a deadline: if (2) has not merged by the end
-  of the day after (1) merged, (3) lands anyway (round 3's F409), and ShiftLead's v2.x `gatesweep` and `workorders`
-  read agent-cadence's board as empty until (2) merges — the same risk, and the same remedy, as an old-pin roster
-  reader below. The order puts (2) first because ShiftLead's readers span the roster, so its read of every board
-  stays whole whenever (2) is on time; it is not a stricter rule for ShiftLead than for the roster. A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose
-  board is still v2 has no board writer: bump and split together leave no such repo but agent-cadence between (1)
-  and (3), a window named here and kept short (round 3's F400): its own board then takes no write from any of its
-  writers, `board.py`, `board_edit.py`, `gate_sweep.py`'s filings and closes and `ledger.py set`'s board half (each
-  goes through `board.py`'s `plan_add()` or `plan_edit()` and so meets D7's gate, and the vendor PR makes each skip a
-  v2 target with a message naming the split rather than fail), but for `ledger.py set`, which keeps the pin's
-  refusal of the whole lift (the ledger put back, exit 1; round 3's F408), so a decision lifted there is lifted
-  again after step 3, and an item that cannot wait is a hand edit to the v2 file, which the v3 reader reads. A board's readers are its own
+- **After v3.0, every repo bumps and splits in one PR** (round 1's F376, F377; round 2's F393, F398; round 4's F420
+  reverses F376's exception for agent-cadence): (1) agent-cadence vendors v3.0 and splits its own board in that
+  PR; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR, worked while (1) is in review
+  so it is ready to merge when (1) merges; (3) each other repo that pins agent-cadence, this repo among them, bumps
+  its pin to a v3.0 agent-cadence and splits its board in that same PR (a roster repo as TD-100 designs). The
+  ledger's precondition is TD-078's D5, not B5's (round 3's F412, round 4's F414): it binds ledgerboard,
+  agent-cadence and ShiftLead, met when `ledger.py migrate --plan --release <x.y>`, run with the last v2.x, prints
+  no entry holding `changes` or `stops`; agent-cadence runs it in (1) and ShiftLead in (2), each before vendoring,
+  and ledgerboard's is B4's guard run before v3.0 is cut. A roster repo's ledger in (3) is TD-100's (TD-078's D7).
+  A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose board is still v2
+  would have no board writer; bump and split together leave no such repo. A v3.0 writer may still meet another
+  repo's board still v2 (a `ledger.py set` reassign or override that notifies another roster repo, §2.4): it
+  skips that target with a message naming the split, as for any target it cannot write (round 3's F400, F408 as
+  F420 narrows them).
+  **The PR that bumps and splits is judged by its head's pin** (round 4's F423): `agent-cadence run` resolves the
+  pin from the checkout it runs in, and the cadence check and the precheck run at the PR's head, so v3.0's check
+  judges it; a split PR (a v2 pair at the base, the directory at the head) reads the same ids on both sides and
+  takes ordinary review (TD-095's D6 and `lift-board-v2`), and its board row reads the head's directory. No
+  override is needed and none is used. In (1), agent-cadence's own scripts are the head's.
+  A board's readers are its own
   repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
-  session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0, and the consumers
-  that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split when (2) is on time (F409),
-  and agent-cadence's scripts run from another roster repo under that repo's pin. Of those, `nudge_user_attention.py`
-  checks the version and refuses a split board, a display; but `gate_sweep.py` and `ledger.py set`'s `_boards()`
-  read another repo's board as text with no version check (round 3's F401), so until their repo bumps they read a
-  split board as empty: a sweep there sees no covering item and can file a duplicate on its own board, and a `set`
-  there logs `no board item` for a decision the split board holds. **The default** (the author's, put to the
-  person as a steer): every pinning repo's bump-and-split lands within one day, steps 1 to 4 together, so the
-  window is that day; a duplicate an old-pin sweep files in it (ShiftLead's v2.x `gatesweep` among them, when (3)
-  does not wait for (2)) is closed by hand, and the rollout's entry says so.
-  The alternatives are each worse on another axis: holding every split until the last roster repo bumps leaves each
-  bumped repo with no board writer (F393), and a v2.x patch that refuses a stub breaks D12's no-v2.x-release rule.
+  session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0 in the PR that
+  splits, and the consumers that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2)
+  makes v3.0, and agent-cadence's scripts run from another roster repo under that repo's pin. Of those,
+  `nudge_user_attention.py` checks the version and refuses a split board, a display; but `gate_sweep.py` and
+  `ledger.py set`'s `_boards()` read another repo's board as text with no version check (round 3's F401), so until
+  their repo bumps they read a split board as empty: a sweep there sees no covering item and can file a duplicate
+  on its own board, and a `set` there logs `no board item` for a decision the split board holds. ShiftLead's
+  v2.x `gatesweep` and `workorders` read agent-cadence's split board so between (1) and (2), which (2)'s
+  readiness keeps short. **The default** (the author's, put to the person as a steer): (2) and every (3) land by
+  the end of the UTC day after (1) merged, so that is the window; a duplicate an old-pin sweep files in it
+  (ShiftLead's v2.x `gatesweep` among them) is closed by hand, and the rollout's entry says so. The alternatives
+  are each worse on another axis: holding every split until the last roster repo bumps leaves each bumped repo
+  with no board writer (F393); splitting agent-cadence's board only after (2) leaves agent-cadence, where most
+  sessions run, with no board writer until then (F420, which this replaces); and a v2.x patch that refuses a stub
+  breaks D12's no-v2.x-release rule.
   Each consumer entry carries the line for its step above.
 
 ## Consumers
@@ -279,13 +284,10 @@ board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), 
 board is split.
 
 - **agent-cadence**:
-  - vendor v3.0 (no split in that PR), its ledger first meeting TD-078's D5; split its own `docs/user_attention.md`
-    with `board.py split` in a PR of its own right after ShiftLead's sync (D12's step 3), or at the end of the UTC
-    day after the vendor PR merged if the sync has not (round 3's F409), landed when no open PR edits the board and no unpushed board
-    commit is held; between its vendor PR and that split its board takes no writer's write (D12's window): its
-    writers skip a v2 target with a message naming the split (`gate_sweep.py`'s filings and closes; round 3's F400),
-    and `ledger.py set`'s lift keeps its refusal of the whole lift, ledger put back, to be run again after the split
-    (F408);
+  - vendor v3.0, its ledger first meeting TD-078's D5, and split its own `docs/user_attention.md` with `board.py
+    split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board and no unpushed
+    board commit is held; its writers skip another repo's board still v2 with a message naming the split
+    (`gate_sweep.py`'s filings and closes, `ledger.py set`'s notice to another repo; round 3's F400, F408);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
     `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
@@ -309,11 +311,14 @@ board is split.
     the board row reads the head's board, fails on `board_dir_problems()`'s and on `version_problem(board)` (D6),
     since the gate judges an item only when it is added and damage a hand edit does to an existing file is caught
     only there (D7); `precheck.py` runs the repo's own command and reads no board;
-  - the own-board path in `cadence_hooks.sh` and `check_claude_memory.sh`; cadence.md §3, §4.3 and §4.4,
-    `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton (no `Format:` line
-    for the item line, no sections, closing archives).
+  - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) and `check_claude_memory.sh` stays
+    the v2 file's path, which `load_board()` reads through the stub to the directory, so it needs no change; cadence.md
+    §3, §4.3 and §4.4, `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton
+    (no `Format:` line for the item line, no sections, closing archives) change in the vendor PR, beside the split
+    (round 4's F421).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
-  - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), landed when no open PR
+  - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), its ledger first
+    meeting TD-078's D5, landed when no open PR
     edits the board and no unpushed board commit is held, and merged only when what reads the board is v3.0 code
     running: where a ShiftLead component runs from a deploy rather than the checkout, the deploy follows the merge
     at once, and the entry says which do (round 3's F411); the sync PR is worked while agent-cadence's vendor PR is
@@ -517,9 +522,9 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > field the v2 reader reads into the header field of the same name. v2.4's "no board action removes one" no longer holds:
 > `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3 repo as the stub, which declares
 > `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer refuses it unread, and a reader
-> that checks nothing reads an empty board, so a repo splits its board only once its own tooling and the consumers
-> that read it from elsewhere run v3.0, and the repos that read each other's boards move to v3.0 together, within
-> a day: until another such repo moves, its v2.x readers that check nothing read the split board as empty (a sweep
+> that checks nothing reads an empty board, so a repo splits its board in the change that makes its own tooling
+> v3.0, and the repos that read each other's boards move to v3.0 together: until another such repo moves, its v2.x
+> readers that check nothing read the split board as empty (a sweep
 > there can file a duplicate item, closed by hand).
 > Within v3.x the same holds for a field: a later minor's field is faulted by an older v3 gate, so **a consumer
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
