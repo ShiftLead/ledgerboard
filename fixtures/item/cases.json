@@ -1004,5 +1004,184 @@
       "shiftlead: append Ship it (session n/a)",
       "board: append 2026-02-30-abcd1234 Ping sam (session n/a)"
     ]
-  }
+  },
+  "gate": [
+    {
+      "name": "an added item faulted",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n",
+          "user_attention/2026-01-06-5e6f7a8b.md": "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-01-06\n**Session:** w-9\n**Due:** 2026-01-21\n**Context:** TD-2\n"
+        }
+      },
+      "old": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n"
+        }
+      }
+    },
+    {
+      "name": "an edited item not judged",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-25\n"
+        }
+      },
+      "old": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n"
+        }
+      }
+    },
+    {
+      "name": "a new decide whose gate's person is not on People",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n",
+          "user_attention/2026-01-06-5e6f7a8b.md": "## Go on the store?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-9\n**Context:** TD-4 decision (sam)\n**Due:** 2026-01-21\n**Answers:** Go (default) | Not yet\n\n- **Context:** the store.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+        }
+      },
+      "old": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n"
+        }
+      }
+    },
+    {
+      "name": "a README holding a - [ ] line above People",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\n\n- [ ] prose shaped like an item\n\nPeople: sam\n",
+          "user_attention/2026-01-06-5e6f7a8b.md": "## Go on the store?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-9\n**Context:** TD-4 decision (sam)\n**Due:** 2026-01-21\n**Answers:** Go (default) | Not yet\n\n- **Context:** the store.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+        }
+      },
+      "old": null
+    },
+    {
+      "name": "old a v2 board: the split PR, nothing new",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1d32ec91.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n",
+          "user_attention/archive/2026-01/2026-01-04-a9306ea1.md": "## Ping lee.\n\n**Kind:** act\n**Added:** 2026-01-04\n**Session:** w-9\n**Context:** TD-3\n**Due:** 2026-01-20\n**Closed:** 2026-01-08 — done\n"
+        }
+      },
+      "old": {
+        "path": "user_attention.md",
+        "files": {
+          "user_attention.md": "# Needs the user\n\nPeople: pat\n\n- [ ] act 2026-01-05 (session w-9) — Rotate the key. Context: TD-1. Due: 2026-01-20.\n- [x] act 2026-01-04 (session w-9) — Ping lee. Context: TD-3. Due: 2026-01-20. Closed: 2026-01-08 — done.\n"
+        }
+      }
+    },
+    {
+      "name": "old None: every open item judged",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n",
+          "user_attention/2026-01-06-5e6f7a8b.md": "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-01-06\n**Session:** w-9\n**Due:** 2026-01-21\n**Context:** TD-2\n"
+        }
+      },
+      "old": null
+    },
+    {
+      "name": "two forms with one head, and a form marked default",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-06-0000000a.md": "## Hold or go?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Context:** TD-4\n**Due:** 2026-01-21\n**Answers:** Go | Hold: <note> | hold: <why>\n\n- **Context:** the store.\n- **Question:** Go?\n- **Recommended:** Go — it is ready\n",
+          "user_attention/2026-01-06-0000000b.md": "## Which way?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Context:** TD-4\n**Due:** 2026-01-21\n**Answers:** Go | Other: <what> (default)\n\n- **Context:** the store.\n- **Question:** Go?\n- **Recommended:** Other — it is ready\n"
+        }
+      },
+      "old": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n"
+        }
+      }
+    },
+    {
+      "name": "a README whose People is faulted",
+      "board": {
+        "path": "user_attention",
+        "files": {
+          "user_attention/README.md": "# Needs the user\n\nLedgerboard: 3\nPeople: pat, pat\n",
+          "user_attention/2026-01-05-1a2b3c4d.md": "## Rotate the key.\n\n**Kind:** act\n**Added:** 2026-01-05\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-01-20\n"
+        }
+      },
+      "old": null
+    },
+    {
+      "name": "a v2 board refused",
+      "board": {
+        "path": "user_attention.md",
+        "files": {
+          "user_attention.md": "# Needs the user\n\nPeople: pat\n\n- [ ] act 2026-01-05 (session w-9) — Rotate the key. Context: TD-1. Due: 2026-01-20.\n- [x] act 2026-01-04 (session w-9) — Ping lee. Context: TD-3. Due: 2026-01-20. Closed: 2026-01-08 — done.\n"
+        }
+      },
+      "old": null
+    }
+  ],
+  "strings": [
+    {
+      "name": "an item file",
+      "text": "## Go on the parts?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-4 decision (pat)\n**Parts:** TD-9, TD-10\n**Due:** 2026-01-20\n**Answers:** Go | Not yet\n",
+      "labels": [
+        "Go",
+        "Not yet",
+        "Later"
+      ]
+    },
+    {
+      "name": "a v2 line",
+      "text": "- [ ] decide 2026-01-06 (session w-1) — Go on the parts? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go | Not yet.",
+      "labels": [
+        "Go",
+        "Not yet",
+        "Later"
+      ]
+    },
+    {
+      "name": "a line's text after its tick",
+      "text": "decide 2026-01-06 (session w-1) — Go on the parts? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go | Not yet.",
+      "labels": [
+        "Go",
+        "Not yet",
+        "Later"
+      ]
+    },
+    {
+      "name": "a v2 board's text opening with a section heading",
+      "text": "## Needs the user\n\n- [ ] decide 2026-01-06 (session w-1) — Go on the parts? Context: TD-4 decision (pat). Parts: TD-9, TD-10. Due: 2026-01-20. Answers: Go | Not yet.\n",
+      "labels": [
+        "Go",
+        "Not yet",
+        "Later"
+      ]
+    },
+    {
+      "name": "an item file whose Context names two entries",
+      "text": "## Go on the parts?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-4, TD-5 decision (pat)\n**Parts:** TD-9, TD-10\n**Due:** 2026-01-20\n**Answers:** Go | Not yet\n",
+      "labels": [
+        "Go"
+      ]
+    }
+  ]
 }

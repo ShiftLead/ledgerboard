@@ -91,7 +91,7 @@
     "parts": [
      "TD-522"
     ],
-    "text": "decide 2026-01-06 (session `w-1`) — Which store? Context: TD-521 decision (pat). Parts: TD-522. Due: 2026-01-20. Answers: Files | Db | Not yet. Lifts: Files | Db. Decided: Db (by pat) (2026-01-14)."
+    "words": "Which store?"
    },
    {
     "answers": [],
@@ -102,7 +102,7 @@
     "lifts": null,
     "line": 10,
     "parts": [],
-    "text": "act 2026-01-02 (session `w-2`) — Done thing. Context: TD-2. Due: 2026-01-09."
+    "words": "Done thing."
    },
    {
     "answers": [
@@ -121,7 +121,7 @@
     ],
     "line": 11,
     "parts": [],
-    "text": "decide 2026-01-03 (n/a) — Still waiting? Context: TD-530 event (vendor-ships). Due: 2026-01-09. Answers: Drop the gate | Keep waiting. Lifts: Drop the gate. Decided: Keep waiting (by sam) (2026-01-04)."
+    "words": "Still waiting?"
    }
   ]
  ],
@@ -259,7 +259,7 @@
    "refused": "only pat answers for decision (pat) on a board whose Answered by is owner, not sam"
   },
   "not_a_decide_refused": {
-   "refused": "decide_lift takes one open decide item line"
+   "refused": "decide_lift takes one open decide item"
   },
   "not_the_owner_refused": {
    "refused": "only pat answers for decision (pat) on a board whose Answered by is owner, not sam"
