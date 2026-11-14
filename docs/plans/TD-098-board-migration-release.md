@@ -301,7 +301,8 @@ board is split.
     round 3's F400, F408; round 5's F429);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
-    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
+    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`, its `_closes()` (:324-332, called at :387 and :512) matching by
+    the item's `id` where it reads `it.line`, `lines[it.line - 1]` and `item_key(raw)` (round 6's F450); the `ls` it passes
     `load_board()` lists subdirectories with `/` (its `git_io` `ls` lists files alone, which reads a directory
     board's `archive/` as empty; round 3's F406); and its own-board dedupe of a *lift was closed* item (`asked`,
     :421-424, from `parse_board()` and `parse_closed_items()` over `BOARD_PATH` and `BOARD_ARCHIVE_PATH` text, by
@@ -313,8 +314,8 @@ board is split.
     to the item and its id (round 5's F443): `LB._item_gate(it.text)` (:1457-1468, :1687) becomes `_item_gate(it)`
     on the `BoardItem`, which the module already takes, and each `plan_edit(…, item.line, item.text[:40], …)`
     (:1490, :1595, :1652) becomes `board.py`'s `plan_edit(board, action, item.id, …)` (TD-095's D7); `rank()`'s
-    tie-break `LB.item_key(it.text)` (:1459) becomes the item's `id` (text 12: tied items may change order at the
-    split), and the refusal messages' `pick[1].text[:80]` (:1465, :1468), the `- close:` lines' `it.text` (:1665)
+    tie-break `LB.item_key(it.text)` (:1459) becomes the item's `id`, ascending, so `min()` picks the oldest of the
+    tied items (text 12: tied items may change order at the split; F451), and the refusal messages' `pick[1].text[:80]` (:1465, :1468), the `- close:` lines' `it.text` (:1665)
     and the note's `item.line` (:1500) read the item's `words` and `id` (round 6's F446); the done-when's grep also
     finds no `.text` or `.line` read on a `BoardItem`; the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
     finds none outside the vendored module;
