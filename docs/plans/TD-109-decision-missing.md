@@ -451,6 +451,10 @@ release, and is that consumer's.
 - **No Owner rule** (D4).
 - **No re-gate guard** (D3 *Re-asking*): refusing a gate alone on an answered entry was designed in round 3 and
   withdrawn in round 4 (F25, F31, F32, F34); a stale Ask on a re-gated entry is the session's to rewrite.
+- **No rename of an answered Ask** (R16's view on the recurring topic): `lift_gate()` could rename an answered Ask's
+  lead to `**Ask (answered):**`, so the flag would read the text alone, with no Log reading and no Ask-write refusal.
+  It would change the lift's output in SPEC *Lifting a gate* and every lift and decide fixture, and flag every entry
+  already answered until migrated; R16 judged D3 heavy but not the wrong design, and that alternative a bigger change.
 - **No pickability change** (D1): the flag names the fault; holding the entry would hide it further.
 - **No board-side check.** A board item whose Context names no gate but which waits on a person is the board's own
   question, not this flag's.
