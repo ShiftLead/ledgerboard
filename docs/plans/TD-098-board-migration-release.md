@@ -30,8 +30,14 @@ field, sections, listing the archive's months, the stub). Three are this part's 
   files would change its result's shape for one note; `split_board_notes()` taking the v2 texts it was split from
   keeps `split_board()` a plain `{path: text}` and lets the notes read what the files no longer hold. The second.
 - **`fixtures/sweep/alpha/`**: a hand-written v3 stand-in for `alpha.md`'s split since B2 (TD-094). Keeping it beside
-  a split it may differ from leaves two answers to one question; B5 checks that `split_board()` gives it file for
-  file and, where it does not, regenerates it from the split (the sweep's `split` result must still say `same`).
+  a split it may differ from leaves two answers to one question, and regenerating it from the split would check the
+  split against itself (round 1's F383); once `split_board()` exists the runner splits `alpha.md` in memory and
+  `alpha/` is deleted, the split's bytes being pinned by `fixtures/board/<case>.v3/` and `board_split`.
+- **Where a board splits in the release's order** (round 1's F376, F377): in each consumer's vendor PR (draft 1),
+  or once every reader of that board runs v3.0. A v2.x reader that checks no version reads a stub as an empty
+  board, and both consumers read other repos' boards (ShiftLead's `gatesweep` and `workorders`, agent-cadence's
+  `nudge_user_attention.py`), so a split in agent-cadence's vendor PR would empty its board for ShiftLead's sweep
+  until ShiftLead synced. The second (D12).
 - **`board.py split` under TD-095's write gate**: a gate exemption for `split` alone, or `split` as a separate
   tool. One `board.py` keeps one `--board` normalisation, one usage and one JSON shape; `split` is the one action
   whose gate is the reverse (it needs a v2 board), so it has its own gate (D11, *`board.py split`*).
@@ -62,7 +68,14 @@ on an `fyi` are all carried. The rule, for each:
   become one closed item, as D6 reads them); it becomes `<id>.md`, or `archive/<YYYY-MM>/<id>.md` when closed, its
   id as D6 gives the v2 item (`key_id()`), so a consumer that persisted `board:<8 hex>` finds its item by the id's
   last 8 digits;
-- **a twin's closed line and its detail block supply every field and the body**; the open twin is read for nothing;
+- **a twin's closed line and its detail block supply every field and the body**; the open twin is read for nothing,
+  as v2 reads it; where its detail block differs from the closed twin's, `split_board_notes()` names it at the
+  item's heading, `open twin's detail not carried`, so a person sees what the read never showed (round 1's F378);
+- **the archive's own prose** (round 1's F378): its text before its first item (its title and any note) is not
+  carried, since `README.md` is the board's, and `split_board_notes()` lists each of its non-blank lines but the `#
+  ` title, `archive preamble not carried`; a line after its first item that is no item, no detail block's line and
+  not blank is carried as the board's are (below), after the board's own carried lines, under the archive's `## `
+  headings that stand above one;
 - its fields are the v2 reader's, rewritten into the file's forms: `Context` and `Closed`'s why lose their final
   period (`Closed: 2026-11-12 — lifted.` becomes `**Closed:** 2026-11-12 — lifted`), `Decided` becomes `<date>[ by
   <person>] — <label>`; its body is the detail block, common indent removed; its replies are the Log. A v2 item's `closed` (B2) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split);
@@ -72,8 +85,10 @@ on an `fyi` are all carried. The rule, for each:
   board's next line; with no `# ` title, as the first line followed by one blank line; round 1's F359), less the `## ` heading
   nearest the first item (with more than one `## ` heading before it, only that one drops), each relative link
   gaining `../`: an inline link or image's target (`[t](target)`, `![t](target)`) or a reference definition's
-  (`[label]: target`) whose target starts with no scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among them), no
-  `#` and no `/`, outside code spans and fenced code;
+  (`[label]: target`) whose target starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among
+  them), `#` and `/` (a `#` later in it, `cadence.md#3-x`, is no bar), outside code spans and fenced code; an
+  angle-bracketed target (`<a b>`) gains it inside the brackets, a title after the target (`(x "t")`) is kept, and
+  a target starting `./` has that `./` replaced by `../` (round 1's F381);
 - a v2 item's `Doer` is carried as written (round 7's F93, F98: a respelling would break the read-back, whose
   records compare `doer.text`; round 9's F147 reverses F97's refusal and F98's): one spelled with more than one
   space or a tab after `team` (F79), one on a kind but `act`, and one outside its form are each written as the line
@@ -133,7 +148,9 @@ on an `fyi` are all carried. The rule, for each:
   `Session` line (with no `Session`, its heading), `why` `head text not carried: <text>`, `<text>` the head group's
   inner text less its `session <name>` and the `on <host>` match `HEAD_HOST_RE` reads (wherever in the group each
   stands), whitespace collapsed and leading and trailing `,`, `;` and spaces dropped; an empty `<text>` gives no
-  note (round 1's F355). Only the line that supplies the item's file is noted: of twins, the closed one, the open
+  note (round 1's F355). `split_board()` and the notes share one private `_split_items(board, archive)`, which gives
+  each item with the v2 line that supplies its file, so the notes never re-derive the split's choices; `files` must
+  be `split_board()`'s result for those texts (round 1's F382). Only the line that supplies the item's file is noted: of twins, the closed one, the open
   twin being read for nothing. Text 8's *Migration* bullet on the notes says so, and `board_split`'s `head_extra`
   case pins it (an open line `(session s-1 on host-a, branch x)` and a closed one `(session s-2 on host-b, pr 7)`;
   only a `(session …)` group can hold such text, since `ITEM_PREFIX_RE` takes `(n/a)` and `(person)` whole);
@@ -161,25 +178,30 @@ item of the input names (an `Added` or a `Closed` date), so hidden, overdue and 
 F75): it always writes the directory beside the board, named the board's name less `.md`, since that is the one
 directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files)` names
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
-`key_id(key)` and `item_key()` are kept through v3.x. The split runs in each consumer's v3.0 vendor PR, beside v3.0's
-ledger half (TD-078), landed when no open PR edits the board (each such PR is redone over the directory).
+`key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
+once every reader of it runs v3.0 (text 12), so never in a vendor PR: in a PR of its own, after D12's vendoring
+steps, landed when no open PR edits the board (each such PR is redone over the directory).
 
 **`board.py split`** (*rebased on TD-095*: its D7's gate, options and output, which B5 extends). `split` takes
 `--board` (a v2 file, normalised as every `--board` is), `--archive` (default the board's name with
-`_archive.md`, beside it; absent, an empty archive), `--json` and `--plan`; `--archive`, which B3 removed with the
+`_archive.md`, beside it; that default absent, an empty archive; an `--archive` given and absent is refused,
+`<archive>: no such file`, round 1's F379), `--json` and `--plan`; `--archive`, which B3 removed with the
 `archive` action, comes back in `TAKES` for `split` alone (`NEEDS_OPT["split"]` is `("board",)`, `--archive`
-being optional; round 1's F353), and the usage docstring says so. Its
-gate is the reverse of a write's, checked in this order, each exit 1 and before anything is written: `<board>: not a
-v2 board file (.md)` for a `--board` not ending `.md`, whose stub would read as a missing directory (F365);
-`<board>: no such board` (`form` None); `version_problem(board)`, as after every read (a major newer than 3, F360);
-`<board>: already a v3 board` (`form` `"dir"`: the stub, or a directory whose name ends `.md`; F371); then
+being optional; round 1's F353), `parser()` gains the `--archive` argument again (F380), and the usage docstring
+says so. Its
+gate is the reverse of a write's, checked in this order, each exit 1 and before anything is written (round 1's
+F380): `<board>: no such board` (`form` None); `version_problem(board)`, as after every read (a major newer than 3,
+F360); `<board>: already a v3 board` (`form` `"dir"`: the stub or the directory, `--board docs/user_attention`
+among them; F371); `<board>: not a v2 board file (.md)` for a `--board` not ending `.md`, whose stub would read as a
+missing directory (F365); `<archive>: no such file` (F379); then
 `split_board()`'s own refusals as `<board>: <why>` (`not a v2 board: declares Ledgerboard: <n>` among them); then
 `<board>: <dir>/ exists` (the directory beside it, `split_exists`). `plan_split(board_path, archive_path, read,
 exists)` returns a `Plan` that writes every file, replaces the v2 file with `board_stub()` and removes the archive,
 as one write (*The board writer*'s both-or-neither). Its output is `main()`'s, as every write's (round 1's F364):
 each note is a `Plan.warn` line, `<path>:<line>: ⚠ <why>`, on stderr in every mode; plain output is the paths
 written and removed, one per line; `--json` is `{"action": "split", "subject": null, "paths": [every path written
-or removed], …info}`, `info` holding `files` (the directory's paths written), `removed` (the archive's, when there
+or removed], …info}` (when `--archive` names another file than the default and a file of the default's name is
+beside the board, a warning names it, left in place; F379), `info` holding `files` (the directory's paths written), `removed` (the archive's, when there
 was one) and `warnings` (`[{"path", "line", "text", "why"}]`); `--plan` prints `Plan.as_json()`. It has no subject
 (a commit of a split is the caller's). The write gate's v2 refusal gains the hint: `<board>:
 not a v3 board: a v2 board (split first: board.py split)` (TD-095's F288; `write_v2_refused`'s expected output).
@@ -190,6 +212,14 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
 - **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (filed B3, TD-103,
   then B4, TD-104); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
   B1 and B2 are merged.
+- **After v3.0, in this order** (round 1's F376, F377): agent-cadence vendors v3.0 (no split); ShiftLead syncs it
+  through its pin; each repo that pins agent-cadence bumps its pin to one vendoring v3.0, this repo among them;
+  then, and only then, each repo splits its own board, in a PR of its own: agent-cadence's, this repo's and
+  ShiftLead's once their own tooling reads v3.0, a roster repo's as TD-100 designs. A board's readers are its own
+  repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, the session-start hook and
+  the attention procedure, `board_edit.py`) and every consumer that reads it from elsewhere (ShiftLead's `gatesweep`
+  and `workorders`, agent-cadence's `nudge_user_attention.py` over the roster), so each consumer entry carries the
+  line *split this repo's board only once both consumers run v3.0*.
 
 ## Consumers
 
@@ -205,8 +235,8 @@ board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), 
 vendor PR splits the board.
 
 - **agent-cadence**:
-  - vendor v3.0 and run `board.py split` on `docs/user_attention.md` in the same PR, landed when no open PR edits
-    the board;
+  - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
+    own once ShiftLead runs v3.0 (D12), landed when no open PR edits the board;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
   - `nudge_user_attention.py`: read boards through `load_board()` (its own checkout's directory; another repo's
     through the forge's directory listing, with `since=` the months it shows); its `ARCHIVE_AT` prompt and its
@@ -297,11 +327,13 @@ v3.0 removes.)
 >   `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
 >   first item's section; any earlier `## ` heading stays). Each relative link there gains `../`, since the file
 >   moves one directory down: the target of an inline link or image (`[t](target)`, `![t](target)`) and of a
->   reference definition (`[label]: target`), when it starts with no scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:`
->   among them), no `#` and no `/`, outside code spans and fenced code. The archive's text before its first item is
->   dropped.
+>   reference definition (`[label]: target`), when it starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`,
+>   `mailto:` among them), `#` and `/`, outside code spans and fenced code; inside `<…>` when the target is
+>   bracketed, a title after it kept, and a leading `./` becoming `../`. The archive's text before its first item
+>   is not carried, and `split_board_notes()` lists each of its non-blank lines but its `# ` title.
+>   Of twins whose detail blocks differ, the open twin's is not carried, and `split_board_notes()` names it.
 > - A line after the first item that is no item, no detail block's line and not blank (a `- (none)` placeholder, a
->   note) is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
+>   note), on the board and then on the archive, is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
 >   first item that stands above a carried line; a heading with no carried line under it is dropped. Nothing is
 >   lost, and `split_board_notes()` lists what may describe the v2 board.
 > - It refuses a board that declares a major above 2 (`Ledgerboard: 3`, a stub's, among them); an item with no date, or a date that is no day of the
@@ -494,10 +526,13 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_split/<case>/`** (a new kind, `board_split_case`: `board.md`, optional `archive.md`,
   `expected.json` holding the files or the refusal, and `split_board_notes()`): `twins` (an open and a closed line
   of one key, on the board and across board and archive, each one closed item, its fields and body the closed line's
-  although the open twin's detail block differs); `sections` (the `## Needs the user` and `## In-flight` headings:
+  although the open twin's detail block differs, the notes naming `open twin's detail not carried`, F378);
+  `archive_prose` (an archive with a title, a note before its first item, and a `- (none)` line after it: the note
+  listed as not carried, the `- (none)` carried after the board's, F378); `sections` (the `## Needs the user` and `## In-flight` headings:
   an earlier `## ` heading kept and only the one nearest the first item dropped; the README's prose kept; its links:
   an inline relative link, an image, a reference definition, a `#anchor`, an `https:` and a `mailto:` link, a
-  `/rooted` path and a link inside a code span, only the relative three given `../`; its notes listed);
+  `/rooted` path and a link inside a code span, only the relative three given `../`; and `file.md#frag`, a link with
+  a title, an `<angle bracketed>` target and a `./x` one, F381; its notes listed);
   `prose_after_items` (round 8's F118: `## In-flight` holding `- (none)`, and a note line between two items, both
   carried to `README.md`'s end in order with the `In-flight` heading, a later heading with nothing under it dropped,
   the notes naming `In-flight`); `hand_line`
@@ -529,7 +564,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_writer/`** and **`fixtures/verdict/`** (B3's and B4's) — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md,
   *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split` and `split_exists` (exit 1),
   and `write_v2_refused`'s message gaining *split first*; *rebased* (round 1's F368): `split_not_md`,
-  `split_no_board`, `split_already_v3` and `split_refused` (an undated item: `split_board()`'s refusal through
+  `split_no_board`, `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379) and `split_refused` (an undated item: `split_board()`'s refusal through
   `board.py`), each exit 1. Each refusal's wording is the builder's, `Refused("<why>")` as the module's are, and its
   case pins it. `board_split` gains `head_extra` (D11's head note) beside the cases listed above.
 - **`fixtures/sweep/`, `fixtures/lift/`, `fixtures/grammar/` and `fixtures/edit/`'s groups** (B1's and B2's) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split). *Rebased:* their B5 steps,
@@ -537,15 +572,14 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   - **`fixtures/sweep/`'s rerun** (TD-092's round 9's F150): the rerun of each v2 board the split accepts
     (`beta.md` with `beta_archive.md`, `alpha.md`) runs over its split (`split_board()`, then the first run's closes
     as moves by id, its filings with `item_file()`), so it calls no removed writer; `expected.json`'s `rerun` is
-    unchanged (a rerun files and closes nothing, and the split keeps the ids). `widgets.md` holds two closed lines of
-    one id (`TD-239`'s, answered twice, which its sweep cases need), a shape D11 refuses (round 1's F351), so its
-    rerun stays on the v2 file: its closes tick lines (`is_open_item()` and `parse_board()`'s id, kept; F373) and its filings are
-    appended by the runner's own `_v2_line()`, a fixture helper writing the line `item_line()` wrote for the fields
-    the sweep files (words, date, `n/a`, Context, kind, answers, default, detail, lifts), pinned by the rerun's
-    unchanged result. No sweep fixture is edited to make it split.
-  - **`fixtures/sweep/alpha/`** (B2's hand-written v3 stand-in for `alpha.md`'s split, TD-094): the sweep's `split`
-    result gains `split_same`, whether `split_board()` of `alpha.md` gives `alpha/` file for file; B5 regenerates
-    `alpha/` from the split where it does not, and `same` must still hold.
+    unchanged but for `widgets` (a rerun files and closes nothing, and the split keeps the ids). `widgets.md` holds
+    two closed lines of one id (`TD-239`'s, answered twice, which its sweep cases need), a shape D11 refuses (round
+    1's F351), so it is left out of the rerun, which then reads `beta` and `alpha` alone, and the rerun's
+    `expected.json` regenerates without it (still filing and closing nothing); its first-run cases stand. The runner
+    keeps no line writer, and no sweep fixture is edited to make it split (round 1's F384, replacing F351's `_v2_line()`).
+  - **`fixtures/sweep/alpha/`** (B2's hand-written v3 stand-in for `alpha.md`'s split, TD-094) is deleted: the
+    sweep's `split` case reads `split_board(alpha.md)` in memory, added to the runner's file map under `alpha/`, and
+    `same` must still hold (round 1's F383).
   - **`fixtures/lift/`**: the groups that call a removed writer or a line's string form move to item files, `lines`
     becoming one item file per case line: `closes` passes each file, `close` runs `edit_item(file, …, close=True)`
     where it ran `edit_line()`, `item_lines` becomes `item_files` (the waiting-only refusals of `item_file(lifts=)`),
@@ -623,7 +657,7 @@ items, 15's ", given a `Board`,"),
 (`split`, `split_exists`, and `write_v2_refused`'s message gaining *split first*), `fixtures/run.py` (`board_split_case`, `board_v3_case` with its tie groups compared as
 sets; `archive_case` and the retired `edit_cases` groups removed; `lift_cases`' `close`, `closes`, `item_lines` and
 `item_problems` groups over item files, its `answered_by` group over `Board`s (F352) and `sweep_cases`' rerun over each v2 board's split, F150, and the sweep's
-`split_same`), `fixtures/sweep/alpha/` (regenerated from the split where it differs), `fixtures/lift/`
+`split` case over an in-memory split, F383), `fixtures/sweep/alpha/` (deleted), `fixtures/lift/`
 (those groups, regenerated), `fixtures/archive/` and the retired
 `fixtures/edit/` groups, `tests/` (B5's bullet under *Unit tests*, F149). **Records:** `item_record()` loses `line`; every expected JSON holding a record
 regenerates: `fixtures/board/*.json` and `fixtures/board/twins_across/expected.json`, `fixtures/board_dir/*/expected.json`, and `fixtures/board_writer/`'s `list`,
@@ -632,8 +666,8 @@ regenerates: `fixtures/board/*.json` and `fixtures/board/twins_across/expected.j
 a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README.md`, F118).
 
 Order: B1, then B2 (both merged), then B3 and B4 (either order; filed TD-103, then TD-104), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
-(round 9's F142). Then v3.0's release with TD-078's half (Paul's), this repo's own split, and each consumer's entry
-(agent-cadence's first).
+(round 9's F142). Then v3.0's release with TD-078's half (Paul's), each consumer's entry (agent-cadence's first),
+this repo's pin bump, and only then this repo's own split (D12's order; round 1's F377).
 
 ## Not in this design
 
