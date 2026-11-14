@@ -1583,6 +1583,9 @@ class BoardItem:
     replies: list[tuple[str, str, str]] = field(default_factory=list)  # (by, YYYY-MM-DD, words), the Log's
     fields: list[tuple[str, str]] = field(default_factory=list)  # every header field as written, in order
     raw: str = ""  # an item file's text as read, every byte
+    # A v2 item's detail block as its file indents it (each line right-trimmed, no indent cut), for show_board()
+    # (v3.0, B3); [] for an item file, whose detail is at column 0.
+    detail_source: list[str] = field(default_factory=list)
 
     def hidden(self, today: date) -> bool:
         """Left out of what needs the person today: a `Hide until:` still ahead. A decided item is a session's
@@ -1937,6 +1940,14 @@ def detail_block(lines: list[str], lineno: int) -> list[str]:
     """The detail block under the item on 1-based line `lineno` — the run of lines right after it
     indented deeper than its `-`, ended by a blank line, a line no deeper than the item, or another
     item. Returned with the block's common indent removed, so its own nesting survives."""
+    block = _detail_source(lines, lineno)
+    cut = min(len(b) - len(b.lstrip()) for b in block) if block else 0
+    return [b[cut:] for b in block]
+
+
+def _detail_source(lines: list[str], lineno: int) -> list[str]:
+    """The detail block under the item on 1-based line `lineno` as its file indents it (v3.0): each line
+    right-trimmed, its indent kept; detail_block() cuts the block's common indent from these."""
     indent = len(lines[lineno - 1]) - len(lines[lineno - 1].lstrip())
     block = []
     for ln in lines[lineno:]:
@@ -1944,8 +1955,7 @@ def detail_block(lines: list[str], lineno: int) -> list[str]:
                 or ITEM_RE.match(ln) or CLOSED_ITEM_RE.match(ln):
             break
         block.append(ln.rstrip())
-    cut = min(len(b) - len(b.lstrip()) for b in block) if block else 0
-    return [b[cut:] for b in block]
+    return block
 
 
 def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
@@ -1989,6 +1999,7 @@ def _parse_open(content: str, *, warn: bool = True, twins: bool = True) -> list[
                                         decided=parse_decided(text), decided_by=parse_decided_by(text), bad_due=bad,
                                         kind=kind, fyi_due=fyi_due,
                                         detail=detail_block(lines, lineno), hide_until=parse_hide_until(text),
+                                        detail_source=_detail_source(lines, lineno),
                                         lifts=parse_lifts(text), parts=parse_parts(text), doer=parse_doer(text)),
                               line))
     return items
@@ -2144,6 +2155,24 @@ def needs_you(board: Board | str, today: date) -> list[tuple[BoardItem, str, int
     out += [(it, "watch", days(it)) for it in dated([it for it in rest if it.kind == "watch"])]
     out += [(it, "fyi", None) for it in rest if it.kind == "fyi"]
     return out
+
+
+def show_board(board: Board, today: date, hidden: bool = False) -> str:
+    """The board for a person to read (v3.0, SPEC *The board writer*, `show`): for each item ``needs_you()``
+    gives, in its order, a header line ``*<id> · <class>*`` and the item as its file holds it; with ``hidden``, then
+    each hidden open item in the board's order, headed ``*<id> · hidden until <date>*``. An item file is its text
+    with its trailing run of `\r` and `\n` cut to one `\n`; a v2 item its line and its detail block at the indent
+    its file gives it. ``no id`` stands for the id of a v2 line with no readable date. One blank line between
+    items, nothing after the last; ``""`` when there is no item to show."""
+    def body(it: BoardItem) -> str:
+        if it.path:
+            return it.raw.rstrip("\r\n") + "\n"
+        return "".join(f"{ln}\n" for ln in [it.raw, *it.detail_source])
+    shown = [f"*{it.id or 'no id'} · {cls}*\n{body(it)}" for it, cls, _ in needs_you(board, today)]
+    if hidden:
+        shown += [f"*{it.id or 'no id'} · hidden until {it.hide_until.isoformat()}*\n{body(it)}"
+                  for it in board.items if it.hidden(today)]
+    return "\n".join(shown)
 
 
 # ---------------------------------------------------------------------------------------------
