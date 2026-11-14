@@ -165,7 +165,7 @@ on an `fyi` are all carried. The rule, for each:
 - *Rebased:* **a board older than v2.3** (no `People:` line, keys before `fmt`'s rule) is split as it reads: the
   split adds no `People:` line and refuses none for lacking one. What such a repo does first is TD-100's (Paul's
   Hold on TD-096); this plan neither refuses nor repairs it.
-- *Rebased:* **a split PR's verdict.** The vendoring PR that splits a board changes the v2 file into the stub and
+- *Rebased:* **a split PR's verdict.** The PR that splits a board changes the v2 file into the stub and
   adds the directory: `lift_pr_verdict()` sends it to review as `lift-board-v2` (B4, TD-095's D10 and its `split_pr`
   case), never `lift-files`; the split's ids are the v2 ids, so the head reads the same items as the base.
 
@@ -201,7 +201,8 @@ as one write (*The board writer*'s both-or-neither). Its output is `main()`'s, a
 each note is a `Plan.warn` line, `<path>:<line>: ⚠ <why>`, on stderr in every mode; plain output is the paths
 written and removed, one per line; `--json` is `{"action": "split", "subject": null, "paths": [every path written
 or removed], …info}` (when `--archive` names another file than the default and a file of the default's name is
-beside the board, a warning names it, left in place; F379), `info` holding `files` (the directory's paths written), `removed` (the archive's, when there
+beside the board, a warning names it, left in place: a `Plan.warn` line `<path>: ⚠ <default archive left in place>`
+and a `warnings` record with `line` null and `text` `""`, pinned by `split_archive_other`; F379, round 2's F388), `info` holding `files` (the directory's paths written), `removed` (the archive's, when there
 was one) and `warnings` (`[{"path", "line", "text", "why"}]`); `--plan` prints `Plan.as_json()`. It has no subject
 (a commit of a split is the caller's). The write gate's v2 refusal gains the hint: `<board>:
 not a v3 board: a v2 board (split first: board.py split)` (TD-095's F288; `write_v2_refused`'s expected output).
@@ -232,11 +233,11 @@ alias, ShiftLead's `sessionorc/board.py`) and TD-092's (B1's and B2's: `board_di
 `v2_problems()`, `load_board()`'s `ls`), and one more from TD-095's D10: each consumer's carve-outs that judge a
 commit by "the board alone" read "only files under the board's directory". Before the split, on a v2 file, the
 board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), so it is a partial check until the
-vendor PR splits the board.
+board is split.
 
 - **agent-cadence**:
   - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
-    own once ShiftLead runs v3.0 (D12), landed when no open PR edits the board;
+    own once both consumers run v3.0 and every pin is bumped (D12), landed when no open PR edits the board;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
   - `nudge_user_attention.py`: read boards through `load_board()` (its own checkout's directory; another repo's
     through the forge's directory listing, with `since=` the months it shows); its `ARCHIVE_AT` prompt and its
@@ -252,6 +253,7 @@ vendor PR splits the board.
     `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton (no `Format:` line
     for the item line, no sections, closing archives).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
+  - split its own board in its own PR once both consumers run v3.0 and every pin is bumped (D12; round 2's F387);
   - first, a check: the entry greps its stores and code for a persisted `board:` reference of any shape other than
     `board:` and 8 hex digits (a full key text, a line number) and names each it finds; `workorders.py`'s own
     `_REF_RE` (`board:[0-9a-f]{8}`) is the shape it persists;
@@ -564,7 +566,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_writer/`** and **`fixtures/verdict/`** (B3's and B4's) — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md,
   *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split` and `split_exists` (exit 1),
   and `write_v2_refused`'s message gaining *split first*; *rebased* (round 1's F368): `split_not_md`,
-  `split_no_board`, `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379) and `split_refused` (an undated item: `split_board()`'s refusal through
+  `split_no_board`, `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379), `split_archive_other` (F388) and `split_refused` (an undated item: `split_board()`'s refusal through
   `board.py`), each exit 1. Each refusal's wording is the builder's, `Refused("<why>")` as the module's are, and its
   case pins it. `board_split` gains `head_extra` (D11's head note) beside the cases listed above.
 - **`fixtures/sweep/`, `fixtures/lift/`, `fixtures/grammar/` and `fixtures/edit/`'s groups** (B1's and B2's) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split). *Rebased:* their B5 steps,
@@ -574,9 +576,13 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     as moves by id, its filings with `item_file()`), so it calls no removed writer; `expected.json`'s `rerun` is
     unchanged but for `widgets` (a rerun files and closes nothing, and the split keeps the ids). `widgets.md` holds
     two closed lines of one id (`TD-239`'s, answered twice, which its sweep cases need), a shape D11 refuses (round
-    1's F351), so it is left out of the rerun, which then reads `beta` and `alpha` alone, and the rerun's
-    `expected.json` regenerates without it (still filing and closing nothing); its first-run cases stand. The runner
-    keeps no line writer, and no sweep fixture is edited to make it split (round 1's F384, replacing F351's `_v2_line()`).
+    1's F351). It cannot leave the rerun, which runs one `sweep()` over every board and refuses a set without the
+    repo's own board, `widgets` (round 2's F385, reopening F384). So for the rerun alone the runner drops, in memory,
+    the first of `widgets.md`'s two `TD-239` closed lines (the one closed 2026-10-20), splits what is left and reruns
+    over that split as over the others; the file on disk and the first run's cases are untouched. `expected.json`'s
+    `rerun` regenerates, and the case holds what it held: the rerun files and closes nothing on any board (were the
+    reduced board to file or close anything, the builder raises it as a finding on this plan, not a fixture edit).
+    The runner keeps no line writer (round 1's F384, replacing F351's `_v2_line()`).
   - **`fixtures/sweep/alpha/`** (B2's hand-written v3 stand-in for `alpha.md`'s split, TD-094) is deleted: the
     sweep's `split` case reads `split_board(alpha.md)` in memory, added to the runner's file map under `alpha/`, and
     `same` must still hold (round 1's F383).
@@ -666,7 +672,7 @@ regenerates: `fixtures/board/*.json` and `fixtures/board/twins_across/expected.j
 a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README.md`, F118).
 
 Order: B1, then B2 (both merged), then B3 and B4 (either order; filed TD-103, then TD-104), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
-(round 9's F142). Then v3.0's release with TD-078's half (Paul's), each consumer's entry (agent-cadence's first),
+(round 9's F142). Then v3.0's release with TD-078's half (Paul's), each consumer's vendoring entry (agent-cadence's first),
 this repo's pin bump, and only then this repo's own split (D12's order; round 1's F377).
 
 ## Not in this design
