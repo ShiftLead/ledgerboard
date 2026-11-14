@@ -102,14 +102,16 @@ read gives None: B2 records rule 1 under `README.md` in `Board.problems`, which 
 `Board.preamble` is then `""` as for an empty README; round 5's F323, F326, the closing fact-check's F332), `README.md declares no Ledgerboard` (`_declared_major()` None, an
 empty README among them) and `README.md declares Ledgerboard: <n>` (any `<n>` but 3, 1 included; round 3's F307,
 round 4's F312). **The
-order of an `add`'s refusals** (F316, F318; round 5's F320, F322, F325): a usage error and a bad `--today` (exit
-2) first; then the options' own refusals, before any read, as today (`--ledger` without `--parts`, `--parts` or
-`--doer` with `--decided`: exit 1; the closing fact-check's F333); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
+order of an `add`'s refusals** (F316, F318; round 5's F320, F322, F325): a usage error (exit 2: argparse's) first; then, before any read and in today's order (round 6's F335), `build()`'s refusals (`--parts` or `--doer`
+with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object: exit 1), then a bad `--today` (exit
+2), then `plan_add()`'s (`--ledger` without `--parts`, a decided item given any option but its own, `--said` without
+`--by` or `--by` without `--said`: exit 1; the closing fact-check's F333); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
 held), or without `--id` the draw's (eight held names); then the item's own (`item_file()`'s, and with `--said` the
 reply's, `edit_item()`'s); then the ledger's (`--parts`: `parts_problems()`, an unusable ledger exit 2), as today;
 then `_gate()`'s `board_problems()` over the board the write leaves. The five edits' order is the same with
-`--id`'s being *no open item has it*, then a close's `<path> exists`, then the edit's own (`edit_item()`'s), then
-the decide lift's ledger checks, then `_gate()`. `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
+`--id`'s being *no open item has it*, then the edit's own (`edit_item()`'s), then the decide lift's ledger checks,
+then a close's `<path> exists`, then `_gate()`: whether a decide closes its item is known only once the ledger half
+has judged it (`closes()` over the entries `decide_lift()` leaves), so the exists check follows it (round 6's F334). `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
 or by hand. `list` and `show` read what `load_board()` reads, a v2 board and a v3 one alike, and refuse only a board
 with `form` None, exit 1, `<board>: no such board` (round 2's F297). A write's checks run in the order the `<why>`s are
 listed. **The options** (round 2's F293): `--id` is required
@@ -205,8 +207,8 @@ No rendered file is stored: a stored view is one file every write touches, which
 `BOARD_ARCHIVE_PATH`) are the v2 pair. The board's presence and form are `load_board()`'s `form` over the tree (round 5's F328), called on `BOARD_DIR` when
 the tree holds a file under `BOARD_DIR/`, else on `BOARD_V2_PATH` (the closing fact-check's F330): `"dir"` is a v3
 board, `"file"` (a v2 board, or a file at `BOARD_V2_PATH` declaring 3 that holds items) takes `lift-board-v2`, and
-None (nothing there, or a stub with no directory) `lift-no-board`. A tree holds a v3 board when it holds a file under `BOARD_DIR/`, else the v2
-pair; it is read through `load_board()` over the tree, whole (no `since`, TD-092's D6), its `ls` `_tree_ls()`,
+None (nothing there, or a stub with no directory) `lift-no-board`. The board is what that call reads (a stub alone
+is no board, never a v2 one; round 6's F336); it is read through `load_board()` over the tree, whole (no `since`, TD-092's D6), its `ls` `_tree_ls()`,
 which lists subdirectories from B4 (TD-092's D6). The consumer reads the same paths at the base and the head:
 every file directly in `BOARD_DIR` and every archive path the PR's file list names (a moved file's old and new
 paths both; an archived item the PR leaves alone changes no verdict). **The verdicts judge what changed from the two
@@ -291,8 +293,9 @@ TD-070's plan's, *Consumers* (TD-098's). These are the lines for those entries t
   `BOARD_V2_ARCHIVE_PATH` where the tree has them, whichever form the other ref holds, so a v2 head over a v3 base
   reads as `lift-board-v2`, never `lift-no-board`;
 - **Both**, from B4 (round 2's F290): a caller of `uncovered_decisions()` passes each other repo's board as
-  `(origin_url, basename, Board)`, read through `load_board()` from that repo's board (its `docs/user_attention/`
-  directory, or its v2 pair), where it passed the board's and its archive's texts;
+  `(origin_url, basename, Board)`, read through `load_board()` from that repo's board (at its `docs/user_attention/`
+  directory when it holds a file under it, else at its `docs/user_attention.md`, as D10 reads a tree; a stub alone
+  there reads as a `Board` of `form` None and no item, so it covers no decision; round 6's F336), where it passed the board's and its archive's texts;
 - **Both**, from B4 (round 3's F311): `BOARD_PATH` and `BOARD_ARCHIVE_PATH` are renamed `BOARD_V2_PATH` and
   `BOARD_V2_ARCHIVE_PATH`, with no alias; a caller that imports either moves to them, or to `BOARD_DIR` for a v3
   board;
@@ -313,7 +316,8 @@ TD-092's plan's. The texts below are B3's and B4's; texts 1, 12, 14's two bullet
 > `docs/technical_debt.md`), and this repo's board at `docs/user_attention/` (v3.0, `BOARD_DIR`), or, in a tree with
 > no file under that directory, the v2 board at `docs/user_attention.md` and its archive at
 > `docs/user_attention_archive.md` (`BOARD_V2_PATH`, `BOARD_V2_ARCHIVE_PATH`, until v3.0 `BOARD_PATH` and
-> `BOARD_ARCHIVE_PATH`); the board is read through `load_board()` over the tree, and the ledger's paths are
+> `BOARD_ARCHIVE_PATH`); the board is what `load_board()` over the tree reads at `BOARD_DIR` when the tree holds a
+> file under it, else at `BOARD_V2_PATH`, and a stub alone there is no board; the ledger's paths are
 > `LEDGER_DIR` and `LEDGER_V1_PATH`. A tree holds the same
 > board paths at the base and the head: every file directly in `BOARD_DIR`, and every file under its `archive/` at a
 > path the PR's file list names (a moved file's old and new paths both). A verdict judges a PR's board changes from
@@ -388,9 +392,10 @@ round 9's F155). Its actions list is replaced by (the `add` bullet keeping v2.8'
 >   its answer is the item's first reply, the Log line `- <today>: <by>: <said>`, refused as `reply` refuses (a
 >   `--by` holding `:` or of more than 40 characters, empty or blank words); `--said` is refused when it holds a
 >   character `str.splitlines()` splits on, checked before any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item the person decided elsewhere (`decided_file()`).
->   The write is refused when `board_problems()` faults the item it adds. **The order** (v3.0): a usage error and a
->   bad `--today` (exit 2); the options' own refusals (`--ledger` without `--parts`, `--parts` or `--doer` with
->   `--decided`, exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
+>   The write is refused when `board_problems()` faults the item it adds. **The order** (v3.0): a usage error (exit
+>   2); `--parts` or `--doer` with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object (exit
+>   1); a bad `--today` (exit 2); `--ledger` without `--parts`, a decided item given any other option, `--said`
+>   without `--by` or the reverse (exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
 >   item's own and `--said`'s; the ledger's; then `board_problems()`;
 > - **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_item()`) of the open item `--id` names,
 >   refused when no open item has it; `done --why` strips the why's trailing `.`, `?` and `!` before the edit
