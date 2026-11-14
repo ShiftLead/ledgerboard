@@ -243,13 +243,17 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   and ledgerboard's is B4's guard run before v3.0 is cut. A roster repo's ledger in (3) is TD-100's (TD-078's D7).
   A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose board is still v2
   would have no board writer; bump and split together leave no such repo. A v3.0 writer may still meet another
-  repo's board still v2 (a `ledger.py set` reassign or override that notifies another roster repo, §2.4): it
-  skips that target with a message naming the split, as for any target it cannot write (round 3's F400, F408 as
-  F420 narrows them).
+  repo's board still v2: `gate_sweep.py` already skips a board it cannot write (`_other_board()`, *not done*, and
+  goes on), so its message gains the split and nothing else changes; `ledger.py set`'s reassign or override that
+  writes another roster repo's board (§2.4) refuses the whole write, as `_set_moved()` does today for a target it
+  cannot write (both files put back, exit 1), its message naming that repo's split: a move to a board no v3.0 tool
+  can write would leave the decision moved with no item to answer, so it waits for that repo's bump (round 3's
+  F400, F408; round 5's F429).
   **The PR that bumps and splits is judged by its head's pin** (round 4's F423): `agent-cadence run` resolves the
-  pin from the checkout it runs in, and the cadence check and the precheck run at the PR's head, so v3.0's check
-  judges it; a split PR (a v2 pair at the base, the directory at the head) reads the same ids on both sides and
-  takes ordinary review (TD-095's D6 and `lift-board-v2`), and its board row reads the head's directory. No
+  pin from the checkout it runs in, so the cadence check and `precheck.py --pr` are run from the PR's own worktree
+  (its head), where v3.0's check judges it; run from a checkout of the base, the old pin would judge it and meet the
+  stub (round 5's F430). A split PR (a v2 pair at the base, the directory at the head) reads the same ids on both
+  sides and takes ordinary review (TD-095's D10 and *Consumers*, `lift-board-v2`; F431), and its board row reads the head's directory. No
   override is needed and none is used. In (1), agent-cadence's own scripts are the head's.
   A board's readers are its own
   repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
@@ -260,9 +264,11 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   `ledger.py set`'s `_boards()` read another repo's board as text with no version check (round 3's F401), so until
   their repo bumps they read a split board as empty: a sweep there sees no covering item and can file a duplicate
   on its own board, and a `set` there logs `no board item` for a decision the split board holds. ShiftLead's
-  v2.x `gatesweep` and `workorders` read agent-cadence's split board so between (1) and (2), which (2)'s
-  readiness keeps short. **The default** (the author's, put to the person as a steer): (2) and every (3) land by
-  the end of the UTC day after (1) merged, so that is the window; a duplicate an old-pin sweep files in it
+  v2.x `gatesweep` and `workorders` read agent-cadence's split board as empty between (1) and (2), which (2)'s
+  readiness keeps short. **The default** (the author's, put to the person as a steer): (2), and each (3) of the
+  three repos' rollout (this repo's own bump among them), land by the end of the UTC day after (1) merged, so that
+  is the window; a roster repo bumps when TD-100 has it do so, on v2.x tooling and a v2 board until then (TD-078's
+  D5 and D7; round 5's F434); a duplicate an old-pin sweep files in it
   (ShiftLead's v2.x `gatesweep` among them) is closed by hand, and the rollout's entry says so. The alternatives
   are each worse on another axis: holding every split until the last roster repo bumps leaves each bumped repo
   with no board writer (F393); splitting agent-cadence's board only after (2) leaves agent-cadence, where most
@@ -286,8 +292,9 @@ board is split.
 - **agent-cadence**:
   - vendor v3.0, its ledger first meeting TD-078's D5, and split its own `docs/user_attention.md` with `board.py
     split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board and no unpushed
-    board commit is held; its writers skip another repo's board still v2 with a message naming the split
-    (`gate_sweep.py`'s filings and closes, `ledger.py set`'s notice to another repo; round 3's F400, F408);
+    board commit is held; `gate_sweep.py`'s skip of a board it cannot write names the split, and `ledger.py set`'s
+    reassign or override refuses a target board still v2, both files put back, naming that repo's split (D12;
+    round 3's F400, F408; round 5's F429);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
     `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
@@ -311,8 +318,10 @@ board is split.
     the board row reads the head's board, fails on `board_dir_problems()`'s and on `version_problem(board)` (D6),
     since the gate judges an item only when it is added and damage a hand edit does to an existing file is caught
     only there (D7); `precheck.py` runs the repo's own command and reads no board;
-  - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) and `check_claude_memory.sh` stays
-    the v2 file's path, which `load_board()` reads through the stub to the directory, so it needs no change; cadence.md
+  - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) stays the v2 file's path, which
+    `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
+    change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:363), which a stub never
+    holds, so it reads the board's open items through `load_board()` instead (round 5's F428); cadence.md
     §3, §4.3 and §4.4, `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton
     (no `Format:` line for the item line, no sections, closing archives) change in the vendor PR, beside the split
     (round 4's F421).
@@ -409,7 +418,8 @@ v3.0 removes.)
 >   differs from the closed twin's.
 > - A line after the first item that is no item, no detail block's line and not blank (a `- (none)` placeholder, a
 >   note), on the board and then on the archive, is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
->   first item that stands above a carried line; a heading with no carried line under it is dropped. Nothing is
+>   first item that stands above a carried line; a heading with no carried line under it is dropped. A relative link
+>   in a carried line gains `../` by the rule above, the file having moved too. Nothing is
 >   lost, and `split_board_notes()` lists what may describe the v2 board.
 > - It refuses a board that declares a major above 2 (`Ledgerboard: 3`, a stub's, among them); an item with no date, or a date that is no day of the
 >   calendar; a closed line with no readable
@@ -495,7 +505,7 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > verdicts*): one file per item, named by its id, in `docs/user_attention/` with `README.md` and
 > `archive/<YYYY-MM>/`, closing an item moving its file. **It reads a v2 board**: `load_board()` gives the same
 > items for a v2 file and its archive as for its split, for any board the split accepts, each v2 item with the id `split_board()` gives it, so a
-> consumer vendors v3.0 before it splits its board, and reads other repos' boards in either major. It reads a v2
+> consumer vendors v3.0 in or before the change that splits its board, and reads other repos' boards in either major. It reads a v2
 > board as the paragraph above says, and a board file that declares no major reads as 2, the format a board's v1
 > and v2 share (*Versions*' "none means 1" stays the ledger's). **It
 > writes v3 only**: `board.py`'s writes refuse a v2 board (*split first*). **What goes:** the item key as what an
@@ -616,8 +626,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   an inline relative link, an image, a reference definition, a `#anchor`, an `https:` and a `mailto:` link, a
   `/rooted` path and a link inside a code span, only the relative three given `../`; and `file.md#frag`, a link with
   a title, an `<angle bracketed>` target and a `./x` one, F381; its notes listed);
-  `prose_after_items` (round 8's F118: `## In-flight` holding `- (none)`, and a note line between two items, both
-  carried to `README.md`'s end in order with the `In-flight` heading, a later heading with nothing under it dropped,
+  `prose_after_items` (round 8's F118: `## In-flight` holding `- (none)`, and a note line between two items holding a
+  relative link `[notes](notes.md)` and one in a code span, both carried to `README.md`'s end in order, the first
+  link written `../notes.md` and the code span's left, round 5's F427, with the `In-flight` heading, a later heading with nothing under it dropped,
   the notes naming `In-flight`); `hand_line`
   (words a hand edit left outside the fields carried into the heading, its final period kept: words after the `Due`
   date, `Due: 2026-11-08. also ping sam.`, and after a `Hide until` date, each joined to the text by one space as
