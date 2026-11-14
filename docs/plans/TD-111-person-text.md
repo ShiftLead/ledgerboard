@@ -128,6 +128,7 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
 - *`people`*: here a name matches in the actor bounds, case ignored, with `'s`; an empty entry, or one holding a
   line break, in `actors`, `people`, `coined` or `labels` is a caller's error (`ValueError`), and so is a `coined`
   entry holding whitespace and a `labels` entry that is no regular expression; `people` may be `None`.
+- *a file name* takes an ending `:\d+` (*foo.py:42*), which the source let pass.
 - *a coined term* matches with `s` or `es` after it, where the source says only *its plural*.
 - *a form* is defined: an answer whose label `is_form()` reads as a form (`Hold: <note>`, `Not right: <what>`,
   `Other:`) is read by its consequence alone; the label and consequence are `split_answer()`'s.
@@ -136,7 +137,7 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   paragraph holding three sentences is refused for a sentence end inside; the writer's cure is a blank line after
   the question, which makes the rest context). The detail block's context is read whole for
   a `decide` and an `act` (its `caveats`, `recommended` and `otherwise` text with its `context`), where the source
-  named `context` and `recommended`'s reason, and an `act`'s `context` alone. The source's `decide` row
+  named `context` and `recommended`'s reason, and its `act` read its `context` alone. The source's `decide` row
   said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The lead is the
   bold run the text *opens* with, where SPEC's *The bold head* takes the first bold run anywhere: a bold word
   mid-question (*Should I merge **#42**?*) must not become the question. A `decide`
@@ -160,7 +161,8 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
 question, and only rule 3 refuses one, in a title; the `’` fold; the word strip but its `'s` (above); every code-token pattern but as above; the
 known false positives and gaps of the module's own patterns; the *One sentence* stops (*e.g, i.e, vs, etc, cf*, widened below)
 and its end rule for a question; `default` read as an answer,
-named *the default*, skipped when it equals an answer's label or whole line; rule 4 as one warning.
+named *the default*, skipped when it equals an answer's label or whole line; rule 4 as one warning; the writer's refusal of an `act` with no bold opening (*an act line leads with its
+task in bold*), a writer's message, not a `PersonTextProblem`.
 
 **The fixtures are the grammar's judge** (round 3's view of the recurring topic): the SPEC prose describes the
 token grammar exactly enough to build from, and where prose and module disagree the fixtures decide, as SPEC's
@@ -223,7 +225,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > its coined words (`coined`), its label patterns (`labels`) and the board's people (`people`) are the caller's.
 > Each function returns a list of `PersonTextProblem(rule, refuse, line)`, empty when the text passes, in rule
 > order; `refuse` is true for rules 1 to 3 and false for rule 4; `line` is one line saying what failed and its
-> cure. An empty entry, or one holding a line break, in `actors`, `people`, `coined` or `labels`, a `coined`
+> cure. An empty entry (after trimming, for `actors`), or one holding a line break (`\n` or `\r`), in `actors`, `people`, `coined` or `labels`, a `coined`
 > entry holding whitespace, or a `labels` entry that is no regular expression, raises `ValueError`. `people` may
 > be `None`, read as no names.
 >
@@ -274,7 +276,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > (camelCase); a word written with `_` on purpose. Known gaps: a command written as words (*git rebase*), and a
 > name whose `_`s the strip removes (`__init__` reads as *init*); a two-part path with no file name
 > (*docs/plans*); a variable (`$HOME`), a short option (`-f`), a bare `{"a":1}` and a file with no extension
-> (*Makefile*); a path with a line number and no file name (*src/lib:42*), a dotfile (*.gitignore*), an extension outside
+> (*Makefile*); a path with a line number and no file name (*src/lib:42*), a file name with more than one line number or a
+> range (*foo.py:42:7*, *foo.py:42-50*), a dotfile (*.gitignore*), an extension outside
 > `CODE_EXTS` (*Foo.java*), a two-part member (*UserService.getName*), a PascalCase name
 > (*NullPointerException*), a host and port (*localhost:8080*), an assignment (*DEBUG=1*), an address
 > (*dev@example.com*) and a two-part host (*example.com*, where *www.example.com* is dotted).
@@ -295,7 +298,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > **An actor** (rule 2): a match, over the read words joined by single spaces, in the bounds `(?<![\w'/-])` before and `(?![\w'/-]|\.\w)` after (so *us-east-1*, *I/O* and *my-app*
 > name no actor), of an I-form (*I,
 > I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
-> word or a phrase taken as literal text with its whitespace collapsed to single spaces, its last word optionally followed by `'s` or `s` (case ignored); or of a
+> word or a phrase taken as literal text, trimmed and its whitespace collapsed to single spaces (an entry empty after that is a
+> `ValueError`), its last word optionally followed by `'s` or `s` (case ignored); or of a
 > name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name, so a person named *Will* makes *it will be built* name an
 > actor: a known gap). An answer is read through
 > `split_answer()`: its label and its consequence, the ` (default)` mark dropped; an answer whose label is a form
@@ -341,20 +345,25 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
 > item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
 > - **a `decide` item**, two calls. The item's text is the text the writer is given for it (`item_file()`'s
->   `text`, before any line or file is written); its **lead** is the `**…**` run the text opens with (after
->   whitespace), and its **tail** the text after that run; a text that opens with no such run has no lead and is
->   all tail. First, `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True)`,
->   the context being the tail when there is a lead, then the detail block's parts `context`, `caveats` and
->   `recommended` and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds
->   the default's label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which
->   names a gate. A text with no lead is read whole, so a second sentence there is refused and belongs in the
->   detail block. Second, the detail block's `question`, `person_text_problems(<question>, question=True)`. The
->   writer names the text each problem came from before its line (`item: `, `detail question: `), so a session
+>   `text`, after its whitespace collapse, before any line or file is written). Its **lead** is the text between
+>   the `**`s of the `**…**` run the text opens with, when that run holds a non-space character; its **tail** is
+>   the text after that run. A text that opens with no such run has no lead and no tail. First,
+>   `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True, people=, actors=,
+>   default=)`, the context being the tail, then the detail block's parts `context`, `caveats` and `recommended`
+>   and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds the default's
+>   label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which names a gate.
+>   A text with no lead is read whole, so a second sentence there is refused and belongs in the detail block; a
+>   lead is the whole question, so *\*\*Merge the PR\*\* now?* is refused (its lead has no `?`). Second, the
+>   detail block's `question`, `person_text_problems(<question>, question=True, people=, actors=)` with the same
+>   `people` and `actors`. The writer lists the first call's problems, then the second's, each line after the
+>   name of the text it came from (`item: `, `detail question: `; a rule-4 line after `context: `), so a session
 >   sees which to rewrite.
-> - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence; an
->   `act` whose text opens with no lead is refused (*an act item leads with its task in bold*). Example: *Reply to
->   **Dana** about the budget* has no lead and is refused; *Should I merge **#42**?*, a `decide`, has no lead and
->   is read whole.
+> - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence. An
+>   `act` whose text opens with no lead is refused by the writer, with the line *an act item leads with its task in
+>   bold* (a writer's refusal, not a `PersonTextProblem`). Example: *Reply to \*\*Dana\*\* about the budget* has
+>   no lead and is refused; *Should I merge \*\*#42\*\*?*, a `decide`, has no lead and is read whole.
+> - **a `look`, `watch` or `fyi` item, or one with no kind**: not checked (the source checks a `decide` and an
+>   `act` alone).
 >
 >   A detail block part whose value is a list is read as its first string and its nested bullets' strings, one per
 >   line.
@@ -377,9 +386,11 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 ## The fixtures
 
 A new kind, `fixtures/person_text/cases.json` → `expected.json`, each case a call and its result: `code_tokens`'
-list, or the problems as `[rule, refuse, line]` lists, or `{"error": "ValueError"}`. Each SPEC example above is a
-case, word for word.
-- **code_tokens**: one case per kind, with each spelling (a span with its backticks, `a code block`, a call's
+list, or the problems as `[rule, refuse, line]` lists, or `{"error": "ValueError"}`. Each SPEC example of the module's
+functions is a case, word for word; the examples of the writer's lead and tail are a consumer's cases, since the
+module has no function for that split.
+- **code_tokens**: *foo.py:42*, *foo.py:42.* and *src/foo.py:42* as one token each, *foo.py:42:7* and
+  *foo.py:42-50* as the gap; one case per kind, with each spelling (a span with its backticks, `a code block`, a call's
   `()`); each known false positive and gap; an id (*TD-1845*, *#3878*, *F12*) and *v2.7.1* as none; `file(s)` and
   `item(es)` as no call, `one_sentence(x)` as `one_sentence()`; a lone `--`, `—`, `/` and `~/` as none; a commit of 6 and 7 characters, *deadbeef* and
   *added* as none; *GitHub*, *PowerPoint*, *PhD* as none (whole-word match); a word of two kinds once; a link's
@@ -391,7 +402,7 @@ case, word for word.
   before the end, and *_Is it ok?_* passing; `’`, `‘`, `“`, `”` folded (*Should I "ship it?"* in curly quotes passing); *Should I run `make
   test`?* passing; *Should I follow https://x.io/guide?* passing; *(see https://x.io/a). Then merge?* and *Say
   (really?) what you think?* each with an end inside; *Nov. 20*, *Dr. Lee*, *9 p.m. tonight* and *Wait... really?* passing; *Ph.D. thesis*
-  refused (the known false positive); *Is `foo`'s output ok?* as four words; *foo.py:42* a file name; an empty question failing with *it is
+  refused (the known false positive); *Is `foo`'s output ok?* as four words; an empty question failing with *it is
   empty* alone; its line with two and three parts.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
   it* passing; *you* inside a span or a URL not read; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
@@ -402,7 +413,7 @@ case, word for word.
   label); `(default)` dropped; `default` equal to a label (marked or not) skipped, unequal and actorless named
   *the default*; rule 4 with one, two, three, four and five tokens; rule 1 as a statement, and with every part
   failing at once (all named, in order); an Ask's `**Ask:**` lead not counted (a writer's case, by its text); `sentence` `None` reading no rule 1; rule order across rules 1, 2 and 4; an
-  empty or multi-line entry in each list refused, an `actors` entry *the  host	agent* matching *the host agent*, and a `coined` entry holding a space; `people=None` read as no
+  empty or multi-line entry in each list refused, an `actors` entry *the  host\tagent* matching *the host agent*, an entry of spaces alone refused, and a `coined` entry holding a space; `people=None` read as no
   names; *Say no. Then what?* passing (the known gap).
 - **ACTOR_WORDS**: its exact contents, and the I-forms absent from it.
 - **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
