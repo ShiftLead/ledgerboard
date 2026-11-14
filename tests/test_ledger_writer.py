@@ -365,5 +365,50 @@ class Module(unittest.TestCase):
             self.assertIn("| TD-001 | The parser drops a trailing comment |", r.stdout)
 
 
+class DecisionMissing(unittest.TestCase):  # v3.1 (TD-112, TD-109 B1): an Ask with no decision, and set --ask
+    ASKED = ("## TD-002: An Ask with its decision\n\n**Priority:** Low\n**Added:** 2026-01-02\n**Status:** Open\n"
+             "**Blocked by:** decision (pat)\n\n**Why:** w\n\n**Ask:** pat says which way.\n")
+
+    def test_answered_reads_the_last_decision_line_in_file_order(self):
+        head = "## TD-001: t\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** a\n\n**Log:**\n"
+        added, lifted = "- 2026-01-03: gate added: decision (pat)\n", \
+            '- 2026-01-05: gate lifted: decision (pat) — by pat; answer "Go"\n'
+        override = "- 2026-01-05: gate lifted: decision (pat) — by kim; override: away\n"
+        kept = '- 2026-01-04: kept waiting: decision (pat) — by pat; answer "One more round"\n'
+        reassigned = "- 2026-01-06: gate reassigned: decision (pat) → decision (kim) — by pat; kim owns it\n"
+        for log, want in ((added + lifted, True), (added + override, True), (lifted + added, False),
+                          (added + lifted + kept, False), (added + lifted + reassigned, False),
+                          (added + kept + lifted, True), (added, False), ("- 2026-01-02: a note\n", False),
+                          (added + lifted + "- not a dated line\n", False)):
+            with self.subTest(log=log):
+                self.assertIs(L._ask_answered(head + log), want)
+        self.assertIs(L._ask_answered(head + added + lifted + "\n**Fix:** after the Log\n"), False)  # log-not-last
+
+    def test_ask_is_set_s_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            led = W.Ledger.open(ledger(tmp, **{"TD-002.md": self.ASKED}))
+            for action, kw in (("note", {"words": "x"}), ("edit", {"section": "Fix", "words": "x"})):
+                with self.subTest(action=action), self.assertRaises(W.Unusable):
+                    W.plan_edit(led, action, "TD-002", ask="pat says go.", today="2026-01-15", **kw)
+
+    def test_set_ask_writes_the_gate_and_its_ask_in_one_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp)
+            plan = W.plan_edit(W.Ledger.open(d), "set", "TD-001", fields={"Blocked by": "decision (pat)"},
+                               ask="pat says which way.", today="2026-01-15")
+            out = plan.changes[os.path.join(d, "TD-001.md")]
+            self.assertIn("**Blocked by:** decision (pat)\n", out)
+            self.assertIn("**Ask:** pat says which way.\n", out)
+            self.assertEqual(plan.info["notes"], [])
+
+    def test_set_ask_refused_in_a_ledger_declaring_ask_even_over_a_body_ask(self):  # F48
+        with tempfile.TemporaryDirectory() as tmp:
+            d = ledger(tmp, **{"TD-002.md": self.ASKED})
+            Path(d, "README.md").write_text(README + "\nFields: Ask = pat | kim\n")
+            with self.assertRaisesRegex(Refused, "declares Ask"):
+                W.plan_edit(W.Ledger.open(d), "set", "TD-002", fields={"Priority": "High"}, ask="pat says go.",
+                            today="2026-01-15")
+
+
 if __name__ == "__main__":
     unittest.main()

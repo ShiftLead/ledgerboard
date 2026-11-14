@@ -68,7 +68,7 @@ ASK_RE = re.compile(r"^\*\*Ask:\*\*", re.MULTILINE)  # the body section a decisi
 WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
 EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part", "priority", "ask-missing",
-               "gate-repeated", "blocker-superseded", "blocker-dropped",
+               "decision-missing", "gate-repeated", "blocker-superseded", "blocker-dropped",
                "blocker-unknown-status")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
@@ -289,6 +289,15 @@ def _old_form_item(value: str | None) -> str | None:
             return rest
         rest = after
     return None
+
+
+def _names_decision(value: str | None) -> bool:
+    """A Blocked by value names a decision (v3.1, SPEC *The ledger*, ``decision-missing``): a readable
+    ``decision (<person>)``, a retired item (``hold``, a role in ``decision (…)``), or an item in the old decision
+    form — each of the last two has its own flag, whose cure writes a ``decision (<person>)``. An ``until``, an
+    ``event`` and any other unreadable item are not one."""
+    g = parse_gates(value)
+    return bool(g["decisions"] or g["retired"]) or _old_form_item(value) is not None
 
 
 def _real_day(text: str | None) -> bool:
@@ -817,7 +826,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     ledger, open or archived, with or without ``old``, never standing; then (v3.0) each entry's ``retired``
     (``_retired_records()``): a retired field or the old decision form, likewise. From v2.8, ``misplaced-name`` (ℹ, never an
     error, scoped by the entry's whole text): ``misplaced_names()`` of each open entry, the ledger's ``Fields:`` names
-    its declared ones. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
+    its declared ones. From v3.1, ``decision-missing`` (``_decision_missing()``): an open entry with an Ask whose
+    Blocked by names no decision and whose Log does not show it answered (``_ask_answered()``), scoped by the
+    entry's whole text, an error on a rewritten one. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
@@ -836,6 +847,10 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
             recs.append({"level": level, "id": tid, "field": "event", "kind": kind,
                          "text": f"{'⚠' if level == 'error' else 'ℹ'} {tid}: {why}", "standing": False})
         e = entries(text)
+        why = _decision_missing(text, tid)  # v3.1: an Ask with no decision, unanswered
+        if why:
+            recs.append({"level": "info", "id": tid, "field": "blocked by", "kind": "decision-missing",
+                         "text": f"ℹ {tid}: {why}", "standing": False})
         for gate in (gate_items(parse_gates(e[0]["blocked_raw"])) if e else []):
             try:  # an entry _entry_parts() refuses (a field below its header block) has its ℹ already
                 n = reassigns(text, gate) if gate.startswith("decision") else 0
@@ -906,7 +921,8 @@ def _retired_records(ledger: str, archive: str) -> list[dict]:
 
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
 EVENT_KINDS = ("event-section", "event-check", "event-ungated", "event-undated")  # check()'s flags on an entry's events (v2.4; event-undated v2.5)
-TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing", "gate-reassigned-often", "misplaced-name")  # flags that read the body: scoped by the entry's whole text
+TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing", "decision-missing", "gate-reassigned-often",
+                                       "misplaced-name")  # flags that read the body: scoped by the entry's whole text
 
 
 def _entry_texts(text: str) -> dict[str, str]:
@@ -4897,6 +4913,57 @@ def _gate_key(gate: str) -> str:
     return " ".join(gate.split()).lower()
 
 
+def _ask_where(text: str) -> str | None:
+    """Where one entry holds its Ask (v3.1): ``"section"`` for a body section named exactly ``Ask``, as the
+    body's sections are read (so never a line in a code fence, a lead glued to the paragraph before it, or a
+    qualified ``Ask (…)``), else ``"field"`` for a header ``Ask`` field, else None — also for an entry
+    ``_entry_parts()`` refuses, whose own faults are flagged already."""
+    try:
+        _, header, body = _entry_parts(text)
+    except Refused:
+        return None
+    if any(lead is not None and _section_key(lead) == "ask" for lead, _ in _entry_sections(body)):
+        return "section"
+    return "field" if any(field_key(n) == "ask" for n, _ in header) else None
+
+
+def _ask_answered(text: str) -> bool:
+    """One entry's Ask is answered (v3.1, SPEC *The ledger*, ``decision-missing``): the last of its Log's
+    ``gate added: decision (…)``, ``gate reassigned:``, ``kept waiting: decision (…)`` and ``gate lifted:
+    decision (…)`` lines, in file order and never by date, is a ``gate lifted``; the person is not compared. A
+    Log that cannot be read — one ``log_problems()`` faults, or one ``log_lines()`` refuses — answers nothing."""
+    try:
+        if log_problems(text):
+            return False
+        recs = log_lines(text)
+    except Refused:
+        return False
+    last = None
+    for rec in recs:
+        kind = rec["kind"]
+        if kind == "gate-reassigned" or (kind in ("gate-added", "kept-waiting", "gate-lifted")
+                                         and _gate_key(rec["gate"]).startswith("decision (")):
+            last = kind
+    return last == "gate-lifted"
+
+
+def _decision_missing(text: str, tid: str) -> str | None:
+    """``check()``'s ``decision-missing`` (v3.1) for one open entry: why it waits on a person that no reader
+    shows — it has an Ask (``_ask_where()``), its Blocked by names no decision (``_names_decision()``) and the
+    Ask is not answered (``_ask_answered()``) — or None."""
+    where = _ask_where(text)
+    if where is None:
+        return None
+    found = entries(text)
+    if not found or _names_decision(found[0]["blocked_raw"]) or _ask_answered(text):
+        return None
+    cure = (f"remove the Ask with edit {tid} --section Ask --remove" if where == "section"
+            else "remove the field with an empty set value (--field 'Ask=')")
+    return ("has an **Ask:** but its Blocked by names no decision (<person>), so nothing shows the person that it "
+            "waits on them — add the gate with set --blocked-by (and the board item a gained decision is owed), or, "
+            f"if it waits on no one, {cure}")
+
+
 def gate_age(text: str, gate: str) -> date | None:
     """The date ``gate`` (as written in Blocked by) has waited since, on one entry (SPEC *The Log*):
     its latest ``gate added``, ``kept waiting`` or ``gate reassigned`` (to it) Log line; else the
@@ -5144,6 +5211,15 @@ def _status_to_log(header: list[tuple[str, str]], sections: list[tuple[str | Non
     return header, sections
 
 
+def _ask_ungated_refusal(tid: str, field: bool) -> str:
+    """Why an Ask is not written on an entry whose Blocked by names no decision (v3.1): its two cures, the
+    first as the ledger writes an Ask — ``--field 'Ask=…'`` where it is a header field, else ``--ask``."""
+    one = "--field 'Ask=…'" if field else "--ask FILE"
+    return (f"{tid} names no decision (<person>): an Ask is what a decision waits on — if it waits on a person, "
+            f"write them together with set --blocked-by \"…, decision (<person>)\" {one}; if it waits on no one, "
+            "remove the Ask with edit --section Ask --remove")
+
+
 def edit_entry(text: str, action: str, *, today: date | str | None = None, fields: Mapping[str, str] | None = None,
                words: str | None = None, section: str | None = None, why: str | None = None,
                pr: int | None = None, pointer: str | None = None, as_is: bool = False,
@@ -5158,7 +5234,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       it adds that the entry did not carry is logged ``- <today>: gate added: <gate>`` in that order;
       from v2.8 ``title`` replaces the heading's title (``fields`` may then be empty), logged ``- <today>:
       retitled: was "<old title>"`` ahead of any gate added line, and a non-empty ``Title`` or ``Log`` field is
-      refused; a title equal to the entry's, as read, changes nothing;
+      refused; a title equal to the entry's, as read, changes nothing; from v3.1 a non-empty ``Ask`` field it adds
+      or changes is refused when the Blocked by it leaves names no decision (``_names_decision()``);
     - ``note`` (``words``): the Status's notes lifted into the Log (``status_notes_to_log``), then
       ``- <today>: <words>`` appended to it; refused for words that begin with a Log writer's prefix;
     - ``edit`` (``section``, ``words``): that named section's paragraphs replaced by ``words``, its lead
@@ -5166,7 +5243,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       Related or Log, else at the end; the Log itself is refused; from v2.8 adding a section named ``Title`` or
       a header name (``HEADER_NAMES``, or ``declared_fields``: the ledger's ``Fields:`` names) is refused, and
       ``remove`` (no ``words``) removes such a misplaced section — refused for any other, and for a header
-      name the entry's header lacks (set it first);
+      name the entry's header lacks (set it first); from v3.1 writing an ``Ask`` section, replacing or adding it,
+      is refused while the entry's Blocked by names no decision (``_names_decision()``), and ``remove`` also
+      takes the ``Ask`` section of such an entry, refused while a decision holds;
     - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``, ``TD-n`` or
       ``<repo>#TD-n``; or ``dropped``, v2.4: Status ``Dropped <today>`` and ``archived: Dropped — <why>``,
       the rest kept; ``archive_plan()`` says first which dependents each leaves, or refuses): the
@@ -5212,6 +5291,7 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
     if action == "set":
         if not fields and title is None:
             raise Refused("set needs the fields to set")
+        was_header = list(header)
         fields = fields or {}
         keys = [field_key(str(n)) for n in fields]
         if len(set(keys)) != len(keys):
@@ -5254,6 +5334,12 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             if not fm or fm.group(1) != name or fm.group(2) != value:
                 raise Refused(f"{name!r}: {value!r} would not read back as one field")
             header = _with(header, name, value)
+        asked = [str(v).strip() for n, v in fields.items() if field_key(str(n).strip()) == "ask" and v and str(v).strip()]
+        if asked and asked[0] != (_value(was_header, "ask") or "").strip() \
+                and not _names_decision(_value(header, "blocked by")):  # v3.1: never an Ask alone
+            raise Refused(f"{tid} names no decision (<person>): an Ask is what a decision waits on, so the gate "
+                          "comes first — set it beside the gate: set --blocked-by \"…, decision (<person>)\" "
+                          "--field 'Ask=…'")
     elif action == "note":
         said = _one_line("a note", words)
         if said.startswith(LOG_PREFIXES):
@@ -5278,12 +5364,20 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
         if remove:  # v2.8: a misplaced section removed, lead and paragraphs
             if words is not None:
                 raise Refused("remove takes no words")
-            if not _misplaced_section(key, declared):
-                raise Refused(f"{name} is not misplaced: only a section named Title or as a header field is removed")
-            if not at:
-                raise Refused(f"the body has no section named {name!r} to remove")
-            if key != "title" and key not in {field_key(n) for n, _ in header}:
-                raise Refused(f"set {name} first: removing it would lose its only words")
+            if _misplaced_section(key, declared):
+                if not at:
+                    raise Refused(f"the body has no section named {name!r} to remove")
+                if key != "title" and key not in {field_key(n) for n, _ in header}:
+                    raise Refused(f"set {name} first: removing it would lose its only words")
+            elif key == "ask":  # v3.1: the Ask of an entry that names no decision
+                if _names_decision(_value(header, "blocked by")):
+                    raise Refused(f"{tid}'s Blocked by names a decision: its Ask is what the decision waits on "
+                                  "(ask-missing would follow) — lift the decision first")
+                if not at:
+                    raise Refused(f"the body has no section named {name!r} to remove")
+            else:
+                raise Refused(f"{name} is not misplaced: only a section named Title or as a header field, or the "
+                              "Ask of an entry with no decision, is removed")
             del sections[at[0]]
         else:
             said = "\n".join(ln.rstrip() if not ln.strip() else ln
@@ -5292,6 +5386,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                 raise Refused(f"the section {name!r} needs its words")
             if not at and _misplaced_section(key, declared):  # v2.8: a replace is allowed, an add is not
                 raise Refused(_misplaced_refusal(name, key))
+            if key == "ask" and not _names_decision(_value(header, "blocked by")):  # v3.1: never an Ask alone
+                raise Refused(_ask_ungated_refusal(tid, "ask" in declared))
             before = parse_event_section(sections[at[0]][1]) if at else None
             if at:
                 sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")

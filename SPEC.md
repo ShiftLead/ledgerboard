@@ -47,7 +47,19 @@ entry; `<repo>` as below), then **gates** (v2.4), each one of
 - `decision (<person>)` — a person owes an answer, a go included; `<person>` is a person's name (*Appendix:
   grammar*), compared case-insensitively. The entry carries an `**Ask:**` section saying what the
   person owes: without one, `check()` flags it (`ask-missing`; an error on an entry the edit changed —
-  its whole text, as for the Log — ℹ on a standing ledger). A decision reassigned more than twice to
+  its whole text, as for the Log — ℹ on a standing ledger). The converse is flagged too (v3.1): an open entry with
+  an Ask — a body section led `**Ask:**`, or a header `Ask` field — whose `Blocked by` names no decision, and
+  which is not answered, waits on a person that no reader shows (`decision-missing`; an error on an entry the edit
+  changed — its whole text — ℹ on a standing ledger). Here a retired item (`hold`, a role in `decision (…)`) and
+  an item in the old decision form count as a decision, since each has its own flag whose cure writes one; an
+  `until` or an `event` does not. An entry is **answered** when the last of its Log's `gate added: decision (…)`,
+  `gate reassigned:`, `kept waiting: decision (…)` and `gate lifted: decision (…)` lines is a `gate lifted:
+  decision (…)`: the Ask stays as the record of the question, as *Lifting is text* keeps an event's section.
+  "Last" is in file order. A Log that cannot be read (one `log_problems()` faults, or two Logs) answers nothing,
+  and the Log alone decides, on an edit as on a standing ledger. An `**Ask (…):**` lead is its own section,
+  never an Ask. The cure is the gate (`set`), or, where nothing waits on a person, the Ask removed: `edit
+  --section Ask --remove`, or a header `Ask` emptied with `set`. Which `Owner` values name a person is a
+  ledger's own, so an Owner is never read as a wait here. A decision reassigned more than twice to
   reach the person it names now is noted (ℹ, `gate-reassigned-often`, v2.4; `reassigns()` counts the run of
   `gate reassigned` Log lines that led to it), scoped by the entry's whole text.
 - `until YYYY-MM-DD` — not before that UTC date. Once today reaches it the gate no longer holds, and
@@ -626,6 +638,8 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   as read changes nothing. Any other is written `## TD-n: <title>` and logs `retitled:
   was "<old title>"`, dated `today`, which it then requires, ahead of any `gate added` line; the Log is made and
   refused as above. The file keeps its name. `set` refuses a non-empty value for a field named `Title` or `Log`.
+  From v3.1 it refuses a non-empty `Ask` field it adds or changes when the `Blocked by` it leaves names no decision
+  (*The ledger*, `decision-missing`): an Ask is what a decision waits on, so the gate comes first.
 - **note** (`words`): lifts the Status's notes (above), then appends `- YYYY-MM-DD: words` to the
   Log, making it at the end of the body if there is none. It is refused if the words begin with a
   writer's prefix or are more than one line. (Before v2.4 it appended ` YYYY-MM-DD: words` to Status.)
@@ -635,9 +649,14 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   which only its writers write. From v2.8 it refuses to add a section named `Title` (the heading's: `set` retitles),
   a **header name** (`Priority`, `Type`, `Added`, `Status`, `Blocked by`, `Part of`, `Escaped from`, `Id take`, and
   each name the ledger's `Fields:` line declares, given as `declared_fields`). A section the body has is
-  replaced whatever its name. With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a
-  header name, and is refused for any other, for a header name the entry's header lacks (`set` it first), and
-  with words. Names compare as leads do, so a qualified lead is never one. From v2.5, `edit` takes an optional `today`. Replacing or adding an
+  replaced whatever its name. From v3.1 it refuses to write an `Ask` section, replacing it or adding it, on an
+  entry whose `Blocked by` names no decision (as `decision-missing` counts one): the writer's `set --ask` writes
+  the gate and the Ask together (*The ledger writer*), and an entry that already has an Ask may take its gate
+  first. An answered entry's Ask (*The ledger*) is therefore never rewritten while ungated. With `remove` (v2.8)
+  it removes a **misplaced section**, one named `Title` or a header name, and (v3.1) the `Ask` section of an entry
+  whose `Blocked by` names no decision (as `decision-missing` counts one, *The ledger*); it is refused for any
+  other section, for an `Ask` that is not misplaced while a decision holds, for a header name the entry's header
+  lacks (`set` it first), and with words. Names compare as leads do, so a qualified lead is never one. From v2.5, `edit` takes an optional `today`. Replacing or adding an
   `**Event (<name>):**` section for a gate the entry carries, when its check becomes `host-log` or its
   `host-log` source, kind, count or text changes (read by `parse_check()`, so spacing alone is no change),
   appends `gate added: event (<name>)` to the Log, dated `today`, which that case requires: a changed question
@@ -1739,16 +1758,24 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   (`--priority`, required, `--type`, `--added` (default today), `--owner`, `--kind`, `--status` (default `Open`),
   `--blocked-by`, `--part-of`, `--location` (the `**Location:**` body section, v2.7), `--field NAME=VALUE` for a
   repo's own (not `--field Location=…`, from v2.7: `--location`)), `--take` (the counter take's
-  nonce, written as `Id take`), and `--why` (required), `--fix` and `--done-when`, each from a file or `-` for
-  stdin. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
+  nonce, written as `Id take`), and `--why` (required), `--ask` (v3.1), `--fix` and `--done-when`, each from a
+  file or `-` for stdin, at most one of them `-`, written in that order; an empty `--ask` is refused, and in a
+  ledger whose `Fields:` declares `Ask` so is any `--ask` (the Ask is then `--field 'Ask=…'`). With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
 - **`set`, `note`, `edit`** — one edit of an open entry, or for `note` (v2.8) of an archived one too
   (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
   empty value removes the field; not a non-empty `--location` or `--field Location=…`, from v2.7: `edit
   --section Location`; an empty one still removes the header field) and (v2.8) `--title "<title>"`, the heading's
-  title, where `--title ""` is a usage error; `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
+  title, where `--title ""` is a usage error. From v3.1 `set` also takes `--ask FILE|-` (`plan_edit(…, ask=)`):
+  the words of the entry's `Ask` section, written (replacing it or adding it) after the fields, in the same
+  write, so a decision and its Ask arrive together. An entry cannot take a decision before its Ask
+  (`ask-missing`) nor an Ask before its decision (*Edits*, `decision-missing`), so for an entry with no Ask,
+  `--ask` is the one-write way it comes to wait on a person (a ledger that declares `Ask` uses `--field 'Ask=…'`
+  beside the gate instead). `--ask` is refused when the `Blocked by` the write leaves names no decision, when
+  its words are empty, with nothing else to set, on an entry holding a header `Ask`, and in a ledger whose
+  `Fields:` declares `Ask` (there the Ask is that field, set beside the gate). `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
-  one; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
+  one, or (v3.1) the `Ask` of an entry with no decision; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
   Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*The
   closed Status set*'s cure); `set` and `edit` take an archived entry only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
@@ -2104,6 +2131,19 @@ so an old form rewritten `decision (<who>)` is a gained decision, owed a coverin
 no new major. One that did not is not misread: each old form is an error that names it (a retired field ℹ on a
 v1 ledger, *Retired words*; the old decision form an error there on an open entry, as an unreadable item, and ℹ on an
 archived one).
+
+**v3.1 adds `decision-missing`** (*The ledger*, `Blocked by`): `check()` flags an open entry with an Ask and no
+decision whose Log does not show it answered — an error on an entry the edit changed, ℹ on a standing ledger — so
+the ledger writer refuses a write that makes one. With it, `edit` and `set` refuse to write an Ask on an entry with
+no decision (*Edits*), `edit`'s `remove` takes such an entry's `Ask` section, and the ledger writer's `set` and
+`new` take `--ask`, which writes a decision and its Ask in one write. It reads every file v3.0 wrote, as v3.0 did:
+no field, Log line or key is new, and the canonical form is unchanged. **What it refuses that v3.0 wrote:** an Ask
+written to an entry with no decision, so a caller that wrote an Ask and then its gate, as two writes, writes both
+with `set --ask`; and `edit_entry()` raises `Refused` for such an Ask. A ledger v3.0 checked clean can show
+`decision-missing` ℹ on entries it already held. A write over one is not refused, except a `renumber` or a
+`reopen` of that entry, whose flag is then new; `check()` given a base names it an error once any write changes
+the entry's text (a `note`, `fmt`, a relink). So a consumer gates each such entry or removes its Ask when it takes
+v3.1.
 
 ## Appendix: grammar
 
