@@ -4536,6 +4536,24 @@ def _up_links(lines: list[str]) -> list[str]:
     return out
 
 
+def _fenced(lines: list[str]) -> set[int]:
+    """The indexes of ``lines`` inside fenced code, each fence's own lines among them (CommonMark's closing rule:
+    the same character, at least as long, no info string)."""
+    out, fence = set(), ""
+    for i, ln in enumerate(lines):
+        f = FENCE_RE.match(ln)
+        if f:
+            mark = f.group("fence")
+            if not fence:
+                fence = mark
+            elif mark[0] == fence[0] and len(mark) >= len(fence) and not f.group("info").strip():
+                fence = ""
+            out.add(i)
+        elif fence:
+            out.add(i)
+    return out
+
+
 def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
     """A v2 board's (or archive's) lines before its first item, and its carried groups: each line after the first
     item that is no item, no detail block's line and not blank, in order, a `## ` heading opening the group of the
@@ -4549,11 +4567,12 @@ def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
             taken.update(range(i + 1, i + 1 + len(_detail_source(lines, i + 1))))
     groups: list[list[str]] = []
     head, open_group = None, False
+    fenced = _fenced(lines)
     for i in range(first, len(lines)):
         ln = lines[i]
-        if i in taken or not ln.strip():
+        if i in taken or (not ln.strip() and i not in fenced):
             continue
-        if ln.startswith("## "):
+        if ln.startswith("## ") and i not in fenced:
             head, open_group = ln, False
             continue
         if SPLIT_PREAMBLE_LINE_RE.match(ln):
@@ -4572,8 +4591,10 @@ def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
 def _split_readme(pre: list[str], carried: list[list[str]]) -> str:
     """`README.md` of a split (v3.0): the board's text before its first item, `Ledgerboard: 3` under its title, the
     `## ` heading nearest the first item dropped, then the carried groups; relative links one directory up."""
-    lines = [ln for ln in pre if not VERSION_RE.match(ln)]
-    heads = [i for i, ln in enumerate(lines) if ln.startswith("## ")]
+    fenced = _fenced(pre)
+    keep = [i for i, ln in enumerate(pre) if i in fenced or not VERSION_RE.match(ln)]
+    lines = [pre[i] for i in keep]
+    heads = [n for n, i in enumerate(keep) if pre[i].startswith("## ") and i not in fenced]
     if heads:
         j = heads[-1] + 1
         while j < len(lines) and not lines[j].strip():
