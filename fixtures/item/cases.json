@@ -853,60 +853,6 @@
   "subjects": {
     "subjects": [
       {
-        "tool": "board_edit",
-        "action": "snooze",
-        "text": "act 2026-01-05 (session s-1 on h) — **Rotate the key** now. Context: TD-1. Due: 2026-01-10.",
-        "to": "2026-01-20"
-      },
-      {
-        "tool": "shiftlead",
-        "action": "decide",
-        "text": "decide 2026-01-05 (session `ab12` on h) — Pick a   name. Due: 2026-01-10.",
-        "answer": "beta   two"
-      },
-      {
-        "tool": "board_edit",
-        "action": "reply",
-        "text": "2026-01-05 (session s-1) — Say more. Due: 2026-01-10. — Sam, 2026-01-12: secret words"
-      },
-      {
-        "tool": "shiftlead",
-        "action": "append",
-        "text": "2026-01-05 (session `w-1` on h) — A very long item text that goes well past the sixty character limit of a head. Due: 2026-01-10.",
-        "session": "w-1"
-      },
-      {
-        "tool": "board_edit",
-        "action": "done",
-        "text": "2026-01-05 (n/a) — No session named. Due: 2026-01-10."
-      },
-      {
-        "tool": "board_edit",
-        "action": "snooze",
-        "text": "2026-01-05 (session s) — X."
-      },
-      {
-        "tool": "board_edit",
-        "action": "due",
-        "text": "act 2026-01-05 (session s-1 on h) — Rotate. Context: TD-1. Due: 2026-01-10.",
-        "to": "2026-01-30"
-      },
-      {
-        "tool": "board_edit",
-        "action": "due",
-        "text": "act 2026-01-05 (n/a) — Rotate. Context: TD-1."
-      },
-      {
-        "tool": "board_edit",
-        "action": "append",
-        "text": "act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20."
-      },
-      {
-        "tool": "board_edit",
-        "action": "append",
-        "text": "act 2026-01-05 (session `w-1`) — Ask the Doer: acme to bump it. Context: TD-12. Due: 2026-01-20."
-      },
-      {
         "tool": "board",
         "action": "snooze",
         "id": "2026-11-11-3f9a2c1d",

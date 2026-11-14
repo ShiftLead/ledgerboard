@@ -103,6 +103,11 @@ def names_used(prods: dict[str, str], start: str) -> set[str]:
     return seen
 
 
+# A v2 production that v3.x reads and no module function judges (v3.0 removed item_problem(), the open item line's
+# judge): SPEC keeps its EBNF as the v2 line's description, and no fixture can hold the module's verdict on it.
+V2_READ_ONLY = {"item-line"}
+
+
 class Grammar(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -132,7 +137,7 @@ class Grammar(unittest.TestCase):
 
     def test_every_start_has_fixtures(self):
         starts = {n for n in self.prods if not any(n in names_used(self.prods, o) for o in self.prods if o != n)}
-        self.assertEqual(starts, set(self.cases))
+        self.assertEqual(starts - V2_READ_ONLY, set(self.cases))
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# The ledger and board formats — versions 1 and 2
+# The ledger and board formats — versions 1 to 3
 
 This is the formats' one definition in prose; the module, `ledgerboard/__init__.py`, is the one implementation and
 `fixtures/` the cases any implementation must reproduce. Where this text and the module disagree,
@@ -958,10 +958,16 @@ of its output changes nothing.
 
 A board is a set of items for a person. **A v3 board is a directory** (by convention `docs/user_attention/`), one
 file per item, named by its id (*The board as a directory*, v3.0). A v2 board is one Markdown file (by convention
-`docs/user_attention.md`) with its archive beside it (`docs/user_attention_archive.md`). What an item means is the
-same in both, and the paragraphs below say it once. Where they place a field on a line (*right after the Context*,
-*ahead of the `Due:`*, *starting a sentence*), the place is a v2 line's; in an item file each field is a header
-line, in the order *The item file* gives.
+`docs/user_attention.md`) with its archive beside it (`docs/user_attention_archive.md`); v3.x reads one and writes
+none. What an item means is the same in both, and the paragraphs below say it once. Where they place a field on a
+line (*right after the Context*, *ahead of the `Due:`*, *starting a sentence*), the place is a v2 line's; in an item
+file each field is a header line, in the order *The item file* gives.
+
+**From v3.0, everything this section says about a line** (its text, where a field stands on it, its key, its
+replies' tails, its tick, and the functions that write or judge a line: `item_line()`, `decided_line()`,
+`edit_line()`, `item_problem()`, `canonical_item()`, `parse_closed_items()`) **is v2's, read only**: v3.x reads a
+v2 line so, and writes none. A paragraph that says it once for both majors names the item file's form beside the
+line's.
 
 **An item** on a v2 board is one line: `- [ ] [kind] YYYY-MM-DD (session <name> on <host>, or n/a) — text.
 Context: … Due: YYYY-MM-DD.` A closed item is ticked: `- [x] … Closed: YYYY-MM-DD — why.` Items are never
@@ -1027,7 +1033,7 @@ and the gate faults, any other.
 written (`parse_parts()`, `BoardItem.parts`, `item_record()`'s `parts`): every `TD-NNN` or `<repo>#TD-NNN` in it,
 each once, and never one inside a reply's words. The writers write the ids in number order, separated by `, `. Its ids are not Context refs, and it is
 part of the item key, since a changed snapshot is a different question (v2). What an answer does to the parts it
-lists is *The decide lift*'s (v2.4). `item_line(parts=)` and `board.py add --parts` write it, and `parts_problems()` checks it against the
+lists is *The decide lift*'s (v2.4). `item_file(parts=)` (v3.0; `item_line(parts=)` before it) and `board.py add --parts` write it, and `parts_problems()` checks it against the
 ledger (v2.6, *Edits*).
 
 **`Doer:`** (v2.8) — `Doer: <repo>.` or `Doer: team <team>.`, right after the Context (after a `Parts:`, where
@@ -1037,11 +1043,11 @@ module compares no doers; a consumer that resolves one compares case-insensitive
 `Doer: team.`, and a doer's repo never ends in `.` (`parse_doer()`, `BoardItem.doer`, `item_record()`'s
 `doer`: `{"kind": "repo" | "team", "name", "text"}`, `text` the value as it stands on the line without its ends'
 whitespace and its final period, or None for none or a value that does not read). It is read only in that place,
-on any kind, and never inside a reply's words; `item_problem()` faults it on any kind but `act`, no kind included.
-The reader reads it as it reads `Parts:`, any spacing and an absent period included, which `item_problem()`
-faults. On a v2 line it is part of the item key, and no edit changes it: a step for another doer is another item.
-What resolving it means, and what a press on it does, are the consumer's. `item_line(doer=)` and
-`board.py add --doer` write it. In an item file (v3.0) it is the header field `Doer` (*The item file*), a bare
+on any kind, and never inside a reply's words; `item_problem()` faults it on any kind but `act`, no kind included
+(v2; in an item file `item_file_problem()` does, v3.0). The reader reads it as it reads `Parts:`, any spacing and
+an absent period included, which `item_problem()` faults (v2). On a v2 line it is part of the item key, and no edit changes it: a step for another doer is another item.
+What resolving it means, and what a press on it does, are the consumer's. `item_file(doer=)` (v3.0;
+`item_line(doer=)` before it) and `board.py add --doer` write it. In an item file (v3.0) it is the header field `Doer` (*The item file*), a bare
 value read by `doer_value()`; `parse_doer()` reads a v2 line's.
 
 **Trailing fields**, after the `Due:` when there is one, each starting a sentence and anchored to the
@@ -1072,8 +1078,9 @@ line's end, in this order:
   it is part of the item key. An answer **lifts** when it is one of `Lifts:` (or `Go` when the item has none), compared
   case-insensitively (v2.4), or when it fills a form listed there (v2.8; *The `Answers:` bullet*), so a `Decided:`
   holding a fill of a listed form lifts and closes as its form would. The two **waiting-only** answers, `Keep waiting` and `Not yet` (any case; a final
-  period dropped; `waiting_only(label)`), never lift: `item_line(lifts=)` refuses one and `item_problem()` faults
-  one. `item_problem()` also faults, on an open `decide` with no `Decided:`, two forms with one head and a form
+  period dropped; `waiting_only(label)`), never lift: `item_file(lifts=)` refuses one and `item_file_problem()` faults
+  one (v3.0; `item_line()` and `item_problem()` before it). `item_file_problem()` (v3.0; `item_problem()` before
+  it) also faults, on an open `decide` with no `Decided:`, two forms with one head and a form
   marked ` (default)` (v2.8; *The `Answers:` bullet*).
 - `Decided: <label> (by <person>) (YYYY-MM-DD).` — the person's answer, and (v2.3) who gave it. A decided item
   stays open and due; it now waits on whoever acts on it, not on the person. Only a final `(by <person>)` before
@@ -1121,7 +1128,7 @@ the same either way.
 **A closed item** is read as an open one is, once its trailing `Closed:` field is cut (`parse_closed_items(content)`,
 v2.4, of a board or its archive: each a `BoardItem` with its line and detail block). On a v3 board a closed item
 is a file under `archive/` with its `Closed:` (*Reading a board*). Its `raw`, `closed`, `fields`, `words` and
-`context` (v3.0) are read from the `- [x]` line as written; only its `text` is the cut line's.
+`context` (v3.0) are read from the `- [x]` line as written.
 
 **The decide lift** (v2.4) is what a lifting answer on a `decide` item whose Context names one entry and one gate
 does to the ledger: `decide_lift(item, entries, label, by, today, board_people, answered_by, archived=())`,
@@ -1175,8 +1182,8 @@ board whose `People:` lists the gate's person (any board, for an event). Its sta
 the board or in its archive). Only `open` and `decided` cover.
 
 `sweep(entries, boards, results, today_utc, today_local, reask_days=30, event_age_days=30, repo)` returns `{to_file:
-{board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}`, `to_close` listing ids (v3.0,
-for boards given as `Board`s; one given as texts, until v3.0 removes that form, lists item keys as before); an item
+{board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}`, `to_close` listing ids
+(v3.0); an item
 read from a v2 line with no readable date has no id and is never in `to_close`: the sweep leaves it for a person, as
 a line it cannot name by id. `entries` are the ledger's
 and the archive's texts; an entry is open unless its Status is an archived one, and only open entries file or lift.
@@ -1571,13 +1578,12 @@ the directory; on an empty `Board`, the path that was missing).
   `answered_by()`, `people_problems()` and `answered_by_problems()` read its preamble, every line of `README.md`
   on a `"dir"` board and the lines above the first item on a `"file"` one, as `board.py`'s
   `who_answered(board, by)` does through `board_people()`; and a consumer calls
-  `version_problem(board)` before it trusts the rest. Each of these that also takes a v2 board's text tells a
-  `Board` from the text by its type (`isinstance(x, Board)`). `people_problems(board)` and
+  `version_problem(board)` before it trusts the rest. `people_problems(board)` and
   `answered_by_problems(board)` of a `Board` give `(path, problem)` pairs, the path `README.md` for a board read
   from a directory and the basename of `Board.path` for one read from a file; a missing `People:` or `Answered
-  by:` line is named under that path too. `board_problems()` of a v2 board's text gives what it gave before, and
-  raises `Refused` for a `board` read from a file (*The gate*). `item_record()` gives an item's record, of either
-  major, with `text` the item's words, and these keys (v3.0), every other key as before: `id`, a string
+  by:` line is named under that path too. `board_problems()` raises `Refused` for a `board` read from a file (*The
+  gate*). `item_record()` gives an item's record, of either major, with `text` the item's words and no `line`, and
+  these keys (v3.0), every other key as before: `id`, a string
   `"YYYY-MM-DD-<8 hex>"`, or `null` for a v2 line with no readable date; `path`, a string, the file's path in the
   directory (`""` for a v2 item); `added`, `"YYYY-MM-DD"` or `null`; `context`, a string, the Context without its
   final period, or `null` for an item with none; `refs`, as before, the refs of `context` (*The board*,
@@ -1671,83 +1677,6 @@ item only when it is added.
 
 ## Edits
 
-Every edit rewrites one open item line and nothing else, and is refused unless the reader reads
-back exactly what was meant:
-- **snooze** hides the item: it sets its `Hide until:` (adding one right after its `Due:`, or after its Context
-  on an item with no `Due:`), and leaves the `Due:` alone (v2.3; before v2.3 it moved the `Due:`);
-- **due** sets the item's `Due:`, the real deadline (adding one ahead of its `Hide until:` and trailing fields when it
-  has none, after a `Doer:`, where one stands; v2.3);
-- **done** ticks it and appends `Closed: YYYY-MM-DD[ — why].`;
-- **decide** writes `Decided: <answer> (YYYY-MM-DD).`, or with `by` (v2.3) `Decided: <answer> (by <by>) (YYYY-MM-DD).`,
-  replacing an earlier one. It refuses a `by` that is not a person's name, and an answer that itself ends in
-  `(by …)`, a typed `Not right: …` included, which the reader would read as who answered. An answer that fills one
-  of the item's forms is written as its fill, the head as offered (v2.8); one that is a form as offered, unfilled,
-  is refused (*<head> needs its words*). With `close` (v2.4), on
-  an item whose Context names a gate, it also ticks the item and appends `Closed: YYYY-MM-DD — kept waiting.` for
-  a waiting-only answer or `Closed: YYYY-MM-DD — lifted.` for a lifting one, and refuses any other answer (`closes()`
-  says when to pass it);
-- **reply** appends a reply tail.
-
-**A new item** (`item_line(text, due, today, session, host, context, *, kind, answers, default, detail, hide_until, lifts, parts, doer)`, v2.3) is one line, `- [ ] [<kind> ]<today> (<head>) — <text> Context: <context>.[ Parts: <ids>.][ Doer: <doer>.] Due: <due>.` then `Answers: …` where its kind takes them, then a decide's `Lifts: …` when `lifts` names answers other than `Go` alone (each one of its answers, once; written as its answer spells it). A decide's `parts` (v2.6) writes ` Parts: <ids>.` right after the Context, the ids ordered by number, separated by `, `, each as given. It is refused on any kind but `decide`. It is refused for an empty list, for an id that is not `TD-` and 1 to 18 ASCII digits, and for an id that shares its number with another or with the Context's entry. It is refused unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`, with nothing after the gate (*The gate sweep* reads an item whose Context goes on past its gate as naming no entry, so it would cover no part). And it is refused unless one of its answers lifts (as *Closing on the answer* reads a lifting answer). The reader is looser: it reads ids in any order and keys them as written, and `item_problem()` faults neither order nor two spellings of one number, so a hand-written order or spelling is a different key. An act's `doer` (v2.8) writes ` Doer: <doer>.` right after the Context, the value exactly as given, neither trimmed nor collapsed: `<repo>` (not ending in `.`) or `team <team>`, with one space and no other whitespace (*The board*, `Doer:`). It is refused on any kind but `act`, no kind included, and for any other value. Its head is ``session `<name>` on <host>``, ``session `<name>` `` with no host, or `n/a`. The text ends a sentence (a period is added unless it ends in `.`, `?` or `!`), and an empty context is `none`. What a kind takes:
-- a `decide` carries two or more distinct answers, at most one marked ` (default)` and never a form (v2.8), no two
-  forms with one head (v2.8), and a detail block; `decided_line()` writes no mark on a form, its `default` naming
-  one written unmarked;
-- a `look` carries exactly `Answers: Works | Not right: <what>.`, which the writer writes itself, `Works` marked ` (default)` only when the caller asks;
-- an `fyi` carries no `Due:`, and every other kind carries one;
-- no kind but `decide` and `look` carries answers.
-
-These are the writer's rules. The reader still reads whatever a line carries. An answer is written `<label>` or `<label> — <consequence>`, with the mark on the label.
-
-The **detail block** is composed from named parts, in the order `Context`, `Question`, `Caveats`, `Recommended`. Each part is one two-space-indented bullet, ``- **<Part>:** <words>``, with any further lines as nested bullets under it. On a `decide` with a default, Recommended opens with that default's label and ` — `, which the writer adds: a `recommended` whose words already open with that label and ` — ` (whitespace collapsed, the label compared ignoring case) is refused, naming the prefix, rather than written with the label twice (TD-069). An `Otherwise` text follows the Recommended words on the same bullet as ``**Otherwise:** <words>``. A `decide` needs Context, Question and Recommended. No writer touches the block afterwards.
-
-The writer refuses text, a context, an answer or a detail value that carries a field name (`Doer:` among them from v2.8), or that is more than one line; a date that is not `YYYY-MM-DD`; a host with no session; and any result the reader would not read back as exactly the item meant, its detail block included.
-
-An answer given elsewhere (on a ledger entry) is written as an already decided `decide` item with `(person)` as its head (`decided_line(…, by=)`), whose `Decided:` names who gave it as **decide** does, with the same refusals (v2.3).
-
-**A snapshot against the ledger** (`parts_problems(item_line, entries, archived=())`, v2.6) lists, and never
-raises, why a `decide` line's `Parts:` does not match the ledger. It reads the item as *The decide lift* does,
-its detail block or a board holding it as its one open item included, and leaves its form to `item_problem()`. A
-string that is not exactly one open item, an item that is no `decide` or is decided, or one whose `Parts:` holds
-no id `parse_parts()` reads gives `[]`. One whose Context or parts the check `item_line()` shares faults gives
-`line: <that fault>` alone, the fault one of `context: not one entry and one decision` (a Context naming two
-entries, or going on past its gate, among them), `<id>: another repo's entry`, `<id>: not an id`, `<id>: the
-Context's entry` and `<id>: twice`; the kind, an empty list and the lifting answer are `item_line()`'s alone.
-Otherwise it reads `entries` (id to text, open and archived alike, by number, the first of a number winning; a
-key that is not a bare `TD-` and 1 to 18 ASCII digits is ignored, and a value that is not a string, or holds no
-entry, is no entry) and `archived` (the ids read from the ledger's archive, by number). An entry is archived when
-its number is in `archived` (whether or not `entries` holds a text for it) or its Status is an archived one. It
-judges the Context entry first, `<ref>: missing` or `<ref>: archived`, and then each part still, in the line's
-order, its first fault of `<id>: missing`, `<id>: archived`, `<id>: not Part of <ref>`, `<id>: does not carry
-<gate>`. It is stricter than *The decide lift*, which skips a part that no longer carries the gate (one archived
-by its Status, or named in `archived` and not given, among them), still lifts an `event (<name>)` snapshot and
-one whose Context goes on past its gate, and, reading a text it is given ahead of `archived`, lifts a part and a
-Context entry named in `archived` whose Status reads `Open`: the snapshot is checked when the question is asked,
-the lift when it is answered. The ledger is not in the line, so `item_line()` does not check these; a writer that
-reads the ledger calls it.
-
-**The form the writers write** (v2.3): an open item line that `item_line()` or `decided_line()` composed, as it stands after any snooze, decide or reply. In short, the line:
-- opens `- [ ] ` at column 0;
-- carries an optional lower-case kind, a date, and a head that is ``(session `<name>` on <host>)``, ``(session `<name>`)``, `(n/a)`, or `(person)` on a decided line;
-- continues with ` — `, text that ends a sentence and names no field, ` Context: <words>.`, on a `decide` optionally ` Parts: <ids>.` (ids separated by `, `, each once), on an `act` optionally ` Doer: <doer>.`, and ` Due: <date>.` on every kind but `fyi`, then, when it has one, ` Hide until: <date>.`;
-- may then carry replies, then `Answers:` as *A new item* says a kind takes them (a decided line may carry any or none), then on a `decide` optionally ` Lifts: <labels>.` (each one of its answers, once, and never `Go` alone), then `Decided:`;
-- holds nothing else, one space between parts.
-
-Fields inside a reply's words or a `Decided:` text are the person's and are not counted. `item_problem(line)` names why a line is not in that form, or gives None. It checks the item line alone, never its detail block, which stays the person's prose. `canonical_item(line)` rewrites a line into that form, moving `Due:` to its place and spelling it so, and refuses any rewrite that would change the line's item key or lose a word. Consumers persist keys, so a format pass that moved an item's key would break what they hold.
-
-**The gate** is `board_problems(board, old)`: the faults of each open line (every `- [ ]` line at any indent, but an open twin of a closed one) whose item key no line of `old` (open or closed) has. A line an edit only snoozed, decided, replied to or ticked keeps its key, so a line is judged once, when it is added, and a board that was never in the form has no flag day. Two rules join it in v2.3, for who may answer. First come the board's `People:` problems (`people_problems(board)`, line 0 for a missing line): a board with no `People:` line is noted, its text opening `ℹ`, which is no fault (nobody is named who may answer it, so a consumer sends a lift on it to ordinary review); a `People:` line that lists no name, a name that is not a person's name or the same name twice, and a second `People:` line above the first item, are faults. Then a new `decide` line whose Context names a gate, `decision (<person>)`, is faulted when the board has a `People:` line that does not list that person. From v2.4 the board's `Answered by:` problems follow its `People:` ones (`answered_by_problems(board)`): a value other than `owner` or `any`, and a second such line above the first item.
-
-**The commit subject of a board write** is one line: `<tool>: <action> <head>[ to <date> | :
-<answer>] (session <name>)` for the five edits (`edit_action()` reads the action back, v2.3; a `snooze … to D`
-meant a moved `Due:` before v2.3 and a hide since — history, not text a reader acts on), and `<tool>: append <head> (session <name>)` for a
-new item — the head is the item's text after its prefix, before its fields, bold dropped, at most
-60 characters; a reply's words never appear. Subjects written before v1 by one consumer
-(`shiftlead: board|answer <head> (from <ref>)`, `shiftlead: board decide <ref> (person)`) still
-read as appends.
-The archive's subject is `<tool>: archive <n> closed items (session <name>)` (`archive_subject()`), `<n>` the closed items moved.
-`subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write, above) `queue`.
-
-## Edits (v3.0)
-
 Every edit rewrites one open item file, by one header line set or one Log line appended, and nothing else, and is
 refused unless the reader reads back exactly what was meant (`edit_item(text, action, *, to, answer, why, reply,
 by, today, close)`, v3.0). A field it adds goes right after the last known field that precedes it in the header
@@ -1808,18 +1737,25 @@ An answer given elsewhere (on a ledger entry) is written as an already decided `
 (`decided_file(title, ref, answers, default, words, today, by=None)`): `## <title>`, its `Context` the ref, `Due`
 today, its `Answers`, and `Decided: <today>[ by <by>] — <words>`, with **decide**'s refusals.
 
-**A snapshot against the ledger** (`parts_problems(item, entries, archived=())`, v2.6) lists, and never raises,
-why a `decide` item's `Parts:` does not match the ledger. `item` is an item file's text or a `BoardItem` (from
-v3.0; a v2 line before it), and its form is left to `item_file_problem()`. A text `parse_item()` reads as no open
-item, an item that is no `decide` or is decided, or one whose `Parts:` holds no id `parse_parts()` reads gives
-`[]`. One whose Context or parts the check `item_file()` shares faults gives `item: <that fault>` alone (v3.0, for
-an item file and a v2 line alike; `line: <that fault>` before it), the fault
-one of `context: not one entry and one decision` (a Context naming two entries, or going on past its gate, among
-them), `<id>: another repo's entry`, `<id>: not an id`, `<id>: the Context's entry` and `<id>: twice`; the kind,
-an empty list and the lifting answer are `item_file()`'s alone. Otherwise it reads `entries` and `archived` and
-judges as v2.6 says, word for word from "(id to text, open and archived
-alike" to "the lift when it is answered"; the ledger is not in the item, so `item_file()` does not check these,
-and a writer that reads the ledger calls it.
+**A snapshot against the ledger** (`parts_problems(item, entries, archived=())`, v2.6) lists, and never raises, why
+a `decide` item's `Parts:` does not match the ledger. `item` is an item file's text or a `BoardItem` (from v3.0; a
+v2 line before it), and its form is left to `item_file_problem()`. A text `parse_item()` reads as no open item, an
+item that is no `decide` or is decided, or one whose `Parts:` holds no id `parse_parts()` reads gives `[]`. One
+whose Context or parts the check `item_file()` shares faults gives `item: <that fault>` alone (v3.0; `line: <that
+fault>` before it), the fault one of `context: not one entry and one decision` (a Context naming two entries, or
+going on past its gate, among them), `<id>: another repo's entry`, `<id>: not an id`, `<id>: the Context's entry`
+and `<id>: twice`; the kind, an empty list and the lifting answer are `item_file()`'s alone. Otherwise it reads
+`entries` (id to text, open and archived alike, by number, the first of a number winning; a key that is not a bare
+`TD-` and 1 to 18 ASCII digits is ignored, and a value that is not a string, or holds no entry, is no entry) and
+`archived` (the ids read from the ledger's archive, by number). An entry is archived when its number is in
+`archived` (whether or not `entries` holds a text for it) or its Status is an archived one. It judges the Context
+entry first, `<ref>: missing` or `<ref>: archived`, and then each part still, in the line's order, its first fault
+of `<id>: missing`, `<id>: archived`, `<id>: not Part of <ref>`, `<id>: does not carry <gate>`. It is stricter than
+*The decide lift*, which skips a part that no longer carries the gate (one archived by its Status, or named in
+`archived` and not given, among them), still lifts an `event (<name>)` snapshot and one whose Context goes on past
+its gate, and, reading a text it is given ahead of `archived`, lifts a part and a Context entry named in `archived`
+whose Status reads `Open`: the snapshot is checked when the question is asked, the lift when it is answered; the
+ledger is not in the item, so `item_file()` does not check these, and a writer that reads the ledger calls it.
 
 **The form the writers write** (v3.0) is a file `item_file()` or `decided_file()` composed, as it stands after any
 snooze, due, decide or reply. `item_file_problem(text)` names why a file is not in that form, or gives None, in a
@@ -2109,8 +2045,11 @@ writer ran.
 
 ## Versions
 
-A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1.
+A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1 for a ledger,
+and 2 for a board file (v3.0: a board's v1 and v2 are one format).
 A v2 ledger declares it in its `README.md`, which `load()` puts first.
+A v3 board declares it in its `README.md`, on any line outside an HTML comment (`board_major()`); a README that
+declares none reads as 3, and is named (*Reading a board*).
 A reader that meets a newer major than it knows reads nothing and says so (`version_problem()`, which a consumer calls before it trusts what it parsed — no parser calls it for you). A release of the module
 is `v<major>.<minor>`: a minor release reads every file the major's earlier releases wrote.
 **v1.3 reads one thing differently:** an answer whose own text held ` — ` was one answer before
@@ -2339,9 +2278,48 @@ from its Context without its replies, so a ref named only in a reply's words is 
 `text` is the item's words (`item_words()`: the line less its prefix, its fields and its replies), not the line
 after its tick. The sweep reads its head phrase (`has no board` and the rest) in the item's words alone, so one
 only in a Context or a reply no longer counts. A line with no readable date has no id (`null` in a record): it is
-matched, for the twin rule, only with the other undated lines, by its key, and the sweep, given a `Board`, never
-closes it. A closed line's `raw`, `closed`, `fields`, `words` and `context` are read from the `- [x]` line as
-written, its `Closed:` among them; only its `text` is the cut line's.
+matched, for the twin rule, only with the other undated lines, by its key, and the sweep never closes it. A
+closed line's `raw`, `closed`, `fields`, `words` and `context` are read from the `- [x]` line as written, its
+`Closed:` among them.
+
+**v3.0 makes the board a directory** (*The board as a directory*, *Edits*, *The board writer*, *The merge gate's
+verdicts*): one file per item, named by its id, in `docs/user_attention/` with `README.md` and
+`archive/<YYYY-MM>/`, closing an item moving its file. **It reads a v2 board**: `load_board()` gives the same
+items for a v2 file and its archive as for its split, for any board the split accepts, each v2 item with the id
+`split_board()` gives it, so a consumer vendors v3.0 in or before the change that splits its board, and reads other
+repos' boards in either major. It reads a v2 board as the paragraph above says, and a board file that declares no
+major reads as 2, the format a board's v1 and v2 share (*Versions*' "none means 1" stays the ledger's). **It
+writes v3 only**: `board.py`'s writes refuse a v2 board (*split first*). **What goes:** the item key as what an
+item is (`item_key()` remains, only to read a v2 line and as `key_id()`'s input); the open-and-closed twin as the
+merge rule (a v3 item is one file; a v2 board's twins are still read as one item, above); `archive_closed()`,
+`archive_subject()`, `ARCHIVE_AT` and `board.py archive` with its `--archive` (which only `split` takes now), and
+`closed_items()` as a public name; the v2 line's writers, `item_line()`, `decided_line()`, `edit_line()`,
+`item_problem()` and `canonical_item()`, and with them the refusal of a field's name in a text, context, answer,
+detail value or reply and of an answer ending `(by …)`; the text forms of the board's readers; `subject()`'s form
+with no id; `add --under`; and the edits' `--line` and `--expect`. **What a caller changes:** `BoardItem.text` is
+gone (an item's words are `words`, its replies `replies`); `needs_you()`, `covers()`, `sweep()`,
+`board_problems()`, `board_people()`, `answered_by()`, `people_problems()` and `answered_by_problems()` take a
+`Board` and no text, the sweep's board and `uncovered_decisions()`'s are `(origin_url, basename, board)`, read
+whole, and the sweep's `to_close` are ids; `board.py`'s edits name an item by `--id`, and a write's JSON and `list`
+give its id where they gave its line; `item_record()` loses `line`, gains `id`, `path`, `added`, `context` and
+`closed`, and its `text` is the item's words (its `doer`, v2.8's, is unchanged); `version_problem()` takes a
+`Board`, or a ledger's text (above; the ledger's `FORMAT_MAJOR` is not changed here); `parts_problems()`,
+`decide_lift()` and `closes()` take an item file's text, and `parts_problems()` prefixes a shared check's fault
+`item:` where it wrote `line:`; `BOARD_PATH` and `BOARD_ARCHIVE_PATH` are `BOARD_V2_PATH` and
+`BOARD_V2_ARCHIVE_PATH`, beside `BOARD_DIR`; a subject carries the id; an `ls` lists subdirectories, so a caller's
+`ls` that lists files alone reads a v3 board's archive as empty; and `lift_pr_verdict()` sends a lift on a v2 board
+to review. **The board's order** for ties is a v2 board's line order and a v3 board's ids descending, newest first
+(by `Added` date, at random within one day), so tied items can change order when a board is split. **`Doer`** is a
+header field of the item file on an `act`, naming who should do its step (*The item file*), which `add --doer`
+writes. The split carries every field the v2 reader reads into the header field of the same name. v2.4's "no board
+action removes one" no longer holds: `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3
+repo as the stub, which declares `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer
+refuses it unread, and a reader that checks nothing reads an empty board, so a repo splits its board in the change
+that makes its own tooling v3.0, and the repos that read each other's boards move to v3.0 together: until another
+such repo moves, its v2.x readers that check nothing read the split board as empty (a sweep there can file a
+duplicate item, closed by hand). Within v3.x the same holds for a field: a later minor's field is faulted by an
+older v3 gate, so **a consumer writes a new field only once every reader of the board runs that release**.
+`Ledgerboard: 3` on a ledger means nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
 
 ## Appendix: grammar
 
@@ -2352,9 +2330,10 @@ The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates cho
 what they repeat, `"…"` is literal text, `[…]` a character class (`^` negates it, `#xN` is a code point), and
 `(…)` groups. What a production cannot say is said in prose under its block.
 
-### The open item line (v2.3)
+### The open item line (v2.3; a v2 board's, read only from v3.0)
 
-An item line as the writers write it (*The form the writers write*): a line `item_problem()` gives None for.
+An item line as the v2.x writers wrote it (v2.x's *The form the writers write*): a line `item_problem()` gives
+None for (v2.x; v3.0 removes `item_problem()`).
 Its line ending is not part of it.
 
 ```ebnf
@@ -2409,7 +2388,7 @@ char           ::= [^#xA]
 What the productions leave to prose: a `date` is a real day of the calendar, and the line ends in no
 whitespace. Which labels are forms (*The board*, the `Answers:` bullet) is a reading of a `label`, as its
 consequence split is: the productions accept every form as a label (a head that is a field's name makes no label:
-`item_line()` refuses it), and a fill is a `Decided:` text, which they accept as any. A field name counts only at a word's start, after a character that is no letter, digit or `_`
+v2.x's `item_line()` refused it), and a fill is a `Decided:` text, which they accept as any. A field name counts only at a word's start, after a character that is no letter, digit or `_`
 (`field-at` names the ASCII ones; the module's word boundary also counts one after any other character that is
 no letter, digit or `_`, such as an em dash or a no-break space, so the grammar accepts such a line, which the
 module refuses). A

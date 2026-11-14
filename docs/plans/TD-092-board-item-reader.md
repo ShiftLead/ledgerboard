@@ -26,7 +26,7 @@ TD-070's plan's, moved unchanged; that plan's nine rounds are in its Status, and
 docs/reviews/TD-070.md, cited here by id where the moved text cites them. TD-092's own record continues the
 numbering (R26, F175 on), so an id names one finding across both plans.
 
-**Entry:** [TD-092](../ledger/archive/TD-092.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-092's Fix (the
+**Entry:** [TD-092](../ledger/archive/TD-092.md), `Part of` [TD-070](../ledger/archive/TD-070.md). **Source:** TD-092's Fix (the
 scope, Paul's Go, #275); [TD-070's plan](TD-070-board-directory.md), draft 11, from which every section here but
 *The problem* and *Not in this design* is moved (its scope S1–S10, Paul's Go of 2026-11-11, kept as each
 decision's source); `SPEC.md` *The board*, *Edits*, *The ledger as a directory* (the precedent), *Ledger entries
