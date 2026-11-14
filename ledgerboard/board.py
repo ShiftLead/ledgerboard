@@ -1,4 +1,4 @@
-# ledgerboard v2.8 sha256:85a92178acf046d2651ac4b5cf2633e6aba4e8acc1ad043aeea60012c46e3d4b
+# ledgerboard v3.0 sha256:5a32c2a0a1dd8fb1824753db9f71a5195bab828601980fa777c70c4c318d2eab
 # SYNCED FILE — canonical copy: ShiftLead/ledgerboard ledgerboard/board.py (vendored by agent-cadence as files/scripts/ledgerboard/board.py)
 # Edit it there and release; an edit made in a consumer's copy is overwritten by the next vendor or sync.
 """The board and rank writer: the module's board edits, read from and written to files (SPEC *The board writer*).
