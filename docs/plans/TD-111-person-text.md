@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** design, round 2 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** design, round 3 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -97,6 +97,9 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   returns `PersonTextProblem`s where the source leaves its type open. `PersonTextProblem` is a tuple, so a caller
   that unpacks `(rule, refuse, line)` as the source says still works.
 - *an empty sentence* is a rule-1 failure (`it is empty`), which the source did not name.
+- *punctuation*: `“ ” ‘` fold as `’` does; a span's stand-in sits in place, so a `?` after it ends the
+  sentence; a bare URL stops before its trailing punctuation; a stop before a closing `)` or quote is a sentence end.
+  The source read none of these.
 - *`sentence_problems` reads the word count, the sentence end and emptiness only*, never code, as the source says
   (the card reads an empty result as *is one sentence*); `person_text_problems` adds `code_tokens(sentence)` and
   writes **one** rule-1 line whose parts name each failure, so rule 1 gives at most one problem.
@@ -116,16 +119,19 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   actor (*I.e.*).
 - *a phrase in `actors`* takes `'s` or `s` on its last word, where the source's phrases took neither; *the host
   agents* passing harms nothing. Entries of `actors` and `people` match as literal text (escaped).
-- *`people`*: here a name matches in the actor bounds, case-sensitive, with `'s`; an empty entry, or one holding a
+- *`people`*: here a name matches in the actor bounds, case ignored, with `'s`; an empty entry, or one holding a
   line break, in `actors`, `people`, `coined` or `labels` is a caller's error (`ValueError`), and so is a `labels`
   entry that is no regular expression.
 - *a coined term* matches with `s` or `es` after it, where the source says only *its plural*.
 - *a form* is defined: an answer whose label `is_form()` reads as a form (`Hold: <note>`, `Not right: <what>`,
   `Other:`) is read by its consequence alone; the label and consequence are `split_answer()`'s.
 - *the writes*: the source's ledger row read the whole Ask as the sentence and no context; here the Ask's first
-  paragraph is the sentence and its later paragraphs the context, as mail's first paragraph is (an Ask of three
-  sentences is the common case, and its later sentences are context, not the question). The source's `decide` row
-  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The title rule
+  paragraph is the sentence and its later paragraphs the context, as mail's first paragraph is (an Ask of one
+  paragraph holding three sentences is refused for a sentence end inside; the writer's cure is a blank line after
+  the question, which makes the rest context). The source's `decide` row
+  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. A `decide`
+  line with no bold head: the source read its first sentence, which made rule 1's *end inside* unable to fire;
+  here the line's words are read whole. The title rule
   runs on `set --title` (v2.8), the retitle path the source said would come (*any retitle path added later*).
 - *`people` compares case-insensitively*, as SPEC's *A person's name* does; the source said nothing.
 - *the title's labels*: the module keeps the format's ids (`TD-n`, `<repo>#TD-n`); the source's `[A-Z]{1,2}\d+`
@@ -203,14 +209,18 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > 3. **A title is plain words** (`title_problems(title, coined=, labels=)`): no code token and no label.
 > 4. **The context is plain words**: its code tokens are named in one warning; never refused, never capped.
 >
-> **The text read.** First, `’` becomes `'`. Then each fenced block — a line that is three or more backticks and
+> **The text read.** First, `’` and `‘` become `'`, and `“` and `”` become `"`. Then each fenced block — a line that is three or more backticks and
 > at most an info word after them, to the next line that is as many backticks or more, or the text's end — and each code span — a run of n backticks, then text
-> holding no run of exactly n backticks and no blank line, then n backticks — is found and stands as one word
-> (a backtick with no partner is a plain character). Then, outside them, a markdown link's target (`](…)`, the
-> `]` kept) and a bare URL (`https?://\S+`) are dropped. The rest is read as whitespace-separated pieces; each is
+> holding no run of exactly n backticks and no blank line, then n backticks — is found and replaced, in place and with
+> no space added, by a letter-holding stand-in that counts as one word and as one code token (a backtick with no
+> partner is a plain character). Then, outside them, a markdown link's target (`](…)`, the `]` kept) and a bare
+> URL are dropped; a bare URL is `https?://\S*` up to and not including a run of `. , ; : ! ? ) ] " '` that ends
+> its piece, so *see https://x.io/guide?* keeps its `?`. The rest is read as whitespace-separated pieces; each is
 > stripped of leading `( [ { " ' * _` and trailing `. , ; : ! ? ) ] } " ' * _`, and a piece holding no letter or
-> digit after the strip (`—`, `-`, `&`, `/`, `~/`) is no word. A pattern below matches the whole stripped word
-> unless it says *holds*; each is case-sensitive unless it says otherwise.
+> digit after the strip (`—`, `-`, `&`, `/`, `~/`) is no word; a letter and a digit are Python's (`str.isalnum()`
+> of a character), and a pattern's classes are as written. A pattern below matches the whole stripped word unless
+> it says *holds*; each is case-sensitive unless it says otherwise. Rules 1, 2 and 3 read these words, so an actor
+> or a label inside a span, a fence, a link's target or a URL is not read.
 >
 > **A code token** (`code_tokens(text)`: in the order of their place in the text, each distinct token once): a
 > code span, spelled as written with its backticks; a fenced block, spelled `a code block`; and a word that is
@@ -228,22 +238,26 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > - an *option*: opens `--` and a letter.
 >
 > A word that is more than one kind is one token. An id (`TD-1845`, `#3878`, `F12`) and a version (`v2.7.1`,
-> whose parts open with digits) are no code token. Known false positives: *yes/no/maybe*, *he/she/they*, *A/B/C*
-> (paths); *Node.js* (a file name); *docs.github.com*, *U.S.A*, *a.b.c* (dotted); *iPhone*, *iOS*, *macOS*
+> whose parts open with digits) are no code token. Known false positives: *yes/no/maybe*, *he/she/they*, *A/B/C*,
+> *US/EU/UK*, *and/or/else*, *Mon/Wed/Fri* (paths); *a(n)* (a call); *Node.js* (a file name); *docs.github.com*, *U.S.A*, *a.b.c* (dotted); *iPhone*, *iOS*, *macOS*
 > (camelCase); a word written with `_` on purpose. Known gaps: a command written as words (*git rebase*), and a
-> name whose `_`s the strip removes (`__init__` reads as *init*).
+> name whose `_`s the strip removes (`__init__` reads as *init*); a two-part path with no file name
+> (*docs/plans*); a variable (`$HOME`), a short option (`-f`), a bare `{"a":1}` and a file with no extension
+> (*Makefile*).
 >
 > **One sentence** (rule 1). The sentence is empty when it holds no word. It has more than `max_words` words when
-> its words, a span or fence counting as one, number more. It has a sentence end inside it when a `.`, `?` or `!`
-> followed by a space or a line break stands before its last word, but not a `.` ending a word that is, case ignored, *e.g*,
-> *i.e*, *vs*, *etc* or *cf*. Its end is read after trailing `) ] " ' *` are dropped: a question must end in `?`;
-> a statement's end is not read. Known false positive: another abbreviation or an id followed by a stop and a
+> its words, a span or fence counting as one, number more. It has a sentence end inside it when a `.`, `?` or `!`,
+> then any of `) ] " ' *`, then a space or a line break, stands before its last word, but not a `.` ending a word
+> that is, case ignored, *e.g*, *i.e*, *vs*, *etc* or *cf* (so *Say (really?) what you think?* has one inside).
+> Its end is the read text's last character that is not whitespace or one of `) ] " ' *`: a question's must be
+> `?` (*Should I run `make test`?* and *Should I "ship it?"* end in `?`); a statement's end is not read. Known false positive: another abbreviation or an id followed by a stop and a
 > space (*U.S. law*, *TD-909. Which*), whose part says *write it without the stop*.
 >
 > **An actor** (rule 2): a match, in the bounds `(?<![\w'])` before and `(?![\w']|\.\w)` after, of an I-form (*I,
 > I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
 > word or a phrase taken as literal text, its last word optionally followed by `'s` or `s` (case ignored); or of a
-> name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name). An answer is read through
+> name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name, so a person named *Will* makes *it will be built* name an
+> actor: a known gap). An answer is read through
 > `split_answer()`: its label and its consequence, the ` (default)` mark dropped; an answer whose label is a form
 > (`is_form()`: `Hold: <note>`, `Not right: <what>`, `Other:`) is read by its consequence alone, and any other by its label
 > and consequence. `default` is read as an answer is, and skipped when its label, after `split_answer()`, equals an
@@ -252,7 +266,9 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > own (a noun *lead* matches *lead-in*).
 >
 > **A label** (rule 3): a word matching `(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+#TD-\d+|TD-\d+` (the format's
-> `<repo>#TD-n` and `TD-n`), a word matching any of `labels` whole, or a word of `coined`, case ignored, with `s`
+> `<repo>#TD-n` and `TD-n`), a word matching any of `labels` (each compiled
+> on its own by Python's `re`, case-sensitive unless the pattern says otherwise, and `fullmatch`ed against the
+> word with an ending `'s` split off), or a word of `coined`, case ignored, with `s`
 > or `es` after it or not; each optionally followed by `'s` (*TD-5's*).
 >
 > **The lines**, one per problem, rule 1's first, then rule 2's in the answers' order with the default last, then
@@ -280,9 +296,10 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
 > item, and the caller's for a ledger entry. It runs:
 > - **a `decide` item**: `person_text_problems(<question>, <its answers>, <context>, question=True)`, where the
->   question is the line's bold head, else the line's text up to its first sentence end; then the detail block's
+>   question is the line's bold head, else the line's words (`item_words()`, the fields and replies left out), whole,
+>   so a second sentence there is refused and belongs in the detail block; then the detail block's
 >   `question` the same way, with no answers; the context is the detail block's `context` and the reason in its
->   `recommended` after the writer's own `<label> — `, read with `sentence` `None`; never the line's `Context:`
+>   `recommended` after the writer's own `<label> — `, read with `sentence` `None` (`question` is then not read); never the line's `Context:`
 >   field, which names a gate;
 > - **an `act` item**: the line's bold head, `question=False` (an `act` line with no bold head is refused: *an act
 >   line leads with its task in bold*), and its detail block's `context` with `sentence` `None`;
@@ -315,11 +332,13 @@ case, word for word.
 - **sentence_problems**: empty and blank; 25 and 26 words, and 25 words with a standalone `—` passing; a code span
   as one word, and a code token giving no problem here; a stop inside (*. Which*), each of the five abbreviations;
   a question without `?`; a statement ending in `.`, `!`, `:` and nothing, each passing; trailing `) ] " ' *`
-  before the end; `’` folded; its line with two and three parts.
+  before the end; `’`, `‘`, `“`, `”` folded (*Should I "ship it?"* in curly quotes passing); *Should I run `make
+  test`?* passing; *Should I follow https://x.io/guide?* passing; *(see https://x.io/a). Then merge?* and *Say
+  (really?) what you think?* each with an end inside; its line with two and three parts.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
-  it* passing; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
+  it* passing; *you* inside a span or a URL not read; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
   (literal), *agent-cadence* (passes, a known gap); `actors` empty refusing *a session pins it*, with the cure
-  line's `, or <a>…` absent and present; `people` case ignored, with `'s`; a form (`Hold: <note> — a session
+  line's `, or <a>…` absent and present; `people` case ignored, with `'s`, and *Will* matching *will* (the known gap); a form (`Hold: <note> — a session
   revises it` passes; `Hold: <note>`, `Not right: <what>` and `Other:` alone refused; `Not right: wrong repo` read as
   label); `(default)` dropped; `default` equal to a label (marked or not) skipped, unequal and actorless named
   *the default*; rule 4 with one, two, three, four and five tokens; rule 1 as a statement, and with every part
@@ -327,7 +346,8 @@ case, word for word.
   empty or multi-line entry in each list refused.
 - **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
   refusing *B4* and *P0* (the caller's pattern, the caller's false positive), and `#\d+`; a `labels` entry that is
-  no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; an id written in
+  no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; *US/EU/UK* refused (a path, the known false positive); a label inside a span
+  read only as the span; an id written in
   words passing.
 
 Unit tests in `tests/test_person_text.py` check that the module carries the eight names, and scan the source of
