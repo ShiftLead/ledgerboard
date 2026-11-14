@@ -104,8 +104,10 @@ empty README among them) and `README.md declares Ledgerboard: <n>` (any `<n>` bu
 round 4's F312). **The
 order of an `add`'s refusals** (F316, F318; round 5's F320, F322, F325): a usage error (exit 2: argparse's) first; then, before any read and in today's order (round 6's F335), `build()`'s refusals (`--parts` or `--doer`
 with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object: exit 1), then a bad `--today` (exit
-2), then `plan_add()`'s (`--ledger` without `--parts`, a decided item given any option but its own, `--said` without
-`--by` or `--by` without `--said`: exit 1; the closing fact-check's F333); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
+2), then `plan_add()`'s (`--ledger` without `--parts`; on a `--decided` item, `--parts`'s and `--doer`'s
+refusals aside, any of `--due`, `--kind`, `--detail`, `--session`, `--host`, `--said`, `--hide-until` and `--lift`;
+on an item that is not `--decided`, `--said` without `--by` or `--by` without `--said`, since a decided item's
+`--by` is who answered: exit 1; the closing fact-check's F333, round 6's closing fact-check's F341); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
 held), or without `--id` the draw's (eight held names); then the item's own (`item_file()`'s, and with `--said` the
 reply's, `edit_item()`'s); then the ledger's (`--parts`: `parts_problems()`, an unusable ledger exit 2), as today;
 then `_gate()`'s `board_problems()` over the board the write leaves. The five edits' order is the same with
@@ -246,7 +248,8 @@ archive files the consumer fetches.
   neither a file under `BOARD_DIR/` nor a v2 board at `BOARD_V2_PATH` (`form` None: a stub with no directory is
   no board, F330), takes review (`lift-no-board`, its message naming
   `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or head (`lift-board-v2`); then a stray path in `files` (`lift-files`,
-  above); then board changes that are not one item's (`lift-board-diff`); then the checks from
+  above); then board changes that are not one item's (`lift-board-diff`); then one item's change that is not an
+  open, never-answered decide gaining a `Decided:` (`lift-board-diff`, (b)'s; F344); then the checks from
   `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and (a) before the `Decided:` by
   and date), the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
   path and bytes (`lift-board-line`) last, where today's byte compare is.
@@ -254,16 +257,22 @@ archive files the consumer fetches.
   of the tree starts with `BOARD_DIR + "/"`, else `BOARD_V2_PATH`; `lift_pr_verdict()`, `tripwire()` and
   `uncovered_decisions()` (through `_tree_board()`) each call `load_board()` on it, at the base and the head alike,
   so the three read one board from one tree. Another repo's board read from a file system takes the same rule: its
-  directory when `ls` of it lists at least one name, else its `docs/user_attention.md`.
+  directory when it holds a file under it (a file directly in it or in any subdirectory, as `_tree_ls()` reads a
+  tree; a directory holding only empty subdirectories holds none; round 6's closing fact-check's F346), else its
+  `docs/user_attention.md`.
 - **The messages** (round 6's F340), each pinned by `fixtures/verdict/expected.json`: `lift-no-board` is `the PR
-  has no board at docs/user_attention/ or docs/user_attention.md at its base and head`; `lift-board-v2` is `the
+  has no board at docs/user_attention/ or docs/user_attention.md at its base or head` (round 6's closing
+  fact-check's F343: it fires when either side has `form` None); `lift-board-v2` is `the
   PR's board is a v2 board at its base or head: a v3 writer writes none`; the stray board path's `lift-files` is
   `<path> is under docs/user_attention/ but neither an item file in it nor one under archive/<YYYY-MM>/`; the
   shape's `lift-board-diff` is `the board changes are not one item's file changed in place or moved to archive/`,
   replacing today's *not one item line changed in place* and *changes its line ending* (a file's bytes are
-  `lift-board-line`'s); (b)'s `lift-board-diff` keeps today's text with *file* for *line* (`the changed board file
-  is not one open item answered in place`); `lift-board-line` is `<path> at the head is not what the decide edit
-  writes at <item_path(id, closed)>`. Every other message keeps today's text, a list of `files` it printed now the
+  `lift-board-line`'s); (b)'s `lift-board-diff`, one item's change that is not an open, never-answered decide gaining a
+  `Decided:`, is `the changed board file is not one open item answered in place or moved to archive/` (round 6's
+  closing fact-check's F344); `lift-board-line` is `<path> at the head is not what the decide edit
+  writes at <item_path(id, closed)>`; the early `lift-files` of a path in `files` outside the board's and the
+  ledger's paths is `the PR changes <path>, outside the board and the ledger` (round 6's closing fact-check's F342,
+  the first such path in sorted order, a fixture `v3_lift_outside_path` pinning it). Every other message keeps today's text, a list of `files` it printed now the
   sorted changed paths.
 - `tripwire()` reads covering items through `load_board()`, and matches a base item to its head counterpart by
   id among the head's open items and the closed ones in the archive files the tree holds (a close moves it), its
@@ -362,7 +371,8 @@ After the list, add:
 > board) takes review (`lift-no-board`, naming `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or
 > head (`lift-board-v2`); then a path in the file list outside `BOARD_DIR/`, `LEDGER_DIR/`, `LEDGER_V1_PATH` and the v1 archive, or under `BOARD_DIR/`
 > but neither directly in it nor under `archive/<YYYY-MM>/` (`lift-files`); then board changes that are not one
-> item's (`lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
+> item's, then one item's change that is not an open, never-answered decide gaining a `Decided:` (both
+> `lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
 > (a) before the `Decided:` by and date), and last the head file's path and
 > bytes (`lift-board-line`).
 
@@ -409,8 +419,9 @@ round 9's F155). Its actions list is replaced by (the `add` bullet keeping v2.8'
 >   character `str.splitlines()` splits on, checked before any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item the person decided elsewhere (`decided_file()`).
 >   The write is refused when `board_problems()` faults the item it adds. **The order** (v3.0): a usage error (exit
 >   2); `--parts` or `--doer` with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object (exit
->   1); a bad `--today` (exit 2); `--ledger` without `--parts`, a decided item given any other option, `--said`
->   without `--by` or the reverse (exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
+>   1); a bad `--today` (exit 2); `--ledger` without `--parts`, a `--decided` item given `--due`, `--kind`,
+>   `--detail`, `--session`, `--host`, `--said`, `--hide-until` or `--lift`, and on an item not `--decided`
+>   `--said` without `--by` or the reverse (exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
 >   item's own and `--said`'s; the ledger's; then `board_problems()`;
 > - **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_item()`) of the open item `--id` names,
 >   refused when no open item has it; `done --why` strips the why's trailing `.`, `?` and `!` before the edit
@@ -522,7 +533,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   open), `v3_lift_closes` (moved to `archive/`; the case's file list names the two paths, no rename, and the verdict
   comes from the trees), `v3_lift_two_items` (review, `lift-board-diff`), `v3_lift_wrong_month` (review, `lift-board-line`),
   `v3_lift_stray_board_path` (review, `lift-files`: a path under `BOARD_DIR/` neither directly in it nor under
-  `archive/<YYYY-MM>/`), `v3_other_repo`,
+  `archive/<YYYY-MM>/`), `v3_lift_outside_path` (review, `lift-files`: a path in `files` outside the board and the
+  ledger; F342), `v3_other_repo`,
   `v3_lift_no_board` (review, `lift-no-board`), `v3_lift_wrong_bytes` (the right path, other bytes: review,
   `lift-board-line`), `v3_lift_open_and_archive` (the open file changed and an archived one added: review,
   `lift-board-diff`, F280), `v3_head_v2` (a v3 base, the v2 pair at the head: review, `lift-board-v2`, F279),
@@ -535,7 +547,9 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   F337): `trees()` gains `delete_base`, paths taken out of the base after the shared base and the case's `base/`
   are laid together and before the head is laid over it, beside `delete` for the head; a path in either ending in
   `/` takes every path under it. `v2_lift` and `split_pr` give `delete_base: ["docs/user_attention/"]` and put the
-  v2 pair in their `base/` (`v2_lift`'s head keeping it, `split_pr`'s `head/` holding the directory);
+  v2 pair in their `base/` (`v2_lift`'s head keeping it; `split_pr`'s `head/` holding the directory and the stub
+  at `docs/user_attention.md`, with `delete: ["docs/user_attention_archive.md"]`, so its head is what a split
+  leaves; round 6's closing fact-check's F345);
   `v3_lift_no_board`, `v3_head_v2` and `v3_stub_only_head` give `delete: ["docs/user_attention/"]`, the last two
   putting the v2 pair, or the stub alone, in their `head/`. **The other repos' boards** (round 6's F339):
   `uncovered()` reads each `boards` entry's `board`, a directory or a `.md` file under `boards/`, through
