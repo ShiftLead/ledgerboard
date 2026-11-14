@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** design, round 5 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** design, round 6 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -42,7 +42,7 @@ caller's.
 |---|---|---|
 | The code-token grammar (spans, paths, file names, calls, snake/dotted/upper/camel names, ranges, commits, options) and `CODE_EXTS` | plain text | module |
 | One sentence: the word count, its end, the abbreviation stops | plain English | module |
-| Pronoun actors: *I* and its contractions; *me, my, myself, you, your, yourself, we, us, our, nobody, no one* and the contractions of *you* and *we* | plain English | `ACTOR_WORDS`, module |
+| Pronoun actors: *I* and its contractions (matched apart, case-sensitive); and in `ACTOR_WORDS` *me, my, myself, you, your, yourself, we, us, our, nobody, no one* and the contractions of *you* and *we* | plain English | `ACTOR_WORDS`, module |
 | The format's own ids as labels in a title: `TD-n`, `<repo>#TD-n` (SPEC *The ledger*, `Blocked by`) | the format's | module |
 | Role nouns (*session, seat, techlead, grinder, designer, manager, director, reviewer, builder, lead, worker, agent*) and the phrases *the home*, *the host agent* | the process's: who acts in it | **passed in**, `actors=` |
 | `COINED_TERMS` (*slice, seam, tripwire*) | the process's sessions' coinages | **passed in**, `coined=` |
@@ -137,8 +137,10 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   the question, which makes the rest context). The detail block's context is read whole for
   a `decide` and an `act` (its `caveats`, `recommended` and `otherwise` text with its `context`), where the source
   named `context` and `recommended`'s reason, and an `act`'s `context` alone. The source's `decide` row
-  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. A `decide`
-  whose text has no bold head: the source read its first sentence, which made rule 1's *end inside* unable to fire;
+  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The lead is the
+  bold run the text *opens* with, where SPEC's *The bold head* takes the first bold run anywhere: a bold word
+  mid-question (*Should I merge **#42**?*) must not become the question. A `decide`
+  whose text has no lead: the source read its first sentence, which made rule 1's *end inside* unable to fire;
   here the text the writer gives `item_file()` is read whole. The title rule
   runs on `set --title` (v2.8), the retitle path the source said would come (*any retitle path added later*).
 - *`people` compares case-insensitively*, as SPEC's *A person's name* does; the source said nothing.
@@ -256,7 +258,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > one of these, spelled as the stripped word unless it says otherwise —
 > - a *path*: opens `/`, `~/`, `./` or `../`; or splits on `/` into three parts or more of which one holds a
 >   letter, or into two whose last is a file name; or holds a `\` between two word characters;
-> - a *file name*: `[\w.-]*\w\.(<ext>)`, case ignored, `<ext>` one of `CODE_EXTS`;
+> - a *file name*: `[\w.-]*\w\.(<ext>)(:\d+)?`, case ignored, `<ext>` one of `CODE_EXTS` (*foo.py:42* is one);
 > - a *call*: a piece that, before the strip, holds `[A-Za-z_][\w.]*\(` whose `(` is not followed by `s)` or
 >   `es)`, spelled as the name before the `(` and `()` (`one_sentence(x)` gives `one_sentence()`; `file(s)` is no
 >   call);
@@ -272,7 +274,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > (camelCase); a word written with `_` on purpose. Known gaps: a command written as words (*git rebase*), and a
 > name whose `_`s the strip removes (`__init__` reads as *init*); a two-part path with no file name
 > (*docs/plans*); a variable (`$HOME`), a short option (`-f`), a bare `{"a":1}` and a file with no extension
-> (*Makefile*); a file name with a line number (`foo.py:42`), a dotfile (*.gitignore*), an extension outside
+> (*Makefile*); a path with a line number and no file name (*src/lib:42*), a dotfile (*.gitignore*), an extension outside
 > `CODE_EXTS` (*Foo.java*), a two-part member (*UserService.getName*), a PascalCase name
 > (*NullPointerException*), a host and port (*localhost:8080*), an assignment (*DEBUG=1*), an address
 > (*dev@example.com*) and a two-part host (*example.com*, where *www.example.com* is dotted).
@@ -293,7 +295,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > **An actor** (rule 2): a match, over the read words joined by single spaces, in the bounds `(?<![\w'/-])` before and `(?![\w'/-]|\.\w)` after (so *us-east-1*, *I/O* and *my-app*
 > name no actor), of an I-form (*I,
 > I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
-> word or a phrase taken as literal text, its last word optionally followed by `'s` or `s` (case ignored); or of a
+> word or a phrase taken as literal text with its whitespace collapsed to single spaces, its last word optionally followed by `'s` or `s` (case ignored); or of a
 > name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name, so a person named *Will* makes *it will be built* name an
 > actor: a known gap). An answer is read through
 > `split_answer()`: its label and its consequence, the ` (default)` mark dropped; an answer whose label is a form
@@ -338,18 +340,24 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > a file already written. A writer refuses the write when any problem's `refuse` is true, naming every problem,
 > and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
 > item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
-> - **a `decide` item**: `person_text_problems(<question>, <its answers>, <context>, question=True)`, where the
->   question is the text the writer is given for the item (`item_file()`'s `text`, before any line or file is
->   written): its bold head, else that text whole,
->   so a second sentence there is refused and belongs in the detail block; then the detail block's
->   `question`, read whole as one sentence, `question=True`, with no answers; the context is the detail block's parts `context`, `caveats` and `recommended`, and its `otherwise` text, as
->   the writer is given them (the `recommended` before the writer adds the default's label and ` — `), joined by blank lines in
->   that order, read with `sentence` `None` (`question` is then not read); never the line's `Context:`
->   field, which names a gate;
-> - **an `act` item**: the bold head of the text the writer is given for the item (`item_file()`'s `text`),
->   `question=False`; an `act` whose text has no bold head is refused (*an act item leads with its task in bold*), and its detail block's `context`, `caveats`, `recommended` and `otherwise` text, as for a `decide`, with
->   `sentence` `None`. A part whose value is a list is read as its first string and its nested bullets' strings, one
->   per line;
+> - **a `decide` item**, two calls. The item's text is the text the writer is given for it (`item_file()`'s
+>   `text`, before any line or file is written); its **lead** is the `**…**` run the text opens with (after
+>   whitespace), and its **tail** the text after that run; a text that opens with no such run has no lead and is
+>   all tail. First, `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True)`,
+>   the context being the tail when there is a lead, then the detail block's parts `context`, `caveats` and
+>   `recommended` and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds
+>   the default's label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which
+>   names a gate. A text with no lead is read whole, so a second sentence there is refused and belongs in the
+>   detail block. Second, the detail block's `question`, `person_text_problems(<question>, question=True)`. The
+>   writer names the text each problem came from before its line (`item: `, `detail question: `), so a session
+>   sees which to rewrite.
+> - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence; an
+>   `act` whose text opens with no lead is refused (*an act item leads with its task in bold*). Example: *Reply to
+>   **Dana** about the budget* has no lead and is refused; *Should I merge **#42**?*, a `decide`, has no lead and
+>   is read whole.
+>
+>   A detail block part whose value is a list is read as its first string and its nested bullets' strings, one per
+>   line.
 > - **an entry's Ask**, on any write of it (`new`, `edit --section Ask`, and `set --ask` where the writer has it):
 >   the Ask's text after its `**Ask:**` lead, its first paragraph the sentence (it ends at the first blank line outside a fence; a blank line inside a fence ends
 >   no paragraph), `question=True`, and its later
@@ -383,7 +391,7 @@ case, word for word.
   before the end, and *_Is it ok?_* passing; `’`, `‘`, `“`, `”` folded (*Should I "ship it?"* in curly quotes passing); *Should I run `make
   test`?* passing; *Should I follow https://x.io/guide?* passing; *(see https://x.io/a). Then merge?* and *Say
   (really?) what you think?* each with an end inside; *Nov. 20*, *Dr. Lee*, *9 p.m. tonight* and *Wait... really?* passing; *Ph.D. thesis*
-  refused (the known false positive); *Is `foo`'s output ok?* as four words; an empty question failing with *it is
+  refused (the known false positive); *Is `foo`'s output ok?* as four words; *foo.py:42* a file name; an empty question failing with *it is
   empty* alone; its line with two and three parts.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
   it* passing; *you* inside a span or a URL not read; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
@@ -394,8 +402,9 @@ case, word for word.
   label); `(default)` dropped; `default` equal to a label (marked or not) skipped, unequal and actorless named
   *the default*; rule 4 with one, two, three, four and five tokens; rule 1 as a statement, and with every part
   failing at once (all named, in order); an Ask's `**Ask:**` lead not counted (a writer's case, by its text); `sentence` `None` reading no rule 1; rule order across rules 1, 2 and 4; an
-  empty or multi-line entry in each list refused, and a `coined` entry holding a space; `people=None` read as no
+  empty or multi-line entry in each list refused, an `actors` entry *the  host	agent* matching *the host agent*, and a `coined` entry holding a space; `people=None` read as no
   names; *Say no. Then what?* passing (the known gap).
+- **ACTOR_WORDS**: its exact contents, and the I-forms absent from it.
 - **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
   refusing *B4* and *P0* (the caller's pattern, the caller's false positive), and `#\d+`; a `labels` entry that is
   no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; *US/EU/UK* refused (a path, the known false positive); *B4 B4 and B4s* listing *B4* once with `labels`; `foo.py's` a file name; a label inside a span
@@ -421,4 +430,6 @@ release is v3.1). It is not held for TD-112 (D4). On its merge the builder tells
 - **No call from the package's writers** (D3).
 - **No vocabulary in the package** beyond plain English pronouns and the format's own ids (D1).
 - **No check of what is already written**: a board or ledger is never swept for these rules.
+- **No port beyond Python**: the `labels` patterns are Python's `re`, and a letter or a digit is
+  `str.isalnum()`'s; a port of the package would carry both.
 - **No mail rules**: the source's rules 5 (pass-ups) and 6 (**Not clear**) are ShiftLead's.
