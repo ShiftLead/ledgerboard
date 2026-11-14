@@ -368,85 +368,6 @@
       "by": "pat"
     }
   ],
-  "subjects": [
-    {
-      "tool": "board_edit",
-      "action": "snooze",
-      "text": "act 2026-01-05 (session s-1 on h) — **Rotate the key** now. Context: TD-1. Due: 2026-01-10.",
-      "to": "2026-01-20"
-    },
-    {
-      "tool": "shiftlead",
-      "action": "decide",
-      "text": "decide 2026-01-05 (session `ab12` on h) — Pick a   name. Due: 2026-01-10.",
-      "answer": "beta   two"
-    },
-    {
-      "tool": "board_edit",
-      "action": "reply",
-      "text": "2026-01-05 (session s-1) — Say more. Due: 2026-01-10. — Sam, 2026-01-12: secret words"
-    },
-    {
-      "tool": "shiftlead",
-      "action": "append",
-      "text": "2026-01-05 (session `w-1` on h) — A very long item text that goes well past the sixty character limit of a head. Due: 2026-01-10.",
-      "session": "w-1"
-    },
-    {
-      "tool": "board_edit",
-      "action": "done",
-      "text": "2026-01-05 (n/a) — No session named. Due: 2026-01-10."
-    },
-    {
-      "tool": "board_edit",
-      "action": "snooze",
-      "text": "2026-01-05 (session s) — X."
-    },
-    {
-      "tool": "board_edit",
-      "action": "due",
-      "text": "act 2026-01-05 (session s-1 on h) — Rotate. Context: TD-1. Due: 2026-01-10.",
-      "to": "2026-01-30"
-    },
-    {
-      "tool": "board_edit",
-      "action": "due",
-      "text": "act 2026-01-05 (n/a) — Rotate. Context: TD-1."
-    },
-    {
-      "tool": "board_edit",
-      "action": "append",
-      "text": "act 2026-01-05 (session `w-1`) — Bump the pin. Context: TD-12. Doer: team ops. Due: 2026-01-20."
-    },
-    {
-      "tool": "board_edit",
-      "action": "append",
-      "text": "act 2026-01-05 (session `w-1`) — Ask the Doer: acme to bump it. Context: TD-12. Due: 2026-01-20."
-    }
-  ],
-  "subject_kinds": [
-    "board_edit: done Ship it (session s-1)",
-    "shiftlead: reply on Pick a name (session w-1)",
-    "shiftlead: append A new item (session w-1)",
-    "shiftlead: board A new item (from TD-12)",
-    "shiftlead: answer A question (from TD-12)",
-    "shiftlead: board decide TD-12 (person)",
-    "Fix the parser (#12)",
-    "board_edit: finish Ship it (session s-1)",
-    "queue: rank TD-3, TD-12 (shiftlead)",
-    "queue: join TD-7 (shiftlead)",
-    "queue: prune TD-1, TD-2 (a-tool)",
-    "queue: rank TD-3 TD-12 (shiftlead)",
-    "queue: sort TD-3 (shiftlead)",
-    "queue: rank TD-3",
-    "queue: rank TD-3 (shiftlead) extra",
-    "shiftlead: archive 3 closed items (session w-1)",
-    "shiftlead: archive 1 closed item (session n/a)",
-    "shiftlead: archive 1 closed items (session w-1)",
-    "shiftlead: archive 0 closed items (session w-1)",
-    "board_edit: due Rotate. to 2026-01-30 (session s-1)",
-    "queue: respace TD-3, TD-4 (shiftlead)"
-  ],
   "compose": [
     {
       "fn": "item_line",
@@ -2281,7 +2202,10 @@
     "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head",
     "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.",
     "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20.",
-    "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b."
+    "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b.",
+    {
+      "heading": "Ask — pat, 2026-01-05: **hm**"
+    }
   ],
   "not_right_forms": [
     "Not right: <what>",
@@ -2842,15 +2766,6 @@
       "count": 3,
       "session": "w-1"
     }
-  ],
-  "edit_actions": [
-    "board_edit: due Rotate. to 2026-01-30 (session s-1)",
-    "board_edit: snooze Rotate. to 2026-01-20 (session s-1)",
-    "board_edit: done Ship it (session s-1)",
-    "shiftlead: append Ship it (session n/a)",
-    "queue: rank TD-1 (shiftlead)",
-    "ledgerboard: archive 2 closed items (session n/a)",
-    "not a subject"
   ],
   "item_keys": [
     "- [ ] act 2026-01-05 (session `s-1`) — Rotate. Context: TD-1. Due: 2026-01-10. Hide until: 2026-01-12. — Pat, 2026-01-06: later. Answers: now | later.",

@@ -136,7 +136,8 @@
   "2026-01-05 (session s-1) — **Spread\tover   space** here. Due: 2026-01-20.": "Spread over space",
   "2026-01-05 (session s-1) — Plain words. Due: 2026-01-20. — Paul, 2026-01-10: **mine**, not a head": null,
   "decide 2026-01-05 (session s-1) — Pick one. Context: TD-004. Due: 2026-01-20. Answers: a | b.": null,
-  "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b.": "a"
+  "decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-20. Answers: **a** | b.": "a",
+  "heading: Ask — pat, 2026-01-05: **hm**": "hm"
  },
  "canonical_items": [
   {
@@ -771,15 +772,6 @@
    "ok": "- [ ] decide 2026-01-15 (person) — Go on the build. Context: TD-12. Due: 2026-01-15. Answers: Go | Hold: <note>. Decided: Hold: the vendor (2026-01-15).\n"
   }
  ],
- "edit_actions": {
-  "board_edit: done Ship it (session s-1)": "done",
-  "board_edit: due Rotate. to 2026-01-30 (session s-1)": "due",
-  "board_edit: snooze Rotate. to 2026-01-20 (session s-1)": "snooze",
-  "ledgerboard: archive 2 closed items (session n/a)": null,
-  "not a subject": null,
-  "queue: rank TD-1 (shiftlead)": null,
-  "shiftlead: append Ship it (session n/a)": null
- },
  "edits": {
   "decide-again-rewrites": {
    "ok": "- [ ] decide 2026-01-05 (session s-1) — Pick one. Due: 2026-01-10. Answers: a | b. Decided: b (2026-01-15)."
@@ -1573,61 +1565,6 @@
     "names technical_debt_archive.md, a v1 file: the ledger is now this directory"
    ]
   ]
- ],
- "subject_kinds": {
-  "Fix the parser (#12)": null,
-  "board_edit: done Ship it (session s-1)": "edit",
-  "board_edit: due Rotate. to 2026-01-30 (session s-1)": "edit",
-  "board_edit: finish Ship it (session s-1)": null,
-  "queue: join TD-7 (shiftlead)": "queue",
-  "queue: prune TD-1, TD-2 (a-tool)": "queue",
-  "queue: rank TD-3": null,
-  "queue: rank TD-3 (shiftlead) extra": null,
-  "queue: rank TD-3 TD-12 (shiftlead)": null,
-  "queue: rank TD-3, TD-12 (shiftlead)": "queue",
-  "queue: respace TD-3, TD-4 (shiftlead)": "queue",
-  "queue: sort TD-3 (shiftlead)": null,
-  "shiftlead: answer A question (from TD-12)": "append",
-  "shiftlead: append A new item (session w-1)": "append",
-  "shiftlead: archive 0 closed items (session w-1)": null,
-  "shiftlead: archive 1 closed item (session n/a)": "archive",
-  "shiftlead: archive 1 closed items (session w-1)": null,
-  "shiftlead: archive 3 closed items (session w-1)": "archive",
-  "shiftlead: board A new item (from TD-12)": "append",
-  "shiftlead: board decide TD-12 (person)": "append",
-  "shiftlead: reply on Pick a name (session w-1)": "edit"
- },
- "subjects": [
-  {
-   "ok": "board_edit: snooze Rotate the key now. to 2026-01-20 (session s-1)"
-  },
-  {
-   "ok": "shiftlead: decide Pick a   name.: beta two (session `ab12`)"
-  },
-  {
-   "ok": "board_edit: reply Say more. (session s-1)"
-  },
-  {
-   "ok": "shiftlead: append A very long item text that goes well past the sixty charact… (session w-1)"
-  },
-  {
-   "ok": "board_edit: done No session named. (session n/a)"
-  },
-  {
-   "refused": "a snooze needs its date"
-  },
-  {
-   "ok": "board_edit: due Rotate. to 2026-01-30 (session s-1)"
-  },
-  {
-   "refused": "a due needs its date"
-  },
-  {
-   "ok": "board_edit: append Bump the pin. (session `w-1`)"
-  },
-  {
-   "ok": "board_edit: append Ask the (session `w-1`)"
-  }
  ],
  "versions": [
   {
