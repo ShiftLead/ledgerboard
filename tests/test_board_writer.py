@@ -643,11 +643,11 @@ class HideNotes(unittest.TestCase):
                          ["hide-spent: a decided item is never hidden, so Hide until: 2026-01-29 hides nothing"])
 
     def test_a_note_is_no_fault(self):
-        line = "- [ ] act 2026-01-10 (n/a) — Merge it. Context: PR #12. Due: 2026-01-20. Hide until: 2026-01-29."
-        self.assertIsNone(L.item_problem(line))
-        faults = [w for _, w in L.board_problems(V2_BOARD.replace(V2_BOARD.splitlines()[4], line), V2_BOARD)
-                  if not w.startswith("ℹ")]  # the gate's own ℹ notes (no People:) are no fault either
-        self.assertEqual(faults, [])
+        text = L.item_file("Merge it.", "2026-01-20", "2026-01-10", None, None, "PR #12", kind="act",
+                           hide_until="2026-01-29")
+        self.assertIsNone(L.item_file_problem(text))
+        self.assertEqual(self.notes("- [ ] act 2026-01-10 (n/a) — Merge it. Context: PR #12. Due: 2026-01-20. "
+                                    "Hide until: 2026-01-29."), [self.LATE])
 
     def test_text_mode_prints_each_note_on_stderr_and_exits_0(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -57,7 +57,6 @@
    "id": "2026-01-05-af0e923c",
    "kind": "decide",
    "lifts": null,
-   "line": 7,
    "notes": [],
    "overdue_days": null,
    "parts": [
@@ -141,7 +140,6 @@
     "Files | disk",
     "Db"
    ],
-   "line": 8,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -216,7 +214,6 @@
    "lifts": [
     "Drop the gate"
    ],
-   "line": 9,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -287,7 +284,6 @@
    "id": "2026-01-08-b687dd7a",
    "kind": "act",
    "lifts": null,
-   "line": 10,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -352,7 +348,6 @@
    "id": "2026-01-09-19b5835a",
    "kind": "fyi",
    "lifts": null,
-   "line": 11,
    "notes": [
     "hide-spent: Hide until: 2026-01-12 has come, so it hides nothing; a snooze replaces it"
    ],
@@ -428,7 +423,6 @@
    "id": "2026-01-10-7e7094ad",
    "kind": "decide",
    "lifts": null,
-   "line": 12,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -483,7 +477,6 @@
    "id": "2026-01-10-1223afd3",
    "kind": "decide",
    "lifts": null,
-   "line": 13,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -540,7 +533,6 @@
    "id": "2026-01-10-816a1de6",
    "kind": "fyi",
    "lifts": null,
-   "line": 14,
    "notes": [],
    "overdue_days": null,
    "parts": [],
@@ -611,7 +603,6 @@
    "id": "2026-01-10-07e43a9f",
    "kind": "decide",
    "lifts": null,
-   "line": 15,
    "notes": [],
    "overdue_days": null,
    "parts": [],

@@ -2132,41 +2132,57 @@
  "strings": {
   "a line's text after its tick": {
    "closes": {
-    "Go": true,
-    "Later": false,
-    "Not yet": true
+    "Go": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Later": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Not yet": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    }
    },
    "parts_problems": []
   },
   "a v2 board's text opening with a section heading": {
    "closes": {
-    "Go": true,
-    "Later": false,
-    "Not yet": true
+    "Go": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Later": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Not yet": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    }
    },
-   "parts_problems": [
-    "TD-4: missing",
-    "TD-9: missing",
-    "TD-10: missing"
-   ]
+   "parts_problems": []
   },
   "a v2 line": {
    "closes": {
-    "Go": true,
-    "Later": false,
-    "Not yet": true
+    "Go": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Later": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    },
+    "Not yet": {
+     "refused": "not an item file: an item is a BoardItem or an item file's text (v3.0; a v2 line is read through load_board())"
+    }
    },
-   "parts_problems": [
-    "TD-4: missing",
-    "TD-9: missing",
-    "TD-10: missing"
-   ]
+   "parts_problems": []
   },
   "an item file": {
    "closes": {
-    "Go": true,
-    "Later": false,
-    "Not yet": true
+    "Go": {
+     "ok": true
+    },
+    "Later": {
+     "ok": false
+    },
+    "Not yet": {
+     "ok": true
+    }
    },
    "parts_problems": [
     "TD-4: missing",
@@ -2176,7 +2192,9 @@
   },
   "an item file whose Context names two entries": {
    "closes": {
-    "Go": false
+    "Go": {
+     "ok": false
+    }
    },
    "parts_problems": [
     "item: context: not one entry and one decision"
@@ -2232,36 +2250,6 @@
    "shiftlead: reply on Pick a name (session w-1)": "edit"
   },
   "subjects": [
-   {
-    "ok": "board_edit: snooze Rotate the key now. to 2026-01-20 (session s-1)"
-   },
-   {
-    "ok": "shiftlead: decide Pick a   name.: beta two (session `ab12`)"
-   },
-   {
-    "ok": "board_edit: reply Say more. (session s-1)"
-   },
-   {
-    "ok": "shiftlead: append A very long item text that goes well past the sixty charact… (session w-1)"
-   },
-   {
-    "ok": "board_edit: done No session named. (session n/a)"
-   },
-   {
-    "refused": "a snooze needs its date"
-   },
-   {
-    "ok": "board_edit: due Rotate. to 2026-01-30 (session s-1)"
-   },
-   {
-    "refused": "a due needs its date"
-   },
-   {
-    "ok": "board_edit: append Bump the pin. (session `w-1`)"
-   },
-   {
-    "ok": "board_edit: append Ask the (session `w-1`)"
-   },
    {
     "ok": "board: snooze 2026-11-11-3f9a2c1d Rotate the key now to 2026-11-20 (session w-9)"
    },
