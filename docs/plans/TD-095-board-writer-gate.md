@@ -1,6 +1,6 @@
 # TD-095: the board's writer and the merge gate's verdicts (TD-070's B3 and B4)
 
-**Status:** Draft 8, 2026-11-14 (session lb-designer). Paul answered the end-of-rounds item **One more round**, run as TD-101: round 5's fact-check (R55) raised five minor findings (F319–F323) and its design review (R56) one build-changing (F324: what makes an id *held*, now the `Board`'s ids or the paths in the `ls`) and five minor, all applied; R56 judged the README-major topic settled, `_declared_major()` (B2) being the search; its closing fact-check (R57) raised one build-changing finding, F330 (which path the verdicts hand `load_board()`, so a stub-only head has one verdict), and three minor (F331–F333), all applied; F330 is unread by a design review, so the item again recommends One more round. Before it, the rounds ended by the stop rule after round 4, whose design review (R53) raised nothing build-changing; the closing fact-check (R54) raised one minor finding (F318), applied; Paul's end-of-rounds item waits, recommended One more round, since round 4's fact-check fix F312 is unread by a design review. Round 4: its fact-check (R52) over round 3's fixes raised one build-changing finding (F312: how the write gate tells a README declaring no `Ledgerboard:` from one declaring 1) and one minor; its design review four minor; all applied. Round 3: fact-check (R50) one build-changing and five minor; design review (R51) one build-changing (F306) and five minor, one rejected. Round 2: fact-check (R48) three build-changing and two minor; design review (R49) four build-changing (two repeating the fact-check's) and six minor. Round 1: fact-check (R44) four build-changing and nine minor, re-checks six minor (R45) and none (R46); design review (R47) four build-changing and four minor. Trend, build-changing per design review: 4, 4, 1, 0, 1; fact-checks apart: 4, 3, 1, 1, 0. Recurring: the write gate's reading of `README.md`'s major (F278, F285–F286, F300, F307, F312), each fix refining the reader, none undoing an earlier one. Draft 2 rebased draft 1 (TD-070's unreviewed B3 and B4 text, moved unchanged) on TD-092's plan as designed (draft 10, Go'd), each change marked *rebased on TD-092*. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 5 of 6.
+**Status:** Draft 9, 2026-11-14 (session lb-designer). Paul answered the end-of-rounds item after round 5 **One more round**, run as TD-102, round 6, the cap's last: its fact-check (R58) raised three minor findings (F334–F336); its design review (R59) read F330 and judged it sound, and raised nothing build-changing and four minor (F337–F340: the fixture runner's base-side deletes, one path rule for the three verdicts, the other repos' boards in the fixtures, the verdicts' messages), so the rounds end by the stop rule, at the cap; its closing fact-check (R60) raised one build-changing finding, F341 (F335's order refused a `--decided` item's `--by`), and five minor (F342–F346), and its re-check (R61) one build-changing, F347 (F344's (b) check swallowed `lift-not-answered`, `lift-no-gate` and `lift-reanswer`; now structural alone), and one minor, rejected (F348); its second re-check (R62) two minor (F349, F350); all others applied. F341 and F347 are unread by a design review, so the item again recommends One more round, past the cap. Round 5 (TD-101): its fact-check (R55) raised five minor findings (F319–F323) and its design review (R56) one build-changing (F324: what makes an id *held*, now the `Board`'s ids or the paths in the `ls`) and five minor, all applied; R56 judged the README-major topic settled, `_declared_major()` (B2) being the search; its closing fact-check (R57) raised one build-changing finding, F330 (which path the verdicts hand `load_board()`, so a stub-only head has one verdict), and three minor (F331–F333), all applied. Before it, the rounds ended by the stop rule after round 4, whose design review (R53) raised nothing build-changing; the closing fact-check (R54) raised one minor finding (F318), applied; Paul's end-of-rounds item waits, recommended One more round, since round 4's fact-check fix F312 is unread by a design review. Round 4: its fact-check (R52) over round 3's fixes raised one build-changing finding (F312: how the write gate tells a README declaring no `Ledgerboard:` from one declaring 1) and one minor; its design review four minor; all applied. Round 3: fact-check (R50) one build-changing and five minor; design review (R51) one build-changing (F306) and five minor, one rejected. Round 2: fact-check (R48) three build-changing and two minor; design review (R49) four build-changing (two repeating the fact-check's) and six minor. Round 1: fact-check (R44) four build-changing and nine minor, re-checks six minor (R45) and none (R46); design review (R47) four build-changing and four minor. Trend, build-changing per design review: 4, 4, 1, 0, 1, 0; fact-checks apart: 4, 3, 1, 1, 0, 0; closing fact-checks of rounds 5 and 6: 1 (F330), 2 (F341, F347). Recurring: the write gate's reading of `README.md`'s major (F278, F285–F286, F300, F307, F312), each fix refining the reader, none undoing an earlier one. Draft 2 rebased draft 1 (TD-070's unreviewed B3 and B4 text, moved unchanged) on TD-092's plan as designed (draft 10, Go'd), each change marked *rebased on TD-092*. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 6 of 6.
 
 **Entry:** [TD-095](../ledger/TD-095.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-095's Fix (the
 scope, Paul's Split, decided 2026-11-13: B3 and B4 here, B5 TD-098's); [TD-070's plan](TD-070-board-directory.md),
@@ -102,14 +102,18 @@ read gives None: B2 records rule 1 under `README.md` in `Board.problems`, which 
 `Board.preamble` is then `""` as for an empty README; round 5's F323, F326, the closing fact-check's F332), `README.md declares no Ledgerboard` (`_declared_major()` None, an
 empty README among them) and `README.md declares Ledgerboard: <n>` (any `<n>` but 3, 1 included; round 3's F307,
 round 4's F312). **The
-order of an `add`'s refusals** (F316, F318; round 5's F320, F322, F325): a usage error and a bad `--today` (exit
-2) first; then the options' own refusals, before any read, as today (`--ledger` without `--parts`, `--parts` or
-`--doer` with `--decided`: exit 1; the closing fact-check's F333); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
+order of an `add`'s refusals** (F316, F318; round 5's F320, F322, F325): a usage error (exit 2: argparse's) first; then, before any read and in today's order (round 6's F335), `build()`'s refusals (`--parts` or `--doer`
+with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object: exit 1), then a bad `--today` (exit
+2), then `plan_add()`'s (`--ledger` without `--parts`; on a `--decided` item, `--parts`'s and `--doer`'s
+refusals aside, any of `--due`, `--kind`, `--detail`, `--session`, `--host`, `--said`, `--hide-until` and `--lift`;
+on an item that is not `--decided`, `--said` without `--by` or `--by` without `--said`, since a decided item's
+`--by` is who answered: exit 1; the closing fact-check's F333, round 6's closing fact-check's F341); then `version_problem(board)`; then this gate; then `--id`'s (malformed, its date not the item's `Added`,
 held), or without `--id` the draw's (eight held names); then the item's own (`item_file()`'s, and with `--said` the
 reply's, `edit_item()`'s); then the ledger's (`--parts`: `parts_problems()`, an unusable ledger exit 2), as today;
 then `_gate()`'s `board_problems()` over the board the write leaves. The five edits' order is the same with
-`--id`'s being *no open item has it*, then a close's `<path> exists`, then the edit's own (`edit_item()`'s), then
-the decide lift's ledger checks, then `_gate()`. `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
+`--id`'s being *no open item has it*, then the edit's own (`edit_item()`'s), then the decide lift's ledger checks,
+then a close's `<path> exists`, then `_gate()`: whether a decide closes its item is known only once the ledger half
+has judged it (`closes()` over the entries `decide_lift()` leaves), so the exists check follows it (round 6's F334). `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
 or by hand. `list` and `show` read what `load_board()` reads, a v2 board and a v3 one alike, and refuse only a board
 with `form` None, exit 1, `<board>: no such board` (round 2's F297). A write's checks run in the order the `<why>`s are
 listed. **The options** (round 2's F293): `--id` is required
@@ -205,8 +209,8 @@ No rendered file is stored: a stored view is one file every write touches, which
 `BOARD_ARCHIVE_PATH`) are the v2 pair. The board's presence and form are `load_board()`'s `form` over the tree (round 5's F328), called on `BOARD_DIR` when
 the tree holds a file under `BOARD_DIR/`, else on `BOARD_V2_PATH` (the closing fact-check's F330): `"dir"` is a v3
 board, `"file"` (a v2 board, or a file at `BOARD_V2_PATH` declaring 3 that holds items) takes `lift-board-v2`, and
-None (nothing there, or a stub with no directory) `lift-no-board`. A tree holds a v3 board when it holds a file under `BOARD_DIR/`, else the v2
-pair; it is read through `load_board()` over the tree, whole (no `since`, TD-092's D6), its `ls` `_tree_ls()`,
+None (nothing there, or a stub with no directory) `lift-no-board`. The board is what that call reads (a stub alone
+is no board, never a v2 one; round 6's F336); it is read through `load_board()` over the tree, whole (no `since`, TD-092's D6), its `ls` `_tree_ls()`,
 which lists subdirectories from B4 (TD-092's D6). The consumer reads the same paths at the base and the head:
 every file directly in `BOARD_DIR` and every archive path the PR's file list names (a moved file's old and new
 paths both; an archived item the PR leaves alone changes no verdict). **The verdicts judge what changed from the two
@@ -244,10 +248,35 @@ archive files the consumer fetches.
   neither a file under `BOARD_DIR/` nor a v2 board at `BOARD_V2_PATH` (`form` None: a stub with no directory is
   no board, F330), takes review (`lift-no-board`, its message naming
   `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or head (`lift-board-v2`); then a stray path in `files` (`lift-files`,
-  above); then board changes that are not one item's (`lift-board-diff`); then the checks from
+  above); then board changes that are not one item's (`lift-board-diff`); then one item's change whose base file is no
+  open item, or whose head file is no item file (open or closed) of that id (`lift-board-diff`, (b)'s, today's
+  *is not one open item answered in place* check on a line; F344, round 6's re-check's F347: whether it is a
+  decide, has one gate, was answered or gains a `Decided:` stays with `lift-no-gate`, `lift-reanswer` and
+  `lift-not-answered`); then the checks from
   `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and (a) before the `Decided:` by
   and date), the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
   path and bytes (`lift-board-line`) last, where today's byte compare is.
+- **One path rule for the three verdicts** (round 6's F338): `_tree_board_path(tree)` is `BOARD_DIR` when a key
+  of the tree starts with `BOARD_DIR + "/"`, else `BOARD_V2_PATH`; `lift_pr_verdict()`, `tripwire()` and
+  `uncovered_decisions()` (through `_tree_board()`) each call `load_board()` on it, at the base and the head alike,
+  so the three read one board from one tree. Another repo's board read from a file system takes the same rule: its
+  directory when it holds a file under it (a file directly in it or in any subdirectory, as `_tree_ls()` reads a
+  tree; a directory holding only empty subdirectories holds none; round 6's closing fact-check's F346), else its
+  `docs/user_attention.md`.
+- **The messages** (round 6's F340), each pinned by `fixtures/verdict/expected.json`: `lift-no-board` is `the PR
+  has no board at docs/user_attention/ or docs/user_attention.md at its base or head` (round 6's closing
+  fact-check's F343: it fires when either side has `form` None); `lift-board-v2` is `the
+  PR's board is a v2 board at its base or head: a v3 writer writes none`; the stray board path's `lift-files` is
+  `<path> is under docs/user_attention/ but neither an item file in it nor one under archive/<YYYY-MM>/`; the
+  shape's `lift-board-diff` is `the board changes are not one item's file changed in place or moved to archive/`,
+  replacing today's *not one item line changed in place* and *changes its line ending* (a file's bytes are
+  `lift-board-line`'s); (b)'s `lift-board-diff`, one item's change whose base file is no open item or whose head file is no item
+  file of that id, is `the changed board file is not one open item's file, changed in place or moved to archive/`
+  (round 6's closing fact-check's F344, its re-check's F347); `lift-board-line` is `<path> at the head is not what the decide edit
+  writes at <item_path(id, closed)>`; the early `lift-files` of a path in `files` outside the board's and the
+  ledger's paths is `the PR changes <path>, outside the board and the ledger` (round 6's closing fact-check's F342,
+  the first such path in sorted order, a fixture `v3_lift_outside_path` pinning it). Every other message keeps today's text, a list of `files` it printed now the
+  sorted changed paths.
 - `tripwire()` reads covering items through `load_board()`, and matches a base item to its head counterpart by
   id among the head's open items and the closed ones in the archive files the tree holds (a close moves it), its
   `gained`, `newly_lifted` and `still` sets compared by id, an undated v2 item (id None) by `item_key()` as
@@ -291,8 +320,9 @@ TD-070's plan's, *Consumers* (TD-098's). These are the lines for those entries t
   `BOARD_V2_ARCHIVE_PATH` where the tree has them, whichever form the other ref holds, so a v2 head over a v3 base
   reads as `lift-board-v2`, never `lift-no-board`;
 - **Both**, from B4 (round 2's F290): a caller of `uncovered_decisions()` passes each other repo's board as
-  `(origin_url, basename, Board)`, read through `load_board()` from that repo's board (its `docs/user_attention/`
-  directory, or its v2 pair), where it passed the board's and its archive's texts;
+  `(origin_url, basename, Board)`, read through `load_board()` from that repo's board (at its `docs/user_attention/`
+  directory when it holds a file under it, else at its `docs/user_attention.md`, as D10 reads a tree; a stub alone
+  there reads as a `Board` of `form` None and no item, so it covers no decision; round 6's F336), where it passed the board's and its archive's texts;
 - **Both**, from B4 (round 3's F311): `BOARD_PATH` and `BOARD_ARCHIVE_PATH` are renamed `BOARD_V2_PATH` and
   `BOARD_V2_ARCHIVE_PATH`, with no alias; a caller that imports either moves to them, or to `BOARD_DIR` for a v3
   board;
@@ -313,7 +343,8 @@ TD-092's plan's. The texts below are B3's and B4's; texts 1, 12, 14's two bullet
 > `docs/technical_debt.md`), and this repo's board at `docs/user_attention/` (v3.0, `BOARD_DIR`), or, in a tree with
 > no file under that directory, the v2 board at `docs/user_attention.md` and its archive at
 > `docs/user_attention_archive.md` (`BOARD_V2_PATH`, `BOARD_V2_ARCHIVE_PATH`, until v3.0 `BOARD_PATH` and
-> `BOARD_ARCHIVE_PATH`); the board is read through `load_board()` over the tree, and the ledger's paths are
+> `BOARD_ARCHIVE_PATH`); the board is what `load_board()` over the tree reads at `BOARD_DIR` when the tree holds a
+> file under it, else at `BOARD_V2_PATH`, and a stub alone there is no board; the ledger's paths are
 > `LEDGER_DIR` and `LEDGER_V1_PATH`. A tree holds the same
 > board paths at the base and the head: every file directly in `BOARD_DIR`, and every file under its `archive/` at a
 > path the PR's file list names (a moved file's old and new paths both). A verdict judges a PR's board changes from
@@ -328,8 +359,10 @@ board item gains a `Decided:`" stands; **(b)** is replaced by:
 > - **(b)** the PR's changes to the board are one item's: its open file changed in place, or removed with
 >   `archive/<YYYY-MM>/<id>.md` added, the same `<id>` and any month (the item closed), and no other board path
 >   changed. The base item is an open `decide` naming one entry and one
->   gate, never answered, that gains `Decided: D by <p> — <label>` (else review, `lift-board-diff`, when the changes
->   are not one item's); the head file is `edit_item(base file, "decide", label, by, D, close=closes(item, label,
+>   gate, never answered, that gains `Decided: D by <p> — <label>` (else review: `lift-board-diff` when the changes
+>   are not one item's, the base file is no open item or the head file is no item file, open or closed, of that
+>   id; `lift-no-gate`, `lift-reanswer` or `lift-not-answered` for the base item's kind and gate, its earlier
+>   answer, or a missing `Decided:`); the head file is `edit_item(base file, "decide", label, by, D, close=closes(item, label,
 >   entries after))` byte for byte at `item_path(id, closed)` (else `lift-board-line`), so a work
 >   order is never closed and a finished lift never left open; D lies from `created_at − 1` to the merge date (else
 >   `created_at`) `+ 1`, the board's local day running up to a day from UTC. A lift on a v2 board, a v2 base or head (a
@@ -343,7 +376,8 @@ After the list, add:
 > board) takes review (`lift-no-board`, naming `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or
 > head (`lift-board-v2`); then a path in the file list outside `BOARD_DIR/`, `LEDGER_DIR/`, `LEDGER_V1_PATH` and the v1 archive, or under `BOARD_DIR/`
 > but neither directly in it nor under `archive/<YYYY-MM>/` (`lift-files`); then board changes that are not one
-> item's (`lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
+> item's, then one item's change whose base file is no open item or whose head file is no item file (open or
+> closed) of that id (both `lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
 > (a) before the `Decided:` by and date), and last the head file's path and
 > bytes (`lift-board-line`).
 
@@ -388,9 +422,11 @@ round 9's F155). Its actions list is replaced by (the `add` bullet keeping v2.8'
 >   its answer is the item's first reply, the Log line `- <today>: <by>: <said>`, refused as `reply` refuses (a
 >   `--by` holding `:` or of more than 40 characters, empty or blank words); `--said` is refused when it holds a
 >   character `str.splitlines()` splits on, checked before any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item the person decided elsewhere (`decided_file()`).
->   The write is refused when `board_problems()` faults the item it adds. **The order** (v3.0): a usage error and a
->   bad `--today` (exit 2); the options' own refusals (`--ledger` without `--parts`, `--parts` or `--doer` with
->   `--decided`, exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
+>   The write is refused when `board_problems()` faults the item it adds. **The order** (v3.0): a usage error (exit
+>   2); `--parts` or `--doer` with `--decided`, an empty `--parts` piece, a `--detail` that is no JSON object (exit
+>   1); a bad `--today` (exit 2); `--ledger` without `--parts`, a `--decided` item given `--due`, `--kind`,
+>   `--detail`, `--session`, `--host`, `--said`, `--hide-until` or `--lift`, and on an item not `--decided`
+>   `--said` without `--by` or the reverse (exit 1); a board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the
 >   item's own and `--said`'s; the ledger's; then `board_problems()`;
 > - **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_item()`) of the open item `--id` names,
 >   refused when no open item has it; `done --why` strips the why's trailing `.`, `?` and `!` before the edit
@@ -502,7 +538,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   open), `v3_lift_closes` (moved to `archive/`; the case's file list names the two paths, no rename, and the verdict
   comes from the trees), `v3_lift_two_items` (review, `lift-board-diff`), `v3_lift_wrong_month` (review, `lift-board-line`),
   `v3_lift_stray_board_path` (review, `lift-files`: a path under `BOARD_DIR/` neither directly in it nor under
-  `archive/<YYYY-MM>/`), `v3_other_repo`,
+  `archive/<YYYY-MM>/`), `v3_lift_outside_path` (review, `lift-files`: a path in `files` outside the board and the
+  ledger; F342), `v3_other_repo`,
   `v3_lift_no_board` (review, `lift-no-board`), `v3_lift_wrong_bytes` (the right path, other bytes: review,
   `lift-board-line`), `v3_lift_open_and_archive` (the open file changed and an archived one added: review,
   `lift-board-diff`, F280), `v3_head_v2` (a v3 base, the v2 pair at the head: review, `lift-board-v2`, F279),
@@ -511,9 +548,20 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   `lift-no-board`, F328), `v3_lift_work_order_archived` (a work order moved to `archive/` at the head: review,
   `lift-board-line`, F306), `v3_lift_closes_listed_once` (as `v3_lift_closes`, the file list naming the move by its new path alone: the same
   verdict, F153), `v3_tripwire_lifted`, `v3_uncovered_new_decide`, `v2_lift` (`lift-board-v2`), and `split_pr` (a v2 pair at the
-  base, the directory at the head: no tripwire flag; review, `lift-board-v2`). The existing cases move their board into the directory with
+  base, the directory at the head: no tripwire flag; review, `lift-board-v2`). **The runner's trees** (round 6's
+  F337): `trees()` gains `delete_base`, paths taken out of the base after the shared base and the case's `base/`
+  are laid together and before the head is laid over it, beside `delete` for the head; a path in either ending in
+  `/` takes every path under it. `v2_lift` and `split_pr` give `delete_base: ["docs/user_attention/"]` and put the
+  v2 pair in their `base/` (`v2_lift`'s head keeping it; `split_pr`'s `head/` holding the directory and the stub
+  at `docs/user_attention.md`, with `delete: ["docs/user_attention_archive.md"]`, so its head is what a split
+  leaves; round 6's closing fact-check's F345);
+  `v3_lift_no_board`, `v3_head_v2` and `v3_stub_only_head` give `delete: ["docs/user_attention/"]`, the last two
+  putting the v2 pair, or the stub alone, in their `head/`. **The other repos' boards** (round 6's F339):
+  `uncovered()` reads each `boards` entry's `board`, a directory or a `.md` file under `boards/`, through
+  `load_board()` (a v2 file's archive beside it as `<stem>_archive.md`), and `cases.json`'s `archive` key goes.
+  The existing cases move their board into the directory with
   the same items, except that `a CRLF board whose answered line drops its CR`'s expected verdict becomes
-  `lift-board-line`; the other `lift-board-diff` messages are those of text 7's (b).
+  `lift-board-line`; the messages are D10's (*The messages*).
 
 **Unit tests** — the opening is TD-092's plan's, B5's bullet TD-070's plan's; B3's and B4's:
 - **B3**: `tests/test_board_writer.py` is rewritten over a directory: each run's `--line`/`--expect` becomes `--id`,
@@ -574,7 +622,8 @@ search finds its names only where it allows.
 trees, `tripwire()`, `lift_pr_verdict()`, `uncovered_decisions()`, each reading `_item_gate(item)` of a
 `BoardItem` where it read `_item_gate(it.text)`, TD-092's D4 (*`words` and `text`*); `lift_pr_verdict()` judging the changed set from the trees and
 `files` only for a path outside the board and the ledger, F153; `decision-no-lift` naming the item's id, F156;
-`uncovered_decisions()`'s `boards` as `Board` triples, F290), `fixtures/run.py` (`uncovered()`, F290),
+`uncovered_decisions()`'s `boards` as `Board` triples, F290; `_tree_board_path()`, F338), `fixtures/run.py`
+(`uncovered()`, F290, F339; `trees()`'s `delete_base` and prefix deletes, F337),
 `SPEC.md` (text 7, and text 8's *The readers take the `Board`* bullet's "and the merge gate's verdicts", which
 TD-092's B2 leaves out, TD-092's round 1's F192), `fixtures/verdict/`, `tests/test_ledgerboard.py`'s verdict tests (F149).
 **Records:** none change. Done when: the precheck is green, every verdict case passes, and *The search*'s B4 search
