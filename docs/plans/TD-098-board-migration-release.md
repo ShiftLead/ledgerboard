@@ -233,8 +233,9 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   and (3), a window named here and kept short (round 3's F400): its own board then takes no write from any of its
   writers, `board.py`, `board_edit.py`, `gate_sweep.py`'s filings and closes and `ledger.py set`'s board half (each
   goes through `board.py`'s `plan_add()` or `plan_edit()` and so meets D7's gate, and the vendor PR makes each skip a
-  v2 target with a message naming the split rather than fail), so a decision lifted there waits for step 3 for its
-  board half, and an item that cannot wait is a hand edit to the v2 file, which the v3 reader reads. A board's readers are its own
+  v2 target with a message naming the split rather than fail), but for `ledger.py set`, which keeps the pin's
+  refusal of the whole lift (the ledger put back, exit 1; round 3's F408), so a decision lifted there is lifted
+  again after step 3, and an item that cannot wait is a hand edit to the v2 file, which the v3 reader reads. A board's readers are its own
   repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
   session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0, and the consumers
   that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split,
@@ -266,8 +267,9 @@ board is split.
   - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
     own right after ShiftLead's sync (D12's step 3), landed when no open PR edits the board and no unpushed board
     commit is held; between its vendor PR and that split its board takes no writer's write (D12's window): its
-    writers, `gate_sweep.py` and `ledger.py set` among them, skip a v2 target with a message naming the split
-    (round 3's F400);
+    writers skip a v2 target with a message naming the split (`gate_sweep.py`'s filings and closes; round 3's F400),
+    and `ledger.py set`'s lift keeps its refusal of the whole lift, ledger put back, to be run again after the split
+    (F408);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
     `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`; the `ls` it passes
@@ -493,10 +495,10 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > field the v2 reader reads into the header field of the same name. v2.4's "no board action removes one" no longer holds:
 > `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3 repo as the stub, which declares
 > `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer refuses it unread, and a reader
-> that checks nothing reads an empty board, so a repo splits its board only once every reader that writes to it or
-> acts on it runs v3.0: its own tooling and the consumers that read it from elsewhere. A v2.x reader in another repo
-> that checks nothing reads it as empty until that repo moves to v3.0, so the repos that read each other's boards
-> move together.
+> that checks nothing reads an empty board, so a repo splits its board only once its own tooling and the consumers
+> that read it from elsewhere run v3.0, and the repos that read each other's boards move to v3.0 together, within
+> a day: until another such repo moves, its v2.x readers that check nothing read the split board as empty (a sweep
+> there can file a duplicate item, closed by hand).
 > Within v3.x the same holds for a field: a later minor's field is faulted by an older v3 gate, so **a consumer
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
 > nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
