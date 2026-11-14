@@ -238,7 +238,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   v2.x, prints no entry holding `changes` or `stops`; agent-cadence runs it in (1) and ShiftLead in (2), each before
   vendoring, and ledgerboard's is B4's guard run before v3.0 is cut. A roster repo's ledger in (4) is TD-100's
   (TD-078's D7). (2) is worked while (1) is in review, so
-  it is ready to merge when (1) merges; and (3) waits for (2) one UTC day at most: if (2) has not merged by the end
+  it is ready to merge when (1) merges; and (3) waits for (2), but not past a deadline: if (2) has not merged by the end
   of the day after (1) merged, (3) lands anyway (round 3's F409), and ShiftLead's v2.x `gatesweep` and `workorders`
   read agent-cadence's board as empty until (2) merges — the same risk, and the same remedy, as an old-pin roster
   reader below. The order puts (2) first because ShiftLead's readers span the roster, so its read of every board
