@@ -201,7 +201,7 @@ as one write (*The board writer*'s both-or-neither). Its output is `main()`'s, a
 each note is a `Plan.warn` line, `<path>:<line>: ⚠ <why>`, on stderr in every mode; plain output is the paths
 written and removed, one per line; `--json` is `{"action": "split", "subject": null, "paths": [every path written
 or removed], …info}` (when `--archive` names another file than the default and a file of the default's name is
-beside the board, a warning names it, left in place: a `Plan.warn` line `<path>: ⚠ <default archive left in place>`
+beside the board, a warning names it, left in place: a `Plan.warn` line `<path>: ⚠ default archive left in place` (that literal `why`, F390)
 and a `warnings` record with `line` null and `text` `""`, pinned by `split_archive_other`; F379, round 2's F388), `info` holding `files` (the directory's paths written), `removed` (the archive's, when there
 was one) and `warnings` (`[{"path", "line", "text", "why"}]`); `--plan` prints `Plan.as_json()`. It has no subject
 (a commit of a split is the caller's). The write gate's v2 refusal gains the hint: `<board>:
@@ -394,10 +394,12 @@ parts stay here: `plan_split` in the first paragraph's library list (after `plan
 >   `_archive.md` beside it, none if absent) split by `split_board()` into the directory beside it named the board's
 >   name without `.md`, which must not exist, the directory the stub then reads as: every file written, the v2 file
 >   replaced by `board_stub()` and its archive removed, as one write. It refuses, exit 1 and writing nothing, a
->   `--board` not ending `.md`, a board that does not exist, one of a major newer than 3, one already v3 (`already a v3 board`), what `split_board()` refuses, and an existing
->   directory (`<dir>/ exists`). `split_board_notes()`'s lines are printed as warnings, `<path>:<line>: ⚠ <why>`
->   (`warnings` in `--json`, each `{"path", "line", "text", "why"}`, beside `files` and `removed`). It prints no
->   subject;
+>   board that does not exist, one of a major newer than 3, one already v3 (`already a v3 board`), a `--board` not
+>   ending `.md`, an `--archive` given that does not exist, what `split_board()` refuses, and an existing directory
+>   (`<dir>/ exists`). `split_board_notes()`'s lines are printed as warnings, `<path>:<line>: ⚠ <why>`, and, when
+>   `--archive` names another file and one of the default archive's name is beside the board, `<path>: ⚠ default
+>   archive left in place` (`warnings` in `--json`, each `{"path", "line", "text", "why"}`, the last with `line`
+>   null and `text` `""`, beside `files` and `removed`; round 2's F389). It prints no subject;
 
 and B3's sentences take B5's words: the paragraph after the actions list's "a v2 board is refused" reads "a v2 board
 is refused (*split first*)"; the write gate's message is `not a v3 board: a v2 board (split first: board.py split)`;
@@ -577,8 +579,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     unchanged but for `widgets` (a rerun files and closes nothing, and the split keeps the ids). `widgets.md` holds
     two closed lines of one id (`TD-239`'s, answered twice, which its sweep cases need), a shape D11 refuses (round
     1's F351). It cannot leave the rerun, which runs one `sweep()` over every board and refuses a set without the
-    repo's own board, `widgets` (round 2's F385, reopening F384). So for the rerun alone the runner drops, in memory,
-    the first of `widgets.md`'s two `TD-239` closed lines (the one closed 2026-10-20), splits what is left and reruns
+    repo's own board, `widgets` (round 2's F385, reopening F384). So for the rerun alone the runner drops, in memory and
+    after the first run's closes and filings are applied (F391), the first of `widgets.md`'s two `TD-239` closed
+    lines (the one closed 2026-10-20), splits what is left and reruns
     over that split as over the others; the file on disk and the first run's cases are untouched. `expected.json`'s
     `rerun` regenerates, and the case holds what it held: the rerun files and closes nothing on any board (were the
     reduced board to file or close anything, the builder raises it as a finding on this plan, not a fixture edit).
