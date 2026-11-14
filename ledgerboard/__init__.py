@@ -2066,6 +2066,11 @@ def item_notes(item: BoardItem, today: date) -> list[str]:
     return []
 
 
+def _why_bare(why: str | None) -> str | None:
+    """A close's why as a record gives it (v3.0): one final period dropped, for either major (D4)."""
+    return why[:-1] if why is not None and why.endswith(".") else why
+
+
 def item_record(item: BoardItem, today: date) -> dict:
     """The item as one JSON-ready record — the board's API, and the fixtures' shape. The
     today-relative fields (``overdue_days``, ``due_tag``, ``hidden``, ``notes``) are computed against ``today``."""
@@ -2076,7 +2081,7 @@ def item_record(item: BoardItem, today: date) -> dict:
         "path": item.path,  # v3.0
         "added": day(item.added),  # v3.0
         "context": item.context,  # v3.0
-        "closed": {"date": day(item.closed[0]), "why": item.closed[1]} if item.closed is not None else None,  # v3.0
+        "closed": {"date": day(item.closed[0]), "why": _why_bare(item.closed[1])} if item.closed is not None else None,  # v3.0
         "line": item.line,
         "text": item.words,  # v3.0: the item's words, for both majors
         "due": item.due.isoformat() if item.due else None,
@@ -3199,6 +3204,8 @@ def board_problems(board: Board | str, old: Board | str | None = None) -> list[t
     ``Board`` read from a file is refused (``Refused``): the gate judges item files."""
     if isinstance(board, Board):
         return _board_gate(board, old)
+    if isinstance(old, Board):
+        raise Refused("board_problems: a v2 board's text is judged against text, never a Board")
     closed = {item_key(ln) for ln in closed_items(board)}
     known = None if old is None else {item_key(ln) for ln in old.splitlines() if ANY_ITEM_RE.match(ln)}
     people = board_people(board)

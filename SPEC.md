@@ -1714,7 +1714,7 @@ an item file and a v2 line alike; `line: <that fault>` before it), the fault
 one of `context: not one entry and one decision` (a Context naming two entries, or going on past its gate, among
 them), `<id>: another repo's entry`, `<id>: not an id`, `<id>: the Context's entry` and `<id>: twice`; the kind,
 an empty list and the lifting answer are `item_file()`'s alone. Otherwise it reads `entries` and `archived` and
-judges as v2.6 says (*Edits*, *A snapshot against the ledger*), word for word from "(id to text, open and archived
+judges as v2.6 says, word for word from "(id to text, open and archived
 alike" to "the lift when it is answered"; the ledger is not in the item, so `item_file()` does not check these,
 and a writer that reads the ledger calls it.
 
