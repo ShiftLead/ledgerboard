@@ -1,6 +1,6 @@
 # TD-098: the board's migration, the release and v3.0's removals (TD-070's B5)
 
-**Status:** Draft 1, 2026-11-14 (session lb-designer): TD-070's plan's B5 text (D11, D12, *Consumers*, the `SPEC.md` texts, fixtures, tests and builds that are B5's), moved unchanged. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 0 of 6.
+**Status:** Draft 2, 2026-11-14 (session lb-designer). Draft 1 was TD-070's plan's B5 text (D11, D12, *Consumers*, the `SPEC.md` texts, fixtures, tests and builds that are B5's), moved unchanged; draft 2 rebases it on TD-092's plan (B1 and B2, merged as TD-093 and TD-094) and TD-095's (B3 and B4, filed as TD-103 and TD-104), each change marked *rebased*, and decides what those plans leave to B5 (the head note, `board.py split`, `fixtures/sweep/alpha/`, the *Versions* text). Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 0 of 6.
 
 **Entry:** [TD-098](../ledger/TD-098.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-098's Fix (Paul's Split
 on TD-095's scope, decided 2026-11-13: B3 and B4 TD-095's, B5 here); [TD-070's plan](TD-070-board-directory.md),
@@ -11,7 +11,7 @@ docs/reviews/TD-070.md, F175–F257 in docs/reviews/TD-092.md and F258–F350 in
 
 ## The problem
 
-The problem is TD-070's plan's (*The problem*): every new item written at one place in one file, the item's identity
+The problem is TD-070's (its plan's *The problem*, the scope Paul answered Go on 2026-11-11): every new item written at one place in one file, the item's identity
 its text, fields inside prose, and the twins as the merge rule. B5 is the half of v3.0 that moves a v2 board into
 the directory and removes what the directory replaces, and the release that carries it.
 
@@ -19,17 +19,29 @@ the directory and removes what the directory replaces, and the release that carr
 
 The scope (S1–S10, Paul's Go, 2026-11-11), the precedent, the entry grammar and what an item means are TD-070's
 plan's and TD-092's plan's (*What is already settled*). This plan's decisions take S9 (D11) and the release (D12).
-B1 and B2 (TD-092's plan) and B3 and B4 (TD-095's plan) are designed and Go'd.
+B1 and B2 (TD-092's plan) are merged (TD-093, TD-094); B3 and B4 (TD-095's plan) are Go'd and filed (TD-103, TD-104). v2.8, the last v2.x minor, is tagged.
 
 ## Options weighed
 
 The options are TD-070's plan's (S1, the directory) and TD-092's plan's (the id, the item's form, `Decided:` in a
-field, sections, listing the archive's months, the stub).
+field, sections, listing the archive's months, the stub). Three are this part's own (draft 2):
+
+- **Where the head note's v2 text comes from** (C1 below, in D11): `split_board()` returning the notes beside the
+  files would change its result's shape for one note; `split_board_notes()` taking the v2 texts it was split from
+  keeps `split_board()` a plain `{path: text}` and lets the notes read what the files no longer hold. The second.
+- **`fixtures/sweep/alpha/`**: a hand-written v3 stand-in for `alpha.md`'s split since B2 (TD-094). Keeping it beside
+  a split it may differ from leaves two answers to one question; B5 checks that `split_board()` gives it file for
+  file and, where it does not, regenerates it from the split (the sweep's `split` result must still say `same`).
+- **`board.py split` under TD-095's write gate**: a gate exemption for `split` alone, or `split` as a separate
+  tool. One `board.py` keeps one `--board` normalisation, one usage and one JSON shape; `split` is the one action
+  whose gate is the reverse (it needs a v2 board), so it has its own gate (D11, *`board.py split`*).
 
 ## Decisions
 
 Numbered as in TD-070's plan, so that citations across the plans and their review records resolve. D1–D10 are
-TD-092's plan's and TD-095's plan's.
+TD-092's plan's and TD-095's plan's: a bare D4, D5, D6 or D9 below is TD-092's, a bare D1, D2, D8 or D10 TD-095's,
+and D3 and D7 are split (the module half TD-092's, the writer half TD-095's). *Rebased:* marks draft 2's changes to
+the moved text.
 
 **D11. Migration (S9).** `split_board(board, archive)` gives the v3 files of a v2 board and its archive, by path in
 the directory.
@@ -112,10 +124,26 @@ on an `fyi` are all carried. The rule, for each:
   split, since no v2 reader reads it into a field (TD-092's plan, D11's prefix), so the notes list it as a carried
   shape's note, at the item's `Session` line (or, with no `Session`, its heading), naming the text lost, so a person
   sees the loss. The written files no longer hold that text, so the note is made from the v2 line (its `raw`), which
-  the notes' input must reach: how (the split's own result carrying it, or `split_board_notes()` taking the v2
-  texts) is B5's design, open for the second part's rounds, as are this note in text 8's *Migration* bullet
-  and a `board_split` case for it (`head_extra`; PR #277's review). `board.py split` prints
-  them as warnings (`warnings` in `--json`).
+  the notes' input must reach. *Rebased (draft 2, deciding what TD-092 left open):* `split_board_notes(files, board,
+  archive="")` takes the v2 texts the files were split from, beside the files, and for each item line of either
+  whose head group holds text after its session and host gives `(path, line number, line, why)` at the item's
+  `Session` line (with no `Session`, its heading), `why` `head text not carried: <text>` (the text after the host,
+  its leading `, ` dropped). Text 8's *Migration* bullet on the notes says so, and `board_split`'s `head_extra`
+  case pins it (an open line `(session s-1 on host-a, branch x)` and a closed one `(session s-2 on host-b, pr 7)`;
+  only a `(session …)` group can hold such text, since `ITEM_PREFIX_RE` takes `(n/a)` and `(person)` whole);
+  `fixtures/board/basic.v3/`'s split is the other (`basic.md:8`'s `,
+  branch feature/x`, TD-092's F238). `board.py split` prints them as warnings (`warnings` in `--json`).
+- *Rebased:* **what the split reads first.** `split_board()` refuses a board whose declared major is not 1 or 2
+  (`format_major()` of its text: `Ledgerboard: 3`, the stub's, and any newer major, `not a v2 board: declares
+  Ledgerboard: <n>`); a v2 file declaring 2 or none is split, its `Ledgerboard:` line dropped from `README.md` as
+  above. Its read-back calls `load_board("", _dict_ls(files), files.get)` and `board_dir_problems("", …)` over the
+  same map, paths relative to the directory (`""` its root, as `_dict_ls()` takes it).
+- *Rebased:* **a board older than v2.3** (no `People:` line, keys before `fmt`'s rule) is split as it reads: the
+  split adds no `People:` line and refuses none for lacking one. What such a repo does first is TD-100's (Paul's
+  Hold on TD-096); this plan neither refuses nor repairs it.
+- *Rebased:* **a split PR's verdict.** The vendoring PR that splits a board changes the v2 file into the stub and
+  adds the directory: `lift_pr_verdict()` sends it to review as `lift-board-v2` (B4, TD-095's D10 and its `split_pr`
+  case), never `lift-files`; the split's ids are the v2 ids, so the head reads the same items as the base.
 
 **The key a consumer persisted** (ShiftLead's `key()`, `key_id()`, an indented line and a `[x]` line) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 
@@ -126,16 +154,40 @@ README lines that may describe the v2 board and the carried shapes rule 14 names
 `key_id(key)` and `item_key()` are kept through v3.x. The split runs in each consumer's v3.0 vendor PR, beside v3.0's
 ledger half (TD-078), landed when no open PR edits the board (each such PR is redone over the directory).
 
+**`board.py split`** (*rebased on TD-095*: its D7's gate, options and output, which B5 extends). `split` takes
+`--board` (a v2 file, normalised as every `--board` is), `--archive` (default the board's name with
+`_archive.md`, beside it; absent, an empty archive), `--json` and `--plan`; `--archive`, which B3 removed with the
+`archive` action, comes back in `TAKES` for `split` alone, and `NEEDS_OPT` and the usage docstring say so. Its
+gate is the reverse of a write's, checked in this order, each exit 1 and before anything is written: `<board>: no
+such board` (`form` None); `<board>: already a v3 board` (`form` `"dir"`, the stub or a directory); then
+`split_board()`'s own refusals as `<board>: <why>` (`not a v2 board: declares Ledgerboard: <n>` among them); then
+`<board>: <dir>/ exists` (the directory beside it, `split_exists`). `plan_split(board_path, archive_path, read,
+exists)` returns a `Plan` that writes every file, replaces the v2 file with `board_stub()` and removes the archive,
+as one write (*The board writer*'s both-or-neither). Plain output: one line per file written, then `removed
+<archive>` when there was one, then each note as `<path>:<line>: ⚠ <why>`. `--json`: `{"action": "split",
+"board": …, "files": [paths], "removed": [paths], "warnings": [{"path", "line", "text", "why"}]}`. It prints no
+subject (a commit of a split is the caller's, as `fmt`'s). The write gate's v2 refusal gains the hint: `<board>:
+not a v3 board: a v2 board (split first: board.py split)` (TD-095's F288; `write_v2_refused`'s expected output).
+
 **D12. The release: v3.0, and v2.8 before it.** v3.0 is a major (*Versions* text 12). It reads v2 boards and writes
 v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else it carries, is Paul's. The order:
 - **B1's precondition** (the last v2.x minor, v2.8, released before B1 merges and none after it; TD-065 in v2.8, its `doer_value()` reused; TD-078's open question and B1's blocks) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D12 (2026-11-13 split).
-- **The builds**, B1 to B5, merge in order with no release between them; TD-091 (TD-078's B4) follows B5 (round
-  9's F142); then v3.0.
+- **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (filed B3, TD-103,
+  then B4, TD-104); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
+  B1 and B2 are merged.
 
 ## Consumers
 
 Both change in their v3.0 vendor PR, each through an entry filed in that repo through its question seat once v3.0
-is cut, agent-cadence's first. Each line below is a line for that entry, never code here.
+is cut, agent-cadence's first. Each line below is a line for that entry, never code here. *Rebased (draft 2):* this
+section is the index of those entries: each carries the lines below, TD-095's plan's *Consumers* lines (B3's and
+B4's: `board_edit.py`, `check_cadence.py`'s `BOARD`, `classify_direct()` and `row_board_edit_pr()`, the fetch rule
+at base and head, `uncovered_decisions()`'s `Board` triples, `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` with no
+alias, ShiftLead's `sessionorc/board.py`) and TD-092's (B1's and B2's: `board_dir_problems()` beside
+`v2_problems()`, `load_board()`'s `ls`), and one more from TD-095's D10: each consumer's carve-outs that judge a
+commit by "the board alone" read "only files under the board's directory". Before the split, on a v2 file, the
+board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), so it is a partial check until the
+vendor PR splits the board.
 
 - **agent-cadence**:
   - vendor v3.0 and run `board.py split` on `docs/user_attention.md` in the same PR, landed when no open PR edits
@@ -181,7 +233,19 @@ The section's opening (what a block is, and *No sentence lands before the code*,
 **1. The title.** `# The ledger and board formats — versions 1 and 2` becomes `# The ledger and board formats —
 versions 1 to 3`.
 
-**2.–6.** *The board*'s first three paragraphs, *The item key*, *What needs the person*, *Preamble lines* and *The gate sweep* — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, texts 2–6 (2026-11-13 split).
+**2.–6.** *The board*'s first three paragraphs, *The item key*, *What needs the person*, *Preamble lines* and *The gate sweep* — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, texts 2–6 (2026-11-13 split). *Rebased:* B2 landed text 2
+without its B5 words (TD-092's round 5's F71), which B5 adds now that it removes the v2 line writers: the first
+paragraph's "A v2 board is one Markdown file (…) with its archive beside it (…)" gains "; v3.x reads one and writes
+none", and after that paragraph B5 adds TD-092's text 2's second paragraph as that plan gives it:
+
+> **From v3.0, everything this section says about a line** (its text, where a field stands on it, its key, its
+> replies' tails, its tick, and the functions that write or judge a line: `item_line()`, `decided_line()`,
+> `edit_line()`, `item_problem()`, `canonical_item()`, `parse_closed_items()`) **is v2's, read only**: v3.x reads a
+> v2 line so, and writes none. A paragraph that says it once for both majors names the item file's form beside the
+> line's.
+
+(`parse_closed_items()` stays in the module, a v2 reader; the list names what judges a line, read only, not what
+v3.0 removes.)
 
 **7. *The board*, *The merge gate's verdicts*, its first paragraph** — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, text 7 (2026-11-14 split).
 
@@ -248,7 +312,13 @@ versions 1 to 3`.
 >   line), then each shape the split carried that `board_dir_problems()` names, at its field's line (the first
 >   header line of that field's name).
 
-**9. *Edits*** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 9 (2026-11-13 split).
+**9. *Edits*** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 9 (2026-11-13 split). *Rebased:* its
+swap is B5's (TD-092's round 7's F92): B5 removes v2's `## Edits` section whole and renames `## Edits (v3.0)`, which
+B1 landed after it, to `## Edits`, its text unchanged; every link or mention of *Edits (v3.0)* in `SPEC.md` becomes
+*Edits*.
+
+**8, *Reading a board*.** *Rebased:* B2 landed its `item_record()` sentence without "and no `line`" (TD-092's plan,
+*The SPEC text the build lands*); B5 adds it, so the record is given "with `text` the item's words and no `line`".
 
 **10. *The board writer*** — its B3 text moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, text 10 (2026-11-14 split); its B5
 parts stay here: `plan_split` in the first paragraph's library list (after `plan_fmt`, B5's: round 9's F155), the
@@ -260,6 +330,22 @@ parts stay here: `plan_split` in the first paragraph's library list (after `plan
 >   the v2 file replaced by `board_stub()` and its archive removed, as one write; `split_board_notes()`'s lines are
 >   printed as warnings (`warnings` in `--json`). It prints no subject;
 
+*Rebased on TD-095* (its text 10 as B3 lands it): the bullet above becomes, with D11's *`board.py split`*:
+
+> - **`split`** (v3.0) — a v2 board (`--board`, its archive `--archive`, default the board's name with
+>   `_archive.md` beside it, none if absent) split by `split_board()` into the directory beside it named the board's
+>   name without `.md`, which must not exist, the directory the stub then reads as: every file written, the v2 file
+>   replaced by `board_stub()` and its archive removed, as one write. It refuses, exit 1 and writing nothing, a
+>   board that does not exist, one already v3 (`already a v3 board`), what `split_board()` refuses, and an existing
+>   directory (`<dir>/ exists`). `split_board_notes()`'s lines are printed as warnings, `<path>:<line>: ⚠ <why>`
+>   (`warnings` in `--json`, each `{"path", "line", "text", "why"}`, beside `files` and `removed`). It prints no
+>   subject;
+
+and B3's sentences take B5's words: the paragraph after the actions list's "a v2 board is refused" reads "a v2 board
+is refused (*split first*)"; the write gate's message is `not a v3 board: a v2 board (split first: board.py split)`;
+and "A write of several files, and of the files it removes, is both or neither (…)" gains ", and `split` removes
+the v2 archive" before its period.
+
 **11. *The ledger as a directory*, *The caller does the I/O*** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 11 (2026-11-13 split).
 
 **12. *Versions*, after the last v2.x paragraph** (the last minor's, v2.8's, released before B1 merges, D12; on
@@ -267,29 +353,32 @@ parts stay here: `plan_split` in the first paragraph's library list (after `plan
 note": round 9's F159), add. **It builds on TD-092's text 15** (TD-092's round 5's F241): B2 lands that
 *Versions* paragraph first, naming what a v2 board reads differently from B2 on and that a board declaring 3 is
 readable, so this paragraph follows it, and at B5 its "It reads a v2 board differently" sentence is reconciled with
-that paragraph rather than repeating it:
+that paragraph rather than repeating it. *Rebased (draft 2):* text 15 is on `main` (B2, `SPEC.md`'s *v3.0 reads a
+board as a `Board`*), so the paragraph below lands after it, and points to it for the six read differences, the
+twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 15's "and the sweep, given a
+`Board`, never closes it" loses ", given a `Board`," at B5, the text form being gone (TD-092's round 6's F247):
 
 > **v3.0 makes the board a directory** (*The board as a directory*, *Edits*, *The board writer*, *The merge gate's
 > verdicts*): one file per item, named by its id, in `docs/user_attention/` with `README.md` and
 > `archive/<YYYY-MM>/`, closing an item moving its file. **It reads a v2 board**: `load_board()` gives the same
 > items for a v2 file and its archive as for its split, each v2 item with the id `split_board()` gives it, so a
 > consumer vendors v3.0 before it splits its board, and reads other repos' boards in either major. It reads a v2
-> board differently in two ways: an open line whose closed twin is in the archive is closed, where v2.x read the two
-> as two items, and twins match by id, so the indent no longer tells them apart; and a board file that declares no
-> major reads as 2, the format a board's v1 and v2 share (*Versions*' "none means 1" stays the ledger's). **It
+> board as the paragraph above says, and a board file that declares no major reads as 2, the format a board's v1
+> and v2 share (*Versions*' "none means 1" stays the ledger's). **It
 > writes v3 only**: `board.py`'s writes refuse a v2 board (*split first*). **What goes:** the item key as what an
-> item is (`item_key()` remains, only to read a v2 line and as `key_id()`'s input); the open-and-closed twin rule
-> (read on a v2 board alone); `archive_closed()`, `archive_subject()`, `ARCHIVE_AT`, `closed_items()` and `board.py
-> archive`; the v2 line's writers, `item_line()`, `decided_line()`, `edit_line()`, `item_problem()` and
+> item is (`item_key()` remains, only to read a v2 line and as `key_id()`'s input); the open-and-closed twin as the
+> merge rule (a v3 item is one file; a v2 board's twins are still read as one item, above); `archive_closed()`,
+> `archive_subject()`, `ARCHIVE_AT` and `board.py archive` with its `--archive` (which only `split` takes now), and
+> `closed_items()` as a public name; the v2 line's writers, `item_line()`, `decided_line()`, `edit_line()`, `item_problem()` and
 > `canonical_item()`, and with them the refusal of a field's name in a text, context, answer, detail value or reply
-> and of an answer ending `(by …)`; `add --under`; and the edits' `--line` and `--expect`. **What a caller
+> and of an answer ending `(by …)`; the text forms of the board's readers; `subject()`'s form with no id;
+> `add --under`; and the edits' `--line` and `--expect`. **What a caller
 > changes:** `needs_you()`, `covers()`, `sweep()`, `board_problems()`, `board_people()`, `answered_by()`,
-> `people_problems()` and `answered_by_problems()` take a `Board`, and the sweep's board is `(origin_url, basename,
-> board)`, read whole, its `to_close` ids; `item_record()` loses `line`, gains `id`, `path`, `added`, `context`
+> `people_problems()` and `answered_by_problems()` take a `Board` and no text, the sweep's board and
+> `uncovered_decisions()`'s are `(origin_url, basename, board)`, read whole, and the sweep's `to_close` are ids;
+> `board.py`'s edits name an item by `--id`, and a write's JSON and `list` give its id where they gave its line; `item_record()` loses `line`, gains `id`, `path`, `added`, `context`
 > and `closed`, and its `text` is the item's words (its `doer`, v2.8's, is unchanged);
-> `version_problem()` takes a `Board` and judges its
-> `major` against `BOARD_MAJOR` (3), the board's own, read from every line of `README.md` (`board_major()`; the
-> ledger's `FORMAT_MAJOR` is not changed here); `parts_problems()`, `decide_lift()` and `closes()` take an item
+> `version_problem()` takes a `Board` (above; the ledger's `FORMAT_MAJOR` is not changed here); `parts_problems()`, `decide_lift()` and `closes()` take an item
 > file's text, and `parts_problems()` prefixes a shared check's fault `item:` where it wrote `line:`; `BOARD_PATH` and `BOARD_ARCHIVE_PATH` are `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH`, beside
 > `BOARD_DIR`; a subject carries the id; an `ls` lists subdirectories, so a caller's `ls` that lists files alone
 > reads a v3 board's archive as empty; and `lift_pr_verdict()` sends a lift on a v2 board to review. **The board's
@@ -315,9 +404,20 @@ and after "A v2 ledger declares it in its `README.md`, which `load()` puts first
 > A v3 board declares it in its `README.md`, on any line outside an HTML comment (`board_major()`); a README that
 > declares none reads as 3, and is named (*Reading a board*).
 
-**13. *Appendix: grammar*, *The item file (v3.0)***, with the paragraph on the field order as a production — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 13 (2026-11-13 split).
+**13. *Appendix: grammar*, *The item file (v3.0)***, with the paragraph on the field order as a production — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 13 (2026-11-13 split). *Rebased:* its retitle is
+B5's (TD-092's round 6's F253): *The open item line (v2.3)* becomes *The open item line (v2.3; a v2 board's, read
+only from v3.0)*, and each link to it follows.
 
-**14. The rest of *The board*** — its opening and its B1 and B2 bullets (*Notes on a hide* to *The decide lift*, the shared *Parts:*, *Doer:* and *Trailing fields* bullets among them) moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 14 (2026-11-13 split); the two bullets below stay:
+**14. The rest of *The board*** — *rebased:* its writer substitutions are B5's (TD-092's text 14, each bullet's
+B5 part, landing as that plan words them): *`Parts:`*'s "`item_line(parts=)` and `board.py add --parts` write it"
+becomes "`item_file(parts=)` (v3.0; `item_line(parts=)` before it) and `board.py add --parts` write it"; *`Doer:`*'s
+"`item_line(doer=)` and `board.py add --doer` write it" becomes "`item_file(doer=)` (v3.0; `item_line(doer=)` before
+it) and `board.py add --doer` write it", "`item_problem()` faults it on any kind but `act`, no kind included" gains
+"(v2; in an item file `item_file_problem()` does, v3.0)", and "which `item_problem()` faults" gains "(v2)" after
+"faults"; *Trailing fields*' `Lifts:` "`item_line(lifts=)` refuses one and `item_problem()` faults one" becomes
+"`item_file(lifts=)` refuses one and `item_file_problem()` faults one (v3.0; `item_line()` and `item_problem()`
+before it)", and TD-075's sentence after it names `item_file_problem()` (v3.0; `item_problem()` before it). Its
+opening and its B1 and B2 bullets (*Notes on a hide* to *The decide lift*, the shared *Parts:*, *Doer:* and *Trailing fields* bullets among them) moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, text 14 (2026-11-13 split); the two bullets below stay:
 
 - *Versions*' past paragraphs (v2.3's to v2.8's) stand as written: each says what that release shipped, and the
   names it gives (`item_line()`, `item_problem()`, `canonical_item()`, `archive_closed()`, `edit_line()`) were that
@@ -327,7 +427,9 @@ and after "A v2 ledger declares it in its `README.md`, which `load()` puts first
 
 **The search** — its opening and the B1 and B2 searches moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *The search* (2026-11-13 split); B3's and B4's moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *The search* (2026-11-14 split); B5's stays:
 
-- **B5** (texts 1, 9's swap, 8's *Migration*, 10's `split`, 12, 14's writer items) runs the full search: all of `SPEC.md`, for
+- **B5** (texts 1, 2's words, 8's *Migration* and "and no `line`", 9's swap, 10's `split` and its words, 12, 13's
+  retitle, 14's writer items, 15's qualifier) first searches *Edits*, as renamed, for `item_line`, `decided_line`,
+  `item_problem`, `canonical_item` (whole name) and `archive_subject` (TD-092's plan, *The search*), then runs the full search: all of `SPEC.md`, for
   every name above (`item_line`, `decided_line`, `edit_line`, `item_problem`, `canonical_item`, `archive_closed`,
   `archive_subject`, `ARCHIVE_AT`, `closed_items`, `BOARD_PATH`, `BOARD_ARCHIVE_PATH`, `--line`, `--expect`,
   `--under`), each found only in a *Versions* paragraph, a v2-tagged sentence or text 12.
@@ -338,7 +440,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 
 - **`fixtures/item/`** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
 - **`fixtures/board/<case>.v3/`** for each v2 case `fixtures/board/` holds when B5 is built (today `basic`,
-  `answers`, `doer`, `hidden`, `people`, `lifts_parts` and `shared_part_left_open`; round 8's F122: `doer` is
+  `answers`, `doer`, `hidden`, `people`, `lifts_parts` and `shared_part_left_open`; *rebased:* ten `.v3/`
+  directories in all, these seven, `twins_across.v3/`, `reply_ref.v3/` and `closed_words.v3/`; round 8's F122: `doer` is
   v2.8's, so `doer.v3/` is among them), and TD-092's `twins_across` (B2: a case directory, `board.md` beside
   `board_archive.md`, TD-092's F209), an open line on the board and its closed twin in the archive: its split
   directory, `fixtures/board/twins_across.v3/` beside the case's directory, and TD-092's `reply_ref` and `closed_words` (B2, dated),
@@ -353,8 +456,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `team  ops` and its unreadable values carried, `Doer: acme .` written with its period, D11), `lifts_parts` (an
   `act` with `Answers:` and an `fyi` with `Parts:` carried), `answers`, `people` and `shared_part_left_open`
   (nothing to carry). So each gets a `.v3/` (the notes a carried shape gives are pinned by `board_split`'s cases,
-  below). A new runner kind, `board_v3_case` (B5),
-  beside `v2_case`: `split_board()` of the case's text gives the directory file for file, and `load_board()` of it
+  below). *Rebased:* `basic`'s notes are not empty: `basic.md:8`'s `, branch feature/x` is lost at the split and
+  named by D11's head note (TD-092's F238), which `basic.v3/`'s case pins. A new runner kind, `board_v3_case` (B5),
+  beside `board_case` (as the ledger's `v2_case` is beside its own; `cases()` already skips a `<case>.v3/`
+  directory, TD-092's plan, *The runner*): `split_board()` of the case's text gives the directory file for file, and `load_board()` of it
   gives the case's expected JSON, the JSON the v2 read gives (`covers`, the records, and `needs_you`), compared as
   D6's *Comparing two reads* says (records keyed by `id` without `path` and `line`; `covers` as a list sorted by id;
   `needs_you`'s **tie groups** as sets, the groups in order), since a v2 board's order is its lines' and its split's
@@ -397,15 +502,31 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_writer/`** and **`fixtures/verdict/`** (B3's and B4's) — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md,
   *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split` and `split_exists` (exit 1),
   and `write_v2_refused`'s message gaining *split first*.
-- **`fixtures/sweep/`, `fixtures/lift/`, `fixtures/grammar/` and `fixtures/edit/`'s groups** (B1's and B2's, with the B5 steps of the sweep's rerun and of the lift groups) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
-- **Retired**: `fixtures/archive/` (with `archive_closed()`), and the `edit/` groups above (B5).
+- **`fixtures/sweep/`, `fixtures/lift/`, `fixtures/grammar/` and `fixtures/edit/`'s groups** (B1's and B2's) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split). *Rebased:* their B5 steps,
+  which TD-092's plan names, are this plan's:
+  - **`fixtures/sweep/`'s rerun** (TD-092's round 9's F150): the rerun of each v2 board (`widgets.md`, `beta.md`
+    with `beta_archive.md`, `alpha.md`) runs over its split (`split_board()`, then the first run's closes as moves by
+    id, its filings with `item_file()`), so it calls no removed writer; `expected.json`'s `rerun` is unchanged (a
+    rerun files and closes nothing, and the split keeps the ids). The runner's v2 branch (ticking a line, filing with
+    `item_line()`) goes.
+  - **`fixtures/sweep/alpha/`** (B2's hand-written v3 stand-in for `alpha.md`'s split, TD-094): the sweep's `split`
+    result gains `split_same`, whether `split_board()` of `alpha.md` gives `alpha/` file for file; B5 regenerates
+    `alpha/` from the split where it does not, and `same` must still hold.
+  - **`fixtures/lift/`**: the groups that call a removed writer or a line's string form move to item files, `lines`
+    becoming one item file per case line: `closes` passes each file, `close` runs `edit_item(file, …, close=True)`
+    where it ran `edit_line()`, `item_lines` becomes `item_files` (the waiting-only refusals of `item_file(lifts=)`),
+    and `item_problems` becomes `item_file_problems` (`item_file_problem()`); `closed_items`
+    (`parse_closed_items()`, kept) stays; `expected.json` regenerates with the same verdicts.
+- **Retired**: `fixtures/archive/` (with `archive_closed()`), and `fixtures/edit/cases.json`'s groups `compose`,
+  `edits`, `item_problems`, `canonical_items` and `archive_subjects` (B5; TD-092's plan places the rest).
 - **The runner** (`fixtures/run.py`, every build's kinds) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
 
 **Unit tests** — the opening and the B1 and B2 bullets moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split); B3's and B4's moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Fixtures* (2026-11-14 split); B5's stays:
 - **B5**: `tests/test_item_gate.py`'s v2 properties go with `item_line()`, `decided_line()`, `edit_line()` and
   `canonical_item()`; `tests/test_ledgerboard.py`'s tests of the removed writers (`item_line()`, `decided_line()`,
   `edit_line()`, among them `test_every_edit_keeps_the_item_key`) go or move to item files, and its `sweep()` tests
-  pass `(origin_url, basename, board)`; the property test that `split_board()` then `load_board()` gives a board's
+  pass `(origin_url, basename, board)`; *rebased:* its `needs_you()`, preamble and people tests, which B2 left on
+  text (TD-092's plan, *Unit tests*), pass a `Board` once the text forms go; the property test that `split_board()` then `load_board()` gives a board's
   items back runs over the fixture boards that split, every `fixtures/board/` case with a `.v3/` (F147; not `undated_twins`
   or `words_prefix`, TD-092's F213, nor `closed_no_day`, TD-092's F231), and
   each accepted `board_split` case, never a refused one.
@@ -424,12 +545,29 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 | `_item_text()` | `.text`, or a line | none: callers read fields | gone B5 |
 | `_gate_body()` | an item's text (for `_item_gate()`, `item_problem()`, `board_problems()`, `_sweep_context()`, `parts_problems()`) | none: its callers read `context` (F133) | gone B5 |
 
+*Rebased:* the B5 parts of TD-092's table's shared rows are this plan's (TD-092's plan: "a row whose build names
+B3, B4 or B5 beside B1 or B2 is shared"), each done at B5:
+
+| function | B5's part |
+|---|---|
+| `BoardItem` | `text` goes; `line` stays, a v2 item's line number (read by `needs_you()`'s v2 order, the v2 half's problems and `_closed_lines()`), 0 for a v3 item |
+| `item_record()` | `line` goes |
+| `edit_head()`, `subject()` | `subject()`'s form with no `id=` goes, and `edit_head()` with it (its one caller) |
+| `board_problems()` | the v2-text form goes |
+| `_item_gate()` | the string form goes |
+| `closes()`, `decide_lift()`, `parts_problems()`, `board.py`'s `_decide_ledger()` and `_check_parts()` | D7's one rule's second branch (a v2 line's string) goes (TD-092's F124, F139): an item file's text or a `BoardItem` |
+| `needs_you()`, `board_people()`, `answered_by()`, `people_problems()`, `answered_by_problems()` | the text forms go: a `Board` only |
+| `_read_boards()`, `covers()`, `sweep()` | the text-board form `(origin_url, basename, text, archive_text)` and its keys in `to_close` go |
+| `edit_line()`, `item_problem()`, `canonical_item()`, `item_line()` (its read-back `written()`), `decided_line()`, `archive_closed()` | removed |
+| `board.py` `plan_split()` | new (D11, *`board.py split`*) |
+
 **B1, the item file**, and **B2, reading** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *The builds* (2026-11-13 split).
 
 **B3, the writer**, and **B4, the merge gate's verdicts** — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *The builds* (2026-11-14 split).
 
 **B5, migration and the release's removals.** D11, D12. Location: `ledgerboard/__init__.py` (`split_board()`,
-refusing only by the ruling's two grounds (F147), `board_stub()`, `split_board_notes(files)`; `item_line()`, `decided_line()`, `edit_line()`, `item_problem()`,
+refusing only by the ruling's two grounds (F147) and a declared major not 1 or 2, `board_stub()`,
+`split_board_notes(files, board, archive="")` with its head note (D11, *rebased*); the shared rows' B5 parts above; `item_line()`, `decided_line()`, `edit_line()`, `item_problem()`,
 `canonical_item()`, `archive_closed()`, `archive_subject()`, `ARCHIVE_AT` removed, `closed_items()` removed from
 the public names and kept private as `_closed_lines()` for `parse_board()`'s within-file twin set, its one caller
 left once `board_problems()`' v2-text form, `archive_closed()` and `item_line()`'s read-back go (round 8's F125),
@@ -437,21 +575,23 @@ left once `board_problems()`' v2-text form, `archive_closed()` and `item_line()`
 B2's shims: `item_record()`'s `line`, `subject()`'s v2 form, the readers' v2-text and v2-line arguments,
 `BoardItem.text`, today's `_item_text()` and `_item_gate()`'s string form (D4's *`words` and `text`*, their callers
 gone; `words` keeps its name); `parse_board()` filling no `text`; the ledger's `FORMAT_MAJOR` untouched),
-`ledgerboard/board.py` (`split`), `SPEC.md` (text 1, 9's swap — v2's *Edits* removed and `## Edits (v3.0)` renamed `## Edits` — 8's *Migration* and its
+`ledgerboard/board.py` (`split`, `plan_split()`, `--archive` back in `TAKES` and `NEEDS_OPT` for `split` alone,
+the write gate's *split first*, the usage docstring), `SPEC.md` (text 1, 9's swap — v2's *Edits* removed and `## Edits (v3.0)` renamed `## Edits` — 8's *Migration* and its
 *Reading a board*'s "and no `line`", 2's words B2 left out, 13's retitle of *The open item line (v2.3)* B1 left out (TD-092's round 6's F253), 10's `split`, "(*split first*)" and ", and `split` removes the v2 archive", 12, 14's writer
-items),
+items, 15's ", given a `Board`,"),
 `fixtures/board_split/`, `fixtures/board/<case>.v3/`, `fixtures/board_writer/`
 (`split`, `split_exists`, and `write_v2_refused`'s message gaining *split first*), `fixtures/run.py` (`board_split_case`, `board_v3_case` with its tie groups compared as
 sets; `archive_case` and the retired `edit_cases` groups removed; `lift_cases`' `close`, `closes`, `item_lines` and
-`item_problems` groups over item files and `sweep_cases`' rerun over each v2 board's split, F150), `fixtures/lift/`
+`item_problems` groups over item files and `sweep_cases`' rerun over each v2 board's split, F150, and the sweep's
+`split_same`), `fixtures/sweep/alpha/` (regenerated from the split where it differs), `fixtures/lift/`
 (those groups, regenerated), `fixtures/archive/` and the retired
 `fixtures/edit/` groups, `tests/` (B5's bullet under *Unit tests*, F149). **Records:** `item_record()` loses `line`; every expected JSON holding a record
-regenerates: `fixtures/board/*.json`, `fixtures/board_dir/*/expected.json`, and `fixtures/board_writer/`'s `list`,
+regenerates: `fixtures/board/*.json` and `fixtures/board/twins_across/expected.json`, `fixtures/board_dir/*/expected.json`, and `fixtures/board_writer/`'s `list`,
 `list_v2` and `list_stub`. Done when: the precheck is green, every fixture passes, *The search*'s full search of
 `SPEC.md` finds no removed name outside the places it allows, and `board.py split` of this repo's own board, run on
 a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README.md`, F118).
 
-Order: B1, then B2, then B3 and B4 (either order), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
+Order: B1, then B2 (both merged), then B3 and B4 (either order; filed TD-103, then TD-104), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
 (round 9's F142). Then v3.0's release with TD-078's half (Paul's), this repo's own split, and each consumer's entry
 (agent-cadence's first).
 
