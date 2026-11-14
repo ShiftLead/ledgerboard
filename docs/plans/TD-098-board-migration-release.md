@@ -474,7 +474,9 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > field the v2 reader reads into the header field of the same name. v2.4's "no board action removes one" no longer holds:
 > `done`, a closing `decide` and `split` remove files. A v2.x module meets a v3 repo as the stub, which declares
 > `Ledgerboard: 3`: a reader that calls `version_problem()` refuses it, a writer refuses it unread, and a reader
-> that checks nothing reads an empty board, so a repo splits its board only once every reader of it runs v3.0.
+> that checks nothing reads an empty board, so a repo splits its board only once every reader that writes to it or
+> acts on it runs v3.0: its own tooling and the consumers that read it from elsewhere (a v2.x reader that only shows
+> another repo's board is the one exception, until its own repo moves to v3.0; round 2's F393).
 > Within v3.x the same holds for a field: a later minor's field is faulted by an older v3 gate, so **a consumer
 > writes a new field only once every reader of the board runs that release**. `Ledgerboard: 3` on a ledger means
 > nothing new here; the ledger's v3.0 changes are its own paragraph (TD-078).
