@@ -268,7 +268,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   their repo bumps they read a split board as empty: a sweep there sees no covering item and can file a duplicate
   on its own board, and a `set` there logs `no board item` for a decision the split board holds. ShiftLead's
   v2.x `gatesweep` and `workorders` read agent-cadence's split board as empty between (1) and (2), which (2)'s
-  readiness keeps short. **The default** (the author's, put as a steer to the team's techlead, 2026-11-14): (2), and of (3) this repo's
+  readiness keeps short. **The rollout** (the author's default, put as a steer, which Paul answered **One-day rollout**, 2026-11-14): (2), and of (3) this repo's
   own bump (ShiftLead's is (2); F444, round 6's F449), land by the end of the UTC day after (1) merged, so that
   is the window; a roster repo bumps when TD-100 has it do so, on v2.x tooling and a v2 board until then (TD-078's
   D5 and D7; round 5's F434); a duplicate an old-pin sweep files in it
