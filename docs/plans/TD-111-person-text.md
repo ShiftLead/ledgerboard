@@ -91,7 +91,8 @@ def person_text_problems(sentence: str | None, answers: Sequence[str] = (), cont
 def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[str] = ()) -> list[PersonTextProblem]
 ```
 
-**Departures from the source**, each named here and nowhere silent:
+**Departures from the source**, each named here and nowhere silent (the SPEC text is the contract once merged;
+this list is the review trail):
 - *signatures*, each additive: `actors=` (D1), `coined=` and `labels=` (D1) on `title_problems`; `sentence` may be
   `None`, which reads no rule 1, so a writer reads rule 4 alone on a detail block's context; `sentence_problems`
   returns `PersonTextProblem`s where the source leaves its type open. `PersonTextProblem` is a tuple, so a caller
@@ -152,6 +153,7 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   pattern the caller passes is the caller's to keep free of *P0*.
 - *the lines*: the source gives three examples; the shapes in the SPEC text are this plan's, and where an example
   disagrees with its own rule they follow the rule (rule 4 names the first three tokens).
+- *an `act`'s tail* is read as context (a rule-4 warning), where the source said the rest of its line is free.
 - *the actor bounds* add `/` and `-` (*us-east-1*, *I/O*, *my-app*, *agent-cadence* name no actor), where the
   source's let a word holding an actor before a `-` count.
 - *the actor gaps that depend on role nouns* (*this leads to*, *the builds start*) are the
@@ -345,9 +347,11 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
 > item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
 > - **a `decide` item**, two calls. The item's text is the text the writer is given for it (`item_file()`'s
->   `text`, after its whitespace collapse, before any line or file is written). Its **lead** is the text between
->   the `**`s of the `**…**` run the text opens with, when that run holds a non-space character; its **tail** is
->   the text after that run. A text that opens with no such run has no lead and no tail. First,
+>   `text`, collapsed and trimmed as `item_file()` does, before any line or file is written). Its **lead** is
+>   `bold_head(text)` (*The bold head*) when the text opens with that run (`BOLD_RE.match`), and none otherwise;
+>   its **tail** is the text after that run. A text with no lead has no tail. The lead is the board's headline,
+>   so it must stand as the question by itself; reading the lead and tail as one sentence was weighed and
+>   rejected, since a person scanning headlines would meet *Merge the PR* with no question in it. First,
 >   `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True, people=, actors=,
 >   default=)`, the context being the tail, then the detail block's parts `context`, `caveats` and `recommended`
 >   and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds the default's
@@ -356,9 +360,10 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >   lead is the whole question, so *\*\*Merge the PR\*\* now?* is refused (its lead has no `?`). Second, the
 >   detail block's `question`, `person_text_problems(<question>, question=True, people=, actors=)` with the same
 >   `people` and `actors`. The writer lists the first call's problems, then the second's, each line after the
->   name of the text it came from (`item: `, `detail question: `; a rule-4 line after `context: `), so a session
+>   name of the text it came from (`item: `, or `item (the bold part): ` when a lead was split off; `detail question: `; a rule-4 line after
+>   `context: `), so a session
 >   sees which to rewrite.
-> - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence. An
+> - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence and its tail context. An
 >   `act` whose text opens with no lead is refused by the writer, with the line *an act item leads with its task in
 >   bold* (a writer's refusal, not a `PersonTextProblem`). Example: *Reply to \*\*Dana\*\* about the budget* has
 >   no lead and is refused; *Should I merge \*\*#42\*\*?*, a `decide`, has no lead and is read whole.
@@ -388,7 +393,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 A new kind, `fixtures/person_text/cases.json` → `expected.json`, each case a call and its result: `code_tokens`'
 list, or the problems as `[rule, refuse, line]` lists, or `{"error": "ValueError"}`. Each SPEC example of the module's
 functions is a case, word for word; the examples of the writer's lead and tail are a consumer's cases, since the
-module has no function for that split.
+module has no function for that split: *  \*\*Merge?\*\** after leading spaces has a lead, and *\*\* \*\* Merge
+\*\*PR\*\*?* (a blank run) has none and is read whole.
 - **code_tokens**: *foo.py:42*, *foo.py:42.* and *src/foo.py:42* as one token each, *foo.py:42:7* and
   *foo.py:42-50* as the gap; one case per kind, with each spelling (a span with its backticks, `a code block`, a call's
   `()`); each known false positive and gap; an id (*TD-1845*, *#3878*, *F12*) and *v2.7.1* as none; `file(s)` and
