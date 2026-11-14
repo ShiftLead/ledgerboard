@@ -150,8 +150,9 @@ section, replacing it or adding it, in the same write as the fields. `plan_edit(
 by` now names the decision, so D3's refusal passes), and `gate()` judges the whole write once: the entry ends with
 both halves, so neither `ask-missing` nor `decision-missing` fires. `ask` is refused when the resulting `Blocked by`
 names no decision (the module's refusal, as for a lone `edit`), and when empty. It composes with a decision added,
-kept or reassigned; with one lifted by the gate route only if another decision remains. `new` already writes both
-at once.
+kept or reassigned; with one lifted by the gate route only if another decision remains. `plan_new()` already writes
+both at once (its `sections`); the `ledger.py new` command takes no Ask, so a new entry that waits on a person is
+filed and then given both with `set --ask` (or the build adds `new --ask`; it is not needed for the rule).
 
 **Removing one.**
 
@@ -194,16 +195,20 @@ field, Log line, prefix or item key is new, the canonical form is unchanged, and
 
 **What a consumer's flows need (F14, F15).** Two things change for a caller, and each consumer's vendor PR takes
 them with the release:
-- **A wait is written in one write.** Any flow that writes an Ask and then the gate, as two writer calls (agent-cadence's
-  cadence and ShiftLead's session briefs both describe *its Ask first, `ledger.py edit TD-n --section Ask`, then the
-  gate, `set --blocked-by`*), becomes `ledger.py set TD-n --blocked-by "<ids>, decision (<person>)" --ask FILE`. A
-  consumer's wrapper passes `--ask` through. The old order is refused at its first write.
+- **A wait is written in one write.** Any flow that writes an Ask and then the gate, as two writer calls, becomes `ledger.py set TD-n --blocked-by "<ids>, decision (<person>)" --ask FILE`. A
+  consumer's wrapper passes `--ask` through. The old order is refused at its first write. ShiftLead's session
+  briefs give that order (its design §4.4 *What waits on the person*: "its Ask first (`ledger.py edit TD-n --section
+  Ask --from <file>`, since `set` refuses a decision with no Ask), then the gate"). agent-cadence's pinned cadence.md
+  says only "give it `decision (<person>)` and an Ask through `ledger.py set`" (§2.4, §2.14), so how its wrapper
+  writes the two is agent-cadence's to check against v3.1. Ledgerboard's own cure for the old decision form (SPEC
+  *Retired words*: *write its text with `edit --section Ask`, then rewrite it `decision (<person>)` with `set`*)
+  still works, since the old form counts as a decision (D1), so its `edit` passes D3's refusal.
 - **`edit_entry()` refuses an Ask on an ungated entry.** A consumer that calls the module directly with
   `edit_entry(…, "edit", section="Ask")` before setting the gate gets `Refused`. A minor may add refusals (v2.4's
   `ask-missing` did); this one is named in *Versions* so a consumer finds it.
 So the design needs a consumer entry in each repo, filed there through its question seat once Paul gives the go:
-*agent-cadence: its cadence.md's wait-on-the-person steps and its `ledger.py` wrapper write the gate and its Ask with
-`set --ask` when it vendors ledgerboard v3.1*, and *ShiftLead: its briefs' and writer's wait-on-the-person steps do
+*agent-cadence: its `ledger.py` wrapper passes `set --ask` through, and its cadence.md's wait-on-the-person steps
+(§2.4, §2.14) name it, when it vendors ledgerboard v3.1*, and *ShiftLead: its briefs' and writer's wait-on-the-person steps do
 the same when its sync PR takes v3.1*.
 
 **What a consumer's existing entries need.** Nothing before it vendors. An open entry that already has an unanswered
