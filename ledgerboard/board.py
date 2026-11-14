@@ -491,7 +491,7 @@ def plan_add(board: str, text: str, *, due: str | None = None, context: str | No
 
 def _ledger_beside(board_path: str) -> str | None:
     """``ledger/`` beside the board (its normalised path), when it is a directory."""
-    beside = os.path.join(os.path.dirname(_norm(board_path)) or ".", "ledger")
+    beside = os.path.normpath(os.path.join(os.path.dirname(_norm(board_path)) or ".", "ledger"))
     return beside if os.path.isdir(beside) else None
 
 
@@ -591,7 +591,7 @@ def plan_edit(board: str, action: str, id: str, *, to: str | None = None,
         files = {here: new}
     changes = {**files, **changes}
     _gate(board, old, changes)
-    if shut is None:
+    if action != "done":  # a done leaves no open item; a decide that closes reports [] (D7)
         info["item_notes"] = _id_notes(load_board(old.path, *_overlay(changes)), id, day)
     msg = subject(tool, action, it.words, to=when, answer=answer, session=session or it.session, id=id)
     return Plan(action, msg, changes, info)
