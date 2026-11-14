@@ -399,9 +399,10 @@ consumer's, in its own repo.
     its `Kinds:` check alone stays, reduced to comparing a `Kinds:` line against `KINDS` (its per-kind probe,
     built from the `Format:` example through `parse_board`, goes with both), over `BOARDS` (:25) rewritten to the
     seed's `docs/user_attention/README.md` and agent-cadence's own board's `README.md` (the split carries the v2
-    head, its `Kinds:` line among it, into the README; never the stub, which has none); and the archive-wording
-    check's three files shrink to two, cadence.md and the procedure, the seed's wording going with the v2 seed
-    (F457, F459, round 7's F478, round 8's F490);
+    head, its `Kinds:` line among it, into the README; never the stub, which has none); its detail-label loop over
+    `BOARDS` (:198-200) retires with the `Format:` example it reads (F501); and the `ARCHIVE_AT` check goes whole, as
+    said above, over none of its three files, since the archive wording it compared is rewritten (F457, F459,
+    round 7's F478, round 8's F490, F500);
   - its cadence check (`check_cadence.py`): its existing board row, `row_board` (:2161, TD-206), is rewritten,
     not joined by a second (round 6's F454). Beside the ledger row (which reads the PR's ledger through
     `ledger_pair_at()` and fails on `v2_problems()`'s faults), it reads the head's board through `load_board()` and
@@ -416,7 +417,7 @@ consumer's, in its own repo.
     gained or changed (with `decided_by`, as :2101 does; round 8's F489) and `_item_gate(item)[1]`; `board_gate_answers()` (:2104-2117) pairs by id over the two `Board`s, still
     the pre-filter ahead of B4's `lift_pr_verdict()` in `row_lift_pr()` (:2457); and `_appends_gate_answer()`
     (:2520-2523) `_item_gate(item)` on each `BoardItem` the commit's added item files give, read through
-    `load_board()` at the commit where it parsed the diff's added lines (`_board_diff()`, defined at :1678, called at :2512; F479, round 8's F488) (the closing fact-check's F460, F461). `_direct_rules()`
+    `load_board()` at the commit where it parsed the diff's added lines (`_board_diff()`, defined at :1678, called there at :2513; F479, round 8's F488, F498) (the closing fact-check's F460, F461). `_direct_rules()`
     (:2060-2066), which calls `board_change_problems()`, goes with it; `classify_direct()` and its `gate_answer()`
     call (:2149) are TD-095's, whose rule (item files added directly, each with a `Due:`) replaces it (F462). The
     done-when's grep covers each name that goes; `precheck.py` runs the repo's own command and reads no board;
@@ -446,10 +447,11 @@ consumer's, in its own repo.
     (:1022-1025) still reads a v2 board file, and a v3 board is judged by its directory's `board_dir_problems()`
     instead, since a list in the README is prose the scan would take for a malformed item (round 7's F476, round 8's
     F492); and the board leaves `_format_problems()`'s
-    text loop (:1007-1015), whose `version_problem(texts[f])` reads a text against `FORMAT_MAJOR` 2 and would refuse
+    text loop (:975-983, its `version_problem(texts[f])` at :982; round 8's F497), whose `version_problem(texts[f])` reads a text against `FORMAT_MAJOR` 2 and would refuse
     the stub's and the README's `Ledgerboard: 3`, in `adopt` and `--migrate` both: the board's version is checked
     by `version_problem(load_board(...))` instead (round 8's F485), its `ls` the file system's, listing
-    subdirectories as `ledger.py`'s file-system `io` does (TD-095's F406), so `archive/` is read (F495).
+    subdirectories as `ledger.py`'s `fs_io()` does once TD-095's B4 lands (TD-092's D6; at agent-cadence's
+    origin/main today, :224-226, it lists files only), so `archive/` is read (F495, F499).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
   - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), its ledger first
     meeting TD-078's D5, landed as D11 says when no open PR
