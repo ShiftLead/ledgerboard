@@ -248,8 +248,11 @@ archive files the consumer fetches.
   neither a file under `BOARD_DIR/` nor a v2 board at `BOARD_V2_PATH` (`form` None: a stub with no directory is
   no board, F330), takes review (`lift-no-board`, its message naming
   `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or head (`lift-board-v2`); then a stray path in `files` (`lift-files`,
-  above); then board changes that are not one item's (`lift-board-diff`); then one item's change that is not an
-  open, never-answered decide gaining a `Decided:` (`lift-board-diff`, (b)'s; F344); then the checks from
+  above); then board changes that are not one item's (`lift-board-diff`); then one item's change whose base file is no
+  open item, or whose head file is no item file (open or closed) of that id (`lift-board-diff`, (b)'s, today's
+  *is not one open item answered in place* check on a line; F344, round 6's re-check's F347: whether it is a
+  decide, has one gate, was answered or gains a `Decided:` stays with `lift-no-gate`, `lift-reanswer` and
+  `lift-not-answered`); then the checks from
   `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and (a) before the `Decided:` by
   and date), the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
   path and bytes (`lift-board-line`) last, where today's byte compare is.
@@ -267,9 +270,9 @@ archive files the consumer fetches.
   `<path> is under docs/user_attention/ but neither an item file in it nor one under archive/<YYYY-MM>/`; the
   shape's `lift-board-diff` is `the board changes are not one item's file changed in place or moved to archive/`,
   replacing today's *not one item line changed in place* and *changes its line ending* (a file's bytes are
-  `lift-board-line`'s); (b)'s `lift-board-diff`, one item's change that is not an open, never-answered decide gaining a
-  `Decided:`, is `the changed board file is not one open item answered in place or moved to archive/` (round 6's
-  closing fact-check's F344); `lift-board-line` is `<path> at the head is not what the decide edit
+  `lift-board-line`'s); (b)'s `lift-board-diff`, one item's change whose base file is no open item or whose head file is no item
+  file of that id, is `the changed board file is not one open item's file, changed in place or moved to archive/`
+  (round 6's closing fact-check's F344, its re-check's F347); `lift-board-line` is `<path> at the head is not what the decide edit
   writes at <item_path(id, closed)>`; the early `lift-files` of a path in `files` outside the board's and the
   ledger's paths is `the PR changes <path>, outside the board and the ledger` (round 6's closing fact-check's F342,
   the first such path in sorted order, a fixture `v3_lift_outside_path` pinning it). Every other message keeps today's text, a list of `files` it printed now the
@@ -371,8 +374,8 @@ After the list, add:
 > board) takes review (`lift-no-board`, naming `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or
 > head (`lift-board-v2`); then a path in the file list outside `BOARD_DIR/`, `LEDGER_DIR/`, `LEDGER_V1_PATH` and the v1 archive, or under `BOARD_DIR/`
 > but neither directly in it nor under `archive/<YYYY-MM>/` (`lift-files`); then board changes that are not one
-> item's, then one item's change that is not an open, never-answered decide gaining a `Decided:` (both
-> `lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
+> item's, then one item's change whose base file is no open item or whose head file is no item file of that id
+> (both `lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
 > (a) before the `Decided:` by and date), and last the head file's path and
 > bytes (`lift-board-line`).
 
