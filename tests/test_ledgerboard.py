@@ -19,6 +19,12 @@ import ledgerboard as L  # noqa: E402
 
 TODAY = date(2026, 1, 15)  # the UTC date pickable() and check() take (v2.4)
 
+
+def v2board(text: str, archive: str = "") -> "L.Board":
+    """A v2 board's text (and its archive's) read as the ``Board`` its readers take (v3.0 removed the text forms)."""
+    files = {"board.md": text, "board_archive.md": archive}
+    return L.load_board("board.md", lambda p: None, files.get)
+
 LEDGER = """# Ledger
 
 ## TD-001: One
@@ -88,20 +94,19 @@ class Check(unittest.TestCase):
 
 
 class Edits(unittest.TestCase):
-    def test_every_edit_keeps_the_item_key(self):
-        line = "- [ ] decide 2026-01-05 (session s) — Pick. Due: 2026-01-10. Answers: a | b."
-        t = date(2026, 1, 15)
-        for action, kw in (("done", {}), ("snooze", {"to": t}), ("decide", {"answer": "a"}),
-                           ("reply", {"reply": "ok", "by": "Sam"})):
-            self.assertEqual(L.item_key(L.edit_line(line, action, today=t, **kw)), L.item_key(line), action)
+    ID = "2026-01-05-0a0b0c0d"
 
     def test_subjects_classify(self):
         for action in L.EDIT_ACTIONS:
-            s = L.subject("tool", action, "2026-01-05 (session s) — X. Due: 2026-01-10.", to="2026-01-20", answer="a")
+            s = L.subject("tool", action, "X", id=self.ID, to="2026-01-20", answer="a")
             self.assertEqual(L.subject_kind(s), "edit", s)
-        self.assertEqual(L.subject_kind(L.subject("tool", "append", "2026-01-05 (session s) — X.")), "append")
+        self.assertEqual(L.subject_kind(L.subject("tool", "append", "X", id=self.ID)), "append")
         with self.assertRaises(L.Refused):
-            L.subject("tool", "erase", "x")
+            L.subject("tool", "erase", "x", id=self.ID)
+
+    def test_a_subject_takes_an_id(self):  # v3.0 removed the form with no id
+        with self.assertRaises(TypeError):
+            L.subject("tool", "append", "X")  # type: ignore[call-arg]
 
 
 RANKED = """# Ledger
@@ -323,19 +328,21 @@ class AnswerConsequences(unittest.TestCase):
         self.assertEqual(L.parse_consequences(text), ["the next run reads it back", "cold — every time", ""])
         self.assertEqual(L.parse_default(text), "On disk")
 
-    def test_decided_line_reads_back_as_written(self):
-        line = L.decided_line("Pick", "TD-40", ["On disk — the next run reads it back", "Not now"], 0, "On disk", "2026-01-15")
-        text = line[len("- [ ] "):].rstrip("\n")
-        self.assertEqual(L.parse_answers(text), ["On disk", "Not now"])
-        self.assertEqual(L.parse_consequences(text), ["the next run reads it back", ""])
-        self.assertEqual(L.parse_default(text), "On disk")
+    FILE = ("## Pick\n\n**Kind:** decide\n**Added:** 2026-01-05\n**Session:** s-1\n**Context:** TD-040\n"
+            "**Due:** 2026-01-20\n**Answers:** On disk (default) — the next run reads it back | In memory — cold — every "
+            "time | Not now\n\n**Context:** c.\n")
+
+    def test_decided_file_reads_back_as_written(self):
+        got = L.parse_item(L.decided_file("Pick", "TD-40", ["On disk — the next run reads it back", "Not now"], 0,
+                                          "On disk", "2026-01-15"))
+        self.assertEqual(got.answers, ["On disk", "Not now"])
+        self.assertEqual(got.consequences, ["the next run reads it back", ""])
+        self.assertEqual(got.default, "On disk")
 
     def test_a_decide_edit_records_the_label_and_keeps_the_consequences(self):
-        out = L.edit_line(self.LINE, "decide", answer="In memory", today=date(2026, 1, 15))
-        text = out[len("- [ ] "):].rstrip("\n")
-        self.assertEqual(L.parse_decided(text), ("In memory", date(2026, 1, 15)))
-        self.assertEqual(L.parse_consequences(text), ["the next run reads it back", "cold — every time", ""])
-        self.assertEqual(L.item_key(out), L.item_key(self.LINE))
+        got = L.parse_item(L.edit_item(self.FILE, "decide", answer="In memory", today=date(2026, 1, 15)))
+        self.assertEqual(got.decided, ("In memory", date(2026, 1, 15)))
+        self.assertEqual(got.consequences, ["the next run reads it back", "cold — every time", ""])
 
     def test_spacing_around_a_consequence_is_not_part_of_it(self):
         self.assertEqual(L.split_answer("A —   leads on  "), ("A", "leads on", False))
@@ -344,24 +351,19 @@ class AnswerConsequences(unittest.TestCase):
         self.assertEqual(L.split_answer("B —"), ("B", "", False))
 
     def test_deciding_the_default_keeps_its_mark_and_consequence(self):
-        out = L.edit_line(self.LINE, "decide", answer="On disk", today=date(2026, 1, 15))
-        text = out[len("- [ ] "):].rstrip("\n")
-        self.assertEqual(L.parse_decided(text), ("On disk", date(2026, 1, 15)))
-        self.assertEqual(L.parse_default(text), "On disk")
-        self.assertEqual(L.parse_consequences(text)[0], "the next run reads it back")
-
-    def test_decided_line_refuses_a_consequence_shaped_like_a_reply(self):
-        with self.assertRaises(L.Refused):
-            L.decided_line("Pick", "TD-40", ["A — Sam, 2026-01-01: yes", "B"], 0, "A", "2026-01-15")
+        got = L.parse_item(L.edit_item(self.FILE, "decide", answer="On disk", today=date(2026, 1, 15)))
+        self.assertEqual(got.decided, ("On disk", date(2026, 1, 15)))
+        self.assertEqual(got.default, "On disk")
+        self.assertEqual(got.consequences[0], "the next run reads it back")
 
     def test_a_look_reads_its_labels_with_consequences_beside(self):
         text = "look 2026-01-05 (session s-1) — Renders? Due: 2026-01-20. Answers: Works — ship it | Not right: <what> — fix first."
         self.assertEqual(L.parse_answers(text), ["Works", "Not right: <what>"])
         self.assertTrue(L.is_not_right_form(L.parse_answers(text)[1]))
 
-    def test_decided_line_writes_one_mark_and_no_empty_consequence(self):
-        line = L.decided_line("Pick", "TD-40", ["A — x (default)", "B — ", "C"], 0, "A", "2026-01-15")
-        self.assertIn("Answers: A (default) — x | B | C.", line)
+    def test_decided_file_writes_one_mark_and_no_empty_consequence(self):
+        text = L.decided_file("Pick", "TD-40", ["A — x (default)", "B — ", "C"], 0, "A", "2026-01-15")
+        self.assertIn("**Answers:** A (default) — x | B | C\n", text)
 
 
 
@@ -422,8 +424,8 @@ class Lifts(unittest.TestCase):
     """v2.4: lifting a gate writes the UTC date, and the decide lift composes lift_gate (SPEC *Lifting a gate*)."""
 
     ENTRY = "## TD-001: x\n\n**Priority:** Low\n**Blocked by:** until 2026-01-15\n\n**Why:** w.\n"
-    ITEM = ("- [ ] decide 2026-01-10 (n/a) — Go? Context: TD-002 decision (pat). Due: 2026-01-20. "
-            "Answers: Go | Not yet.")
+    ITEM = ("## Go?\n\n**Kind:** decide\n**Added:** 2026-01-10\n**Context:** TD-002 decision (pat)\n"
+            "**Due:** 2026-01-20\n**Answers:** Go | Not yet\n")
     GATED = "## TD-002: y\n\n**Priority:** Low\n**Blocked by:** decision (pat)\n\n**Ask:** go?\n"
 
     def test_a_lift_is_dated_by_the_utc_day(self):
@@ -493,7 +495,7 @@ class DetailRecommended(unittest.TestCase):
     """TD-069: the writer opens a decide's Recommended with its default's label; words that already do are refused."""
 
     def line(self, recommended):
-        return L.item_line("Go on?", "2026-01-20", "2026-01-15", "w-1", None, "TD-4", kind="decide",
+        return L.item_file("Go on?", "2026-01-20", "2026-01-15", "w-1", None, "TD-4", kind="decide",
                            answers=["Go — it ships", "Not yet"], default=0,
                            detail={"context": "c.", "question": "q?", "recommended": recommended})
 
@@ -518,25 +520,24 @@ class Parts(unittest.TestCase):
                "TD-9": PART.format("TD-9"), "TD-10": PART.format("TD-10")}
 
     def line(self, context="TD-4 decision (pat)", parts=("TD-10", "TD-9")):
-        return L.item_line("Go on the builds?", "2026-01-20", "2026-01-15", "w-1", None, context, kind="decide",
+        return L.item_file("Go on the builds?", "2026-01-20", "2026-01-15", "w-1", None, context, kind="decide",
                            answers=["Go", "Not yet"], detail=self.DETAIL, parts=list(parts))
 
-    def test_the_line_reads_back_with_its_parts_in_number_order(self):
-        got = L.parse_board(self.line(), warn=False)
-        self.assertEqual(got[0].parts, ["TD-9", "TD-10"])
+    def test_the_file_reads_back_with_its_parts_in_number_order(self):
+        self.assertEqual(L.parse_item(self.line()).parts, ["TD-9", "TD-10"])
         self.assertEqual(L.parts_problems(self.line(), self.ENTRIES), [])
 
     def test_a_tuple_of_parts_is_a_list(self):
-        self.assertIn(" Parts: TD-9, TD-10. Due:", self.line(parts=("TD-9", "TD-10")))
+        self.assertIn("**Parts:** TD-9, TD-10\n", self.line(parts=("TD-9", "TD-10")))
 
-    def test_item_line_and_parts_problems_share_their_line_faults(self):
+    def test_item_file_and_parts_problems_share_their_faults(self):
         for context, parts in (("TD-4, TD-5 decision (pat)", ["TD-9"]), ("TD-4 event (go)", ["TD-9"]),
                                ("TD-4 decision (pat) — later", ["TD-9"]), ("TD-4 decision (pat)", ["TD-9", "TD-009"]),
                                ("TD-4 decision (pat)", ["TD-004"]), ("TD-4 decision (pat)", ["other#TD-9"])):
             with self.assertRaises(L.Refused) as r:
                 self.line(context, parts)
-            hand = (f"- [ ] decide 2026-01-15 (n/a) — Go? Context: {context}. Parts: {', '.join(parts)}. "
-                    "Due: 2026-01-20. Answers: Go | Not yet.")
+            hand = (f"## Go?\n\n**Kind:** decide\n**Added:** 2026-01-15\n**Context:** {context}\n"
+                    f"**Parts:** {', '.join(parts)}\n**Due:** 2026-01-20\n**Answers:** Go | Not yet\n")
             self.assertEqual(L.parts_problems(hand, self.ENTRIES), [f"item: {r.exception}"])
 
     def test_inputs_json_cannot_carry(self):
@@ -567,11 +568,13 @@ class Parts(unittest.TestCase):
         keys = ["TD-4", "TD-9", "TD-009", "TD-10", "x", 9, None, b"TD-9", "TD-" + "1" * 5000]
         values = [self.ENTRIES["TD-4"], self.ENTRIES["TD-9"], "words", None, 5, b"bytes", self.PART.format("TD-009")]
         for _ in range(1500):
-            line = "- [ ] decide 2026-01-15 (n/a) — " + " ".join(rnd.choice(words) for _ in range(rnd.randint(0, 14)))
+            line = ("## Go?\n\n**Kind:** decide\n**Added:** 2026-01-15\n**Context:** "
+                    + " ".join(rnd.choice(words) for _ in range(rnd.randint(0, 7))) + "\n**Parts:** "
+                    + " ".join(rnd.choice(words) for _ in range(rnd.randint(0, 7))) + "\n")
             ents = {rnd.choice(keys): rnd.choice(values) for _ in range(rnd.randint(0, 5))}
             archived = rnd.choice([(), ["TD-9"], "TD-9", None, 5, [None, "TD-4", 5]])
             self.assertIsInstance(L.parts_problems(line, ents, archived), list)
-            self.assertIsInstance(L.parts_problems(line.replace("decide 2026-01-15 (n/a) — ", ""), rnd.choice(
+            self.assertIsInstance(L.parts_problems(line.replace("**Kind:** decide\n", ""), rnd.choice(
                 [ents, None, 5, "x"]), archived), list)
 
 
@@ -583,7 +586,7 @@ class Doer(unittest.TestCase):
         self.assertEqual(L.PARTS_RE.match(" Parts: TD-4. Doer: acme.").group("ids"), "TD-4.")
 
     def test_every_field_name_set_finds_it(self):
-        for name in ("FIELDS_RE", "FIELD_NAME_RE", "ANY_FIELD_RE", "WRITER_FIELD_RE", "GATE_FIELD_RE"):
+        for name in ("WRITER_FIELD_RE", "GATE_FIELD_RE"):
             with self.subTest(name=name):
                 m = getattr(L, name).search("x Doer: y")
                 self.assertIsNotNone(m)
@@ -607,10 +610,14 @@ class AnswerForms(unittest.TestCase):
         with self.assertRaises(TypeError):
             L._lifting("Go", None)  # type: ignore[call-arg]
 
+    FILE = ("## Go on the build?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n"
+            "**Context:** TD-12 decision (pat)\n**Due:** 2026-01-20\n**Answers:** Go | Hold: <note> | Hold: later\n"
+            "**Lifts:** Hold: <note>\n")
+
     def test_decide_writes_the_fill_once(self):
-        new = L.edit_line(self.LINE, "decide", answer="hold:  the vendor", by="pat", today=date(2026, 1, 15))
-        self.assertEqual(L.parse_decided(new)[0], "Hold: the vendor")
-        again = L.edit_line(self.LINE, "decide", answer="Hold: the vendor", by="pat", today=date(2026, 1, 15))
+        new = L.edit_item(self.FILE, "decide", answer="hold:  the vendor", by="pat", today=date(2026, 1, 15))
+        self.assertEqual(L.parse_item(new).decided[0], "Hold: the vendor")
+        again = L.edit_item(self.FILE, "decide", answer="Hold: the vendor", by="pat", today=date(2026, 1, 15))
         self.assertEqual(new, again)
 
 
@@ -1109,8 +1116,8 @@ class NextId(unittest.TestCase):
 class GateSweep(unittest.TestCase):  # v2.4: odd inputs the fixtures do not carry (ledgerboard TD-031)
     LEDGER = ("# Ledger\n\nLedgerboard: 2\n\n## TD-301: An event\n\n**Priority:** Low\n**Added:** 2026-08-01\n"
               "**Status:** Open\n**Blocked by:** event (x-ready), decision (pat)\n\n**Ask:** Go ahead?\n")
-    BOARDS = [("git@example.com:Acme/Own.git", "own", "People: kim\n\n", ""),
-              ("git@example.com:acme/other.git", "other", "People: pat\n\n", "")]
+    BOARDS = [("git@example.com:Acme/Own.git", "own", v2board("People: kim\n\n")),
+              ("git@example.com:acme/other.git", "other", v2board("People: pat\n\n"))]
 
     def run_sweep(self, results, today_local="2026-11-03"):
         return L.sweep([self.LEDGER], self.BOARDS, results, "2026-11-03", today_local, repo="acme/own")
@@ -1140,7 +1147,7 @@ class UnliftedAnswer(unittest.TestCase):  # v2.7 (TD-056): a lifting answer clos
                 f"**Blocked by:** {gate}\n" + (f"\n**Log:**\n{log}" if log else ""))
 
     def run_sweep(self, ledger, board):
-        got = L.sweep(["# Ledger\n\nLedgerboard: 2\n\n" + ledger], [("git@example.com:acme/own.git", "own", board, "")],
+        got = L.sweep(["# Ledger\n\nLedgerboard: 2\n\n" + ledger], [("git@example.com:acme/own.git", "own", v2board(board))],
                       {}, "2026-11-03", "2026-11-03", repo="acme/own")
         return [(i["kind"], i["context"]) for i in got["to_file"].get("example.com/acme/own", [])], got["to_close"]
 
@@ -1166,15 +1173,16 @@ class UnliftedAnswer(unittest.TestCase):  # v2.7 (TD-056): a lifting answer clos
 
     def test_the_act_carries_its_detail(self):
         got = L.sweep(["# Ledger\n\nLedgerboard: 2\n\n" + self.entry(1)],
-                      [("git@example.com:acme/own.git", "own", self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)"),
-                        "")], {}, "2026-11-03", "2026-11-03", repo="acme/own")
+                      [("git@example.com:acme/own.git", "own",
+                        v2board(self.BOARD + self.ANSWER.format(n=1, gate="decision (pat)")))],
+                      {}, "2026-11-03", "2026-11-03", repo="acme/own")
         act = got["to_file"]["example.com/acme/own"][0]
         self.assertEqual(act["text"], "decision (pat) on TD-1 was answered with a lift on 2026-10-25 but still stands "
                                       "on TD-1: lift it.")
         self.assertEqual(act["detail"]["question"], "Lift the gate by hand, or ask the question again?")
-        line = L.item_line(act["text"], "2026-11-10", "2026-11-03", "sweep", None, act["context"], kind="act",
+        text = L.item_file(act["text"], "2026-11-10", "2026-11-03", "sweep", None, act["context"], kind="act",
                            detail=act["detail"])
-        self.assertEqual(L._sweep_head(line), "unlifted")
+        self.assertEqual(L._sweep_head(L.parse_item(text).words), "unlifted")
 
 
 class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not carry (ledgerboard TD-032)
@@ -1214,8 +1222,7 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
     def test_aware_datetimes_are_their_utc_dates(self):
         base, head = self.trees("a lift, closed in the same write")
         files = sorted(set(head) - set(base) | {p for p in head if base.get(p) != head[p]})
-        subject = L.subject("board", "decide", "decide 2026-01-06 (session `w-1`) — Warm the cache nightly?",
-                            answer="Go", session="w-1")
+        subject = "board: decide Warm the cache nightly?: Go (session w-1)"  # a v2.x subject, as written
         late = datetime(2026, 1, 15, 23, 30, tzinfo=timezone(timedelta(hours=-7)))  # 2026-01-16 in UTC
         got = L.lift_pr_verdict(base, head, files, subject, 1, late, late, "acme/widgets")
         self.assertTrue(got["carve_out"], got)
@@ -1354,7 +1361,7 @@ class SplitBoard(unittest.TestCase):  # v3.0 (TD-108, TD-098's B5): split_board(
             new = L.load_board("", L._dict_ls(files), files.get)
 
             def recs(items):
-                return {it.id: {k: v for k, v in L.item_record(it, day).items() if k not in ("path", "line")}
+                return {it.id: {k: v for k, v in L.item_record(it, day).items() if k not in ("path",)}
                         for it in items}
             self.assertEqual(recs(old.items), recs(new.items), name)
             self.assertEqual(recs(old.closed), recs(new.closed), name)

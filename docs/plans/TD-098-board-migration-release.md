@@ -2,7 +2,7 @@
 
 **Status:** Draft 2, 2026-11-14 (session lb-designer). Draft 1 was TD-070's plan's B5 text (D11, D12, *Consumers*, the `SPEC.md` texts, fixtures, tests and builds that are B5's), moved unchanged; draft 2 rebases it on TD-092's plan (B1 and B2, merged as TD-093 and TD-094) and TD-095's (B3 and B4, merged as TD-103, #306, and TD-104, #307), each change marked *rebased*, and decides what those plans leave to B5 (the head note, `board.py split`, `fixtures/sweep/alpha/`, the *Versions* text). Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: six ran, the cap, and Paul bought a seventh (TD-105, 2026-11-14); record `docs/reviews/TD-098.md`, R63–R93, F351–F484. Build-changing per design review 3, 2, 2, 4, 2, 3, 3 (fact-checks 8, 1, 3, 1, 3, 1, 3; closing fact-checks of rounds 6 and 7: 3, 1). Recurring: the release order (F376, F393, F400, F401, F409, F420), redesigned in round 4 (every repo bumps and splits in one PR), judged sound by round 5's review, Paul choosing the one-day rollout (2026-11-14); and agent-cadence code lines the plan had not named (F442–F480), which round 7 answers with *Consumers*' rule and its done-when, a pattern grep and a behavioural half (each reader run over agent-cadence's own board before and after its split), the design review judging the rule right. Round 7's design review raised three build-changing findings (F474–F476) and its closing fact-check one (F480), applied and unread by a design review. The end-of-rounds item is on the board again (`TD-098 decision (paul)`).
 
-**Entry:** [TD-098](../ledger/TD-098.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-098's Fix (Paul's Split
+**Entry:** [TD-098](../ledger/archive/TD-098.md), `Part of` [TD-070](../ledger/archive/TD-070.md). **Source:** TD-098's Fix (Paul's Split
 on TD-095's scope, decided 2026-11-13: B3 and B4 TD-095's, B5 here); [TD-070's plan](TD-070-board-directory.md),
 draft 11, from which every section here is moved unchanged (its scope S1–S10, Paul's Go of 2026-11-11, kept as each
 decision's source); [TD-092's plan](TD-092-board-item-reader.md), draft 10, Go'd (B1 and B2); [TD-095's
@@ -817,6 +817,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     (`parse_closed_items()`, kept) stays; `expected.json` regenerates with the same verdicts, but for
     `answered_by`'s `problems`, which become `[path, problem]`, the path the one-file map's name where a line
     number stood (`answered_by_problems()` of a `Board`; F374).
+  - **`fixtures/grammar/`** (B5's step, Paul's answer to the build's steer, 2026-11-14): its `item-line` start, with
+    its cases and expected verdicts, is deleted, since `item_problem()`, the open item line's judge, goes and no module
+    function then gives a verdict to hold. SPEC keeps the `item-line` EBNF as the v2 line's description, which v3.x
+    still reads; `tests/test_grammar.py` names it in `V2_READ_ONLY`, the productions its coverage test exempts.
 - **Retired**: `fixtures/archive/` (with `archive_closed()`), and `fixtures/edit/cases.json`'s groups `compose`,
   `edits`, `item_problems`, `canonical_items` and `archive_subjects` (B5; TD-092's plan places the rest).
 - **The runner** (`fixtures/run.py`, every build's kinds) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split).
@@ -830,6 +834,9 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   items back runs over the fixture boards that split, every `fixtures/board/` case with a `.v3/` (F147; not `undated_twins`
   or `words_prefix`, TD-092's F213, nor `closed_no_day`, TD-092's F231), and
   each accepted `board_split` case, never a refused one.
+  `tests/test_grammar.py` gains `V2_READ_ONLY = {"item-line"}`, exempting the v2 line's production from its test that
+  every grammar start has fixture cases (*Fixtures*, `fixtures/grammar/`'s B5 step; Paul, 2026-11-14), which amends
+  TD-092's plan's word that it is unchanged in code.
 - `tests/test_ledger_writer.py` and `tests/test_release.py` change in no build.
 
 ## The builds

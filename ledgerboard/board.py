@@ -567,7 +567,7 @@ def plan_edit(board: str, action: str, id: str, *, to: str | None = None,
     if (ledger is not None or board_only) and action != "decide":
         raise Refused("--ledger and --board-only are a decide's")
     if action == "done" and why is not None:
-        why = re.sub(r"[\s.?!]+\Z", "", " ".join(why.split()))  # collapsed, then stripped, as edit_line() does (D7)
+        why = re.sub(r"[\s.?!]+\Z", "", " ".join(why.split()))  # collapsed, then stripped, as v2.x's edit_line() did (D7)
     if action == "decide" and isinstance(answer, str) and answer.strip():
         answer = fill_form(answer, it.answers) or answer  # v2.8: filled once, so board, ledger and subject agree
     if action == "decide":

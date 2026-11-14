@@ -60,7 +60,7 @@ read as absent; round 9: the split refuses only what it cannot place or would re
 Class: **wide** (a new
 major of a vendored, published format, read and written by both consumers; cap 6 rounds, cadence.md §4.8).
 
-**Entry:** [TD-070](../ledger/TD-070.md). **Source:** the entry's Why and Fix; the scope (S1–S10, kept as each
+**Entry:** [TD-070](../ledger/archive/TD-070.md). **Source:** the entry's Why and Fix; the scope (S1–S10, kept as each
 decision's source below); [target design](target-design.md) §7.1's v3.0 row; `SPEC.md` *The board*, *Edits*, *The
 board writer*, *The merge gate's verdicts*, *The ledger as a directory* (the precedent), *Ledger entries and their
 edits* (the grammar the item file reuses); both consumers' pinned code, read 2026-11-11 (cited by file and function).

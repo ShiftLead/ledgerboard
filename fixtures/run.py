@@ -40,42 +40,33 @@ Fixtures, each an invented input and its expected JSON:
   exist; its ``unreadable`` paths read as None) through ``load_board()`` — its form, major, path and problems, its
   reads as ``board/``'s, ``board_dir_problems()`` and ``version_problem()``, and with ``since`` the ids such a read
   gives — against ``expected.json``.
-- ``edit/cases.json`` → ``edit/expected.json``: ``edit_line()``,
-  ``item_line()``/``decided_line()``, the line predicates, the version reader (v1.0), and
+- ``edit/cases.json`` → ``edit/expected.json``: the line predicates, the version reader (v1.0), and
   ``bold_head()`` (from v3.0 a heading too, read whole), ``is_not_right_form()`` and ``fill_not_right()`` (v1.1), and the rank —
   ``queue_subject()``, ``implicit_key()``, ``key_order()``, ``midpoint()``, ``rank()``, ``set_rank()``,
   ``rank_path()`` and ``components()`` of a ledger fixture's entries (v1.2), and ``respace()`` (v2.3), and
   ``split_notes()`` of a README and ``item_notes()`` of a line, or (v3.0) of an item file, at the file's ``today``
-  (v2.4); an answer's
-  consequence — ``item_record()``'s ``consequences`` and ``decided_line()``'s marked label (v1.3); ``item_line()``'s
-  ``kind``, ``answers``, ``default`` and ``detail``, passed when a case carries them, with a case's own
-  ``today`` in place of the file's (v2.3); ``item_problem()`` and ``canonical_item()``
-  (v2.3; ``board_problems()`` moved to ``item/``'s ``gate``, v3.0), ``archive_subject()`` (v2.3), and ``Hide until`` (v2.3): ``item_key()`` of lines
-  that carry one, ``item_line(hide_until=)``, and ``snooze``/``due``; and who answered (v2.3): ``decide``'s
-  and ``decided_line()``'s ``by``, and ``board_problems()`` of a board's ``People:`` line; and ``Parts:`` and ``Lifts:`` (v2.3): read,
-  ordered and keyed, through every edit, ``item_line(lifts=)`` and the item gate; and ``item_line(parts=)`` (v2.6):
-  the snapshot written in number order, spelled as given, and each of its refusals; and ``Doer:`` (v2.8): read,
-  faulted and kept through every edit, ``item_line(doer=)`` and its refusals; and answer forms (v2.8):
-  ``is_form()``, ``form_head()`` and ``fill_form()``, a fill written by ``decide``, and the two new refusals.
+  (v2.4); ``item_key()`` of lines that carry a ``Hide until`` (v2.3); and answer forms (v2.8): ``is_form()``,
+  ``form_head()`` and ``fill_form()``. v3.0 retired its groups of the v2 line writers (``edit_line()``,
+  ``item_line()``, ``decided_line()``, ``item_problem()``, ``canonical_item()``, ``archive_subject()``); their
+  item-file counterparts are ``item/``'s.
 - ``item/cases.json`` → ``item/expected.json`` (v3.0): the board's item file — ``parse_item()`` of each file at its
   path, printed as ``item_attrs()`` and ``item_fields()``; ``item_file()`` and ``decided_file()``, every file they write
   judged by ``item_file_problem()``; ``edit_item()`` of each edit; ``item_file_problem()`` and ``canonical_item_file()``;
   the ids (``item_id()``, ``is_item_id()``, ``item_path()``, ``key_id()``, a raised ValueError recorded as
-  ``{"raises": "ValueError"}``); and the commit subjects of a board write, v2 and v3 — ``subject()`` with and
-  without ``id``, ``subject_kind()``, ``edit_action()`` and ``subject_id()`` (``edit/``'s subject groups, moved here);
+  ``{"raises": "ValueError"}``); and the commit subjects of a board write — ``subject()``, which takes an ``id``
+  (v3.0 removed the form with none), and, of v2 and v3 subjects alike, ``subject_kind()``, ``edit_action()`` and ``subject_id()`` (``edit/``'s subject groups, moved here);
   the gate, ``board_problems()`` over ``Board``s (``gate``, each board a ``{path, files}`` read through
   ``load_board()``); and D7's one rule for a string, ``closes()`` and ``parts_problems()`` of an item file and of
-  v2 strings (``strings``).
+  v2 strings (``strings``), which v3.0 takes as no item: ``closes()`` refuses one, ``parts_problems()`` gives ``[]``.
 - ``sweep/cases.json`` → ``sweep/expected.json`` (v2.4): ``sweep()`` and ``covers()`` over ``sweep/``'s ledger and
   boards, each read whole through ``load_board()`` (v3.0: a board names its file, its archive beside it as
   ``<stem>_archive.md``, or a ``dir``; ``to_close`` lists ids, ``covers()`` names each item by id); the ``sets``,
-  each its own boards over the same ledger; and ``split``, a run with a v2 board replaced by its split directory,
-  compared as two reads of one board are; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's line against its own entries and
+  each its own boards over the same ledger; ``rerun``, over each v2 board's split (v3.0), the first run's closes and
+  filings made there; and ``split``, a run with a v2 board replaced by its split, made in memory, compared as two
+  reads of one board are; and ``parts_problems()`` (v2.6) of each ``parts_problems`` case's item file against its own entries and
   ``archived``, with, where the case asks, ``covers()`` of each listed part on a one-item board holding the line,
   and the ``decide_lift()`` cross-check of a ``Go``. From v2.7, a lifting answer closed with no lift (TD-224 to
   TD-269): the ``act`` that says its lift is owed, held entries, its close, and a run's own ``reask_days``.
-- ``archive/<case>.board.md`` and ``<case>.archive.md`` → ``<case>.json`` (v2.3): ``archive_closed()`` of the
-  two, read as bytes, or its refusal.
 - ``ledger/belowheader.md`` (TD-049): a ``decision`` gate below the header block — ``check()`` gives its ℹ and
   reads on, where v2.4 raised, so the next entry's reassign note still comes.
 - ``ledger/parts.md`` (v2.1): ``Part of`` — a parent with open and with archived parts, the order,
@@ -124,13 +115,15 @@ Fixtures, each an invented input and its expected JSON:
   nothing; and ``status_problem()`` of each form, in its place and out of it.
 - ``grammar/cases.json`` → ``grammar/expected.json`` (v2.3): SPEC's grammar appendix — per start symbol and
   production, strings that production's EBNF accepts and refuses, and the module's verdict on each:
-  ``item_problem()`` of an item line, ``item_file_problem()`` of a whole item file (v3.0), ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
+  ``item_file_problem()`` of a whole item file (v3.0; v3.0 retired the ``item-line`` start, whose judge was
+  ``item_problem()``), ``rank()``'s flags of a rank file, ``parse_gates()`` of a ``Blocked by`` (v2.4,
   whose ``person`` productions hold a person's name), ``parse_event_section()`` of an Event section (v2.4).
   ``tests/test_grammar.py`` checks the appendix's EBNF against these verdicts.
 - ``origins/cases.json`` → ``origins/expected.json`` (v2.4): repos and origins — ``origin_key()`` and
   ``origin_path()`` of ssh, https and unreadable URLs; ``item_key()`` of two lines differing only in a repo's
   case (it stays byte-exact); ``item_refs()`` folding a repo's case and reading no ref from a bad repo; and
-  ``parse_blocked()`` of ids whose repo is or is not the grammar.
+  ``parse_blocked()`` of ids whose repo is or is not the grammar; and ``item_file_problem()`` of a ``Parts`` naming one
+  repo in two cases (v3.0; ``item_problem()`` of its line before it).
 - ``ledger/gates.md`` (v2.4): ``Blocked by``'s gates at ``TODAY`` — an ``until`` past, reached and ahead, an
   ``event``, a decision with and without its Ask, each gate repeated, the retired words (``hold``, ``decision
   (designer)``, the old form, ``Waits``, ``Taken by``, a stage word in Status), a Priority outside the three,
@@ -145,10 +138,10 @@ Fixtures, each an invented input and its expected JSON:
   a skipped part, a parent without the gate, a person in another case, an emptied ``Blocked by``, two lifting
   labels, an event's three answers, each refusal; v3.0: each base item an item file, ``items``), the two compared
   byte for byte, ``reassign_gate()`` and
-  ``reassigns()`` with ``check()``'s note, ``closes()``, ``edit_line(…, close=True)``, ``waiting_only()``,
-  ``parse_closed_items()`` (its items' ``words``, v3.0), ``answered_by()`` and its problems, and the waiting-only
-  label refused by
-  ``item_line(lifts=)`` and ``item_problem()``.
+  ``reassigns()`` with ``check()``'s note, ``closes()``, ``edit_item(…, close=True)``, ``waiting_only()``,
+  ``parse_closed_items()`` (its items' ``words``, v3.0), ``answered_by()`` and its problems of a v2 board read as a
+  ``Board``, and the waiting-only label refused by ``item_file(lifts=)`` and ``item_file_problem()`` (v3.0; each
+  item an item file where v2.x took a line).
 - ``ids/cases.json`` → ``ids/expected.json`` (v2.4): the next id — ``parse_take()`` of takes, a range and commits
   that are not takes, ``next_id()`` over ``LAST``, ids and a floor, ``ids_held()`` of each layout, and
   ``judge_takes()`` of each id's ``Id take`` (and, in the transition, its ``Taken by``) against a counter's takes.
@@ -559,7 +552,7 @@ def compared(got: dict) -> dict:
     their ``path``, ``line`` and a closed record's ``raw`` left out; ``keys`` as a set; ``needs_you``'s tie groups
     (each run of one class and one days) each as a set, the groups in order."""
     def recs(rs: list[dict]) -> dict:
-        return {r["id"]: {k: v for k, v in r.items() if k not in ("path", "line", "raw")} for r in rs}
+        return {r["id"]: {k: v for k, v in r.items() if k not in ("path", "raw")} for r in rs}
     groups: list[list] = []
     for iid, cls, days in got["needs_you"]:
         if groups and groups[-1][:2] == [cls, days]:
@@ -645,37 +638,10 @@ def board_dir_case(L, case: Path) -> dict:
     return out
 
 
-def archive_case(L, md: Path) -> dict:
-    """``archive_closed()`` of a board and its archive, read as bytes so a CRLF case keeps its line endings."""
-    board = md.read_bytes().decode("utf-8")
-    archive = md.with_name(md.name.replace(".board.md", ".archive.md")).read_bytes().decode("utf-8")
-    got = _refused(lambda: L.archive_closed(board, archive))
-    return {"refused": got["refused"]} if "refused" in got else {"board": got["ok"][0], "archive": got["ok"][1]}
-
-
 def edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     today = date.fromisoformat(spec["today"])
-    out: dict = {"edits": {}, "compose": [], "predicates": {}, "versions": []}
-    for c in spec["edits"]:
-        to = date.fromisoformat(c["to"]) if c.get("to") else None
-        out["edits"][c["name"]] = _refused(lambda c=c, to=to: L.edit_line(
-            c["line"], c["action"], to=to, answer=c.get("answer"), why=c.get("why"),
-            reply=c.get("reply"), by=c.get("by"), today=today, **({"close": True} if c.get("close") else {})))
+    out: dict = {"predicates": {}, "versions": []}  # v3.0 retired the v2 line writers' groups
     out["item_keys"] = {ln: L.item_key(ln) for ln in spec.get("item_keys", [])}  # v2.3: Hide until is stripped
-    for c in spec["compose"]:
-        if c["fn"] == "item_line":
-            kw = {k: c[k] for k in ("kind", "answers", "default", "detail", "hide_until", "lifts", "parts", "doer")
-                  if k in c}  # v2.3's keywords; parts v2.6, doer v2.8
-            out["compose"].append(_refused(lambda c=c, kw=kw: L.item_line(
-                c["text"], c["due"], c.get("today", spec["today"]), c["session"], c["host"], c["context"], **kw)))
-        else:
-            by = {"by": c["by"]} if "by" in c else {}  # v2.3: who answered
-            out["compose"].append(_refused(lambda c=c, by=by: L.decided_line(
-                c["title"], c["ref"], c["answers"], c["default"], c["words"], spec["today"], **by)))
-    out["item_problems"] = {ln: L.item_problem(ln) for ln in spec["item_problems"]}  # v2.3: the item gate
-    out["canonical_items"] = [_refused(lambda ln=ln: L.canonical_item(ln)) for ln in spec["canonical_items"]]
-    out["archive_subjects"] = [_refused(lambda c=c: L.archive_subject(c["tool"], c["count"], c.get("session")))
-                               for c in spec["archive_subjects"]]
     for ln in spec["predicates"]:
         out["predicates"][ln] = {"entry_id": L.entry_id(ln), "row_id": L.row_id(ln), "is_item": L.is_item(ln),
                                  "is_open_item": L.is_open_item(ln), "is_stamp": L.is_stamp(ln),
@@ -780,9 +746,9 @@ def item_cases(L, spec: dict) -> dict:
     def gate(c):  # v3.0 (B2): the gate over Boards; a board read from a file is refused
         return _refused(lambda: [list(p) for p in L.board_problems(board(c["board"]), board(c.get("old")))])
 
-    def strings(c):  # v3.0 (B2): D7's one rule for a string argument
+    def strings(c):  # v3.0 (B2): D7's one rule for a string argument; from B5 a v2 string is no item
         ents = c.get("entries", {})
-        return {"closes": {lb: L.closes(c["text"], lb, ents) for lb in c["labels"]},
+        return {"closes": {lb: _refused(lambda lb=lb: L.closes(c["text"], lb, ents)) for lb in c["labels"]},
                 "parts_problems": L.parts_problems(c["text"], ents)}
     composed = {c["name"]: compose(c) for c in spec["compose"]}
     ids, subj = spec["ids"], spec["subjects"]
@@ -803,8 +769,8 @@ def item_cases(L, spec: dict) -> dict:
                            for c in ids["key_id"]]},
         "subjects": {
             "subjects": [_refused(lambda c=c: L.subject(
-                c["tool"], c["action"], c["text"], to=c.get("to"), answer=c.get("answer"), session=c.get("session"),
-                **({"id": c["id"]} if "id" in c else {}))) for c in subj["subjects"]],
+                c["tool"], c["action"], c["text"], id=c["id"], to=c.get("to"), answer=c.get("answer"),
+                session=c.get("session"))) for c in subj["subjects"]],  # v3.0 removed the form with no id
             "subject_kinds": {s: L.subject_kind(s) for s in subj["subject_kinds"]},
             "edit_actions": {s: L.edit_action(s) for s in subj["edit_actions"]},  # v2.3
             "subject_ids": {s: L.subject_id(s) for s in subj["subject_ids"]}},
@@ -877,9 +843,10 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
     """Lifting a gate (v2.4): ``lift_gate()``, ``decide_lift()`` and their outputs compared, ``reassign_gate()`` and
-    ``reassigns()``, ``check()``'s reassign note, ``closes()``, ``edit_line(close=)``, ``waiting_only()``,
-    ``parse_closed_items()``, ``answered_by()`` and its problems, and the waiting-only refusals of ``item_line()``
-    and ``item_problem()``. Each entry is a file of ``lift/entries/``; a line is named from ``lines``."""
+    ``reassigns()``, ``check()``'s reassign note, ``closes()``, ``edit_item(close=)``, ``waiting_only()``,
+    ``parse_closed_items()``, ``answered_by()`` and its problems over a v2 board read as a ``Board``, and the
+    waiting-only refusals of ``item_file()`` and ``item_file_problem()``. Each entry is a file of ``lift/entries/``;
+    an item is an item file named from ``items`` (v3.0: v2.x named lines)."""
     if not hasattr(L, "decide_lift"):  # a module older than v2.4
         return {"missing": "the module has no decide_lift — older than v2.4"}
     d = root / "lift" / "entries"
@@ -887,15 +854,14 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
 
     def entry(tid):
         return (d / f"{tid}.md").read_text(encoding="utf-8")
-    lines = spec["lines"]
-    items = spec.get("items", {})  # v3.0 (B2): decide_lift()'s items as item files, by the line's name
+    items = spec["items"]  # v3.0: item files, by name
     takes_archived = "archived" in inspect.signature(L.decide_lift).parameters  # v2.6
 
     def decide(c):
         if "archived" in c and not takes_archived:  # a v2.4 module is never handed the keyword
             return {"missing": "the module's decide_lift takes no archived — older than v2.6"}
         return _refused(lambda: L.decide_lift(
-            items.get(c["line"], lines[c["line"]]), {t: entry(t) for t in c["entries"]}, c["label"], c["by"],
+            items[c["line"]], {t: entry(t) for t in c["entries"]}, c["label"], c["by"],
             spec["today"],
             c["people"], c["answered_by"], **({"archived": c["archived"]} if "archived" in c else {})))
     decided = {c["name"]: decide(c) for c in spec["decide_lift"]}
@@ -909,9 +875,11 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
         return {**base, **decided[c["after"]]["ok"]} if "after" in c else base
 
     def close(c):
-        return _refused(lambda: L.edit_line(lines[c["line"]][2:].join(["- ", ""]), c.get("action", "decide"),
-                                            answer=c.get("answer"), reply=c.get("reply"), by=c["by"],
-                                            today=today, close=True))
+        return _refused(lambda: L.edit_item(items[c["line"]], c.get("action", "decide"), answer=c.get("answer"),
+                                            reply=c.get("reply"), by=c["by"], today=today, close=True))
+
+    def board(text):  # v3.0: a v2 board's text read as the Board the readers take, through a one-file map
+        return L.load_board("board.md", lambda p: None, {"board.md": text}.get)
     ledger = "# Ledger\n\nLedgerboard: 2\n\n" + "\n".join(entry(t) for t in spec["check"])
     return {
         "decide_lift": decided,
@@ -923,19 +891,19 @@ def lift_cases(L, spec: dict, root: Path = HERE) -> dict:
         "reassigns": [L.reassigns(entry(t), g) for t, g in spec["reassigns"]],
         "check": [r for r in L.check(ledger, "", today=spec["today"]) if r["kind"] == "gate-reassigned-often"],
         "closes": [decided[c["after"]] if "missing" in decided.get(c.get("after"), {})
-                   else L.closes(lines[c["line"]], c["label"], after(c)) for c in spec["closes"]],
+                   else L.closes(items[c["line"]], c["label"], after(c)) for c in spec["closes"]],
         "close": {c["name"]: close(c) for c in spec["close"]},
         "waiting_only": {x: L.waiting_only(x) for x in spec["waiting_only"]},
         "closed_items": [[{"line": it.line, "words": it.words, "kind": it.kind, "answers": it.answers, "lifts": it.lifts,
                            "parts": it.parts, "decided": it.decided, "decided_by": it.decided_by, "detail": it.detail}
                           for it in L.parse_closed_items(b)] for b in spec["closed_items"]],
-        "answered_by": [{"value": L.answered_by(b), "problems": [list(x) for x in L.answered_by_problems(b)]}
+        "answered_by": [{"value": L.answered_by(board(b)), "problems": [list(x) for x in L.answered_by_problems(board(b))]}
                         for b in spec["answered_by"]],
-        "item_lines": [_refused(lambda c=c: L.item_line(
+        "item_files": [_refused(lambda c=c: L.item_file(
             c["text"], c["due"], spec["today"], c["session"], c["host"], c["context"],
             **{k: c[k] for k in ("kind", "answers", "default", "detail", "lifts") if k in c}))
-            for c in spec["item_lines"]],
-        "item_problems": {ln: L.item_problem(ln) for ln in spec["item_problems"]},
+            for c in spec["item_files"]],
+        "item_file_problems": [L.item_file_problem(t) for t in spec["item_file_problems"]],
     }
 
 
@@ -958,11 +926,17 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
     """The gate sweep (v2.4): ``sweep()`` over ``sweep/``'s ledger, archive and boards on each run's dates, the same
     sweep again once the first run's items are filed and its closes made (it writes nothing new), ``covers()``
     of entries and gates, and the refusals. Each board is read whole through ``load_board()`` (v3.0), from a map of
-    ``sweep/``'s files, so the rerun reads the files the first run's closes and filings leave."""
+    ``sweep/``'s files. The rerun reads each v2 board's split (v3.0, F150): the first run's closes made as moves by
+    id and its filings written with ``item_file()``; ``widgets.md``'s first ``TD-239`` closed line, which the
+    split refuses beside its twin, is dropped in memory for the rerun alone (F385). The ``split`` case reads
+    ``split_board()`` of its v2 board, put in the map under its directory (F383)."""
     if not hasattr(L, "sweep"):
         return {"missing": "the module has no sweep — older than v2.4"}
     d = root / "sweep"
     files = {p.relative_to(d).as_posix(): p.read_text(encoding="utf-8") for p in sorted(d.rglob("*")) if p.is_file()}
+    if "split" in spec:  # v3.0: the split case's directory is the v2 board's split, in memory
+        sb = next(b for b in spec["boards"] if b["basename"] == spec["split"]["basename"])
+        files.update({f"{spec['split']['dir']}/{k}": v for k, v in L.split_board(files[sb["board"]]).items()})
     ents = [files["ledger.md"], files["archive.md"]]
     results = {(r[0], r[1]): (r[2], r[3]) if len(r) > 3 else r[2] for r in spec["results"]}
 
@@ -977,29 +951,29 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
     first = next(c for c in spec["runs"] if c["name"] == spec["rerun"])
     day = first["today_local"]
     after = dict(files)
+    rerun_boards = []
     for b in spec["boards"]:
         name = L.origin_key(b["url"]) or b["basename"]
         ids = set(runs[first["name"]]["to_close"].get(name, []))
         filed = runs[first["name"]]["to_file"].get(name, [])
-        if b.get("dir"):  # a v3 board: close by id (the file moves), file with item_file()
-            for i in sorted(ids):
-                text = after.pop(f"{b['dir']}/{i}.md")
-                after[f"{b['dir']}/{L.item_path(i, day)}"] = L.edit_item(text, "done", why="swept",
-                                                                          today=date.fromisoformat(day))
-            for it in filed:
-                new = L.item_file(it["text"], None if it["kind"] == "fyi" else day, day, "sweep", None, it["context"],
-                                  kind=it["kind"], answers=it["answers"], default=it["default"], detail=it["detail"],
-                                  lifts=it["lifts"])
-                after[f"{b['dir']}/{L.item_id(day, hashlib.sha256(new.encode()).hexdigest()[:8])}.md"] = new
-            continue
-        lines = [ln.replace("- [ ]", "- [x]", 1) + f" Closed: {day} — swept."
-                 if L.is_open_item(ln) and L.parse_board(ln, warn=False)[0].id in ids else ln
-                 for ln in after[b["board"]].split("\n")]
+        if not b.get("dir"):  # a v2 board: the rerun reads its split (v3.0), written beside it in memory
+            text = after[b["board"]]
+            if b["basename"] == "widgets":  # F385: the first of two closed lines of one id, which the split refuses
+                cut = next(ln for ln in text.split("\n") if "TD-239" in ln and "Closed: 2026-10-20" in ln)
+                text = text.replace(cut + "\n", "", 1)
+            arch = b["board"][:-3] + "_archive.md"
+            b = dict(b, dir=b["board"][:-3] + ".split")
+            after.update({f"{b['dir']}/{k}": v for k, v in L.split_board(text, after.get(arch, "")).items()})
+        rerun_boards.append(b)
+        for i in sorted(ids):  # close by id (the file moves), file with item_file()
+            src = after.pop(f"{b['dir']}/{i}.md")
+            after[f"{b['dir']}/{L.item_path(i, day)}"] = L.edit_item(src, "done", why="swept",
+                                                                     today=date.fromisoformat(day))
         for it in filed:
-            lines.append(L.item_line(it["text"], day, day, "sweep", None, it["context"], kind=it["kind"],
-                                     answers=it["answers"], default=it["default"], detail=it["detail"],
-                                     lifts=it["lifts"]).rstrip("\n"))
-        after[b["board"]] = "\n".join(lines) + "\n"
+            new = L.item_file(it["text"], None if it["kind"] == "fyi" else day, day, "sweep", None, it["context"],
+                              kind=it["kind"], answers=it["answers"], default=it["default"], detail=it["detail"],
+                              lifts=it["lifts"])
+            after[f"{b['dir']}/{L.item_id(day, hashlib.sha256(new.encode()).hexdigest()[:8])}.md"] = new
     entry = L._entry_texts("\n".join(ents))
     out = {"parts_problems": _parts_cases(L, spec, boards[0])} if spec.get("parts_problems") else {}
 
@@ -1020,7 +994,7 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
     return {
         **out,
         "runs": runs,
-        "rerun": run(first, boards_of(spec["boards"], after)),
+        "rerun": run(first, boards_of(rerun_boards, after)),
         "covers": [[[b, it.id, state] for b, it, state in L.covers(entry[t], g, boards, spec["repo"])]
                    for t, g in spec["covers"]],
         "refused": {c["name"]: _refused(lambda c=c: L.sweep(
@@ -1042,9 +1016,21 @@ def _parts_entry(tid: str, e) -> object:
     return f"## {tid}: {e.get('title', 'An invented entry')}\n\n" + "\n".join(head) + "\n\n**Why:** Invented.\n"
 
 
+def _one_item_file(L, line: object) -> object:
+    """A case's v2 line as the item file its split gives (v3.0: the readers take an item file), when it is a v2
+    board holding one item the split accepts; anything else (a board of two items, a refused one, no string) as
+    given, which the readers take as no item."""
+    try:
+        files = [v for k, v in L.split_board(line).items() if k != L.BOARD_README] if isinstance(line, str) else []
+    except L.Refused:
+        files = []
+    return files[0] if len(files) == 1 else line
+
+
 def _parts_cases(L, spec: dict, own) -> dict:
     """``parts_problems()`` (v2.6) of each case; a case's line is its ``line``, else a decide built from its
-    ``context`` and ``parts``. ``covers``: each listed part's ``covers()`` on a one-item board holding the line,
+    ``context`` and ``parts``. The readers are given an item file (v3.0): the decide built as one, or a case's line as
+    its split's (``_one_item_file()``). ``covers``: each listed part's ``covers()`` on a one-item board holding the line,
     given as this repo's own board. ``lift``: ``decide_lift()`` of ``Go`` by ``pat``, ``People: pat``, with the
     case's ``lift_archived`` (else its ``archived``): the ids it changes and the Log lines it adds, or its
     refusal (each case's entries carry no Log, so every Log line is the lift's)."""
@@ -1055,8 +1041,12 @@ def _parts_cases(L, spec: dict, own) -> dict:
         line = c["line"] if "line" in c else (
             f"- [ ] decide 2026-11-06 (session `w-1`) — Go on the builds? Context: {c.get('context', 'TD-4 decision (pat)')}."
             f" Parts: {c.get('parts', 'TD-9, TD-10')}. Due: 2026-11-20. Answers: Go | Not yet.")
+        item = _one_item_file(L, line) if "line" in c else (
+            f"## Go on the builds?\n\n**Kind:** decide\n**Added:** 2026-11-06\n**Session:** w-1\n"
+            f"**Context:** {c.get('context', 'TD-4 decision (pat)')}\n**Parts:** {c.get('parts', 'TD-9, TD-10')}\n"
+            "**Due:** 2026-11-20\n**Answers:** Go | Not yet\n")
         ents = {k: _parts_entry(k, v) for k, v in c.get("entries", {}).items()}
-        got = {"problems": L.parts_problems(line, ents, c.get("archived", []))}
+        got = {"problems": L.parts_problems(item, ents, c.get("archived", []))}
         if c.get("covers"):
             board = f"# Needs the user\n\nKinds: decide | act | look | watch | fyi\nPeople: pat\n\n{line}\n"
             boards = [(own[0], own[1], L.load_board("board.md", dict_ls({"board.md": board}), {"board.md": board}.get))]
@@ -1067,7 +1057,7 @@ def _parts_cases(L, spec: dict, own) -> dict:
                 for p in L.parse_parts(line)}
         if c.get("lift"):
             def lift(c=c, line=line, ents=ents):
-                new = L.decide_lift(line, ents, "Go", "pat", "2026-11-06", ["pat"], None,
+                new = L.decide_lift(item, ents, "Go", "pat", "2026-11-06", ["pat"], None,
                                     archived=c.get("lift_archived", c.get("archived", [])))
                 return {k: [ln["text"] for ln in L.log_lines(t)] for k, t in sorted(new.items())}  # no case's entry has a Log
             got["lift"] = _refused(lift)
@@ -1152,8 +1142,7 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
 
 
 def grammar_cases(L, spec: dict) -> dict:
-    """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item line's
-    ``item_problem()``, an item file's ``item_file_problem()`` (v3.0), a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4),
+    """The grammar appendix's fixtures (v2.3): each string's verdict, from the module — an item file's ``item_file_problem()`` (v3.0), a rank file's ``rank()`` flags, a ``Blocked by``'s ``parse_gates()``, an Event section's ``parse_event_section()`` (v2.4),
     and (v2.7) a Status value's ``status_problem()``, a Log line's ``log_line()``, a header block's ``canonical()``
     and an ``Added`` value's ``migrate_entry()``."""
     if not hasattr(L, "parse_gates"):  # a module older than v2.4: this case fails, the others still run
@@ -1172,7 +1161,6 @@ def grammar_cases(L, spec: dict) -> dict:
         "header-block": lambda s: _why(_refused(lambda: L.canonical(f"## TD-1: x\n\n{s}\n")).get("refused")),
         "added": lambda s: _added_verdict(L.migrate_entry(f"## TD-1: x\n\n**Added:** {s}\n**Status:** Open\n",
                                                           archived=False, today=TODAY)),
-        "item-line": lambda s: (L.item_problem(s) is None, L.item_problem(s)),
         "item-file": lambda s: _why(L.item_file_problem(s)),  # v3.0: a whole item file
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
@@ -1210,14 +1198,15 @@ def _gates_verdict(g: dict) -> tuple[bool, list[str] | None]:
 
 def origin_cases(L, spec: dict) -> dict:
     """Repos and origins (v2.4): ``origin_key()`` and ``origin_path()`` of each URL, ``item_key()`` of lines
-    differing only in a repo's case, ``item_refs()`` of Contexts naming repos, ``parse_blocked()`` of ids."""
+    differing only in a repo's case, ``item_refs()`` of Contexts naming repos, ``parse_blocked()`` of ids, and ``item_file_problem()`` of a `Parts`
+    naming one repo in two cases (v3.0; ``item_problem()`` of its v2 line before it)."""
     if not hasattr(L, "origin_key"):
         return {"missing": "the module has no origin_key — older than v2.4"}
     return {"origin_key": {u: {"key": L.origin_key(u), "path": L.origin_path(u)} for u in spec["origin_key"]},
             "item_key": {x: L.item_key(x) for x in spec["item_key"]},
             "item_refs": {x: L.item_refs(x) for x in spec["item_refs"]},
             "blocked": {x: list(L.parse_blocked(x)) for x in spec["blocked"]},
-            "item_problem": {x: L.item_problem(x) for x in spec.get("item_problem", [])}}
+            "item_file_problem": [L.item_file_problem(x) for x in spec.get("item_file_problem", [])]}  # v3.0
 
 
 def migrate_cases(L, spec: dict) -> dict:
@@ -1326,8 +1315,6 @@ def cases(L, root: Path):
         yield case / "expected.json", board_split_case(L, case)  # v3.0
     for case in sorted(p for p in (root / "board_dir").glob("*") if p.is_dir()):
         yield case / "expected.json", board_dir_case(L, case)  # v3.0
-    for md in sorted((root / "archive").glob("*.board.md")):
-        yield md.with_name(md.name.removesuffix(".board.md") + ".json"), archive_case(L, md)
     spec = json.loads((root / "edit" / "cases.json").read_text(encoding="utf-8"))
     yield root / "edit" / "expected.json", edit_cases(L, spec, root)
     spec = json.loads((root / "item" / "cases.json").read_text(encoding="utf-8"))
