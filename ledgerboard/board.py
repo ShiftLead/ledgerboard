@@ -299,16 +299,16 @@ def held(board: Board, ls=fs_ls) -> set[str]:
 
 def _overlay(changes: Mapping[str, str | None], ls=fs_ls, rd=fs_read):
     """An ``ls`` and a ``read`` of the disk with ``changes`` (path to text, None removed) put in, nothing written."""
-    want = {os.path.normpath(p): t for p, t in changes.items()}
+    want = {os.path.abspath(p): t for p, t in changes.items()}
 
-    def read2(p: str) -> str | None:
-        p = os.path.normpath(p)
-        return want[p] if p in want else rd(p)
+    def read2(path: str) -> str | None:
+        p = os.path.abspath(path)
+        return want[p] if p in want else rd(path)
 
-    def ls2(p: str) -> list[str] | None:
-        p = os.path.normpath(p)
-        names = set(ls(p) or [])
-        there = ls(p) is not None
+    def ls2(path: str) -> list[str] | None:
+        p = os.path.abspath(path)
+        names = set(ls(path) or [])
+        there = ls(path) is not None
         for q, t in want.items():
             if os.path.dirname(q) == p:
                 there = there or t is not None
@@ -553,14 +553,14 @@ def plan_edit(board: str, action: str, id: str, *, to: str | None = None,
         if not to:
             raise Refused(f"a {action} needs --to")
         when = _today(to)
-    if action == "reply" and not (by and by.strip()):
+    old = load_v3(board)
+    it = _find(old, id)
+    if action == "reply" and not (by and by.strip()):  # the edit's own refusals, after the id's (D7)
         raise Refused("a reply needs --by, who says it")
     if (ledger is not None or board_only) and action != "decide":
         raise Refused("--ledger and --board-only are a decide's")
-    old = load_v3(board)
-    it = _find(old, id)
     if action == "done" and why is not None:
-        why = " ".join(why.split()).rstrip(".?!")  # collapsed, then stripped, as edit_line() does (D7)
+        why = re.sub(r"[\s.?!]+\Z", "", " ".join(why.split()))  # collapsed, then stripped, as edit_line() does (D7)
     if action == "decide" and isinstance(answer, str) and answer.strip():
         answer = fill_form(answer, it.answers) or answer  # v2.8: filled once, so board, ledger and subject agree
     if action == "decide":

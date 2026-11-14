@@ -150,6 +150,38 @@ class BothOrNeither(unittest.TestCase):
             self.assertEqual(snapshot(board), before)
 
 
+class ReviewFixes(unittest.TestCase):
+    """PR #306's review: ``--board .``, the edits' order, a why ending in marks and spaces."""
+
+    def test_a_board_given_as_dot_is_gated_and_noted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = make_board(tmp)
+            here = os.getcwd()
+            os.chdir(board)
+            try:
+                code, out, _ = run("add", "--board", ".", "--text", "Look later", "--kind", "act", "--due",
+                                   "2026-01-30", "--hide-until", "2026-02-20", "--context", "PR #3",
+                                   "--today", "2026-01-15", "--id", "2026-01-15-5eed0001", "--json")
+            finally:
+                os.chdir(here)
+            self.assertEqual(code, 0)
+            self.assertNotEqual(json.loads(out)["item_notes"], [])  # the new file is seen by the notes and the gate
+
+    def test_an_unknown_id_is_refused_before_the_edits_own_refusals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = make_board(tmp)
+            code, _, err = run("reply", "--board", board, "--id", "2026-01-10-ffffffff", "--text", "hi", "--by", " ")
+            self.assertEqual(code, 1)
+            self.assertIn("no open item has the id", err)
+
+    def test_a_why_ending_in_marks_and_spaces_has_no_final_period(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = make_board(tmp)
+            self.assertEqual(run("done", "--board", board, "--id", ID, "--why", "merged. .", "--today",
+                                 "2026-01-15")[0], 0)
+            self.assertIn("**Closed:** 2026-01-15 — merged\n", Path(board, ARCHIVED).read_text())
+
+
 class TheMove(unittest.TestCase):
     """``done``, and a ``decide`` that closes, write the archived file and remove the open one in one write (D2, D7):
     the archived file first, then the removal; nothing left on a failed write."""
