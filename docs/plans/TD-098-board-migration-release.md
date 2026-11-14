@@ -88,7 +88,8 @@ on an `fyi` are all carried. The rule, for each:
 - **its heading is `item_words(line)`** — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split);
 - `README.md` is the board's text before its first item, `Ledgerboard: 3` under its title (on its own line right
   before the first non-blank line after the `# ` title, so a title, a blank line, `Ledgerboard: 3`, then the
-  board's next line; with no `# ` title, as the first line followed by one blank line; round 1's F359), less the `## ` heading
+  board's next line; with no `# ` title, as the first line, followed by one blank line when other preamble text follows it, and
+  alone with its newline when none does; round 1's F359, round 4's F417), less the `## ` heading
   nearest the first item (with more than one `## ` heading before it, only that one drops), each relative link
   gaining `../`: an inline link or image's target (`[t](target)`, `![t](target)`) or a reference definition's
   (`[label]: target`) whose target starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among
@@ -190,7 +191,7 @@ directory the stub reads as (D6); any other place would leave a stub reading as 
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
 once its own tooling and both consumers run v3.0 (text 12; D12's order: ShiftLead's in its sync PR, agent-cadence's
-in a PR of its own right after, each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
+in a PR of its own right after, or one UTC day after its vendor PR if the sync has not merged (D12, round 3's F409), each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
 edits the board and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
 PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
@@ -230,10 +231,13 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   B1 to B4 are merged.
 - **After v3.0, in this order** (round 1's F376, F377; round 2's F393, F398): (1) agent-cadence vendors v3.0, no
   split; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR; (3) agent-cadence splits
-  its own board, in a PR of its own, at once after (2); (4) each other repo that pins agent-cadence, this repo
+  its own board, in a PR of its own, at once after (2), or one UTC day after (1) if (2) has not merged (below); (4) each other repo that pins agent-cadence, this repo
   among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
-  TD-100 designs). Before (1), (2) and (4), each repo's ledger meets TD-078's D5 precondition (v2.8's `migrate`
-  run, so v3.0 reads it), which is TD-078's and not B5's (round 3's F412). (2) is worked while (1) is in review, so
+  TD-100 designs). The ledger's precondition is TD-078's D5, not B5's (round 3's F412, round 4's F414): it binds
+  ledgerboard, agent-cadence and ShiftLead, met when `ledger.py migrate --plan --release <x.y>`, run with the last
+  v2.x, prints no entry holding `changes` or `stops`; agent-cadence runs it in (1) and ShiftLead in (2), each before
+  vendoring, and ledgerboard's is B4's guard run before v3.0 is cut. A roster repo's ledger in (4) is TD-100's
+  (TD-078's D7). (2) is worked while (1) is in review, so
   it is ready to merge when (1) merges; and (3) waits for (2) one UTC day at most: if (2) has not merged by the end
   of the day after (1) merged, (3) lands anyway (round 3's F409), and ShiftLead's v2.x `gatesweep` and `workorders`
   read agent-cadence's board as empty until (2) merges — the same risk, and the same remedy, as an old-pin roster
@@ -248,7 +252,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   again after step 3, and an item that cannot wait is a hand edit to the v2 file, which the v3 reader reads. A board's readers are its own
   repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
   session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0, and the consumers
-  that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split,
+  that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split when (2) is on time (F409),
   and agent-cadence's scripts run from another roster repo under that repo's pin. Of those, `nudge_user_attention.py`
   checks the version and refuses a split board, a display; but `gate_sweep.py` and `ledger.py set`'s `_boards()`
   read another repo's board as text with no version check (round 3's F401), so until their repo bumps they read a
@@ -599,7 +603,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   of one key, on the board and across board and archive, each one closed item, its fields and body the closed line's
   although the open twin's detail block differs, the notes naming `open twin's detail not carried`, F378, and
   one open twin with a reply the closed line lacks, `open twin's line not carried`, F396);
-  `archive_prose` (an archive with a title, a note before its first item, and a `- (none)` line after it: the note
+  `no_title_heading` (a board with no `# ` title whose text before its first item is the dropped `## ` heading
+  alone: `README.md` is `Ledgerboard: 3` and one newline, round 4's F417); `archive_prose` (an archive with a title, a note before its first item, and a `- (none)` line after it: the note
   listed as not carried, the `- (none)` carried after the board's, F378); `sections` (the `## Needs the user` and `## In-flight` headings:
   an earlier `## ` heading kept and only the one nearest the first item dropped; the README's prose kept; its links:
   an inline relative link, an image, a reference definition, a `#anchor`, an `https:` and a `mailto:` link, a
