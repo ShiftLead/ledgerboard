@@ -16,8 +16,8 @@ v2 keeps reading four forms only because old files hold them: the `Waits` field,
 decision form `decision (<who>) <text>` in `Blocked by`, and a `Resolved` header field. v2.7's `migrate` maps the
 old Status words, `Added` comments and a header `Location`, and leaves those four as they are (*Migrating to
 v2.7*, rule 5). §7.1 plans v3.0 to stop reading them and to remove `migrate` (its row stands as a summary: D4 makes v2.7's
-retired header `Location` a v3.0 error too, round 8's F117), once every repo holds none of them,
-in open entries and archived ones alike.
+retired header `Location` a v3.0 error too, round 8's F117), once the repos that take it —
+ledgerboard, agent-cadence and ShiftLead (D5) — hold none of them, in open entries and archived ones alike.
 
 Two things stand in the way.
 
