@@ -17,6 +17,7 @@
     python3 -m ledgerboard.board decide  --board PATH --id ID --answer TEXT [--by NAME] [--ledger DIR | --board-only]
     python3 -m ledgerboard.board reply   --board PATH --id ID --text TEXT --by NAME
     python3 -m ledgerboard.board fmt     --board PATH
+    python3 -m ledgerboard.board split   --board PATH.md [--archive PATH]   (a v2 board into its directory)
     python3 -m ledgerboard.board rank    --rank PATH --action rank|join|prune [--set TD-n=KEY]... [--drop TD-n]...
     python3 -m ledgerboard.board rank    --rank PATH --action respace --ledger PATH [--fixed KEY]... [--repo NAME]
         [--tool NAME] [--session NAME] [--today D] [--plan] [--json]
@@ -34,7 +35,9 @@ write that leaves an open item (``add``, ``snooze``, ``due``, ``decide``, ``repl
 (``item_notes()`` at ``--today``): ``item_notes`` in ``--json`` and ``--plan``, and on stderr as ``<id>: ℹ <note>``
 otherwise; a note never changes the exit code. A ``decide --board-only`` whose lifting answer leaves a listed entry
 still carrying the gate writes nothing (v2.7): it reports ``left_open`` and prints ``left open: <ids> still carry
-<gate>`` on stderr in every mode.
+<gate>`` on stderr in every mode. ``split`` (v3.0) is the one write that needs a v2 board: it writes the directory
+beside it (``split_board()``), replaces the v2 file with ``board_stub()`` and removes its archive, as one write, and
+prints ``split_board_notes()``'s lines as warnings (``warnings`` in ``--json``).
 
 Exit, the package's one table (``ledger.py`` shares it): 0 written (or nothing to change); 1 refused; 2 usage
 (a bad ``--today`` among it), or (``decide`` and ``add --parts``) the ledger cannot be used as asked; 4 a write failed (every file restored). 3 is ``ledger.py``'s
@@ -68,8 +71,10 @@ from . import (
     _lifting,
     _num,
     answered_by,
+    archive_path,
     board_people,
     board_problems,
+    board_stub,
     canonical_item_file,
     closes,
     decide_lift,
@@ -93,11 +98,13 @@ from . import (
     respace,
     set_rank,
     show_board,
+    split_board,
+    split_board_notes,
     subject,
     version_problem,
 )
 
-ACTIONS = ("list", "show", "add", "snooze", "due", "done", "decide", "reply", "fmt", "rank")
+ACTIONS = ("list", "show", "add", "snooze", "due", "done", "decide", "reply", "fmt", "split", "rank")
 EDITS = ("snooze", "due", "done", "decide", "reply")
 TOOL = "ledgerboard"
 
@@ -263,7 +270,7 @@ def v3_problem(board: Board, ls=fs_ls) -> str | None:
     if board.form is None:
         return "no such board"
     if board.form != "dir":
-        return "a v2 board"
+        return "a v2 board (split first: board.py split)"
     if BOARD_README not in (ls(board_dir(board.path)) or []):
         return f"no {BOARD_README}"
     if any(p == BOARD_README and why.startswith("unreadable") for p, why in board.problems):
@@ -708,6 +715,61 @@ def plan_fmt(board: str) -> Plan:
     return Plan("fmt", None, changes, {"fixed": fixed, "refused": refused})
 
 
+def _title(text: str, path: str) -> str:
+    """A v2 board's title: its first `# ` line's text, else the file's name without `.md`."""
+    for ln in text.splitlines():
+        if ln.startswith("# "):
+            return ln[2:].strip()
+    return os.path.basename(path).removesuffix(".md")
+
+
+def plan_split(board_path: str, archive_path_: str | None = None, read=fs_read, exists=os.path.exists) -> Plan:
+    """A v2 board split into its directory (v3.0, SPEC *The board writer*, ``split``): every file
+    ``split_board()`` gives written into the directory beside the board, named the board's name less `.md`, the
+    v2 file replaced by ``board_stub()`` and the archive (``archive_path_``, default ``<stem>_archive.md`` beside
+    it, none when that is absent) removed, as one write. Its gate is the reverse of a write's, each Refused before
+    anything is written: a newer major, a stub whose directory is missing, no board, a v3 board, a ``--board`` not
+    ending `.md`, an ``--archive`` given that does not exist, ``split_board()``'s refusals, then the directory
+    existing. ``split_board_notes()``'s lines are warnings."""
+    path = _norm(board_path)
+    got = _load(path, rd=read)
+    if got.form is None and got.major is not None and got.problems:
+        raise Refused(f"{path}: a v3 stub whose directory is missing")
+    if got.form is None:
+        raise Refused(f"{path}: no such board")
+    if got.form == "dir":
+        raise Refused(f"{path}: already a v3 board")
+    if not path.endswith(".md"):
+        raise Refused(f"{path}: not a v2 board file (.md)")
+    default = archive_path(path)
+    arch = _norm(archive_path_) if archive_path_ is not None else default
+    if archive_path_ is not None and not exists(arch):
+        raise Refused(f"{arch}: no such file")
+    text = read(path) or ""
+    archive = read(arch) if exists(arch) else None
+    try:
+        files = split_board(text, archive or "")
+        notes = split_board_notes(files, text, archive or "")
+    except Refused as e:
+        raise Refused(f"{path}: {e}") from None
+    d = path[:-3]
+    if exists(d):
+        raise Refused(f"{path}: {d}/ exists")
+    changes: dict[str, str | None] = {os.path.join(d, rel): t for rel, t in files.items()}
+    written = list(changes)
+    changes[path] = board_stub(_title(text, path), os.path.basename(d))
+    if archive is not None:
+        changes[arch] = None
+    warnings = [{"path": arch if p == "(archive)" else os.path.join(d, p), "line": n, "text": ln, "why": why}
+                for p, n, ln, why in notes]
+    if arch != default and exists(default):
+        warnings.append({"path": default, "line": None, "text": "", "why": "default archive left in place"})
+    warn = [f"{w['path']}:{w['line']}: ⚠ {w['why']}" if w["line"] is not None else f"{w['path']}: ⚠ {w['why']}"
+            for w in warnings]
+    return Plan("split", None, changes, {"files": written, "removed": [arch] if archive is not None else [],
+                                         "warnings": warnings}, warn)
+
+
 def read_ledger(path: str) -> str:
     """The open entries' text of the ledger at `path`, a v1 file or a v2 directory (``load()``)."""
     def ls(p: str) -> list[str] | None:
@@ -815,6 +877,8 @@ def build(a: argparse.Namespace) -> Plan:
                          ledger=a.ledger, board_only=a.board_only or False)
     if a.action == "fmt":
         return plan_fmt(a.board)
+    if a.action == "split":
+        return plan_split(a.board, a.archive)
     if a.queue == "respace":
         if a.set or a.drop:
             raise Refused("a respace sets and drops no lines: it rewrites the keys itself")
@@ -839,13 +903,14 @@ TAKES = {
     "decide": {"board", "id", "answer", "by", "today", "tool", "session", "ledger", "board_only"},
     "reply": {"board", "id", "text", "by", "today", "tool", "session"},
     "fmt": {"board"},
+    "split": {"board", "archive"},
     "rank": {"rank", "queue", "set", "drop", "tool", "ledger", "fixed", "repo"},
 }
 NEEDS_OPT = {
     "list": ("board",), "show": ("board",), "add": ("board", "text"), "snooze": ("board", "id", "to"),
     "due": ("board", "id", "to"), "done": ("board", "id"), "decide": ("board", "id", "answer"),
     "reply": ("board", "id", "text", "by"),
-    "fmt": ("board",), "rank": ("rank", "queue"),
+    "fmt": ("board",), "split": ("board",), "rank": ("rank", "queue"),
 }
 DEFAULTS = {"tool": TOOL, "hidden": False, "answer": [], "lift": [], "parts": [], "set": [], "drop": [],
             "fixed": [], "board_only": False}
@@ -855,6 +920,7 @@ def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="ledgerboard.board", description=__doc__.split("\n", 1)[0])
     ap.add_argument("action", choices=ACTIONS)
     ap.add_argument("--board", help="the board: a v3 directory, or the stub beside it (list and show: a v2 file too)")
+    ap.add_argument("--archive", help="split: the v2 board's archive (default: <board>_archive.md beside it)")
     ap.add_argument("--id", help="an edit: the open item's id; add: the new item's id (default: drawn at random)")
     ap.add_argument("--hidden", action="store_true", help="show: the hidden open items too, after the rest")
     ap.add_argument("--rank", help="rank: the rank file (created when missing)")

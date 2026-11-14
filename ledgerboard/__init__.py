@@ -4479,6 +4479,354 @@ def _read_board_dir(d: str, names: list[str], ls: Ls, read: Read, since: date | 
 
 
 # ---------------------------------------------------------------------------------------------
+# Migration (v3.0, SPEC *The board as a directory*, *Migration*): a v2 board split into its directory
+# ---------------------------------------------------------------------------------------------
+
+SPLIT_PREAMBLE_LINE_RE = re.compile(r"^(?:People|Answered by|Ledgerboard):")  # a line README.md would read
+SPLIT_V2_NAMES = ("user_attention_archive.md", "user_attention.md", "Needs the user", "In-flight")
+SPLIT_ARCHIVE = "(archive)"  # the path split_board_notes() gives a line of the v2 archive's own text
+SPLIT_HEAD_RE = re.compile(r"^(?:[A-Za-z]+\s+)?\d{4}-\d{2}-\d{2}\s*\((?P<inner>session\s[^)]*)\)")
+SPLIT_SESSION_RE = re.compile(r"session\s+`?[^\s`,;)]+`?")
+UP_LINK_RE = re.compile(r"(?P<lead>!?(?<!\\)\[[^\]]*\]\()(?P<target><[^<>\n]*>|[^)\s]+)"
+                        r"(?=(?:\s+\"[^\"]*\"|\s+'[^']*')?\s*\))")
+UP_REF_RE = re.compile(r"^(?P<lead> {0,3}\[[^\]]+\]:[ \t]*)(?P<target><[^<>\n]*>|\S+)")
+UP_SKIP_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:|#|/")
+
+
+def _up(target: str) -> str:
+    """A link's target one directory up: `../` before a relative one (a leading `./` becoming `../`), inside its
+    `<…>` when bracketed; a target with a scheme, or starting `#` or `/`, as written."""
+    inner, wrap = (target[1:-1], True) if target.startswith("<") else (target, False)
+    if not inner or UP_SKIP_RE.match(inner):
+        return target
+    new = "../" + (inner[2:] if inner.startswith("./") else inner)
+    return f"<{new}>" if wrap else new
+
+
+def _up_text(text: str, line_start: bool) -> str:
+    text = UP_LINK_RE.sub(lambda m: m.group("lead") + _up(m.group("target")), text)
+    if line_start:
+        text = UP_REF_RE.sub(lambda m: m.group("lead") + _up(m.group("target")), text, count=1)
+    return text
+
+
+def _up_links(lines: list[str]) -> list[str]:
+    """``lines`` with each relative link's target (an inline link's or image's, a reference definition's) one
+    directory up, outside code spans and fenced code (v3.0, `README.md` moving into the board's directory)."""
+    out, fence = [], ""
+    for ln in lines:
+        f = FENCE_RE.match(ln)
+        if f:
+            mark = f.group("fence")
+            if not fence:
+                fence = mark
+            elif mark[0] == fence[0] and len(mark) >= len(fence) and not f.group("info").strip():
+                fence = ""
+            out.append(ln)
+            continue
+        if fence:
+            out.append(ln)
+            continue
+        pieces, pos = [], 0
+        for m in INLINE_CODE_RE.finditer(ln):
+            pieces += [_up_text(ln[pos:m.start()], pos == 0), m.group(0)]
+            pos = m.end()
+        pieces.append(_up_text(ln[pos:], pos == 0))
+        out.append("".join(pieces))
+    return out
+
+
+def _fenced(lines: list[str]) -> set[int]:
+    """The indexes of ``lines`` inside fenced code, each fence's own lines among them (CommonMark's closing rule:
+    the same character, at least as long, no info string)."""
+    out, fence = set(), ""
+    for i, ln in enumerate(lines):
+        f = FENCE_RE.match(ln)
+        if f:
+            mark = f.group("fence")
+            if not fence:
+                fence = mark
+            elif mark[0] == fence[0] and len(mark) >= len(fence) and not f.group("info").strip():
+                fence = ""
+            out.add(i)
+        elif fence:
+            out.add(i)
+    return out
+
+
+def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
+    """A v2 board's (or archive's) lines before its first item, and its carried groups: each line after the first
+    item that is no item, no detail block's line and not blank, in order, a `## ` heading opening the group of the
+    lines under it (a heading with none under it dropped). Refused for a carried line README.md would read."""
+    lines = text.splitlines()
+    first = next((i for i, ln in enumerate(lines) if ANY_ITEM_RE.match(ln)), len(lines))
+    taken: set[int] = set()
+    for i in range(first, len(lines)):
+        if ITEM_RE.match(lines[i]) or CLOSED_ITEM_RE.match(lines[i]):
+            taken.add(i)
+            taken.update(range(i + 1, i + 1 + len(_detail_source(lines, i + 1))))
+    groups: list[list[str]] = []
+    head, open_group = None, False
+    fenced = _fenced(lines)
+    for i in range(first, len(lines)):
+        ln = lines[i]
+        if i in taken or (not ln.strip() and i not in fenced):
+            continue
+        if ln.startswith("## ") and i not in fenced:
+            head, open_group = ln, False
+            continue
+        if SPLIT_PREAMBLE_LINE_RE.match(ln):
+            raise Refused(f"{where}'s line {i + 1}, {ln.split(':', 1)[0]}:, stands below the first item, where no "
+                          "v2 reader reads it, and README.md would read it: move or delete it first")
+        if head is not None:
+            groups.append([head])
+            head, open_group = None, True
+        elif not open_group:
+            groups.append([])
+            open_group = True
+        groups[-1].append(ln)
+    return lines[:first], groups
+
+
+def _split_readme(pre: list[str], carried: list[list[str]]) -> str:
+    """`README.md` of a split (v3.0): the board's text before its first item, `Ledgerboard: 3` under its title, the
+    `## ` heading nearest the first item dropped, then the carried groups; relative links one directory up."""
+    fenced = _fenced(pre)
+    keep = [i for i, ln in enumerate(pre) if i in fenced or not VERSION_RE.match(ln)]
+    lines = [pre[i] for i in keep]
+    heads = [n for n, i in enumerate(keep) if pre[i].startswith("## ") and i not in fenced]
+    if heads:
+        j = heads[-1] + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        del lines[heads[-1]:j]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    first = next((i for i, ln in enumerate(lines) if ln.strip()), None)
+    if first is not None and lines[first].startswith("# "):
+        nxt = next((i for i in range(first + 1, len(lines)) if lines[i].strip()), None)
+        if nxt is None:
+            lines = [*lines[:first + 1], "", "Ledgerboard: 3"]
+        else:
+            lines = [*lines[:first + 1], *(lines[first + 1:nxt] or [""]), "Ledgerboard: 3", *lines[nxt:]]
+    else:
+        rest = lines[first:] if first is not None else []
+        lines = ["Ledgerboard: 3", *([""] + rest if rest else [])]
+    for group in carried:
+        lines += ["", *group]
+    return "\n".join(_up_links(lines)) + "\n"
+
+
+def _split_due(where: str, it: BoardItem) -> None:
+    """Refused where v2 reads the item's `Due` as unreadable and v3 would read it otherwise: on any kind but `fyi` a
+    colonless `Due <day>`, and on any kind the `Due` v2 reads lying inside the Context's words or a reply's."""
+    m = ITEM_RE.match(it.raw) or CLOSED_ITEM_RE.match(it.raw)
+    if m is None:
+        return
+    r = m.group("text").strip()
+    c = CLOSED_RE.search(r) if CLOSED_ITEM_RE.match(it.raw) else None
+    if c:
+        r = r[: c.start()].rstrip()
+    dm = DUE_RE.search(r)
+    if dm and _real_day(dm.group("due")):
+        at = dm.start()
+    else:
+        am = DUE_ATTEMPT_RE.search(r)
+        if am is None:
+            return
+        at = am.start()
+        if r[at + 3:at + 4] != ":" and it.kind != "fyi" and _real_day(am.group("raw")):
+            raise Refused(f"{where}'s line {it.line} carries `Due {am.group('raw')}` with no colon, which v2 reads "
+                          f"as unreadable and v3 would read as a day: write `Due: {am.group('raw')}.` first")
+    rs = reply_span(r)
+    if rs and rs[0] <= at < rs[1]:
+        raise Refused(f"{where}'s line {it.line}: the `Due` v2 reads stands in a reply's words, where v3 would not "
+                      "read it: fix it first")
+    cm = CONTEXT_RE.search(_gate_body(r))
+    if cm:
+        shift = (rs[1] - rs[0]) if rs else 0
+
+        def pos(p: int) -> int:
+            return p + shift if rs and p > rs[0] else p
+        if pos(cm.start("ctx")) <= at < pos(cm.end("ctx")):
+            raise Refused(f"{where}'s line {it.line}: the `Due` v2 reads stands in the Context's words, where v3 "
+                          "would not read it: fix it first")
+
+
+def _split_items(board: str, archive: str) -> dict:
+    """What a split of a v2 board and its archive writes (v3.0), shared by split_board() and split_board_notes():
+    ``items`` each ``(item, path, open twin or None)``, the item the v2 line that supplies its file; ``readme``;
+    ``archive_pre`` the archive's own lines before its first item, ``(line number, line)``, its `# ` title left
+    out. Refused by the ruling's two grounds (no id or no month; two lines of one id) and a declared major above 2."""
+    major = board_major(board, file=True)
+    if major > 2:
+        raise Refused(f"not a v2 board: declares Ledgerboard: {major}")
+    opens = [("the board", it) for it in _parse_open(board, warn=False, twins=False)]
+    shut = [*(("the board", it) for it in parse_closed_items(board)),
+            *(("the archive", it) for it in parse_closed_items(archive))]
+    for where, it in [*opens, *shut]:
+        if it.id is None:
+            raise Refused(f"{where}'s line {it.line} has no date, or a date that is no day of the calendar: no id can "
+                          "be given it; date it first")
+    for where, it in shut:
+        if it.closed is None or it.closed[0] is None:
+            raise Refused(f"{where}'s line {it.line} is closed with no readable `Closed:` date: no month to file it "
+                          "under; date it first")
+    for what, group in (("open", opens), ("closed", shut)):
+        by: dict[str, list[tuple[str, BoardItem]]] = {}
+        for where, it in group:
+            by.setdefault(it.id, []).append((where, it))
+        for iid, held in by.items():
+            if len(held) > 1:
+                raise Refused(f"{iid} is the id of {len(held)} {what} lines "
+                              f"({', '.join(f'{w} line {it.line}' for w, it in held)}): one file each cannot be "
+                              "written; keep one first")
+    closed_ids = {it.id for _, it in shut}
+    twins = {it.id: it for _, it in opens if it.id in closed_ids}
+    items = [(it, item_path(it.id), None) for _, it in opens if it.id not in closed_ids]
+    items += [(it, item_path(it.id, it.closed[0].isoformat()), twins.get(it.id)) for _, it in shut]
+    for where, it in [*((w, it) for w, it in opens if it.id not in closed_ids), *shut]:
+        _split_due(where, it)
+    pre, carried = _split_text(board, "the board")
+    apre, acarried = _split_text(archive, "the archive")
+    title = next((i for i, ln in enumerate(apre) if ln.strip()), None)
+    archive_pre = [(n, ln) for n, ln in enumerate(apre, 1)
+                   if ln.strip() and not (n - 1 == title and ln.startswith("# "))]
+    return {"items": items, "readme": _split_readme(pre, [*carried, *acarried]), "archive_pre": archive_pre}
+
+
+def _split_file(it: BoardItem) -> str:
+    """A v2 item's file (v3.0): its words the heading, the fields the v2 reader reads its header, its detail block
+    the body and its replies the Log."""
+    log = [f"- {d}: {by}: {words}" for by, d, words in it.replies]
+    return _item_render(it.words, it.fields, it.detail, log or None)
+
+
+def split_board(board: str, archive: str = "") -> dict[str, str]:
+    """The v3 files of a v2 board and its archive (v3.0, SPEC *Migration*), ``{path in the directory: text}``,
+    every line ending in LF: `README.md`, `<id>.md` for each open item and `archive/<YYYY-MM>/<id>.md` for each
+    closed one. Refused, ``Refused``, only where it cannot give an item an id or a month, where two lines of one
+    kind share an id, where the read-back's records of a v2 item and its file would differ, for a board declaring
+    a major above 2, a carried line README.md would read, and a `Due` v2 and v3 would read differently."""
+    got = _split_items(board, archive)
+    files = {BOARD_README: got["readme"]}
+    for it, path, _ in got["items"]:
+        files[path] = _split_file(it)
+    _split_check(board, archive, files)
+    return files
+
+
+def _split_check(board: str, archive: str, files: dict[str, str]) -> None:
+    """Refused unless ``files`` read back as the v2 board reads (*Two reads of one board compared*, at the latest day
+    any item names), and ``board_dir_problems()`` names nothing in them but rule 14's carried shapes."""
+    old = _read_board_file("board.md", board, archive, 2)
+    ls = _dict_ls(files)
+    new = load_board("", ls, files.get)
+    days = [d for it in [*old.items, *old.closed]
+            for d in (it.added, it.closed[0] if it.closed else None) if d is not None]
+    day = max(days) if days else date(1970, 1, 1)
+
+    def recs(group: list[BoardItem]) -> dict[str, dict]:
+        out = {}
+        for it in group:
+            r = item_record(it, day)
+            r.pop("path")
+            r.pop("line")
+            out[it.id] = r
+        return out
+
+    def ties(b: Board) -> list[set[str]]:
+        out: list[tuple[tuple, set[str]]] = []
+        for it, cls, d in needs_you(b, day):
+            if out and out[-1][0] == (cls, d):
+                out[-1][1].add(it.id)
+            else:
+                out.append(((cls, d), {it.id}))
+        return [g for _, g in out]
+    for what in ("items", "closed"):
+        a, b = recs(getattr(old, what)), recs(getattr(new, what))
+        diff = sorted(set(a) ^ set(b)) or sorted(k for k in a if a[k] != b[k])
+        if diff:
+            raise Refused(f"the split would not read back the same items: {diff[0]} reads differently — nothing "
+                          "was split")
+    if ties(old) != ties(new) or board_people(old) != board_people(new) or answered_by(old) != answered_by(new):
+        raise Refused("the split would not read back the same board: what needs the person, People: or Answered "
+                      "by: reads differently — nothing was split")
+    carried = set()
+    for path, text in files.items():
+        it = parse_item(text, path) if path != BOARD_README else None
+        if it is not None:
+            carried |= {(path, msg) for rule, _, msg in _item_dir_problems(it) if rule == 14}
+    bad = [f"{p}: {m}" for p, m in board_dir_problems("", ls, files.get) if (p, m) not in carried]
+    if bad:
+        raise Refused(f"the split would not read as its files say ({'; '.join(bad)}) — nothing was split")
+
+
+def _head_extra(line: str) -> str:
+    """The text a v2 line's head group holds after its session and host, which no file holds (v3.0)."""
+    m = ITEM_RE.match(line) or CLOSED_ITEM_RE.match(line)
+    g = SPLIT_HEAD_RE.match(m.group("text").strip()) if m else None
+    if g is None:
+        return ""
+    inner = HEAD_HOST_RE.sub("", SPLIT_SESSION_RE.sub("", g.group("inner"), count=1), count=1)
+    return " ".join(inner.split()).strip(",; ")
+
+
+def _collapsed(text: str) -> str:
+    return " ".join(text.split())
+
+
+def split_board_notes(files: Mapping[str, str], board: str, archive: str = "") -> list[tuple[str, int, str, str]]:
+    """What a caller warns about after a split (v3.0, SPEC *Migration*), ``(path, line number, line, why)``, nothing
+    rewritten: ``files`` is ``split_board(board, archive)``. `README.md`'s lines that may still describe the v2
+    board; the archive's own lines before its first item, not carried (path ``(archive)``, the archive's line);
+    an open twin whose detail block or line held what its closed twin's does not; each rule-14 shape the split
+    carried, at its field's line; and each item whose v2 line's head group held more than its session and host."""
+    got = _split_items(board, archive)
+    out: list[tuple[str, int, str, str]] = []
+    for n, ln in enumerate(files.get(BOARD_README, "").splitlines(), 1):
+        named = next((x for x in SPLIT_V2_NAMES if x in ln), None)
+        if named:
+            out.append((BOARD_README, n, ln, f"names {named}: the board is now this directory"))
+        elif ln.startswith("Format:"):
+            out.append((BOARD_README, n, ln, "a Format: line: it may describe the v2 board's lines"))
+    out += [(SPLIT_ARCHIVE, n, ln, "archive preamble not carried") for n, ln in got["archive_pre"]]
+    parsed = [(it, path, twin, parse_item(files[path], path)) for it, path, twin in got["items"] if path in files]
+    for it, path, twin, p in parsed:
+        if twin is None or p is None:
+            continue
+        head = files[path].splitlines()[0]
+        if twin.detail and twin.detail != it.detail:
+            out.append((path, 1, head, "open twin's detail not carried"))
+        ts, cs = reply_span(twin.text), reply_span(it.text)
+        tr = _collapsed(twin.text[ts[0]:ts[1]]) if ts else ""
+        cr = _collapsed(it.text[cs[0]:cs[1]]) if cs else ""
+        if (tr and tr not in cr) or ((twin.due, twin.bad_due) != (None, None)
+                                     and (twin.due, twin.bad_due) != (it.due, it.bad_due)) \
+                or (twin.hide_until is not None and twin.hide_until != it.hide_until):
+            out.append((path, 1, head, "open twin's line not carried"))
+    for it, path, _, p in parsed:
+        if p is None:
+            continue
+        lines = files[path].splitlines()
+        out += [(path, line, lines[line - 1] if line else "", msg)
+                for rule, line, msg in _item_dir_problems(p) if rule == 14]
+    for it, path, _, p in parsed:
+        extra = _head_extra(it.raw)
+        if extra and p is not None:
+            line = _field_line(p, "Session") or 1
+            out.append((path, line, files[path].splitlines()[line - 1], f"head text not carried: {extra}"))
+    return out
+
+
+def board_stub(title: str, name: str) -> str:
+    """The stub `board.py split` leaves at a v2 board's path (v3.0): its title, `Ledgerboard: 3`, and a line naming
+    the directory ``name`` beside it, which ``load_board()`` reads through it."""
+    return (f"# {title}\n\nLedgerboard: 3\n\nThis board is the directory [{name}/]({name}/), one file per item "
+            "(ledgerboard v3.0).\n")
+
+
+# ---------------------------------------------------------------------------------------------
 # Line predicates, for a reader that walks a diff line by line
 # ---------------------------------------------------------------------------------------------
 

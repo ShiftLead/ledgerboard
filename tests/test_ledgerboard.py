@@ -1323,3 +1323,52 @@ class UnknownStatus(unittest.TestCase):
                 recs = [r for r in L.check(led, arc, old, today=TODAY) if r["kind"] == "blocker-unknown-status"]
                 self.assertEqual([(r["id"], r["level"]) for r in recs], [("TD-001", level)])
                 self.assertIn("(Xyzzy)", recs[0]["text"])
+
+
+class SplitBoard(unittest.TestCase):  # v3.0 (TD-108, TD-098's B5): split_board() then load_board() gives the items back
+    @staticmethod
+    def boards():
+        """(name, board, archive) of every fixture board that splits: each fixtures/board/ case with a `.v3/`, and
+        each accepted fixtures/board_split/ case."""
+        fx = ROOT / "fixtures"
+        for md in sorted((fx / "board").iterdir()):
+            if md.name.endswith(".v3") or not (md.with_name((md.stem if md.is_file() else md.name) + ".v3")).is_dir():
+                continue
+            path = md / "board.md" if md.is_dir() else md
+            arch = Path(str(path)[:-3] + "_archive.md")
+            yield md.name, path.read_text(encoding="utf-8"), arch.read_text(encoding="utf-8") if arch.exists() else ""
+        for case in sorted((fx / "board_split").iterdir()):
+            if "refused" in json.loads((case / "expected.json").read_text(encoding="utf-8")):
+                continue
+            arch = case / "archive.md"
+            yield (case.name, (case / "board.md").read_text(encoding="utf-8"),
+                   arch.read_text(encoding="utf-8") if arch.exists() else "")
+
+    def test_a_split_reads_back_the_items(self):
+        day = date(2026, 1, 15)
+        n = 0
+        for name, board, archive in self.boards():
+            n += 1
+            files = L.split_board(board, archive)
+            old = L._read_board_file("board.md", board, archive, 2)
+            new = L.load_board("", L._dict_ls(files), files.get)
+
+            def recs(items):
+                return {it.id: {k: v for k, v in L.item_record(it, day).items() if k not in ("path", "line")}
+                        for it in items}
+            self.assertEqual(recs(old.items), recs(new.items), name)
+            self.assertEqual(recs(old.closed), recs(new.closed), name)
+            self.assertTrue(all(t.endswith("\n") and "\r" not in t for t in files.values()), name)
+        self.assertGreater(n, 20)
+
+    def test_a_crlf_board_splits_to_lf(self):
+        board = "# B\r\n\r\n- [ ] act 2026-01-05 (n/a) — Ship it. Context: TD-1. Due: 2026-01-20.\r\n  - a note\r\n"
+        files = L.split_board(board)
+        self.assertEqual(files, L.split_board(board.replace("\r\n", "\n")))
+        self.assertFalse(any("\r" in t for t in files.values()))
+
+    def test_the_stub(self):
+        self.assertEqual(L.board_stub("Needs the user", "user_attention"),
+                         "# Needs the user\n\nLedgerboard: 3\n\nThis board is the directory "
+                         "[user_attention/](user_attention/), one file per item (ledgerboard v3.0).\n")
+

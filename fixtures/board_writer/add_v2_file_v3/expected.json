@@ -2,6 +2,6 @@
  "exit": 1,
  "out": {
   "action": "add",
-  "refused": "board.md: not a v3 board: a v2 board"
+  "refused": "board.md: not a v3 board: a v2 board (split first: board.py split)"
  }
 }
