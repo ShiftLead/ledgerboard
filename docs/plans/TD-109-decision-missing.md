@@ -30,9 +30,12 @@ both this format's, and `check()` already scopes `ask-missing` to what an edit c
 - **Lifting is text** (SPEC *Events*): a lifted decision leaves its Ask in the entry as the record of what was
   asked. `lift_gate()` removes the gate and logs `gate lifted: decision (<p>) — by <who>; answer "<label>"` (or
   `override: <why>`). Every lift route writes through it (*Lifting a gate*), the decide lift included.
-- **`set` dropping a decision logs nothing.** Only `lift_gate()` writes `gate lifted:`; `set` logs `gate added:`
-  for a gate it adds and nothing for one it removes (*Edits*). `gate lifted:` is a reserved prefix, so `note` cannot
-  write one.
+- **Only a lift writes `gate lifted:`.** `lift_gate()` is its one writer, and the prefix is reserved, so `note`
+  cannot write one. `edit_entry(…, "set")` logs `gate added:` for a gate it adds and nothing for one it removes
+  (*Ledger entries and their edits*, *Edits*). The ledger writer never drops a decision that way: its `set` route
+  (`_gate_route()`, SPEC *The ledger writer*) lifts a decision a `--blocked-by` drops through `lift_gate()`, needing
+  `--by <person>`, or reassigns it. So through the writer a dropped decision is always logged as a lift; only a
+  direct `edit_entry()` caller or a hand edit drops one silently.
 - **The scope rule** (`check()`): a flag in `TEXT_KINDS` is judged on the entry's whole text; with `old`, a flag on
   an entry whose text is unchanged is standing (ℹ), and on a rewritten one a kind in `EDIT_ERRORS` is an error.
   Without `old`, every flag keeps the level it was raised at.
@@ -54,7 +57,9 @@ An **open** entry is flagged `decision-missing` when all three hold:
 2. **Its `Blocked by` names no decision.** A decision here is a readable `decision (<person>)`, a retired item
    (`hold`, or a role in `decision (…)`), or an item in the old decision form (`_old_form_item()`). The last two
    each have their own flag (`retired`), whose cure writes a `decision (<person>)`; counting them keeps one fault
-   from being reported twice. An `until` or an `event` gate is not a decision: an entry that waits on a date and
+   from being reported twice. Any other unreadable `decision (…)` item (`decision (the owner)`, which
+   `parse_gates()` puts in `bad`) names no person, so it is not a decision here: the entry is flagged beside the
+   item's own `blocked-item` error, since no reader can tell whom it waits on. An `until` or an `event` gate is not a decision: an entry that waits on a date and
    also asks a person something is flagged.
 3. **It is not answered** (D2).
 
@@ -100,8 +105,13 @@ lifted: event (<name>)` Log line says why").
 **The decide lift on a board answer** is covered: `decide_lift()` writes through `lift_gate()`, so the entry it
 writes has the gate gone, the Ask kept, and a last decision line that is a lift. No flag, so `gate()` refuses
 nothing. A work-order answer (`One more round`) logs `kept waiting` and keeps the gate; a `Hold: <note>` keeps the
-gate and rewrites the Ask, which a gated entry may do. A decision dropped with `set` (no lift line; cadence.md's
-TD-218 says only the person drops one) leaves the last decision line a `gate added` and is flagged.
+gate and rewrites the Ask, which a gated entry may do. The writer's `set` route that drops a decision lifts it
+(`--by` the gate's person, or `--override`), so it too leaves the entry answered: through the writer, removing a
+decision is always recorded as somebody's answer. A decision dropped any other way (a direct `edit_entry(…,
+"set")`, a hand edit) leaves no lift line, so the last decision line is a `gate added` and the entry is flagged.
+Through the writer, then, the flag fires on `new` with an Ask and no decision, on an `edit --section Ask` that adds
+or rewrites an Ask on an entry with no decision, and on a gate-less entry that already had an unanswered Ask once an
+edit rewrites it (at a check given a base; `gate()` itself refuses no fault already there).
 
 ### D3. The cure for an Ask that waits on no one: `edit --remove` takes it
 
@@ -110,6 +120,10 @@ before the Log existed, or was written by mistake, needs a way out that is not a
 `edit_entry(…, remove=True)` also removes the section `Ask` (matched as leads are, so never a qualified `Ask (…)`)
 when the entry's `Blocked by` names no decision in D1's sense. It is refused while one does: the Ask is what the
 decision waits on (`ask-missing` would follow). A header `Ask` field is already removed by `set`'s empty value.
+The build updates every place that says what `remove` takes: SPEC *Ledger entries and their edits* and *The ledger
+writer* (below), `edit_entry()`'s docstring and its refusal *"{name} is not misplaced: only a section named Title or as a header
+field is removed"*, `plan_edit()`'s docstring, and `ledger.py`'s `edit` description in its
+command table and its `--remove` help (today "only one named Title or as a header field (v2.8)").
 
 ### D4. The Owner half stays each consumer's
 
@@ -147,7 +161,12 @@ TD-247, TD-249); those whose wait is an Owner alone are D4's and are not flagged
 
 **Telling agent-cadence.** When the build merges, the builder mails agent-cadence's techlead that the next release
 carries `decision-missing`, so its TD-264 calls `check()` for the Ask half and keeps only its Owner half once it
-vendors that release.
+vendors that release. The mail names the one difference from agent-cadence's own copy (`ungated_waits()`, which
+reads `parse_blocked()`'s holders): here a retired item (`hold`, a role) and the old decision form count as a
+decision, since each already carries its own `retired` error. agent-cadence agreed to D4 at the design stage
+(2026-11-14, its techlead's reply through ledgerboard's techlead): its TD-264 (PR #212, merged) keeps the Owner
+branch of its `ungated_waits()` and drops its Ask branch when it vendors the release. It asks to be told when that
+release is tagged, so the mail names the release number.
 
 ## The SPEC text
 
@@ -178,6 +197,13 @@ for any other, for a header name the entry's header lacks (`set` it first), and 
 > refused for any other section, for an `Ask` while a decision holds, for a header name the entry's header lacks
 > (`set` it first), and with words.
 
+### In *The ledger writer*, the `edit` command
+
+Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced one; …)" with:
+
+> (or, v2.8, with `--remove` in place of `--from`, removes a misplaced one, or (v3.1) the `Ask` of an entry with no
+> decision; …)
+
 ### In *Versions*, after v3.0's paragraphs
 
 > **v3.1 adds `decision-missing`** (*The ledger*, `Blocked by`): `check()` flags an open entry with an Ask and no
@@ -188,7 +214,7 @@ for any other, for a header name the entry's header lacks (`set` it first), and 
 > is refused over one, and `check()` given a base names it an error once an edit rewrites that entry, so a consumer
 > gates each or removes its Ask when it takes v3.1.
 
-(If another minor lands first, the build writes that number in all three places.)
+(If another minor lands first, the build writes that number in every place above.)
 
 ## The fixtures
 
@@ -198,18 +224,25 @@ for any other, for a header name the entry's header lacks (`set` it first), and 
   ends `gate added: decision (pat)` then `gate lifted: decision (pat) — by pat; answer "Go"` (none); one whose Log
   lifts and then adds the decision again with no gate now (ℹ: the last line is `gate added`); one lifted by
   `override` (none); an Ask with `decision (designer)` (`retired` only, no `decision-missing`); an Ask with `hold`
-  (`retired` only); a `**Ask (earlier):**` section with no gate (none). And in `gates.archive.md`, an archived
-  entry with an Ask and no gate (none).
-- **`fixtures/ledger_edit/` (`check()` given `old`):** an ungated Ask added by the edit (error); an entry already
-  ungated in `old` and untouched (standing ℹ); the same entry with a note added (error: its text changed); a lift
-  written by `lift_gate()` (none); a lifted entry whose Ask the edit rewrites (error); a lifted entry the edit adds a
-  note to (none).
+  (`retired` only); an Ask with an unreadable `decision (the owner)` (`blocked-item` and `decision-missing`); a
+  `**Ask (earlier):**` section with no gate (none). And in `gates.archive.md`, an archived entry with an Ask and no
+  gate (none). The case's `check_since_empty` (`check(old="")`) shows each flagged entry as an error, since every
+  entry is new against an empty base; that is expected.
+- **`fixtures/ledger_edit/`, its `check` group (`check()` given `old`):** an ungated Ask added by the edit (error);
+  an entry already ungated in `old` and untouched (standing ℹ); the same entry with a note added (error: its text
+  changed); a lift written by `lift_gate()` (none); a decision dropped by a direct `edit_entry(…, "set")`, no lift
+  line (error); a lifted entry whose Ask the edit rewrites (error); a lifted entry the edit adds a note to (none).
+  That group's runner keeps only a listed set of kinds (`fixtures/run.py`, the `check` case: `archive-open-parts`,
+  `part-of-archived`, `part-of-unknown`, `log-not-last`, `log-line`, `event-undated`, `status`, `misplaced-name`,
+  `retired`), so the build adds `decision-missing` (and `blocked-item`, for the unreadable case if it is put here)
+  to that list.
+- **`fixtures/ledger_edit/`, its `edit_entry` group:** `remove` of `Ask` with no decision (removed), with a decision
+  (refused), and of an `Ask (old)` section (refused: neither misplaced nor an Ask).
 - **`fixtures/ledger_writer/`:** `new` with an Ask section and no gate (refused, `decision-missing`); `new` with an
-  Ask and `decision (pat)` (written); `set --blocked-by ""` dropping a decision from an entry with an Ask (refused);
-  a `note` on an entry already ungated (written, the fault being there before); `edit --section Ask --remove` on an
-  ungated entry (written, the flag gone) and on a gated one (refused).
-- **`fixtures/edit/`:** `edit_entry(remove=True)` of `Ask` with no decision (removed), with a decision (refused), and
-  of an `Ask (old)` section (refused: not misplaced, not an Ask).
+  Ask and `decision (pat)` (written); `set --blocked-by "" --by pat` dropping the decision from an entry with an Ask
+  (written: the route lifts it, so the entry is answered, no flag); `edit --section Ask` adding an Ask to an entry
+  with no decision (refused); a `note` on an entry already ungated (written, the fault being there before);
+  `edit --section Ask --remove` on an ungated entry (written, the flag gone) and on a gated one (refused).
 
 ## Builds
 
