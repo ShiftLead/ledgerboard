@@ -137,7 +137,7 @@ FILE"*. So is
 `edit_entry(…, "set")` that writes a non-empty header `Ask` field, or changes one, when the resulting `Blocked by`
 names no decision. This replaces a `check()` rule that would compare an answered entry's Ask with the base's, which
 a reopen, a renumber, a link rewrite and the canonical form all trip (F9). A question asked again on an answered
-entry is gated and written in one `set --ask` (below), and the entry is then gated, not answered. A `Hold: <note>`
+entry may be gated and written in one `set --ask` (below), and the entry is then gated, not answered. A `Hold: <note>`
 answer, as cadence.md §4.8 has a session record it, keeps the gate and puts the note in the Ask, so the Ask is
 written on a gated entry and is untouched. Whether a `Hold` lifts is the item's `Lifts:`; where one lifts, the entry
 is answered and its Ask is not rewritten, so the session records the note with `note` (a Log line), not in the Ask.
@@ -164,13 +164,13 @@ both halves, so neither `ask-missing` nor `decision-missing` fires. Its edges:
   that header field and the body section is a misplaced name (v2.8); there `set --blocked-by "…" --field 'Ask=…'`
   is the one write, which D3's `set` refusal already judges on the resulting `Blocked by`.
 
-**Re-asking an answered entry.** An entry that already has an Ask can take a gate alone (`ask-missing` is satisfied
-by the old Ask), so an answered entry is gated again with `set --blocked-by` and needs no `--ask`. Its Ask then
+**Re-asking an answered entry.** An entry that already has an Ask (a `**Ask:**` section or a header `Ask`; not a renamed
+`**Ask (answered):**`) can take a gate alone (`ask-missing` is satisfied by the old Ask), so an answered entry is gated again with `set --blocked-by` and needs no `--ask`. Its Ask then
 still holds the question already answered; the session that re-asks rewrites it in the same PR (`edit --section
 Ask`, allowed once the entry is gated) or passes `--ask`. Nothing refuses a gate alone there: the entry waits
 visibly, which is all TD-109 asks, and a guard against a stale question would need its own trigger, its own
-exceptions (a reassign, a second person's decision, a header Ask) and its own fixtures (F31–F33, withdrawn in
-round 4).
+exceptions (a reassign, a second person's decision, a header Ask) and its own fixtures (F31, F32; withdrawn in
+round 4, F34).
 
 **What "answered" is, in code.** D2's rule is one module function, `ask_answered(text) -> bool` over an entry's
 text (its Log read by `log_lines()`), which `check()` calls; it is public so a consumer reading a ledger can ask
