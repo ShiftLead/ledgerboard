@@ -581,6 +581,19 @@ tail (`Resolved 2026-01-10: why`): exit 1, *run migrate first*, nothing written;
   changed, each regenerated and read;
 - text 10's message regenerates every expected output that holds the old ending: `ledger_edit/expected.json`
   and the `ledger_writer/*/expected.json` files that print it.
+- *The builder's calls (TD-091, 2026-11-14), each for the techlead's read:* `fixtures/ledger/basic.md` and its twin
+  `basic.v2/` lose their retired forms (TD-001's header `Location` becomes the body section, TD-002's old form
+  becomes `decision (the owner)`), since a retired form's level now follows the declared major (ℹ v1, error v2) and
+  the twins must give one JSON; the `retired_*` cases cover the forms. `ledger_writer/set_old_form`'s command sets
+  `event (ships), decision (Robin) pick a format first`, so the writer's refusal rule refuses it (as written it
+  dropped the old item and wrote). `ledger_edit`'s `set_refused_gate_on_old_form` gains a `today`, so the value
+  is written as given rather than refused for the date. `archive` refuses a header `Resolved` on every archive
+  kind. Verdicts that follow from D4 though no bullet names them: `ledger_writer/reopen_location` exits 0 (the
+  error stands, as for `Resolved`); `ledger_edit`'s `set_migrates_old_form_no_today` is refused for its missing
+  `today`, and `set_migrates_old_form` logs `gate added` (text 7's gained decision); `fixtures/ledger/gates.json`'s
+  TD-106 `Waits` and `Taken by` become errors; `basic.json` and `escaped.json`'s ℹ flags become the retired records;
+  `report_check_base` reports two errors. `fmt_retired_fields` and `fmt_header_not_field` do not change (`fmt`
+  reads no `check()`, and neither holds a `Taken by`).
 
 ## The builds
 

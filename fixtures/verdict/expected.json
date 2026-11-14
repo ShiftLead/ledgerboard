@@ -533,10 +533,6 @@
    "refusals": [],
    "flags": []
   },
-  "migrate_old_form_not_gained": {
-   "refusals": [],
-   "flags": []
-  },
   "v3_uncovered_new_decide": {
    "refusals": [
     [
@@ -545,6 +541,15 @@
     ]
    ],
    "flags": []
+  },
+  "old_form_rewrite_gained": {
+   "flags": [],
+   "refusals": [
+    [
+     "decision-uncovered",
+     "TD-190 gains decision (Kim) and no open decide item on this repo's board asks it — file the item in the same PR"
+    ]
+   ]
   }
  }
 }

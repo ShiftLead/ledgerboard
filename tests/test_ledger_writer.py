@@ -106,7 +106,8 @@ class ArchivedNote(unittest.TestCase):
                 d, _ = self.archived(tmp, status)
                 with self.assertRaises(Refused) as e:
                     W.plan_edit(W.Ledger.open(d), "note", "TD-005", words="x", today="2026-01-15")
-                self.assertIn("run migrate first", str(e.exception))
+                self.assertTrue(str(e.exception).endswith(  # v3.0: The closed Status set's cure
+                    "on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"))
                 self.assertNotIsInstance(e.exception, W.Unusable)
 
     def test_set_and_edit_still_refuse_an_archived_entry(self):
@@ -184,15 +185,14 @@ class Location(unittest.TestCase):  # v2.7 (TD-058 D4): the Location is a body s
             self.assertEqual(code, 0)
             self.assertNotIn("Location", Path(d, "TD-001.md").read_text())
 
-    def test_check_grades_a_header_location_as_waits(self):
+    def test_check_grades_a_header_location_an_error_whatever_the_edit(self):  # v3.0: a retired error
         old = "# Ledger\n\nLedgerboard: 2\n\n## TD-001: x\n\n**Priority:** Low\n**Location:** a\n\n**Why:** w.\n"
         new = old + "\n## TD-002: y\n\n**Priority:** Low\n**Location:** b\n\n**Why:** w.\n"
-        recs = {r["id"]: r for r in L.check(new, "", old=old, today="2026-01-15") if r["kind"] == "retired"}
-        self.assertEqual((recs["TD-001"]["level"], recs["TD-001"]["standing"]), ("info", True))
-        self.assertEqual(recs["TD-002"]["level"], "error")
-        self.assertIn(L.LOCATION_WRITTEN, recs["TD-002"]["text"])
-        self.assertTrue(all(r["level"] == "info" for r in L.check(new, "", today="2026-01-15")
-                            if r["kind"] == "retired"))
+        for base in (old, None):
+            recs = {r["id"]: r for r in L.check(new, "", old=base, today="2026-01-15") if r["kind"] == "retired"}
+            self.assertEqual({t: (r["level"], r["standing"]) for t, r in recs.items()},
+                             {"TD-001": ("error", False), "TD-002": ("error", False)})
+            self.assertIn("move its value with edit --section Location, then remove it with set", recs["TD-001"]["text"])
 
 
 class Retitle(unittest.TestCase):  # v2.8 (TD-068 B1): set --title and edit --remove at the command line
@@ -224,54 +224,6 @@ class Retitle(unittest.TestCase):  # v2.8 (TD-068 B1): set --title and edit --re
                                title="A narrower scope", today="2026-01-15")
             log = plan.changes[os.path.join(d, "TD-001.md")].split("**Log:**\n", 1)[1].splitlines()
             self.assertEqual([L.log_line(x)["kind"] for x in log], ["gate-lifted", "retitled"])
-
-
-class Migrate(unittest.TestCase):  # v2.7 (TD-058 B2): ledger.py migrate's text output and its usage errors
-    ARCH = ("## TD-004: Gone\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** {}\n\n**Why:** a reason.\n")
-
-    def ledger(self, tmp: str, status: str) -> str:
-        d = ledger(tmp, **{"TD-001.md": E1.replace("**Status:** Open", "**Status:** Designed 2026-10-01")})
-        os.makedirs(os.path.join(d, "archive"))
-        Path(d, "archive", "TD-004.md").write_text(self.ARCH.format(status))
-        return d
-
-    def test_dry_run_prints_the_entries_and_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            d = self.ledger(tmp, "OBE 2026-10-03")
-            code, out, _ = run("migrate", "--release", "2.7", "--dry-run", "--ledger", d, "--today", "2026-11-11")
-            self.assertEqual(code, 0)
-            self.assertEqual(out, "TD-001\n  change: Status Designed 2026-10-01 → Open\n"
-                                  "  listed: stage word Designed: Kind not set\n"
-                                  "TD-004\n  change: Status OBE 2026-10-03 → Dropped 2026-10-03\n")
-            self.assertIn("Designed", Path(d, "TD-001.md").read_text())
-
-    def test_dry_run_with_nothing_to_migrate(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            d = ledger(tmp)
-            code, out, _ = run("migrate", "--release", "2.7", "--dry-run", "--ledger", d, "--today", "2026-11-11")
-            self.assertEqual((code, out), (0, "nothing to migrate\n"))
-
-    def test_a_stop_prints_one_line_per_stopped_entry(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            d = self.ledger(tmp, "Gone quiet")
-            code, out, err = run("migrate", "--release", "2.7", "--ledger", d, "--today", "2026-11-11")
-            self.assertEqual((code, out), (1, ""))
-            self.assertEqual(err, "TD-004: no date for the Status; Status Gone: no archived form\n")
-            self.assertIn("Designed", Path(d, "TD-001.md").read_text())
-
-    def test_base_and_resolved_are_usage_errors(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            d = ledger(tmp)
-            for flag in ("--base", "--resolved"):
-                code, _, _ = run("migrate", "--release", "2.7", flag, d, "--ledger", d)
-                self.assertEqual(code, 2, flag)
-
-    def test_the_subject_counts_the_entries_changed(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            d = self.ledger(tmp, "OBE 2026-10-03")
-            code, out, _ = run("migrate", "--release", "2.7", "--ledger", d, "--today", "2026-11-11", "--json")
-            self.assertEqual(code, 0)
-            self.assertIn('"subject": "ledger: migrate v2.7 (2 entries)"', out)
 
 
 class Write(unittest.TestCase):

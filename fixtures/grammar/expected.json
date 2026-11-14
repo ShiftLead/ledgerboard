@@ -7,21 +7,15 @@
    },
    {
     "accepted": false,
-    "why": [
-     "Added comment → Log"
-    ]
+    "why": null
    },
    {
     "accepted": false,
-    "why": [
-     "Added 2026-01-01.: not a date"
-    ]
+    "why": null
    },
    {
     "accepted": false,
-    "why": [
-     "Added soon: not a date"
-    ]
+    "why": null
    }
   ],
   "date": [
@@ -31,9 +25,7 @@
    },
    {
     "accepted": false,
-    "why": [
-     "Added 2026-1-31: not a date"
-    ]
+    "why": null
    }
   ],
   "digit": [
@@ -43,9 +35,7 @@
    },
    {
     "accepted": false,
-    "why": [
-     "Added 2026-1O-09: not a date"
-    ]
+    "why": null
    }
   ]
  },
@@ -1391,7 +1381,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "digit": [
@@ -1401,7 +1391,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "status-dropped": [
@@ -1411,15 +1401,15 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Dropped, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ]
  },
@@ -1431,15 +1421,15 @@
    },
    {
     "accepted": false,
-    "why": "an open entry's Status is Open alone — this one is Open, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an open entry's Status is Open alone — this one is Open, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an open entry's Status is Open alone — this one is open, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an open entry's Status is Open alone — this one is open, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an open entry's Status is Open alone — this one is Open, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an open entry's Status is Open alone — this one is Open, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ]
  },
@@ -1451,7 +1441,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "digit": [
@@ -1461,7 +1451,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "status-resolved": [
@@ -1471,15 +1461,15 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Resolved, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ]
  },
@@ -1491,7 +1481,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "digit": [
@@ -1501,7 +1491,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "entry-id": [
@@ -1511,7 +1501,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "repo": [
@@ -1521,7 +1511,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "repo-part": [
@@ -1531,7 +1521,7 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ],
   "status-superseded": [
@@ -1541,15 +1531,15 @@
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    },
    {
     "accepted": false,
-    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — run migrate, which maps it, lists it, or names what a person decides"
+    "why": "an archived entry's Status is Resolved D, Superseded D by <id> or Dropped D — this one is Superseded, not in that form — v3.0 reads no other form: on an open entry write Open with set, on an archived one by hand, then ledger.py fmt TD-n"
    }
   ]
  }

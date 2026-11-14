@@ -395,8 +395,8 @@ class Gates(unittest.TestCase):
     def test_parse_blocked_keeps_every_block_for_its_callers(self):
         self.assertEqual(L.parse_blocked("TD-1, decision (pat), until 2026-02-01, event (x), hold, soon"),
                          (["TD-1"], ["pat"], ["until 2026-02-01", "event (x)", "hold", "soon"]))
-        self.assertEqual(L.parse_blocked("decision (designer), decision (kim) — after it, TD-9"),
-                         ([], ["designer", "kim"], []))
+        self.assertEqual(L.parse_blocked("decision (designer), decision (kim) — after it, TD-9"),  # v3.0: the old
+                         (["TD-9"], ["designer"], ["decision (kim) — after it"]))  # form names no holder
 
     def test_an_ask_removed_is_an_error_on_the_edit(self):
         was = "# Ledger\n\n## TD-001: x\n\n**Priority:** Low\n**Blocked by:** decision (pat)\n\n**Ask:** go?\n"
@@ -445,50 +445,6 @@ class Lifts(unittest.TestCase):
         got = L.decide_lift(self.ITEM, {"TD-002": self.GATED}, "Go", "pat", TODAY, ["pat"], None)["TD-002"]
         self.assertEqual([e["id"] for e in L.pickable("# Ledger\n\n" + got, "", today=TODAY)["pickable"]], ["TD-002"])
         self.assertEqual([r for r in L.check("# Ledger\n\n" + got, "", today=TODAY) if r["level"] == "error"], [])
-
-
-class Migrate(unittest.TestCase):
-    """v2.7 (TD-058 B1): migrate_entry() is pure and never raises for an entry's text; its output is stable."""
-
-    def test_never_raises_and_a_second_run_changes_nothing(self):
-        spec = json.loads((ROOT / "fixtures" / "migrate" / "cases.json").read_text(encoding="utf-8"))
-        for c in spec["migrate_entry"]:
-            for cut in range(0, len(c["text"]) + 1, 7):  # every prefix of every fixture entry, both places
-                for archived in (False, True):
-                    got = L.migrate_entry(c["text"][:cut], archived=archived, today="2026-11-11",
-                                          closed_date="2026-10-20", kinds={"designed": "stage-a"})
-                    self.assertEqual(sorted(got), ["changes", "listed", "stops", "text"])
-                    if got["changes"]:
-                        again = L.migrate_entry(got["text"], archived=archived, today="2026-11-11",
-                                                closed_date="2026-10-20", kinds={"designed": "stage-a"})
-                        self.assertEqual((again["text"], again["changes"], again["stops"]), (got["text"], [], []))
-                        self.assertIsNone(L.status_problem(got["text"], archived=archived))
-
-    RULES_5_TO_8 = ("Taken by", "Waits", "Resolved", "old decision form")
-
-    def test_rules_5_to_8_never_move_a_gate_age(self):
-        """v2.8 (TD-078 D1): on a case naming a gate, with a dated Log line or a real Added, where only rules
-        5–8 change the entry, the gate's age is the same before and after."""
-        spec = json.loads((ROOT / "fixtures" / "migrate" / "cases.json").read_text(encoding="utf-8"))
-        seen = 0
-        for c in spec["migrate_entry"]:
-            if "gate" not in c:
-                continue
-            got = L.migrate_entry(c["text"], archived=c["archived"], today=spec["today"])
-            if got["stops"] or not got["changes"] or not all(x.startswith(self.RULES_5_TO_8) for x in got["changes"]):
-                continue
-            seen += 1
-            with self.subTest(case=c["name"]):
-                self.assertEqual(L.gate_age(got["text"], c["gate"]), L.gate_age(c["text"], c["gate"]))
-        self.assertGreaterEqual(seen, 5)
-
-    def test_rule_8_reads_the_gate_the_old_form_held(self):
-        text = ("## TD-7: An invented entry\n\n**Priority:** Low\n**Added:** 2026-09-01\n**Status:** Open\n"
-                "**Blocked by:** TD-3, decision (Kim) — a, b (c, d)\n\n**Why:** a reason.\n")
-        got = L.migrate_entry(text, archived=False, today="2026-11-11")
-        g = L.parse_gates(L.entries(got["text"])[0]["blocked_raw"])
-        self.assertEqual((g["ids"], g["decisions"], g["old_form"]), (["TD-3"], ["Kim"], None))
-        self.assertIn("**Ask:** a, b (c, d)\n", got["text"])
 
 
 class DetailRecommended(unittest.TestCase):
@@ -1036,8 +992,11 @@ class TheLog(unittest.TestCase):
             with self.subTest(status):
                 text = self.ENTRY.replace("**Status:** Open", f"**Status:** {status}")
                 self.assertEqual(L.status_notes_to_log(text), text)
-        text = "## TD-6: x\n\n**Status:** Resolved: built\n**Resolved:** 2026-01-07 (PR #3)\n\n**Why:** w\n"
+        text = "## TD-6: x\n\n**Status:** Resolved: built\n\n**Why:** w\n\n**Resolved:** 2026-01-07 (PR #3)\n"
         self.assertIn("- 2026-01-07: built\n", L.edit_entry(text, "reopen", today="2026-02-01", why="again"))
+        held = "## TD-6: x\n\n**Status:** Resolved: built\n**Resolved:** 2026-01-07 (PR #3)\n\n**Why:** w\n"  # v3.0:
+        self.assertIn("- 2026-02-01: was: Resolved: built\n",  # a header Resolved is not read for its date (D6)
+                      L.edit_entry(held, "reopen", today="2026-02-01", why="again"))
 
     def test_a_gates_age(self):
         text = self.ENTRY.replace("**Status:** Open", "**Status:** Open\n**Blocked by:** decision (Paul)")
@@ -1103,8 +1062,7 @@ class NextId(unittest.TestCase):
         spec = json.loads((ROOT / "fixtures" / "ids" / "cases.json").read_text(encoding="utf-8"))
         nonces = {t["take"] for c in spec["judge_takes"] for t in c["takes"]}
         for c in spec["judge_takes"]:
-            for kind, text in sum(L.judge_takes(c["new"], c["takes"], c["entries"], c["branch"], "main",
-                                                accept_taken_by=c["accept_taken_by"]), []):
+            for kind, text in sum(L.judge_takes(c["new"], c["takes"], c["entries"], c["branch"], "main"), []):
                 with self.subTest(case=c["name"], kind=kind):
                     self.assertFalse([n for n in nonces if n in text], text)
 
@@ -1268,14 +1226,11 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
             with self.assertRaises(L.Refused):
                 call()
 
-    def test_the_migrate_subject(self):
-        s = L.migrate_subject("2.4", 12)
-        self.assertEqual(s, "ledger: migrate v2.4 (12 entries)")
+    def test_a_migrate_subject_is_still_named(self):  # v3.0: migrate_subject() is gone; v2.x's subjects stay read
+        s = "ledger: migrate v2.4 (12 entries)"
         self.assertEqual(L.subject_kind(s), "migrate")
         self.assertIsNone(L.edit_action(s))
-        for bad in (("2.x", 3), ("2.4", -1), ("2.4", True)):
-            with self.assertRaises(L.Refused):
-                L.migrate_subject(*bad)
+        self.assertFalse(hasattr(L, "migrate_subject") or hasattr(L, "migrate_entry"))
 
     def test_a_line_break_that_split_misses_numbers_as_parse_board_does(self):
         base, head = self.trees("v2_lift")  # a v2 board, at L.BOARD_V2_PATH
