@@ -323,8 +323,9 @@ board is split.
     `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
     change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:380), which a stub never
     holds, so where `${BOARD%.md}/` is a directory it tests for an open item there instead, a top-level file
-    of an id's shape, the glob `[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md` (an open item is `<id>.md` there, D6;
-    a stray file of another name is a problem the board row names, not an item; F439), keeping the script's order invariant (no subprocess
+    of roughly an id's shape, the glob `[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md` (an open item is `<id>.md`
+    there, D6; a name that fails `is_item_id()` is a stray file the board row names, TD-092's D11 rule 14, and its
+    match only fires the soft warning; F439, F440, F441), keeping the script's order invariant (no subprocess
     before the board test; round 5's F428, F435, F436); cadence.md
     §3, §4.3 and §4.4, `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton
     (no `Format:` line for the item line, no sections, closing archives) change in the vendor PR, beside the split
