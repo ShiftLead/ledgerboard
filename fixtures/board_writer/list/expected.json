@@ -4,8 +4,11 @@
   "action": "list",
   "items": [
    {
+    "added": "2026-01-10",
     "answers": [],
+    "closed": null,
     "consequences": [],
+    "context": "PR #12",
     "decided": null,
     "decided_by": null,
     "default": null,
@@ -17,29 +20,34 @@
     "hidden": false,
     "hide_until": null,
     "host": "box",
+    "id": "2026-01-10-32d5decf",
     "kind": "act",
     "lifts": null,
     "line": 7,
     "notes": [],
     "overdue_days": null,
     "parts": [],
+    "path": "",
     "refs": [
      "PR #12"
     ],
     "replies": [],
     "session": "w-1",
-    "text": "act 2026-01-10 (session `w-1` on box) — Merge the parser fix. Context: PR #12. Due: 2026-01-20.",
+    "text": "Merge the parser fix.",
     "waiting_on": "person"
    },
    {
+    "added": "2026-01-11",
     "answers": [
      "Memory",
      "Disk"
     ],
+    "closed": null,
     "consequences": [
      "",
      ""
     ],
+    "context": "TD-7",
     "decided": null,
     "decided_by": null,
     "default": "Memory",
@@ -55,18 +63,20 @@
     "hidden": false,
     "hide_until": null,
     "host": null,
+    "id": "2026-01-11-766afb35",
     "kind": "decide",
     "lifts": null,
     "line": 8,
     "notes": [],
     "overdue_days": null,
     "parts": [],
+    "path": "",
     "refs": [
      "TD-7"
     ],
     "replies": [],
     "session": "w-2",
-    "text": "decide 2026-01-11 (session `w-2`) — **Pick a cache.** Context: TD-7. Due: 2026-01-18. Answers: Memory (default) | Disk.",
+    "text": "**Pick a cache.**",
     "waiting_on": "person"
    }
   ]

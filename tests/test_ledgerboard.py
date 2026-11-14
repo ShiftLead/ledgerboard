@@ -537,7 +537,7 @@ class Parts(unittest.TestCase):
                 self.line(context, parts)
             hand = (f"- [ ] decide 2026-01-15 (n/a) — Go? Context: {context}. Parts: {', '.join(parts)}. "
                     "Due: 2026-01-20. Answers: Go | Not yet.")
-            self.assertEqual(L.parts_problems(hand, self.ENTRIES), [f"line: {r.exception}"])
+            self.assertEqual(L.parts_problems(hand, self.ENTRIES), [f"item: {r.exception}"])
 
     def test_inputs_json_cannot_carry(self):
         line = self.line()

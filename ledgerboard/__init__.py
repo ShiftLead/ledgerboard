@@ -19,7 +19,9 @@ Sections: the ledger (entries, ``Fields:``, ``Blocked by``, ``Part of``, derived
 (cards, keys, the rank file, the pick order); the board
 (items, the item record, keys and refs); the ledger as a directory (``load``, ``split``); edits (``edit_line``, composing an item, the commit
 subject of a write and its parser); the board's item file (v3.0: its id, ``parse_item``, ``item_file``,
-``edit_item``, ``item_file_problem``, ``canonical_item_file``); line predicates for diff walkers; ledger entries and their writers
+``edit_item``, ``item_file_problem``, ``canonical_item_file``); reading a board (v3.0: ``load_board`` of a v3
+directory or a v2 board file alike, the ``Board`` every board reader takes, ``board_dir_problems``); line
+predicates for diff walkers; ledger entries and their writers
 (``canonical``, ``entry_text``, ``edit_entry``, v2.2; the Log, v2.4); the format version.
 """
 
@@ -1381,10 +1383,26 @@ def is_person(name: object) -> bool:
     return isinstance(name, str) and PERSON_RE.fullmatch(name) is not None
 
 
-def _people_line(content: str) -> tuple[int, str] | None:
-    """(1-based line, names text) of the board's first `People:` line above its first item, or None."""
+def _preamble(board: Board | str) -> tuple[str, bool]:
+    """(the preamble's text, whether every line of it is preamble) of a ``Board`` (v3.0: `README.md` on a board
+    read from a directory, every line of it; the text before the first item on one read from a file) or of a v2
+    board's text, read only above its first item."""
+    if isinstance(board, Board):
+        return board.preamble, board.form == "dir"
+    return board, False
+
+
+def _preamble_path(board: Board) -> str:
+    """The path a ``Board``'s preamble problems are named under: `README.md` on a board read from a directory,
+    else ``Board.path``'s basename."""
+    return BOARD_README if board.form == "dir" else str(board.path).rstrip("/").rsplit("/", 1)[-1]
+
+
+def _people_line(content: str, every: bool = False) -> tuple[int, str] | None:
+    """(1-based line, names text) of the board's first `People:` line above its first item (``every``: on any
+    line), or None."""
     for n, ln in enumerate(content.splitlines(), start=1):
-        if ANY_ITEM_RE.match(ln):
+        if ANY_ITEM_RE.match(ln) and not every:
             return None
         m = PEOPLE_RE.match(ln.rstrip())
         if m:
@@ -1392,12 +1410,13 @@ def _people_line(content: str) -> tuple[int, str] | None:
     return None
 
 
-def board_people(content: str) -> list[str] | None:
+def board_people(content: Board | str) -> list[str] | None:
     """The names the board's `People:` preamble line lists (v2.3), as written, in order — or None when
     it has none. The line is read only above the board's first item; its names are comma-separated.
     A name outside the person grammar, a duplicate or an empty list is returned as it stands, for
-    board_problems() to flag; compare names case-insensitively."""
-    got = _people_line(content)
+    board_problems() to flag; compare names case-insensitively. A ``Board`` (v3.0) is read from its preamble:
+    every line of `README.md` on a board read from a directory."""
+    got = _people_line(*_preamble(content))
     if got is None:
         return None
     return [n.strip() for n in got[1].split(",")] if got[1].strip() else []
@@ -1606,6 +1625,165 @@ def item_key(line: str) -> str:
     return line.rstrip(" .")
 
 
+# A v2 line's prefix (v3.0): the tick, an optional word before a date, an optional date, then right after the date
+# an optional one head of a form the format writes, then an optional ` — `. What follows it is the words' source.
+ITEM_PREFIX_RE = re.compile(r"^\s*-\s*\[[ xX]\]\s+(?:[A-Za-z]+\s+(?=\d{4}-\d{2}-\d{2}\b))?"
+                            r"(?:\d{4}-\d{2}-\d{2}\b(?:\s*\((?:n/a|person|session\s[^)]*)\))?)?(?:\s*—\s)?")
+
+
+def _doer_span(text: str) -> tuple[int, int, str] | None:
+    """(start, end, value as written) of a v2 line's `Doer:` field as ``parse_doer()`` finds it, or None."""
+    c = CONTEXT_RE.search(text)
+    if c is None:
+        return None
+    at = c.end()
+    p = PARTS_RE.match(text, at)
+    if p:
+        at = p.end()
+    m = DOER_RE.match(text, at)
+    if m is None:
+        return None
+    start = m.end()
+    span = reply_span(text)
+    if span and span[0] <= start < span[1]:
+        return None
+    nxt = GATE_FIELD_RE.search(text, start)
+    end = min([len(text), *([nxt.start()] if nxt else []), *([span[0]] if span and span[0] >= start else [])])
+    return m.start(), end, text[start:end]
+
+
+def _no_period(value: str) -> str:
+    """A field's value as a header holds it: trimmed, its one final `.` dropped."""
+    value = value.strip()
+    return value[:-1].rstrip() if value.endswith(".") else value
+
+
+def _v2_read(line: str) -> dict:
+    """What v3.0 reads of a v2 item line (open or closed) beyond today's fields, read from the line as written:
+    its ``words`` (``item_words()``), ``fields`` (the header fields its split file carries, in order), ``added``,
+    ``id``, ``session``, ``host``, ``context`` (read with its replies cut), ``replies``, ``closed`` (a closed
+    line's ``(date, why)``, ``(None, None)`` with no readable `Closed:` date; None for an open line) and ``raw``."""
+    m = ITEM_RE.match(line) or CLOSED_ITEM_RE.match(line)
+    if m is None:
+        return {"words": "", "fields": [], "added": None, "id": None, "session": None, "host": None,
+                "context": None, "replies": [], "closed": None, "raw": line}
+    t = m.group("text").strip()
+    is_closed = ITEM_RE.match(line) is None
+    pm = ITEM_PREFIX_RE.match(line)
+    pfx = min(max(0, pm.end() - m.start("text")), len(t)) if pm else 0
+    spans: list[tuple[int, int]] = []
+    found: dict[str, str] = {}
+
+    def dot(end: int, text: str) -> int:
+        return end + 1 if text[end:end + 1] == "." else end
+    r, closed = t, None
+    if is_closed:
+        closed = (None, None)
+        c = CLOSED_RE.search(t)
+        if c:
+            r = t[: c.start()].rstrip()
+            day, de = c.group("date"), c.end("date")
+            if t[de:].startswith(CONSEQUENCE_SEP):
+                end, why = len(t), _no_period(t[de + len(CONSEQUENCE_SEP):]) or None
+            else:
+                end, why = dot(de, t), None
+            spans.append((c.start(), end))
+            if _real_day(day):
+                closed = (date.fromisoformat(day), why)
+                found["Closed"] = day + (f"{CONSEQUENCE_SEP}{why}" if why else "")
+            else:
+                found["Closed"] = _no_period(t[c.start("date"):end])
+    rs = reply_span(r)
+    if rs:
+        spans.append(rs)
+    body = _gate_body(r)
+    cm = CONTEXT_RE.search(body)
+    context = None
+    if cm:
+        context = _no_period(cm.group("ctx"))
+        shift = (rs[1] - rs[0]) if rs else 0
+
+        def at(p: int) -> int:
+            return p + shift if rs and p > rs[0] else p
+        spans.append((at(cm.start()), at(cm.end())))
+        found["Context"] = context
+    c0 = CONTEXT_RE.search(r)
+    pm2 = PARTS_RE.match(r, c0.end()) if c0 else None
+    if pm2 and not (rs and rs[0] <= pm2.start("ids") < rs[1]):
+        spans.append((pm2.start(), pm2.end()))
+    parts = parse_parts(r)
+    if parts:
+        found["Parts"] = ", ".join(parts)
+    ds = _doer_span(r)
+    if ds:
+        v = ds[2].strip()
+        if v.endswith(".") and not v[:-1].endswith((" ", "\t")):
+            v = v[:-1]
+        if v.strip(" \t."):
+            spans.append((ds[0], ds[1]))
+            found["Doer"] = v
+    dm = DUE_RE.search(r)
+    if dm and _real_day(dm.group("due")):
+        spans.append((dm.start(), dot(dm.end(), r)))
+        found["Due"] = dm.group("due")
+    elif am := DUE_ATTEMPT_RE.search(r):
+        spans.append((am.start(), dot(am.end(), r)))
+        found["Due"] = am.group("raw")
+    hm = _hide_match(r)
+    if hm:
+        spans.append((hm.start(), dot(hm.end(), r)))
+        found["Hide until"] = hm.group("date")
+    tr = _trailer(r)
+    ts = len(r) - len(tr)
+    a = ANSWERS_RE.search(tr)
+    if a:
+        spans.append((ts + a.start(), dot(ts + a.end("answers"), r)))
+        if a.group("answers").strip():
+            found["Answers"] = a.group("answers").strip()
+        d = DECIDED_RE.search(tr, a.start())
+        lm = LIFTS_RE.search(tr[: d.start()] if d else tr, a.start())
+        if lm:
+            spans.append((ts + lm.start(), dot(ts + lm.end("lifts"), r)))
+            if lm.group("lifts").strip():
+                found["Lifts"] = lm.group("lifts").strip()
+    dd = DECIDED_RE.search(tr)
+    if dd:
+        spans.append((ts + dd.start(), ts + dd.end()))
+        got = _decided_parts(r)
+        found["Decided"] = (f"{got[2].isoformat()}{f' by {got[1]}' if got[1] else ''}{CONSEQUENCE_SEP}{got[0]}"
+                            if got else _no_period(tr[dd.start("text"):]))
+    cuts = sorted((max(s, pfx), e) for s, e in spans if e > max(s, pfx))
+    pieces, pos = [], pfx
+    for s, e in cuts:
+        if s > pos:
+            pieces.append(t[pos:s])
+        pos = max(pos, e)
+    pieces.append(t[pos:])
+    words = " ".join(w for p in pieces for w in [" ".join(p.split())] if w)
+    km = KIND_RE.match(r)
+    if km:
+        found["Kind"] = km.group("kind").lower()
+    dm2 = ITEM_DATE_RE.match(t)
+    added = date.fromisoformat(dm2.group(1)) if dm2 and _real_day(dm2.group(1)) else None
+    if added:
+        found["Added"] = added.isoformat()
+    session, host = item_head(r)
+    if session:
+        found["Session"] = f"{session} on {host}" if host else session
+    return {"words": words, "fields": [(n, found[n]) for n in ITEM_FIELDS if n in found], "added": added,
+            "id": f"{added.isoformat()}-{key_id(item_key('- [ ] ' + t))}" if added else None,
+            "session": session, "host": host, "context": context, "replies": parse_replies(r), "closed": closed,
+            "raw": line}
+
+
+def item_words(line: str) -> str:
+    """A v2 item line's words (v3.0, SPEC *Reading a board*): every piece of the line after its prefix
+    (``ITEM_PREFIX_RE``) outside the spans its fields and replies are read from, a field's span with the `.` ending
+    it, each piece trimmed and its runs of whitespace collapsed, joined by one space. A closed line is read as
+    written, its `Closed:` among its fields."""
+    return _v2_read(line)["words"]
+
+
 def closed_items(content: str) -> list[str]:
     """The board's closed (`- [x]`) item lines."""
     return [ln for ln in content.splitlines() if CLOSED_ITEM_RE.match(ln)]
@@ -1614,7 +1792,8 @@ def closed_items(content: str) -> list[str]:
 def parse_closed_items(content: str) -> list[BoardItem]:
     """The board's (or its archive's) closed items, in order, each read as parse_board() reads an open one
     (v2.4): its trailing `Closed:` field cut first, since the fields before it are anchored at the line's
-    end. Each keeps its 1-based line and its detail block."""
+    end. Each keeps its 1-based line and its detail block. Its ``raw``, ``closed``, ``fields``, ``words`` and
+    ``context`` (v3.0) are read from the `- [x]` line as written; only its ``text`` is the cut line's."""
     lines = content.splitlines()
     shown = []
     for ln in lines:
@@ -1625,7 +1804,18 @@ def parse_closed_items(content: str) -> list[BoardItem]:
         c = CLOSED_RE.search(m.group("text"))
         text = (m.group("text")[: c.start()] if c else m.group("text")).rstrip()
         shown.append(f"{ln[: m.start('text')].replace('[x]', '[ ]').replace('[X]', '[ ]')}{text}" if text else "")
-    return parse_board("\n".join(shown), warn=False)
+    got = parse_board("\n".join(shown), warn=False)
+    for it in got:
+        _v2_fill(it, lines[it.line - 1])
+    return got
+
+
+def _v2_fill(it: BoardItem, line: str) -> BoardItem:
+    """``it``'s v3.0 fields, read from its line as written (``_v2_read()``)."""
+    r = _v2_read(line)
+    for k in ("words", "fields", "added", "id", "session", "host", "context", "replies", "closed", "raw"):
+        setattr(it, k, r[k])
+    return it
 
 
 # The answers that only keep a gate waiting (v2.4): they never lift, and an item whose Context names a gate
@@ -1641,9 +1831,9 @@ def waiting_only(label: object) -> bool:
     return isinstance(label, str) and " ".join(label.split()).rstrip(".").lower() in WAITING_ONLY
 
 
-def _answered_by_line(content: str) -> tuple[int, str] | None:
+def _answered_by_line(content: str, every: bool = False) -> tuple[int, str] | None:
     for n, ln in enumerate(content.splitlines(), start=1):
-        if ANY_ITEM_RE.match(ln):
+        if ANY_ITEM_RE.match(ln) and not every:
             return None
         m = ANSWERED_BY_RE.match(ln.rstrip())
         if m:
@@ -1651,11 +1841,12 @@ def _answered_by_line(content: str) -> tuple[int, str] | None:
     return None
 
 
-def answered_by(content: str) -> str | None:
+def answered_by(content: Board | str) -> str | None:
     """The board's `Answered by:` preamble line (v2.4), its value stripped as written, or None when it has
     none (which means `owner`). Read only above the board's first item; a value other than `owner` or
-    `any` (in any case) is returned as it stands, for board_problems() to flag."""
-    got = _answered_by_line(content)
+    `any` (in any case) is returned as it stands, for board_problems() to flag. A ``Board`` (v3.0) is read
+    from its preamble, as board_people() reads one."""
+    got = _answered_by_line(*_preamble(content))
     return got[1].strip() if got else None
 
 
@@ -1666,10 +1857,29 @@ def _item_text(item: BoardItem | str) -> str:
     return m.group("text").strip() if m else item.strip()
 
 
-def _item_gate(text: str) -> tuple[str | None, str | None]:
+def _is_item_file(s: object) -> bool:
+    """D7's one rule for a string (v3.0): a string whose first non-blank line opens `## ` and whose next non-blank
+    line is a header field is an item file, read through ``parse_item()``; any other string is v2 (a line, a
+    line's text after its tick, or a board's text), read as before."""
+    return isinstance(s, str) and _item_layout(s) is not None
+
+
+def _as_item(item: BoardItem | str) -> BoardItem | None:
+    """``item`` as the BoardItem a reader judges: a BoardItem as given, an item file's text through
+    ``parse_item()``; None for a v2 string, which the reader reads as before."""
+    if isinstance(item, BoardItem):
+        return item
+    return parse_item(item) if _is_item_file(item) else None
+
+
+def _item_gate(item: BoardItem | str) -> tuple[str | None, str | None]:
     """(the one entry ref, the one gate) an item's Context names, each None when it names none or more
-    than one."""
-    c = CONTEXT_RE.search(_gate_body(text))
+    than one. A BoardItem (v3.0) is read from its ``context``; an item file's text through ``parse_item()``; any
+    other string as a v2 line's text after its tick."""
+    got = _as_item(item)
+    if got is not None:
+        return _context_gate(got.context or "")
+    c = CONTEXT_RE.search(_gate_body(item))
     return _context_gate(c.group("ctx") if c else "")
 
 
@@ -1703,17 +1913,24 @@ def closes(item: BoardItem | str, label: str, entries_after: Mapping[str, str]) 
     *The board*): on an item whose Context names a gate, a waiting-only answer, and a lifting one when the
     Context names this repo's entry (a bare ``TD-n``) and nothing listed still carries the gate after the
     write — neither that entry nor any `Parts:` id, read from ``entries_after`` (id to text; an id it lacks
-    carries nothing). Any other answer is a work order and leaves it open."""
-    text = _item_text(item)
-    ref, gate = _item_gate(text)
+    carries nothing). Any other answer is a work order and leaves it open. A BoardItem, or an item file's text
+    (v3.0, D7's one rule), is read from its fields; any other string as a v2 line, as before."""
+    got = _as_item(item)
+    if got is not None:
+        ref, gate = _item_gate(got)
+        lifts, offered, parts = got.lifts, got.answers, got.parts
+    else:
+        text = _item_text(item)
+        ref, gate = _item_gate(text)
+        lifts, offered, parts = parse_lifts(text), parse_answers(text), parse_parts(text)
     if gate is None:
         return False
     if waiting_only(label):
         return True
-    if ref is None or "#" in ref or not _lifting(label, parse_lifts(text), parse_answers(text)):
+    if ref is None or "#" in ref or not _lifting(label, lifts, offered):
         return False
     by_num = {_num(k): v for k, v in entries_after.items() if _is_id(k)}
-    return not any(_carried(by_num.get(_num(x)), gate) for x in [ref, *parse_parts(text)] if "#" not in x)
+    return not any(_carried(by_num.get(_num(x)), gate) for x in [ref, *parts] if "#" not in x)
 
 
 def detail_block(lines: list[str], lineno: int) -> list[str]:
@@ -1732,12 +1949,19 @@ def detail_block(lines: list[str], lineno: int) -> list[str]:
 
 
 def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
-    """The board's open items, in order, with their fields parsed.
+    """The board's open items, in order, with their fields parsed (v3.0: every BoardItem field the line holds,
+    its ``words``, ``fields``, ``id`` and the rest, read as ``_v2_read()`` reads them).
 
     An open item whose closed twin is also on the board (item_key equal) is closed: a merge that
     took both sides of a close keeps both lines, and the tick wins."""
+    return _parse_open(content, warn=warn, twins=True)
+
+
+def _parse_open(content: str, *, warn: bool = True, twins: bool = True) -> list[BoardItem]:
+    """parse_board()'s body; ``twins`` False keeps an open line whose closed twin is on the board (load_board()
+    applies its own twin rule, by id, across the board and its archive)."""
     items = []
-    closed = {item_key(ln) for ln in closed_items(content)}
+    closed = {item_key(ln) for ln in closed_items(content)} if twins else set()
     lines = content.splitlines()
     for lineno, line in enumerate(lines, start=1):
         m = ITEM_RE.match(line)
@@ -1760,12 +1984,13 @@ def parse_board(content: str, *, warn: bool = True) -> list[BoardItem]:
         fyi_due = kind == "fyi" and (due is not None or bad is not None)
         if kind == "fyi":
             due, bad = None, None  # an fyi is never due
-        items.append(BoardItem(text=text, due=due, line=lineno, answers=parse_answers(text),
-                               default=parse_default(text), consequences=parse_consequences(text),
-                               decided=parse_decided(text), decided_by=parse_decided_by(text), bad_due=bad,
-                               kind=kind, fyi_due=fyi_due,
-                               detail=detail_block(lines, lineno), hide_until=parse_hide_until(text),
-                               lifts=parse_lifts(text), parts=parse_parts(text), doer=parse_doer(text)))
+        items.append(_v2_fill(BoardItem(text=text, due=due, line=lineno, answers=parse_answers(text),
+                                        default=parse_default(text), consequences=parse_consequences(text),
+                                        decided=parse_decided(text), decided_by=parse_decided_by(text), bad_due=bad,
+                                        kind=kind, fyi_due=fyi_due,
+                                        detail=detail_block(lines, lineno), hide_until=parse_hide_until(text),
+                                        lifts=parse_lifts(text), parts=parse_parts(text), doer=parse_doer(text)),
+                              line))
     return items
 
 
@@ -1788,9 +2013,13 @@ def item_refs(text: str) -> list[str]:
     `branch <name>`, or that is one bare token shaped like a branch name — it has a `-`, `_`
     or `/` and no file extension — so a word, a path to a file or a session id is not one."""
     m = CONTEXT_RE.search(text)
-    if not m:
-        return []
-    ctx = m.group("ctx")
+    return context_refs(m.group("ctx")) if m else []
+
+
+def context_refs(ctx: str) -> list[str]:
+    """What a bare Context value names (v3.0: an item file's header value, or a v2 item's ``context``), in order,
+    each once, read as ``item_refs()`` reads a line's Context: ``item_refs(text)`` is this of ``CONTEXT_RE``'s
+    ``ctx`` over ``text``."""
     found = [(x.start(), x.group(0)) for x in REF_TD_RE.finditer(ctx)]
     spans = [x.span() for x in REF_TD_RE.finditer(ctx)]
     for x in REF_PR_RE.finditer(ctx):
@@ -1837,12 +2066,24 @@ def item_notes(item: BoardItem, today: date) -> list[str]:
     return []
 
 
+def _why_bare(why: str | None) -> str | None:
+    """A close's why as a record gives it (v3.0): one final period dropped, for either major (D4)."""
+    return why[:-1] if why is not None and why.endswith(".") else why
+
+
 def item_record(item: BoardItem, today: date) -> dict:
     """The item as one JSON-ready record — the board's API, and the fixtures' shape. The
     today-relative fields (``overdue_days``, ``due_tag``, ``hidden``, ``notes``) are computed against ``today``."""
+    def day(d: date | None) -> str | None:
+        return d.isoformat() if d is not None else None
     return {
+        "id": item.id,  # v3.0
+        "path": item.path,  # v3.0
+        "added": day(item.added),  # v3.0
+        "context": item.context,  # v3.0
+        "closed": {"date": day(item.closed[0]), "why": _why_bare(item.closed[1])} if item.closed is not None else None,  # v3.0
         "line": item.line,
-        "text": item.text,
+        "text": item.words,  # v3.0: the item's words, for both majors
         "due": item.due.isoformat() if item.due else None,
         "overdue_days": item.overdue_days(today),
         "due_tag": due_tag(item, today),
@@ -1855,9 +2096,10 @@ def item_record(item: BoardItem, today: date) -> dict:
         "waiting_on": item.waiting_on,
         "due_error": item.bad_due,
         "kind": item.kind,
-        **dict(zip(("session", "host"), item_head(item.text))),
-        "refs": item_refs(item.text),
-        "replies": [{"by": by, "date": d, "text": t} for by, d, t in parse_replies(item.text)],
+        "session": item.session,
+        "host": item.host,
+        "refs": context_refs(item.context) if item.context is not None else [],  # v3.0: never a reply's
+        "replies": [{"by": by, "date": d, "text": t} for by, d, t in item.replies],
         "detail": item.detail,
         "hide_until": item.hide_until.isoformat() if item.hide_until else None,
         "hidden": item.hidden(today),
@@ -1871,29 +2113,33 @@ def item_record(item: BoardItem, today: date) -> dict:
 NEEDS_CLASSES = ("decided", "overdue", "due", "bad_due", "undated", "watch", "fyi")
 
 
-def needs_you(board: str, today: date) -> list[tuple[BoardItem, str, int | None]]:
+def needs_you(board: Board | str, today: date) -> list[tuple[BoardItem, str, int | None]]:
     """What needs the person (v2.3): every open item not hidden (a decided one never is), each with one class
     and a signed `days`, in one order. A decided item (`decided`, `days` the decision's age) is a session's
     work order and comes first, oldest decision first. The person's to-do follow by date: `overdue` (days
     past due, most first), `due` (0 on the due date, negative days until it; soonest first), then `bad_due`
     (a Due: the reader cannot read) and `undated`, as the board orders them. Then every `watch` item, ordered
-    the same way and carrying its signed days (None when undated), then every `fyi` (never due: days None)."""
+    the same way and carrying its signed days (None when undated), then every `fyi` (never due: days None).
+    ``board`` is a ``Board`` (v3.0), ties in the board's order (*The board's order*), or a v2 board's text, read
+    as before, ties in line order."""
     def days(it: BoardItem) -> int | None:
         return (today - it.due).days if it.due else None
 
     def dated(group: list[BoardItem]) -> list[BoardItem]:
-        on = sorted((it for it in group if it.due), key=lambda it: (-days(it), it.line))
-        return on + [it for it in group if not it.due and it.bad_due] + \
-            [it for it in group if not it.due and not it.bad_due]
+        on = sorted((it for it in group if it.due), key=lambda it: (-days(it), pos[id(it)]))
+        return on + [it for it in group if not it.due and it.bad_due is not None] + \
+            [it for it in group if not it.due and it.bad_due is None]
 
-    live = [it for it in parse_board(board, warn=False) if not it.hidden(today)]
-    decided = sorted((it for it in live if it.decided), key=lambda it: (it.decided[1], it.line))
+    items = list(board.items) if isinstance(board, Board) else parse_board(board, warn=False)
+    pos = {id(it): n for n, it in enumerate(items)}
+    live = [it for it in items if not it.hidden(today)]
+    decided = sorted((it for it in live if it.decided), key=lambda it: (it.decided[1], pos[id(it)]))
     rest = [it for it in live if not it.decided]
     out = [(it, "decided", (today - it.decided[1]).days) for it in decided]
     for it in dated([it for it in rest if it.todo]):
         d = days(it)
         cls = "overdue" if d is not None and d > 0 else "due" if d is not None else \
-            "bad_due" if it.bad_due else "undated"
+            "bad_due" if it.bad_due is not None else "undated"
         out.append((it, cls, d))
     out += [(it, "watch", days(it)) for it in dated([it for it in rest if it.kind == "watch"])]
     out += [(it, "fyi", None) for it in rest if it.kind == "fyi"]
@@ -2879,16 +3125,23 @@ def canonical_item(line: str) -> str:
     return new + ending
 
 
-def people_problems(board: str) -> list[tuple[int, str]]:
+def people_problems(board: Board | str) -> list[tuple[int, str]] | list[tuple[str, str]]:
     """(1-based line, problem) for the board's `People:` preamble line (v2.3): a note, opening `ℹ`, when
     it has none (line 0) — a lift on such a board takes ordinary review — and a fault for a line that
     lists no name, a name outside the person grammar, a name twice (case-insensitively), or a second
-    `People:` line above the first item."""
-    got = _people_line(board)
+    `People:` line above the first item. Given a ``Board`` (v3.0), ``(path, problem)`` pairs, the path
+    `README.md` on a board read from a directory and ``Board.path``'s basename on one read from a file."""
+    if isinstance(board, Board):
+        return [(_preamble_path(board), p) for _, p in _people_problems(*_preamble(board))]
+    return _people_problems(board)
+
+
+def _people_problems(board: str, every: bool = False) -> list[tuple[int, str]]:
+    got = _people_line(board, every)
     if got is None:
         return [(0, "ℹ people: no `People:` line — nobody is named who may answer this board's items")]
-    n, _ = got
-    names = board_people(board) or []
+    n, value = got
+    names = [x.strip() for x in value.split(",")] if value.strip() else []
     out = []
     if not names:
         out.append((n, "people: `People:` lists no name"))
@@ -2901,17 +3154,24 @@ def people_problems(board: str) -> list[tuple[int, str]]:
         out.append((n, f"people: named twice: {', '.join(twice)}"))
     lines = board.splitlines()
     for m in range(n, len(lines)):
-        if ANY_ITEM_RE.match(lines[m]):
+        if ANY_ITEM_RE.match(lines[m]) and not every:
             break
         if PEOPLE_RE.match(lines[m].rstrip()):
             out.append((m + 1, "people: a second `People:` line — the first is read"))
     return out
 
 
-def answered_by_problems(board: str) -> list[tuple[int, str]]:
+def answered_by_problems(board: Board | str) -> list[tuple[int, str]] | list[tuple[str, str]]:
     """(1-based line, problem) for the board's `Answered by:` preamble line (v2.4): a value other than `owner`
-    or `any`, and a second such line above the first item. None means `owner`, and is no problem."""
-    got = _answered_by_line(board)
+    or `any`, and a second such line above the first item. None means `owner`, and is no problem. Given a
+    ``Board`` (v3.0), ``(path, problem)`` pairs, named as people_problems() names them."""
+    if isinstance(board, Board):
+        return [(_preamble_path(board), p) for _, p in _answered_by_problems(*_preamble(board))]
+    return _answered_by_problems(board)
+
+
+def _answered_by_problems(board: str, every: bool = False) -> list[tuple[int, str]]:
+    got = _answered_by_line(board, every)
     if got is None:
         return []
     n, value = got
@@ -2920,14 +3180,14 @@ def answered_by_problems(board: str) -> list[tuple[int, str]]:
         out.append((n, f"answered by: `Answered by:` is owner or any, not {value.strip()!r}"))
     lines = board.splitlines()
     for m in range(n, len(lines)):
-        if ANY_ITEM_RE.match(lines[m]):
+        if ANY_ITEM_RE.match(lines[m]) and not every:
             break
         if ANSWERED_BY_RE.match(lines[m].rstrip()):
             out.append((m + 1, "answered by: a second `Answered by:` line — the first is read"))
     return out
 
 
-def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
+def board_problems(board: Board | str, old: Board | str | None = None) -> list[tuple[int, str]] | list[tuple[str, str]]:
     """(1-based line, problem) for each open item line of `board` that item_problem() faults and
     that is new: no item line of `old`, open or closed, has its item key. Every `- [ ]` line at any
     indent is judged but an open twin of a closed one; closed lines never are; `old=None`
@@ -2935,7 +3195,17 @@ def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
     also faulted when the board's `People:` does not list that person. First come the board's
     `People:` problems (people_problems(), v2.3), whose note on a board with none opens `ℹ` and is no
     fault; then its `Answered by:` problems (answered_by_problems(), v2.4). The board's gate: a consumer calls
-    it on the board as the edit leaves it, with the board as the edit found it."""
+    it on the board as the edit leaves it, with the board as the edit found it.
+
+    Given a ``Board`` (v3.0, *The gate*): `README.md`'s `People:` and `Answered by:` problems as their pairs come,
+    then ``(path, problem)`` for each open item whose id no item of ``old`` (a ``Board`` of either form, read
+    whole, or a v2 board's text; open or closed) has: ``item_file_problem()``'s fault and, on a new `decide` whose
+    Context names a gate, a `People:` that does not list its person. ``old`` None judges every open item. A
+    ``Board`` read from a file is refused (``Refused``): the gate judges item files."""
+    if isinstance(board, Board):
+        return _board_gate(board, old)
+    if isinstance(old, Board):
+        raise Refused("board_problems: a v2 board's text is judged against text, never a Board")
     closed = {item_key(ln) for ln in closed_items(board)}
     known = None if old is None else {item_key(ln) for ln in old.splitlines() if ANY_ITEM_RE.match(ln)}
     people = board_people(board)
@@ -2955,6 +3225,34 @@ def board_problems(board: str, old: str | None = None) -> list[tuple[int, str]]:
                 problems.append(f"context: the gate's person {', '.join(off)} is not on the board's `People:`")
         if problems:
             out.append((n, "; ".join(problems)))
+    return out
+
+
+def _board_gate(board: Board, old: Board | str | None) -> list[tuple[str, str]]:
+    """board_problems() of a ``Board`` (v3.0, *The gate*)."""
+    if board.form == "file":
+        raise Refused("the gate judges a board read from a directory (v3), and this one was read from a file "
+                      "(a v2 board): its items are lines, not item files")
+    if old is None:
+        known = None
+    elif isinstance(old, Board):
+        known = {it.id for it in [*old.items, *old.closed] if it.id is not None}
+    else:
+        known = {it.id for it in [*_parse_open(str(old), warn=False, twins=False), *parse_closed_items(str(old))]
+                 if it.id is not None}
+    people = board_people(board)
+    on = {x.lower() for x in people or []}
+    out: list[tuple[str, str]] = [*people_problems(board), *answered_by_problems(board)]
+    for it in board.items:
+        if known is not None and it.id in known:
+            continue
+        problems = [p] if (p := item_file_problem(it.raw)) else []
+        if people is not None and it.kind == "decide" and it.context:
+            off = [g.group("person") for g in CONTEXT_GATE_RE.finditer(it.context) if g.group("person").lower() not in on]
+            if off:
+                problems.append(f"context: the gate's person {', '.join(off)} is not on the board's `People:`")
+        if problems:
+            out.append((it.path, "; ".join(problems)))
     return out
 
 
@@ -3861,6 +4159,297 @@ def canonical_item_file(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------------------------
+# Reading a board (v3.0): a v3 directory and a v2 board file alike, as one Board
+# ---------------------------------------------------------------------------------------------
+
+BOARD_MAJOR = 3  # the newest board major this module reads; the ledger's is FORMAT_MAJOR
+BOARD_README = "README.md"  # a v3 board's opening prose and preamble lines
+BOARD_ARCHIVE = "archive"  # a v3 board's closed items, each under archive/<YYYY-MM>/
+BOARD_MONTH_RE = re.compile(r"[0-9]{4}-(?:0[1-9]|1[0-2])")  # an archive month's directory name
+BOARD_FIRST_RE = re.compile(r"^(?:## TD-\d+:|\s*-\s*\[[ xX]\]\s)", re.MULTILINE)  # where a file's preamble ends
+BOARD_PROBLEMS_RULES = 10  # rules 1-10 are Board.problems'; 11-16 board_dir_problems()' alone
+
+
+@dataclass
+class Board:
+    """A board as ``load_board()`` reads it (v3.0, SPEC *Reading a board*). ``form`` is how it was read: ``"dir"``
+    from a directory (through a stub too), ``"file"`` from one file and its archive, None for an empty Board read
+    from nothing; every reader turns on it. ``major`` serves the version check alone. ``path`` is the path
+    ``load_board()`` was given. ``preamble`` is `README.md`'s text, or a file's text before its first item;
+    ``items`` the open items and ``closed`` every closed item read, in the board's order; ``problems`` what the
+    read skipped or could not settle, ``(path, problem)``."""
+    form: str | None
+    path: str
+    major: int | None
+    preamble: str = ""
+    items: list[BoardItem] = field(default_factory=list)
+    closed: list[BoardItem] = field(default_factory=list)
+    problems: list[tuple[str, str]] = field(default_factory=list)
+
+
+def _declared_major(text: str, file: bool) -> int | None:
+    """The `Ledgerboard: N` a board declares, or None: on a file above its first item, as format_major() reads
+    it; in a `README.md` on every line. HTML comments are no line of it."""
+    pre = COMMENT_RE.sub("", text)
+    if file:
+        first = BOARD_FIRST_RE.search(pre)
+        pre = pre[: first.start() if first else len(pre)]
+    m = VERSION_RE.search(pre)
+    return int(m.group(1)) if m else None
+
+
+def board_major(text: str, file: bool = False) -> int:
+    """A board's major (v3.0): the `Ledgerboard: N` it declares. ``file`` False reads a v3 board's `README.md`,
+    every line of it outside HTML comments (3 when it declares none); ``file`` True a board file, the lines above
+    its first item, as format_major() reads a ledger's, but 2 when it declares none: a board's v1 and v2 are one
+    format."""
+    got = _declared_major(text, file)
+    return got if got is not None else (2 if file else 3)
+
+
+def _basename(path: str) -> str:
+    return str(path).rstrip("/").rsplit("/", 1)[-1]
+
+
+def _sorted_problems(found: list[tuple[str, int, int, str]], every: bool) -> list[tuple[str, str]]:
+    """Problems as ``(path, problem)``, sorted by path, then rule, then line (rules 1-10 alone unless ``every``)."""
+    return [(p, msg) for p, rule, _, msg in sorted(found, key=lambda f: (f[0], f[1], f[2]))
+            if every or rule <= BOARD_PROBLEMS_RULES]
+
+
+def load_board(path: str, ls: Ls, read: Read, *, since: date | None = None) -> Board:
+    """The board at ``path`` as a ``Board`` (v3.0, SPEC *Reading a board*), whichever major it is written in.
+
+    In this order: ``ls(path)`` not None is a directory (``form`` ``"dir"``): `README.md`, each `<id>.md` in it,
+    and each month under `archive/` and its files. Else ``read(path)`` a text is a stub (it declares
+    `Ledgerboard: 3` or newer and holds no item: the directory beside it, its name less `.md`), a file declaring
+    3 or newer that holds items (read as a file, rule 5), or a v2 board file read with its archive beside it
+    (``<stem>_archive.md``) by the v2 line reader (``form`` ``"file"``). Else the path is missing: an empty Board,
+    ``form`` and ``major`` None. ``since``, a date, leaves a directory's archive months before its month unread; a
+    file ignores it. Never raises: what the read skipped or could not settle is in ``problems``."""
+    return _load_board(path, ls, read, since, False)[0]
+
+
+def board_dir_problems(path: str, ls: Ls, read: Read) -> list[tuple[str, str]]:
+    """Damage a hand edit or a merge can do to the board at ``path`` (v3.0), ``(path, problem)``, sorted by path,
+    then rule, then line; never raises. On a board read from a directory every rule of *Reading a board*'s
+    ``problems``, the board read whole (no ``since``); on one read from a file, ``Board.problems`` alone."""
+    board, every = _load_board(path, ls, read, None, True)
+    return every if board.form == "dir" else board.problems
+
+
+def _load_board(path: str, ls: Ls, read: Read, since: date | None, full: bool
+                ) -> tuple[Board, list[tuple[str, str]]]:
+    names = ls(path)
+    if names is not None:
+        return _read_board_dir(path, names, ls, read, since, full, None, path)
+    text = read(path)
+    if text is None:
+        return Board(None, path, None), []
+    major = board_major(text, file=True)
+    if major >= BOARD_MAJOR and not any(ANY_ITEM_RE.match(ln) for ln in text.splitlines()):
+        d = str(path)[:-3] if str(path).endswith(".md") else None
+        dn = ls(d) if d is not None else None
+        if dn is None:
+            got = [(_basename(path), f"stub: declares Ledgerboard: {major} and holds no item, but its directory, "
+                                     f"{_basename(d or path)}/, is missing; nothing was read")]
+            return Board(None, path, major, problems=got), got
+        return _read_board_dir(d, dn, ls, read, since, full, major, path)
+    board = _read_board_file(path, text, read(archive_path(path)) or "", major)
+    return board, board.problems
+
+
+def _read_board_file(path: str, text: str, archive: str, major: int) -> Board:
+    """A board file and its archive read by the v2 line reader (v3.0): the twin rule by id across the two."""
+    name, aname = _basename(path), _basename(archive_path(path))
+    found: list[tuple[str, int, int, str]] = []
+    if major >= BOARD_MAJOR:
+        found.append((name, 5, 0, f"file: declares Ledgerboard: {major} and holds items, so it is no stub; read "
+                                  "as a board file"))
+    opens = _parse_open(text, warn=False, twins=False)
+    on_board = parse_closed_items(text)
+    in_archive = parse_closed_items(archive)
+
+    def ident(it: BoardItem) -> tuple[str, str]:
+        return ("id", it.id) if it.id is not None else ("key", item_key(it.raw))
+    shut = {ident(it) for it in [*on_board, *in_archive]}
+    items = [it for it in opens if ident(it) not in shut]
+    for what, group in (("open", [(name, it) for it in items]),
+                        ("closed", [*((name, it) for it in on_board), *((aname, it) for it in in_archive)])):
+        by: dict[tuple[str, str], list[tuple[str, BoardItem]]] = {}
+        for src, it in group:
+            by.setdefault(ident(it), []).append((src, it))
+        for (kind, key), held in by.items():
+            if len(held) < 2:
+                continue
+            where = ", ".join(f"{src}:{it.line}" for src, it in held)
+            src = name if any(s == name for s, _ in held) else aname
+            first = min(it.line for s, it in held if s == src)
+            found.append((src, 10, first, f"duplicate: {key} is the id of {len(held)} {what} lines ({where}); each is "
+                                          "read" if kind == "id" else
+                          f"duplicate: {len(held)} {what} lines with no date share one key ({where}); each is read"))
+    pre: list[str] = []
+    for ln in text.splitlines(keepends=True):
+        if ANY_ITEM_RE.match(ln):
+            break
+        pre.append(ln)
+    return Board("file", path, major, "".join(pre), items, [*on_board, *in_archive], _sorted_problems(found, False))
+
+
+def _field_line(it: BoardItem, name: str) -> int:
+    """The 1-based line of an item file's first header field named ``name`` (as field_key() compares), or 0."""
+    for n, ln in enumerate(_lf_lines(it.raw), start=1):
+        m = FIELD_RE.match(ln.removesuffix("\n").removesuffix("\r"))
+        if m and field_key(m.group(1)) == field_key(name):
+            return n
+    return 0
+
+
+def _item_dir_problems(it: BoardItem) -> list[tuple[int, int, str]]:
+    """``(rule, line, problem)`` of rules 12-16 for one item file read from a directory (v3.0)."""
+    out: list[tuple[int, int, str]] = []
+    lay = _item_layout(it.raw)
+    if lay is None:
+        return out
+    _, bare, _, a, b, _ = lay
+    for i in range(a, b):
+        if not FIELD_RE.match(bare[i]):
+            out.append((12, i + 1, f"header: {bare[i]!r} is no field; it is kept, in no field"))
+    if it.added is not None and it.id is not None and it.id[:10] != it.added.isoformat():
+        out.append((13, _field_line(it, "Added"), f"added: {it.added.isoformat()} is not the id's date, {it.id[:10]}"))
+    got: dict[str, str] = {}
+    for n, v in it.fields:
+        got.setdefault(field_key(n), v)
+    kind = it.kind
+
+    def fault(name: str, words: str) -> None:
+        out.append((14, _field_line(it, name), words))
+    if "decided" in got and parse_decided_value(got["decided"]) is None:
+        fault("Decided", "decided: `Decided` is not `<date>[ by <person>] — <label>`; read as no answer")
+    if "closed" in got and parse_closed_value(got["closed"]) is None:
+        fault("Closed", "closed: `Closed` is not `<date>[ — <why>]`; read as no close")
+    if "kind" in got:
+        if got["kind"].lower() not in KINDS:
+            fault("Kind", f"kind: {got['kind']!r} is not one of {', '.join(KINDS)}; read as a to-do, shown")
+        elif got["kind"] != got["kind"].lower():
+            fault("Kind", f"kind: {got['kind']!r} is not in lower case; read as {got['kind'].lower()}")
+    if "hide until" in got and not _real_day(got["hide until"]):
+        fault("Hide until", f"hide: {got['hide until']!r} is no day; read as not hidden")
+    if "parts" in got and not all(ITEM_ENTRY_ID_RE.fullmatch(x) for x in got["parts"].split(", ")):
+        fault("Parts", "parts: `Parts` is not entry ids separated by `, `; read as no parts")
+    if "doer" in got:
+        dv = doer_value(got["doer"])
+        if dv is None:
+            fault("Doer", "doer: `Doer` names no repo, `<repo>` not ending in `.`, and no team, `team <name>`; read "
+                          "as no doer")
+        elif dv[0] == "team" and got["doer"] != f"team {dv[1]}":
+            fault("Doer", f"doer: written with more than one space, or a tab, after `team`; read as the team {dv[1]}")
+    if kind == "fyi" and "due" in got:
+        fault("Due", "due: an fyi carries no `Due`; read as fyi_due")
+    for key, name, takes in (("parts", "Parts", ("decide",)), ("lifts", "Lifts", ("decide",)),
+                             ("doer", "Doer", ("act",)), ("answers", "Answers", ("decide", "look"))):
+        if key in got and kind not in takes:
+            fault(name, f"{key}: {_a_kind(kind)} carries no `{name}`; read as written")
+    archived = it.path.startswith(f"{BOARD_ARCHIVE}/")
+    if not archived and it.closed is not None:
+        out.append((15, _field_line(it, "Closed"), "closed: a `Closed` on a file outside archive/; read as closed"))
+    if archived and it.closed is not None and it.closed[0] is not None \
+            and it.path.split("/")[1] != it.closed[0].isoformat()[:7]:
+        out.append((16, _field_line(it, "Closed"), f"closed: filed under archive/{it.path.split('/')[1]}/, but its "
+                                                   f"`Closed` is {it.closed[0].isoformat()}; read as closed"))
+    return out
+
+
+def _read_board_dir(d: str, names: list[str], ls: Ls, read: Read, since: date | None, full: bool,
+                    stub_major: int | None, given: str) -> tuple[Board, list[tuple[str, str]]]:
+    """A v3 board's directory read (v3.0): `README.md`, its item files and its archive's months."""
+    found: list[tuple[str, int, int, str]] = []
+    readme = None
+    if BOARD_README in names:
+        readme = read(_sub(d, BOARD_README))
+        if readme is None:
+            found.append((BOARD_README, 1, 0, "unreadable: the file could not be read; skipped"))
+    else:
+        found.append((BOARD_README, 3, 0, "readme: no README.md; the board is read as Ledgerboard: 3"))
+    declared = _declared_major(readme, False) if readme is not None else None
+    if readme is not None and declared is None:
+        found.append((BOARD_README, 3, 0, "readme: declares no `Ledgerboard:` major; the board is read as "
+                                          "Ledgerboard: 3"))
+    elif declared is not None and declared < BOARD_MAJOR:
+        found.append((BOARD_README, 4, 0, f"readme: declares Ledgerboard: {declared}, but the board is a directory; "
+                                          "read as a directory"))
+    major = declared if declared is not None else BOARD_MAJOR
+    if stub_major is not None:
+        major = max(major, stub_major)
+    files: list[str] = []
+    for n in names:
+        if n.endswith("/"):
+            if n != f"{BOARD_ARCHIVE}/":
+                found.append((n, 11, 0, "name: a directory other than archive/; not read"))
+        elif n != BOARD_README:
+            if n.endswith(".md") and is_item_id(n[:-3]):
+                files.append(n)
+            else:
+                found.append((n, 11, 0, "name: not an item file, `<id>.md`; not read"))
+    month_floor = since.isoformat()[:7] if since is not None else None
+    for n in ls(_sub(d, BOARD_ARCHIVE)) or []:
+        rel = f"{BOARD_ARCHIVE}/{n}"
+        if not n.endswith("/"):
+            found.append((rel, 11, 0, "name: a file directly in archive/, outside a month; not read"))
+            continue
+        if not BOARD_MONTH_RE.fullmatch(n[:-1]):
+            found.append((rel, 11, 0, "name: not a month, `YYYY-MM`, under archive/; not read"))
+            continue
+        if month_floor is not None and n[:-1] < month_floor:
+            continue
+        for m in ls(_sub(d, rel.rstrip("/"))) or []:
+            if m.endswith("/"):
+                found.append((f"{rel}{m}", 11, 0, "name: a directory in a month; not read"))
+            elif m.endswith(".md") and is_item_id(m[:-3]):
+                files.append(f"{rel}{m}")
+            else:
+                found.append((f"{rel}{m}", 11, 0, "name: not an item file, `<id>.md`; not read"))
+    read_items: list[BoardItem] = []
+    for rel in files:
+        text = read(_sub(d, rel))
+        if text is None:
+            found.append((rel, 1, 0, "unreadable: the file could not be read; skipped"))
+            continue
+        it = parse_item(text, rel)
+        if it is None:
+            found.append((rel, 2, 0, "no item: its first non-blank line does not open `## `, or the next non-blank "
+                                     "line is no header field; skipped"))
+            continue
+        read_items.append(it)
+        if it.added is None:
+            had = any(field_key(n) == "added" for n, _ in it.fields)
+            found.append((rel, 7, _field_line(it, "Added"), "added: `Added` is no day; the item is read with no "
+                                                             "date added" if had else
+                          "added: no `Added`; the item is read with no date added"))
+        if rel.startswith(f"{BOARD_ARCHIVE}/") and it.closed == (None, None):
+            found.append((rel, 9, 0, "closed: an archived file with no `Closed` in its form; read as closed, with no "
+                                     "date"))
+        found += [(rel, rule, line, msg) for rule, line, msg in _item_dir_problems(it)]
+    by_id: dict[str, list[BoardItem]] = {}
+    for it in read_items:
+        by_id.setdefault(it.id, []).append(it)
+    kept: list[BoardItem] = []
+    for iid, held in by_id.items():
+        if len(held) == 1:
+            kept.append(held[0])
+            continue
+        shut = [it for it in held if it.path.startswith(f"{BOARD_ARCHIVE}/")]
+        win = max(shut, key=lambda it: it.path) if shut else held[0]
+        kept.append(win)
+        found.append((win.path, 8, 0, f"duplicate: {iid} is held by {len(held)} files "
+                                      f"({', '.join(sorted(it.path for it in held))}); this archived copy is read"))
+    order = sorted(kept, key=lambda it: it.id or "", reverse=True)
+    board = Board("dir", given, major, readme or "", [it for it in order if it.closed is None],
+                  [it for it in order if it.closed is not None], _sorted_problems(found, False))
+    return board, _sorted_problems(found, True)
+
+
+# ---------------------------------------------------------------------------------------------
 # Line predicates, for a reader that walks a diff line by line
 # ---------------------------------------------------------------------------------------------
 
@@ -4153,13 +4742,14 @@ def v2_problems(path: str, ls: Ls, read: Read) -> list[str]:
 
 
 def _dict_ls(files: Mapping[str, str]) -> Ls:
-    """``ls`` over a {relative path: text} mapping, as ``load()`` takes it ("" is the root)."""
+    """``ls`` over a {relative path: text} mapping, as ``load()`` and ``load_board()`` take it ("" is the root):
+    each subdirectory listed once, as ``<name>/`` (v3.0)."""
     def ls(path: str) -> list[str] | None:
         pre = f"{path.rstrip('/')}/" if path else ""
-        names = [p[len(pre):] for p in files if p.startswith(pre) and "/" not in p[len(pre):]]
-        if not names and not any(p.startswith(pre) for p in files):
+        under = [p[len(pre):] for p in files if p.startswith(pre)]
+        if not under:
             return None
-        return sorted(names)
+        return sorted({x if "/" not in x else x.split("/", 1)[0] + "/" for x in under})
     return ls
 
 
@@ -6184,11 +6774,12 @@ def reassigns(text: str, gate: str) -> int:
     return n
 
 
-def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str, today: date | str,
+def decide_lift(item: BoardItem | str, entries: Mapping[str, str], label: str, by: str, today: date | str,
                 board_people: list[str] | None, answered_by: str | None,
                 archived: Iterable[str] = ()) -> dict[str, str]:
     """The decide lift's ledger half (v2.4, SPEC *The decide lift*): ``{id: new_text}`` for each entry the answer
-    ``label``, given by ``by``, changes, from the ``decide`` item ``item_line`` (the base board line) and
+    ``label``, given by ``by``, changes, from the ``decide`` item ``item`` (the base item: an item file's text or a
+    ``BoardItem``, v3.0; a v2 line, read as before, until v3.0 removes it) and
     ``entries`` (id to base text: its Context entry and each `Parts:` id the ledger's directory holds, whatever
     its Status). ``archived`` (v2.6) are the ids of those only the ledger's archive holds, each ``TD-n`` read by
     number as ``entries``' keys are, any other member ignored; an id among ``entries`` is read from its text
@@ -6210,11 +6801,17 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
     Context entry; a gate's person not on `People:`; an answerer not on `People:`, or, for a decision under
     ``owner``, not the gate's person."""
     day = utc_day(today, "decide_lift()'s today")
-    got = parse_board(item_line if ITEM_RE.match(item_line) else "", warn=False)
-    if len(got) != 1 or got[0].kind != "decide":
-        raise Refused("decide_lift takes one open decide item line")
-    item = got[0]
-    ref, gate = _item_gate(item.text)
+    one = _as_item(item)
+    if one is not None:
+        if one.kind != "decide" or one.closed is not None:
+            raise Refused("decide_lift takes one open decide item")
+        item = one
+    else:
+        got = parse_board(item if isinstance(item, str) and ITEM_RE.match(item) else "", warn=False)
+        if len(got) != 1 or got[0].kind != "decide":
+            raise Refused("decide_lift takes one open decide item line")
+        item = got[0]
+    ref, gate = _item_gate(item)
     if ref is None or gate is None:
         raise Refused("the item's Context names no one entry and one gate, decision (<person>) or event (<name>)")
     gate = _one_gate(gate)
@@ -6297,29 +6894,35 @@ def decide_lift(item_line: str, entries: Mapping[str, str], label: str, by: str,
     return out
 
 
-def parts_problems(item_line: str, entries: Mapping[str, str], archived: Iterable[str] = ()) -> list[str]:
-    """Why a ``decide`` line's `Parts:` snapshot does not match the ledger (v2.6, SPEC *Edits*), each a fixed
-    string, or ``[]``; it never raises. The item is read as *The decide lift* reads it (``parse_board()``, its
-    detail block or a board holding it as its one open item included), and its form is left to
-    ``item_problem()``: anything but one open, undecided ``decide`` whose `Parts:` holds an id gives ``[]``. A
-    fault of the check ``item_line()`` shares is ``line: <fault>`` alone. Otherwise ``entries`` (id to text, open
+def parts_problems(item: BoardItem | str, entries: Mapping[str, str], archived: Iterable[str] = ()) -> list[str]:
+    """Why a ``decide`` item's `Parts:` snapshot does not match the ledger (v2.6, SPEC *Edits*), each a fixed
+    string, or ``[]``; it never raises. ``item`` is an item file's text or a ``BoardItem`` (v3.0, its form left to
+    ``item_file_problem()``), or a v2 line, read as *The decide lift* reads it (``parse_board()``, its detail block
+    or a board holding it as its one open item included), its form left to ``item_problem()``: anything but one
+    open, undecided ``decide`` whose `Parts:` holds an id gives ``[]``. A fault of the check ``item_file()`` and
+    ``item_line()`` share is ``item: <fault>`` alone (v3.0; ``line: <fault>`` before it). Otherwise ``entries`` (id to text, open
     and archived alike, by number, the first key of a number winning; a key that is not a bare ``TD-n`` of 1 to
     18 ASCII digits is ignored, and a value that is no string or holds no entry is no entry) and ``archived``
     (the ids read from the ledger's archive, by number) judge the Context entry (``<ref>: missing`` or
     ``<ref>: archived``) and then each part, in the line's order, its first fault of ``<id>: missing``,
     ``<id>: archived``, ``<id>: not Part of <ref>``, ``<id>: does not carry <gate>``. An entry is archived when
     its number is in ``archived`` or its Status is an archived word."""
-    if not isinstance(item_line, str):
-        return []
-    got = parse_board(item_line, warn=False)
-    if len(got) != 1 or got[0].kind != "decide" or got[0].decided is not None or not got[0].parts:
-        return []
-    item = got[0]
-    c = CONTEXT_RE.search(_gate_body(item.text))
-    ctx = c.group("ctx").strip().removesuffix(".") if c else ""
+    one = _as_item(item) if isinstance(item, (BoardItem, str)) else None
+    if one is not None:
+        if one.kind != "decide" or one.decided is not None or one.closed is not None or not one.parts:
+            return []
+        item = one
+    else:
+        if not isinstance(item, str):
+            return []
+        got = parse_board(item, warn=False)
+        if len(got) != 1 or got[0].kind != "decide" or got[0].decided is not None or not got[0].parts:
+            return []
+        item = got[0]
+    ctx = (item.context or "").strip()
     fault = _parts_fault(ctx, item.parts)
     if fault is not None:
-        return [f"line: {fault}"]
+        return [f"item: {fault}"]
     ref = next(x.group(0) for x in REF_TD_RE.finditer(ctx))
     gate = " ".join(CONTEXT_ANY_GATE_RE.search(ctx).group(0).split())
     by_num: dict[int, object] = {}
@@ -6768,16 +7371,15 @@ def _ours(ref: str | None, own: bool, repo: str) -> int | None:
     return _num(tid) if other.lower() == repo.lower() and _is_id(tid) else None
 
 
-def _sweep_context(text: str, own: bool, repo: str) -> tuple[int, str, str] | None:
+def _sweep_context(item: BoardItem, own: bool, repo: str) -> tuple[int, str, str] | None:
     """An item's Context read as the sweep keys it: (this repo's entry number, the gate's key, the qualifier
     after the gate — ``""``, ``lift`` or ``board <repo>``, lowercased), or None when it names no entry of this
-    repo with one gate."""
-    ref, gate = _item_gate(text)
+    repo with one gate. Read from the item's ``context`` (v3.0), of either major."""
+    ref, gate = _item_gate(item)
     num = _ours(ref, own, repo)
     if num is None or gate is None:
         return None
-    c = CONTEXT_RE.search(_gate_body(text))
-    ctx = c.group("ctx") if c else ""
+    ctx = item.context or ""
     g = CONTEXT_ANY_GATE_RE.search(ctx)
     qual = " ".join(ctx[g.end():].strip().rstrip(".").split()).lower() if g else ""
     return num, _gate_key(gate), qual
@@ -6787,22 +7389,36 @@ def _sweep_head(text: str) -> str | None:
     return next((cond for cond, words in SWEEP_HEADS if words in text), None)
 
 
+def _board_of(board: Sequence) -> Board | str:
+    """A sweep board's board: its ``Board`` (v3.0, ``(origin_url, basename, board)``), else its text (the v2.x
+    form, ``(origin_url, basename, text, archive_text)``, until v3.0 removes it)."""
+    return board[2] if isinstance(board[2], Board) else str(board[2] or "")
+
+
 def _read_boards(boards: Sequence[Sequence], repo: str) -> list[dict]:
     """Every item of every board read, open and closed (the board's and its archive's), each with what the
-    sweep compares: {board, own, item, line (the open item's line as written, else None), state, ctx, head}."""
+    sweep compares: {board, own, item, line (the open item's line as written, else None; None on a ``Board``,
+    whose open items are named by id), state, ctx, head}. The head phrase is read in the item's words (v3.0)."""
     out = []
     mine = _own_board(boards, repo)
     for b in boards:
         name, own = _board_name(b), b is mine
-        text, archive = str(b[2] or ""), str(b[3] or "")
-        lines = text.splitlines()
-        reads = [(it, lines[it.line - 1], "decided" if it.decided else "open") for it in parse_board(text, warn=False)]
-        reads += [(it, None, "closed-decided" if it.decided else "closed")
-                  for src in (text, archive) for it in parse_closed_items(src)]
+        board = _board_of(b)
+        if isinstance(board, Board):
+            reads = [(it, None, "decided" if it.decided else "open") for it in board.items]
+            reads += [(it, None, "closed-decided" if it.decided else "closed") for it in board.closed]
+        else:
+            text, archive = board, str(b[3] or "") if len(b) > 3 else ""
+            lines = text.splitlines()
+            reads = [(it, lines[it.line - 1], "decided" if it.decided else "open")
+                     for it in parse_board(text, warn=False)]
+            reads += [(it, None, "closed-decided" if it.decided else "closed")
+                      for src in (text, archive) for it in parse_closed_items(src)]
         for it, line, state in reads:
             out.append({"board": name, "own": own, "item": it, "line": line, "state": state,
-                        "ctx": _sweep_context(it.text, own, repo), "head": _sweep_head(it.text),
-                        "people": board_people(text), "answered_by": answered_by(text), "pick": _board_pick_key(b)})
+                        "ctx": _sweep_context(it, own, repo), "head": _sweep_head(it.words),
+                        "people": board_people(board), "answered_by": answered_by(board), "pick": _board_pick_key(b),
+                        "by_id": isinstance(board, Board)})
     return out
 
 
@@ -6829,11 +7445,13 @@ def covers(entry_text: str, gate: str, boards: Sequence[Sequence], repo: str) ->
     """The board items that ask about one entry's gate (v2.4, SPEC *The gate sweep*): each ``decide`` item whose
     Context names the entry and the gate, or names the entry's parent (its ``Part of``) with the gate and the
     entry among its ``Parts:``, on a board whose ``People:`` lists the gate's person (an event gate has no
-    person, so any board). ``boards`` is ``[(origin_url, basename, text, archive_text)]``; ``repo`` this repo's
+    person, so any board). ``boards`` is ``[(origin_url, basename, board)]``, each ``board`` a ``Board`` read
+    whole (v3.0), or ``[(origin_url, basename, text, archive_text)]`` (v2.x, until v3.0 removes it); ``repo`` this repo's
     ``origin_path`` (else its basename), which a ``<repo>#TD-n`` ref must name. On this repo's own board (its
     origin path, else its basename, is ``repo``) a bare ``TD-n`` is this repo's. Returns ``[(board name, item,
     state)]``, the board named by its ``origin_key``, else its basename, and the state ``open``, ``decided``
-    (open, with ``Decided:``), ``closed`` or ``closed-decided`` (closed, on the board or in its archive). Only
+    (open, with ``Decided:``), ``closed`` or ``closed-decided`` (closed: on a v3 board, its file under
+    `archive/`; on a v2 board, closed on the board or in its archive). Only
     ``open`` and ``decided`` cover."""
     ents = entries(entry_text)
     if not ents:
@@ -6876,13 +7494,9 @@ def _log(text: str) -> list[dict]:
 
 
 def _item_date(it: BoardItem) -> date | None:
-    """An item's date, read from its head (v2.7): an optional kind word, then the date; None when it does not
-    read."""
-    m = ITEM_DATE_RE.match(it.text)
-    try:
-        return date.fromisoformat(m.group(1)) if m else None
-    except ValueError:
-        return None
+    """An item's date (v2.7): its ``added`` (v3.0; a v2 line's is read from its head, an optional kind word,
+    then the date); None when it does not read."""
+    return it.added
 
 
 def _log_dates(text: str, kind: str, gate_key: str) -> list[date]:
@@ -6945,7 +7559,7 @@ def _answers_owing(reads: list[dict], open_texts: Mapping[int, str], known: set[
                 continue
             owed.append(n)
         if owed:
-            _, gate = _item_gate(it.text)
+            _, gate = _item_gate(it)
             groups.setdefault((num, key), []).append({"read": r, "date": day, "gate": gate, "owed": owed})
     return groups
 
@@ -7025,16 +7639,19 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
           today_local: date | str, reask_days: int = SWEEP_REASK_DAYS, event_age_days: int = SWEEP_EVENT_AGE_DAYS,
           repo: str = "") -> dict:
     """What one sweep of this repo's ledger does (v2.4, SPEC *The gate sweep*): ``{to_file: {board: [item]},
-    to_close: {board: [item key]}, lifts: [{id, gate, kind, evidence}]}``, each board named as ``covers()``
+    to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}``, each board named as ``covers()``
     names it. It keeps no state: the boards and the ledger's Log are its state, so a second run over its own
     writes files and closes nothing.
 
     ``entries`` are this repo's ledger and archive texts (an entry is open unless its Status is an archived
-    one); ``boards`` ``[(origin_url, basename, text, archive_text)]``, this repo's own among them; ``results``
+    one); ``boards`` ``[(origin_url, basename, board)]``, each ``board`` a ``Board`` read whole (v3.0), or
+    ``[(origin_url, basename, text, archive_text)]``, this repo's own among them; ``results``
     maps ``(TD-n, event name)`` to a check's outcome (``passed``, ``not yet``, ``impossible``, ``error``) or to
     ``(outcome, evidence)``; ``today_utc`` dates the Log's ages and an ``until``, ``today_local`` the boards'
     ``Decided:`` dates; ``repo`` is this repo's ``origin_path`` (else its basename). Each item filed is
-    ``item_line()``'s arguments, the host adding today, its Due:, session and host."""
+    ``item_file()``'s arguments (the same names as ``item_line()``'s), the host adding today, its Due:, session and
+    host. ``to_close`` lists ids for a board given as a ``Board`` (an item with no id, a v2 line with no readable
+    date, is never in it) and item keys for one given as texts, as before."""
     today_u = date.fromisoformat(utc_day(today_utc, "today_utc"))
     if isinstance(today_local, datetime):
         today_local = today_local.date()  # the caller's own civil date: its zone is the caller's
@@ -7153,7 +7770,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                 if (num, _gate_key(gate)) in held:  # an answer owes its lift (v2.7)
                     continue
                 who = gate[gate.index("(") + 1: -1].lower()
-                fit = [b for b in boards if who in {p.lower() for p in (board_people(str(b[2] or "")) or [])}]
+                fit = [b for b in boards if who in {p.lower() for p in (board_people(_board_of(b)) or [])}]
                 pick = own if own in fit else (min(fit, key=_board_pick_key) if fit else None)
                 if pick is None:
                     if may_file(num, gate, "no-board", text):
@@ -7194,9 +7811,11 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     for r in reads:
         if r["state"] not in ("open", "decided") or r["ctx"] is None:
             continue
+        if r["by_id"] and r["item"].id is None:
+            continue  # no id: the sweep leaves it for a person, as a line it cannot name (v3.0)
         if _sweep_closes(r, reads, boards, results, open_texts, texts, known, repo, set(owing)):
             keys = to_close.setdefault(r["board"], [])
-            k = item_key(r["line"])
+            k = r["item"].id if r["by_id"] else item_key(r["line"])
             if k not in keys:
                 keys.append(k)
     return {"to_file": to_file, "to_close": to_close, "lifts": lifts}
@@ -7213,7 +7832,7 @@ def _audit_satisfied(reads: list[dict], boards: Sequence[Sequence], there: str, 
     for r in reads:
         if r["board"] != name or not r["item"].decided:
             continue
-        ref, _ = _item_gate(r["item"].text)
+        ref, _ = _item_gate(r["item"])
         if ref is not None and ref_key(ref) == want:
             return True
     return False
@@ -7225,7 +7844,7 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
     """The close rule (SPEC *The gate sweep*): whether the sweep closes one open item about this repo's entry.
     ``owing`` holds each (entry, gate key) an answer still owes a lift (v2.7)."""
     it, (num, gate_key, qual) = r["item"], r["ctx"]
-    _, gate = _item_gate(it.text)
+    _, gate = _item_gate(it)
     if it.decided and not waiting_only(it.decided[0]) and not _lifting(it.decided[0], it.lifts, it.answers):
         return False  # a work order waits for whoever acts on it
     if qual.startswith("board "):
@@ -7701,8 +8320,14 @@ def format_major(text: str) -> int:
     return int(m.group(1)) if m else 1
 
 
-def version_problem(text: str) -> str | None:
-    """Why this module must not read `text`, or None: a declared major newer than it knows."""
+def version_problem(text: Board | str) -> str | None:
+    """Why this module must not read `text`, or None: a declared major newer than it knows. Given a ``Board``
+    (v3.0), its ``major`` against ``BOARD_MAJOR``; given text, the ledger's check, against ``FORMAT_MAJOR``."""
+    if isinstance(text, Board):
+        if text.major is not None and text.major > BOARD_MAJOR:
+            return (f"this board declares Ledgerboard: {text.major}, newer than this ledgerboard.py reads "
+                    f"({BOARD_MAJOR}) — vendor a newer release; nothing was read")
+        return None
     major = format_major(text)
     if major > FORMAT_MAJOR:
         return (f"this file declares Ledgerboard: {major}, newer than this ledgerboard.py reads "

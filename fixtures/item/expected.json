@@ -164,6 +164,64 @@
    "ok": "## Rotate the key\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Owner:** sam.lee\n**Due:** 2026-11-20\n**Hide until:** 2026-11-15\n\n- **Context:** kept as written.\n  - nested\n"
   }
  },
+ "gate": {
+  "a README holding a - [ ] line above People": {
+   "ok": []
+  },
+  "a README whose People is faulted": {
+   "ok": [
+    [
+     "README.md",
+     "people: named twice: pat"
+    ]
+   ]
+  },
+  "a new decide whose gate's person is not on People": {
+   "ok": [
+    [
+     "2026-01-06-5e6f7a8b.md",
+     "context: the gate's person sam is not on the board's `People:`"
+    ]
+   ]
+  },
+  "a v2 board refused": {
+   "refused": "the gate judges a board read from a directory (v3), and this one was read from a file (a v2 board): its items are lines, not item files"
+  },
+  "an added item faulted": {
+   "ok": [
+    [
+     "2026-01-06-5e6f7a8b.md",
+     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+    ]
+   ]
+  },
+  "an edited item not judged": {
+   "ok": []
+  },
+  "old None: every open item judged": {
+   "ok": [
+    [
+     "2026-01-06-5e6f7a8b.md",
+     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+    ]
+   ]
+  },
+  "old a v2 board: the split PR, nothing new": {
+   "ok": []
+  },
+  "two forms with one head, and a form marked default": {
+   "ok": [
+    [
+     "2026-01-06-0000000b.md",
+     "answers: a form cannot be the default: pressing it sends no words"
+    ],
+    [
+     "2026-01-06-0000000a.md",
+     "answers: two answers are forms with one head, Hold: a fill could not say which"
+    ]
+   ]
+  }
+ },
  "ids": {
   "is_item_id": {
    "2026-02-30-abcd1234": false,
@@ -2070,6 +2128,60 @@
   "two_forms_decided": null,
   "two_forms_open": "answers: two answers are forms with one head, Hold: a fill could not say which",
   "unknown_field": "header: Owner is no field of an item file"
+ },
+ "strings": {
+  "a line's text after its tick": {
+   "closes": {
+    "Go": true,
+    "Later": false,
+    "Not yet": true
+   },
+   "parts_problems": []
+  },
+  "a v2 board's text opening with a section heading": {
+   "closes": {
+    "Go": true,
+    "Later": false,
+    "Not yet": true
+   },
+   "parts_problems": [
+    "TD-4: missing",
+    "TD-9: missing",
+    "TD-10: missing"
+   ]
+  },
+  "a v2 line": {
+   "closes": {
+    "Go": true,
+    "Later": false,
+    "Not yet": true
+   },
+   "parts_problems": [
+    "TD-4: missing",
+    "TD-9: missing",
+    "TD-10: missing"
+   ]
+  },
+  "an item file": {
+   "closes": {
+    "Go": true,
+    "Later": false,
+    "Not yet": true
+   },
+   "parts_problems": [
+    "TD-4: missing",
+    "TD-9: missing",
+    "TD-10: missing"
+   ]
+  },
+  "an item file whose Context names two entries": {
+   "closes": {
+    "Go": false
+   },
+   "parts_problems": [
+    "item: context: not one entry and one decision"
+   ]
+  }
  },
  "subjects": {
   "edit_actions": {

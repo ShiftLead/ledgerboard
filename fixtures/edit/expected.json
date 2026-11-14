@@ -13,122 +13,6 @@
    "refused": "a tool is one word with no parenthesis, not 'my tool'"
   }
  ],
- "board_problems": [
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ],
-   [
-    2,
-    "head: `(session w-2)` is not `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ],
-   [
-    3,
-    "text: does not end a sentence (`.`, `?` or `!`)"
-   ],
-   [
-    4,
-    "open: an item line opens `- [ ] ` at column 0, single-spaced; kind: 'nested' is not a kind: one of decide, act, look, watch, fyi, in lower case; head: a date then `(session `<name>` on <host>)`, `(session `<name>`)`, `(n/a)` or `(person)`, then ` — `"
-   ]
-  ],
-  [],
-  [
-   [
-    5,
-    "context: the gate's person lee is not on the board's `People:`"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [],
-  [
-   [
-    3,
-    "people: not a person's name: 'pat smith', ''"
-   ],
-   [
-    3,
-    "people: named twice: PAT"
-   ],
-   [
-    4,
-    "people: a second `People:` line — the first is read"
-   ]
-  ],
-  [
-   [
-    3,
-    "people: `People:` lists no name"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ],
-   [
-    1,
-    "answers: two answers are forms with one head, Hold: a fill could not say which"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ],
-   [
-    1,
-    "answers: a form cannot be the default: pressing it sends no words"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ],
-  [
-   [
-    0,
-    "ℹ people: no `People:` line — nobody is named who may answer this board's items"
-   ]
-  ]
- ],
  "bold_heads": {
   "2026-01-05 (session s-1 on h) — **Fix the export** before Friday. Due: 2026-01-20.": "Fix the export",
   "2026-01-05 (session s-1) — **  ** is no head. Due: 2026-01-20.": null,
@@ -1078,9 +962,13 @@
  },
  "item_notes": {
   "hide a day before due": [],
+  "hide a day before due, as an item file": [],
   "hide equal to due": [],
+  "hide equal to due, as an item file": [],
   "later hide on an fyi with a due": [],
-  "later hide, impossible due": []
+  "later hide on an fyi with a due, as an item file": [],
+  "later hide, impossible due": [],
+  "later hide, impossible due, as an item file": []
  },
  "item_problems": {
   "  - [ ] 2026-01-15 (session `w-1` on box-1) — Ship it. Context: TD-7. Due: 2026-01-20.": "open: an item line opens `- [ ] ` at column 0, single-spaced",

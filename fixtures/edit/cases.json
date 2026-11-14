@@ -2680,72 +2680,6 @@
     "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:.",
     "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> (default)."
   ],
-  "board_problems": [
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-02-01.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session w-2) — Rotate the key. Context: TD-8. Due: 2026-01-25.\n"
-    },
-    {
-      "old": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n",
-      "new": "- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\n- [ ] 2026-01-15 (session `w-1` on box-1) — Ship it Context: TD-7. Due: 2026-01-20.\n  - [ ] nested note\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\n- [x] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20. Closed: 2026-01-16.\n- [ ] 2026-01-15 (session `w-1` on box-1) — Done it. Context: TD-9. Due: 2026-01-20.\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\nPeople: pat, Sam\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (Pat). Due: 2026-01-20. Answers: a | b (default).\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
-    },
-    {
-      "old": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n",
-      "new": "# Board\n\nPeople: pat\n\n- [ ] decide 2026-01-15 (session `w-1` on box-1) — Pick the cache store? Context: TD-7 decision (lee). Due: 2026-01-20. Answers: a | b (default).\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\nPeople: pat, sam, PAT, pat smith, \nPeople: lee\n\n- [ ] 2026-01-16 (session `w-2`) — Rotate the test key. Context: TD-8. Due: 2026-01-25.\nPeople: below\n"
-    },
-    {
-      "old": null,
-      "new": "# Board\n\nPeople:\n"
-    },
-    {
-      "old": "",
-      "new": "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:.\n"
-    },
-    {
-      "old": "",
-      "new": "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> (default).\n"
-    },
-    {
-      "old": "",
-      "new": "- [ ] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:. Decided: Hold: x (2026-01-16).\n"
-    },
-    {
-      "old": "",
-      "new": "- [x] decide 2026-01-15 (session `w-1`) — Go on the build? Context: TD-12. Due: 2026-01-20. Answers: Go | Hold: <note> | hold:. Closed: 2026-01-16.\n"
-    },
-    {
-      "old": "",
-      "new": "- [ ] look 2026-01-15 (session `w-1`) — Check the page. Context: PR #4. Due: 2026-01-20. Answers: Works | Not right: <what>.\n"
-    }
-  ],
   "archive_subjects": [
     {
       "tool": "shiftlead",
@@ -2842,6 +2776,22 @@
     {
       "name": "later hide on an fyi with a due",
       "line": "- [ ] fyi 2026-01-01 (n/a) — An fyi with a date. Context: none. Due: 2026-01-20. Hide until: 2026-02-01."
+    },
+    {
+      "name": "hide a day before due, as an item file",
+      "file": "## Hide a day early.\n\n**Kind:** act\n**Added:** 2026-01-01\n**Context:** TD-21\n**Due:** 2026-01-20\n**Hide until:** 2026-01-19\n"
+    },
+    {
+      "name": "hide equal to due, as an item file",
+      "file": "## Hide to the day.\n\n**Kind:** act\n**Added:** 2026-01-01\n**Context:** TD-22\n**Due:** 2026-01-20\n**Hide until:** 2026-01-20\n"
+    },
+    {
+      "name": "later hide, impossible due, as an item file",
+      "file": "## No such day.\n\n**Kind:** act\n**Added:** 2026-01-01\n**Context:** TD-23\n**Due:** 2026-02-30\n**Hide until:** 2026-03-20\n"
+    },
+    {
+      "name": "later hide on an fyi with a due, as an item file",
+      "file": "## An fyi with a date.\n\n**Kind:** fyi\n**Added:** 2026-01-01\n**Context:** none\n**Due:** 2026-01-20\n**Hide until:** 2026-02-01\n"
     }
   ],
   "forms": [
