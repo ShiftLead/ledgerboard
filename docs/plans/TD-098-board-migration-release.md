@@ -1,6 +1,6 @@
 # TD-098: the board's migration, the release and v3.0's removals (TD-070's B5)
 
-**Status:** Draft 2, 2026-11-14 (session lb-designer). Draft 1 was TD-070's plan's B5 text (D11, D12, *Consumers*, the `SPEC.md` texts, fixtures, tests and builds that are B5's), moved unchanged; draft 2 rebases it on TD-092's plan (B1 and B2, merged as TD-093 and TD-094) and TD-095's (B3 and B4, filed as TD-103 and TD-104), each change marked *rebased*, and decides what those plans leave to B5 (the head note, `board.py split`, `fixtures/sweep/alpha/`, the *Versions* text). Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 0 of 6.
+**Status:** Draft 2, 2026-11-14 (session lb-designer). Draft 1 was TD-070's plan's B5 text (D11, D12, *Consumers*, the `SPEC.md` texts, fixtures, tests and builds that are B5's), moved unchanged; draft 2 rebases it on TD-092's plan (B1 and B2, merged as TD-093 and TD-094) and TD-095's (B3 and B4, merged as TD-103, #306, and TD-104, #307), each change marked *rebased*, and decides what those plans leave to B5 (the head note, `board.py split`, `fixtures/sweep/alpha/`, the *Versions* text). Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 3 of 6 held (record `docs/reviews/TD-098.md`); build-changing per design review 3, 2, 2 (fact-checks 8, 1, 3); the release order recurs (F376, F393, F400, F401, F409), and round 4 runs on round 3's fixes.
 
 **Entry:** [TD-098](../ledger/TD-098.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-098's Fix (Paul's Split
 on TD-095's scope, decided 2026-11-13: B3 and B4 TD-095's, B5 here); [TD-070's plan](TD-070-board-directory.md),
@@ -19,7 +19,7 @@ the directory and removes what the directory replaces, and the release that carr
 
 The scope (S1–S10, Paul's Go, 2026-11-11), the precedent, the entry grammar and what an item means are TD-070's
 plan's and TD-092's plan's (*What is already settled*). This plan's decisions take S9 (D11) and the release (D12).
-B1 and B2 (TD-092's plan) are merged (TD-093, TD-094); B3 and B4 (TD-095's plan) are Go'd and filed (TD-103, TD-104). v2.8, the last v2.x minor, is tagged.
+B1 and B2 (TD-092's plan) are merged (TD-093, TD-094); B3 and B4 (TD-095's plan) are merged (TD-103, #306; TD-104, #307). v2.8, the last v2.x minor, is tagged.
 
 ## Options weighed
 
@@ -94,7 +94,11 @@ on an `fyi` are all carried. The rule, for each:
   (`[label]: target`) whose target starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`, `mailto:` among
   them), `#` and `/` (a `#` later in it, `cadence.md#3-x`, is no bar), outside code spans and fenced code; an
   angle-bracketed target (`<a b>`) gains it inside the brackets, a title after the target (`(x "t")`) is kept, and
-  a target starting `./` has that `./` replaced by `../` (round 1's F381);
+  a target starting `./` has that `./` replaced by `../` (round 1's F381). Its bytes (round 3's F410): the dropped
+  heading's line goes with the blank lines right after it (a blank line before it stays, so one blank line, not two,
+  is left where it stood), the preamble's trailing blank lines go, and the file ends in one newline; a preamble that
+  is the `# ` title alone (`reply_ref.md`, `closed_words.md`) gives the title, a blank line and `Ledgerboard: 3`, then
+  that newline;
 - a v2 item's `Doer` is carried as written (round 7's F93, F98: a respelling would break the read-back, whose
   records compare `doer.text`; round 9's F147 reverses F97's refusal and F98's): one spelled with more than one
   space or a tab after `team` (F79), one on a kind but `act`, and one outside its form are each written as the line
@@ -136,7 +140,7 @@ on an `fyi` are all carried. The rule, for each:
   *Comparing two reads*), the guard that catches any other. `board_dir_problems()` of the result names rule 14's
   carried shapes, which `split_board_notes()` lists and the split does not refuse; any finding under another rule is
   a fault of the split itself, and refused. Nothing else is refused;
-- **`split_board_notes(files)`** (round 9's F147, the ruling; it took `readme` before) takes `split_board()`'s
+- **`split_board_notes(files, board, archive="")`** (round 9's F147, the ruling; it took `readme` before) takes `split_board()`'s
   `{path: text}` and gives `(path, line number, line, why)`: `README.md`'s lines that may still describe the v2
   board (as before: a line naming `user_attention.md`, `user_attention_archive.md`, `Needs the user` or
   `In-flight`, a `Format:` line, the carried lines among them), then each rule-14 finding `board_dir_problems()`
@@ -182,7 +186,7 @@ line's text, else the file's name without `.md` (round 1's F358). Every file the
 whatever the v2 file used (F359). The read-back compares the two reads' records at one date, the latest day any
 item of the input names (an `Added` or a `Closed` date), so hidden, overdue and the notes are judged alike (F367). `split` takes no target (round 6's
 F75): it always writes the directory beside the board, named the board's name less `.md`, since that is the one
-directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files)` names
+directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files, board, archive="")` names
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
 once its own tooling and both consumers run v3.0 (text 12; D12's order: ShiftLead's in its sync PR, agent-cadence's
@@ -221,14 +225,20 @@ not a v3 board: a v2 board (split first: board.py split)` (TD-095's F288; `write
 **D12. The release: v3.0, and v2.8 before it.** v3.0 is a major (*Versions* text 12). It reads v2 boards and writes
 v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else it carries, is Paul's. The order:
 - **B1's precondition** (the last v2.x minor, v2.8, released before B1 merges and none after it; TD-065 in v2.8, its `doer_value()` reused; TD-078's open question and B1's blocks) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D12 (2026-11-13 split).
-- **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (filed B3, TD-103,
-  then B4, TD-104); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
-  B1 and B2 are merged.
+- **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (B3, TD-103, #306,
+  then B4, TD-104, #307); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
+  B1 to B4 are merged.
 - **After v3.0, in this order** (round 1's F376, F377; round 2's F393, F398): (1) agent-cadence vendors v3.0, no
   split; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR; (3) agent-cadence splits
   its own board, in a PR of its own, at once after (2); (4) each other repo that pins agent-cadence, this repo
   among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
-  TD-100 designs). A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose
+  TD-100 designs). Before (1), (2) and (4), each repo's ledger meets TD-078's D5 precondition (v2.8's `migrate`
+  run, so v3.0 reads it), which is TD-078's and not B5's (round 3's F412). (2) is worked while (1) is in review, so
+  it is ready to merge when (1) merges; and (3) waits for (2) one UTC day at most: if (2) has not merged by the end
+  of the day after (1) merged, (3) lands anyway (round 3's F409), and ShiftLead's v2.x `gatesweep` and `workorders`
+  read agent-cadence's board as empty until (2) merges — the same risk, and the same remedy, as an old-pin roster
+  reader below. The order puts (2) first because ShiftLead's readers span the roster, so its read of every board
+  stays whole whenever (2) is on time; it is not a stricter rule for ShiftLead than for the roster. A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose
   board is still v2 has no board writer: bump and split together leave no such repo but agent-cadence between (1)
   and (3), a window named here and kept short (round 3's F400): its own board then takes no write from any of its
   writers, `board.py`, `board_edit.py`, `gate_sweep.py`'s filings and closes and `ledger.py set`'s board half (each
@@ -245,7 +255,8 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   split board as empty: a sweep there sees no covering item and can file a duplicate on its own board, and a `set`
   there logs `no board item` for a decision the split board holds. **The default** (the author's, put to the
   person as a steer): every pinning repo's bump-and-split lands within one day, steps 1 to 4 together, so the
-  window is that day; a duplicate an old-pin sweep files in it is closed by hand, and the rollout's entry says so.
+  window is that day; a duplicate an old-pin sweep files in it (ShiftLead's v2.x `gatesweep` among them, when (3)
+  does not wait for (2)) is closed by hand, and the rollout's entry says so.
   The alternatives are each worse on another axis: holding every split until the last roster repo bumps leaves each
   bumped repo with no board writer (F393), and a v2.x patch that refuses a stub breaks D12's no-v2.x-release rule.
   Each consumer entry carries the line for its step above.
@@ -264,8 +275,9 @@ board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), 
 board is split.
 
 - **agent-cadence**:
-  - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
-    own right after ShiftLead's sync (D12's step 3), landed when no open PR edits the board and no unpushed board
+  - vendor v3.0 (no split in that PR), its ledger first meeting TD-078's D5; split its own `docs/user_attention.md`
+    with `board.py split` in a PR of its own right after ShiftLead's sync (D12's step 3), or at the end of the UTC
+    day after the vendor PR merged if the sync has not (round 3's F409), landed when no open PR edits the board and no unpushed board
     commit is held; between its vendor PR and that split its board takes no writer's write (D12's window): its
     writers skip a v2 target with a message naming the split (`gate_sweep.py`'s filings and closes; round 3's F400),
     and `ledger.py set`'s lift keeps its refusal of the whole lift, ledger put back, to be run again after the split
@@ -298,7 +310,10 @@ board is split.
     for the item line, no sections, closing archives).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
   - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), landed when no open PR
-    edits the board and no unpushed board commit is held;
+    edits the board and no unpushed board commit is held, and merged only when what reads the board is v3.0 code
+    running: where a ShiftLead component runs from a deploy rather than the checkout, the deploy follows the merge
+    at once, and the entry says which do (round 3's F411); the sync PR is worked while agent-cadence's vendor PR is
+    in review, so it is ready when that merges (F409);
   - first, a check: the entry greps its stores and code for a persisted `board:` reference of any shape other than
     `board:` and 8 hex digits (a full key text, a line number) and names each it finds; `workorders.py`'s own
     `_REF_RE` (`board:[0-9a-f]{8}`) is the shape it persists;
@@ -372,7 +387,9 @@ v3.0 removes.)
 >   period is added or removed; a bold head stays in it as written.
 > - `README.md` is the board's text before its first item, with `Ledgerboard: 3` under its title (any
 >   `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
->   first item's section; any earlier `## ` heading stays). Each relative link there gains `../`, since the file
+>   first item's section; any earlier `## ` heading stays), that heading's line going with the blank lines right
+>   after it. Its trailing blank lines go and it ends in one newline, so a board whose text before its first item is
+>   its title alone gives the title, a blank line and `Ledgerboard: 3`. Each relative link there gains `../`, since the file
 >   moves one directory down: the target of an inline link or image (`[t](target)`, `![t](target)`) and of a
 >   reference definition (`[label]: target`), when it starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`,
 >   `mailto:` among them), `#` and `/`, outside code spans and fenced code; inside `<…>` when the target is
@@ -726,7 +743,7 @@ regenerates: `fixtures/board/*.json` and `fixtures/board/twins_across/expected.j
 `SPEC.md` finds no removed name outside the places it allows, and `board.py split` of this repo's own board, run on
 a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README.md`, F118).
 
-Order: B1, then B2 (both merged), then B3 and B4 (either order; filed TD-103, then TD-104), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
+Order: B1, then B2 (both merged), then B3 and B4 (either order; merged TD-103, #306, then TD-104, #307), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
 (round 9's F142). Then v3.0's release with TD-078's half (Paul's), each consumer's vendoring entry (agent-cadence's first),
 and this repo's pin bump with its own split in one PR (D12's order; round 1's F377, round 2's F393).
 
