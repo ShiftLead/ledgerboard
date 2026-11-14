@@ -7917,18 +7917,23 @@ def _sweep_closes(r: dict, reads: list[dict], boards: Sequence[Sequence], result
 # The merge gate's verdicts (v2.4): the lift-PR verdict, the tripwire and the coverage check
 # ---------------------------------------------------------------------------------------------
 
-BOARD_PATH = "docs/user_attention.md"  # the paths a tree is read at (SPEC *The merge gate's verdicts*)
-BOARD_ARCHIVE_PATH = "docs/user_attention_archive.md"
+BOARD_DIR = "docs/user_attention"  # the paths a tree is read at (SPEC *The merge gate's verdicts*): a v3 board
+BOARD_V2_PATH = "docs/user_attention.md"  # a v2 board, in a tree with no file under BOARD_DIR (v3.0: BOARD_PATH)
+BOARD_V2_ARCHIVE_PATH = "docs/user_attention_archive.md"  # its archive (v3.0: BOARD_ARCHIVE_PATH)
 LEDGER_DIR = "docs/ledger"  # a v2 ledger; a tree with no file under it holds a v1 ledger at LEDGER_V1_PATH
 LEDGER_V1_PATH = "docs/technical_debt.md"
+LEDGER_V1_ARCHIVE_PATH = "docs/technical_debt_archive.md"
 COVERING = ("open", "decided")  # the covers() states that cover
 
 
 def _tree_ls(tree: Mapping[str, str]) -> Ls:
+    """A tree's ``ls`` (v3.0, TD-092's D6): the names directly under ``path``, each subdirectory once as
+    ``<name>/``, sorted; None when no path of the tree lies under it."""
     def ls(path: str) -> list[str] | None:
         pre = path.rstrip("/") + "/"
         under = [k[len(pre):] for k in tree if k.startswith(pre)]
-        return sorted(x for x in under if x and "/" not in x) if under else None
+        names = {x.split("/", 1)[0] + "/" if "/" in x else x for x in under if x}
+        return sorted(names) if under else None
     return ls
 
 
@@ -7963,9 +7968,28 @@ def _tree_ledger_by_place(tree: Mapping[str, str]) -> tuple[dict[int, str], dict
     return here, gone
 
 
-def _tree_board(tree: Mapping[str, str], repo: str) -> tuple[str, str, str, str]:
-    """This repo's own board as the sweep's board tuple, read from a tree."""
-    return ("", repo, str(tree.get(BOARD_PATH) or ""), str(tree.get(BOARD_ARCHIVE_PATH) or ""))
+def _tree_board_path(tree: Mapping[str, str]) -> str:
+    """Where a tree's board is read (v3.0, SPEC *The merge gate's verdicts*): ``BOARD_DIR`` when the tree holds a
+    file under it, else ``BOARD_V2_PATH``, the one rule the three verdicts share."""
+    pre = BOARD_DIR + "/"
+    return BOARD_DIR if any(k.startswith(pre) for k in tree) else BOARD_V2_PATH
+
+
+def _tree_load(tree: Mapping[str, str]) -> Board:
+    """This repo's own board read from a tree through ``load_board()``, whole (v3.0): ``form`` ``"dir"`` for a v3
+    board, ``"file"`` for a v2 one, None for none (a stub with no directory included)."""
+    return load_board(_tree_board_path(tree), _tree_ls(tree), lambda p: tree.get(p))
+
+
+def _tree_board(tree: Mapping[str, str], repo: str) -> tuple[str, str, Board]:
+    """This repo's own board as the sweep's board triple, ``(origin_url, basename, Board)``, read from a tree."""
+    return ("", repo, _tree_load(tree))
+
+
+def _ident(it: BoardItem) -> tuple[str, str]:
+    """How the verdicts match an item across the base and the head (v3.0): by its id, and an undated v2 item (id
+    None) by ``item_key()`` of its line, its indent kept."""
+    return ("id", it.id) if it.id is not None else ("key", item_key(it.raw))
 
 
 def _check_repo(repo: object) -> None:
@@ -7995,37 +8019,18 @@ def _new_log(base: str | None, head: str) -> list[dict]:
     return out
 
 
-def _board_line_reads(text: str) -> dict[str, list[tuple[str, BoardItem]]]:
-    """Every item line of a board's (or archive's) text by its item key: each (line, item), read open or closed."""
-    out: dict[str, list[tuple[str, BoardItem]]] = {}
-    for ln in text.splitlines():
-        if ITEM_RE.match(ln):
-            got = parse_board(ln, warn=False)
-        elif CLOSED_ITEM_RE.match(ln):
-            got = parse_closed_items(ln)
-        else:
-            continue
-        if got:
-            out.setdefault(item_key(ln), []).append((ln, got[0]))
-    return out
-
-
-def _lifted_close(line: str) -> bool:
-    m = CLOSED_ITEM_RE.match(line)
-    c = CLOSED_RE.search(m.group("text")) if m else None
-    return bool(c) and c.group(0).rstrip().endswith("— lifted.")
-
-
 def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject: str, repo: str) -> list[tuple[str, str]]:
     """The tripwire on a `decision (<p>)` removed (v2.4, SPEC *The merge gate's verdicts*): ``[(kind, text)]``,
     each a removal the diff does not account for. It runs on every PR, the ``set by=`` route included. Trees map
-    each path to its text, the ledger and this repo's board and archive at SPEC's paths; only this repo's own
-    board is read, at the base and at the head, never another repo's, so the verdict is the same on every
-    machine. An entry that stays open and loses a `decision (<p>)` is accounted for by a ``gate reassigned`` or
+    each path to its text, the ledger and this repo's board at SPEC's paths, the board read through
+    ``load_board()`` (v3.0); only this repo's own board is read, at the base and at the head, never another
+    repo's, so the verdict is the same on every machine. A base item is matched to its head counterpart by id
+    among the head's open items and its closed ones (a close moves it), an undated v2 item by ``item_key()``. An entry that stays open and loses a `decision (<p>)` is accounted for by a ``gate reassigned`` or
     ``override:`` line for it, or by a new ``gate lifted … answer`` line whose suffix fits the board:
 
     - none: an item covering the gate at the base (covers(), state ``open`` or ``decided``) carries a new or
-      changed `Decided:` at the head, decided or closed, or, already decided, is newly closed ``— lifted.`` (the
+      changed `Decided:` at the head, decided or closed, or, already decided, is newly closed with the why
+      ``lifted`` (``Closed: D — lifted``; on a v2 line ``— lifted.``) (the
       last part of a shared item an older writer decided; from v2.7 the last part's item is undecided at the base
       and gains its `Decided:` with its `Closed:`);
     - ``; no board item``: nothing covers it at the base nor at the head;
@@ -8046,9 +8051,9 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
     b_open, _, _ = _tree_ledger(base_tree)
     h_open, _, _ = _tree_ledger(head_tree)
     b_board, h_board = _tree_board(base_tree, repo), _tree_board(head_tree, repo)
-    b_lines, h_lines = b_board[2].splitlines(), h_board[2].splitlines()  # as parse_board() numbers them
-    b_archived = set(b_board[3].splitlines())
-    h_reads = _board_line_reads("\n".join([*h_lines, *(x for x in h_board[3].splitlines() if x not in b_archived)]))
+    h_by: dict[tuple[str, str], list[BoardItem]] = {}  # the head's items, open and closed, by id
+    for hit in [*h_board[2].items, *h_board[2].closed]:
+        h_by.setdefault(_ident(hit), []).append(hit)
     people = board_people(b_board[2])
     anyone = (answered_by(b_board[2]) or "").lower() == "any"
     flags: list[tuple[str, str]] = []
@@ -8077,15 +8082,14 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
             suffix, by = rec.get("suffix", ""), rec["by"]
             cov_b = [(it, s) for _, it, s in covers(btext, gate, [b_board], repo) if s in COVERING]
             cov_h = [(it, s) for _, it, s in covers(htext, gate, [h_board], repo) if s in COVERING]
-            answered_here = []  # the covering items the head answers: (base item, head line, head item)
+            answered_here = []  # the covering items the head answers: (base item, head item)
             for it, s in cov_b:
-                bl = b_lines[it.line - 1]
-                for hl, hit in h_reads.get(item_key(bl), []):
-                    closed = bool(CLOSED_ITEM_RE.match(hl))
+                for hit in h_by.get(_ident(it), []):
                     gained = hit.decided is not None and (hit.decided, hit.decided_by) != (it.decided, it.decided_by)
-                    newly_lifted = it.decided is not None and closed and _lifted_close(hl) and hit.decided is not None
+                    newly_lifted = (it.decided is not None and it.closed is None and hit.closed is not None
+                                    and hit.closed[1] == "lifted" and hit.decided is not None)
                     if gained or newly_lifted:
-                        answered_here.append((it, hl, hit))
+                        answered_here.append((it, hit))
             if suffix.startswith("; board "):
                 there = suffix[len("; board "):]
                 if not REPO_RE.fullmatch(there) or there.lower() == repo.lower():
@@ -8096,22 +8100,21 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                     flags.append(("tripwire-no-board-item", f"{tid} lifts {gate} with no board item, but an open "
                                   "item on this repo's board asks it — answer that item"))
             elif suffix == "; shared board item left open":
-                still = {item_key(b_lines[it.line - 1]) for it, _ in cov_b} & {
-                    item_key(h_lines[it.line - 1]) for it, _ in cov_h}
+                still = {_ident(it) for it, _ in cov_b} & {_ident(it) for it, _ in cov_h}
                 shared = False
                 for it, _ in cov_h:
-                    if item_key(h_lines[it.line - 1]) not in still:
+                    if _ident(it) not in still:
                         continue
-                    ref, _g = _item_gate(it.text)
+                    ref, _g = _item_gate(it)
                     listed = [x for x in [ref, *it.parts] if x and "#" not in x and _num(x) != num]
                     if any(_carried(h_open.get(_num(x)), gate) is not None for x in listed):
                         shared = True
                 if not shared:
                     flags.append(("tripwire-shared", f"{tid} lifts {gate} leaving a shared board item open, but no "
                                   "item it covers still asks another listed entry"))
-                base_dec = {item_key(b_lines[it.line - 1]): (it.decided, it.decided_by) for it, _ in cov_b}
-                if any(item_key(h_lines[it.line - 1]) in still and it.decided is not None
-                       and (it.decided, it.decided_by) != base_dec[item_key(h_lines[it.line - 1])]
+                base_dec = {_ident(it): (it.decided, it.decided_by) for it, _ in cov_b}
+                if any(_ident(it) in still and it.decided is not None
+                       and (it.decided, it.decided_by) != base_dec[_ident(it)]
                        for it, _ in cov_h):  # v2.7: an answer for one part must not speak for the rest
                     flags.append(("tripwire-shared-decided", f"{tid} lifts {gate} leaving a shared board item open, "
                                   "but the item gains a Decided: that speaks for the entries left — leave it "
@@ -8121,7 +8124,7 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                               "board gains a Decided: in the same diff"))
             if by.lower() != person.lower():
                 ok = (not suffix and anyone and people is not None and by.lower() in {p.lower() for p in people}
-                      and any((hit.decided_by or "").lower() == by.lower() for _, _, hit in answered_here))
+                      and any((hit.decided_by or "").lower() == by.lower() for _, hit in answered_here))
                 if not ok:
                     flags.append(("tripwire-by", f"{tid} lifts {gate} by {by}, not {person} — only the gate's "
                                   "person answers, or anyone listed on a board whose Answered by is any"))
@@ -8143,14 +8146,16 @@ def _held_old_form(text: str | None, gate: str) -> bool:
 def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, str], boards: Sequence[Sequence],
                         repo: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """The merge gate's coverage check (v2.4, SPEC *The merge gate's verdicts*): ``(refusals, flags)``, each
-    ``[(kind, text)]``. ``boards`` are the other repos' boards read (the sweep's tuples); this repo's own board is
+    ``[(kind, text)]``. ``boards`` are the other repos' boards read (the sweep's triples); this repo's own board is
     read from ``head_tree`` in place of any that names it. A `decision (<p>)` an open entry gains in the diff
     (one a base entry held in the old form, ``decision (<p>) <text>``, is not gained, v2.8) is refused when this
     repo's board lists ``<p>`` on `People:` and no item on it covers the gate (covers(),
     state ``open`` or ``decided``), and flagged when the board does not list ``<p>``, since its coverage then
     depends on another repo's board, which not every machine reads. A new `decide` item on this repo's board
     whose Context names a decision and none of whose answers lifts (one of its `Lifts:`, `Go` when it has none,
-    never a waiting-only one) is refused. Refusals rest on this repo's own board alone."""
+    never a waiting-only one) is refused: new is an id on no base item, open or closed in an archive file the tree
+    holds (v3.0; an undated v2 item matched by ``item_key()``). Refusals rest on this repo's own board alone.
+    ``boards`` is ``[(origin_url, basename, Board)]`` (v3.0), each read through ``load_board()``."""
     _check_repo(repo)
     own = _tree_board(head_tree, repo)
     mine = _own_board(boards, repo)
@@ -8178,18 +8183,17 @@ def uncovered_decisions(base_tree: Mapping[str, str], head_tree: Mapping[str, st
                 flags.append(("decision-elsewhere", f"{tid} gains {gate}, and this repo's board does not list {person}: "
                               + (f"covered on {where}, which not every machine reads" if where else
                                  "no board read covers it — the sweep files its item")))
-    base_keys = {item_key(ln) for ln in str(base_tree.get(BOARD_PATH) or "").splitlines()
-                 if ITEM_RE.match(ln) or CLOSED_ITEM_RE.match(ln)}
-    lines = own[2].splitlines()  # as parse_board() numbers them
-    for it in parse_board(own[2], warn=False):
-        ln = lines[it.line - 1]
-        if it.kind != "decide" or item_key(ln) in base_keys:
+    b_board = _tree_load(base_tree)
+    base_ids = {_ident(it) for it in [*b_board.items, *b_board.closed]}  # open, or closed in an archive file
+    for it in own[2].items:
+        if it.kind != "decide" or _ident(it) in base_ids:
             continue
-        _, gate = _item_gate(it.text)
+        _, gate = _item_gate(it)
         if gate is None or not GATE_DECISION_RE.match(gate):
             continue
         if not any(_lifting(a, it.lifts, it.answers) for a in it.answers):
-            refusals.append(("decision-no-lift", f"the new decide item on line {it.line} asks {gate} and none of "
+            name = it.id if it.id is not None else "with no id"
+            refusals.append(("decision-no-lift", f"the new decide item {name} asks {gate} and none of "
                              f"its answers lifts it ({' | '.join(it.lifts or ['Go'])})"))
     return refusals, flags
 
@@ -8206,16 +8210,21 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
     decide lift the person's answer reviews; else ``review`` names, as ``[(kind, text)]``, the first condition
     that sends it to ordinary review. ``flags`` are tripwire()'s over the same trees.
 
-    Trees map paths to texts (SPEC's paths); ``files`` are the PR's changed paths, ``subject`` its commit's
-    subject, ``commits`` its commit count; ``created_at`` and ``merged_at`` (None while open) the forge's dates,
-    each a date or an aware datetime (taken as its UTC date). The carve-out needs: (a0) the base board declares
-    `People:`; (a) the subject's action is ``decide``; one commit; the board diff one item, which gains a
-    `Decided: <label> (by <p>)` and no other answer had, its head line ``edit_line(base line, "decide", label,
-    by, D, close=closes(…))`` byte for byte; (c) for this repo's entry, a v2 ledger whose changed files are
-    exactly those decide_lift() changes, each byte-equal to its result, every new Log line one date T, with T
-    within a day of ``created_at`` and not after the merge; for another repo's entry, the board alone, the
-    gate's person and the answerer on `People:`; and the `Decided:` date D within ``created_at − 1`` and the
-    merge (else ``created_at``) ``+ 1``. (d), a PR only, is the consumer's: this judges a PR."""
+    Trees map paths to texts (SPEC's paths), the board read through ``load_board()`` at ``BOARD_DIR`` when the
+    tree holds a file under it, else at ``BOARD_V2_PATH`` (v3.0); ``files`` are the PR's changed paths, which
+    choose the archive files fetched and send a path outside the board and the ledger to review, ``subject`` its
+    commit's subject, ``commits`` its commit count; ``created_at`` and ``merged_at`` (None while open) the forge's
+    dates, each a date or an aware datetime (taken as its UTC date). What changed is read from the two trees,
+    never from ``files``. The carve-out needs a v3 board at the base and the head (a v2 one takes review,
+    ``lift-board-v2``), and: (a0) the base board declares `People:`; (a) the subject's action is ``decide``; one
+    commit; the board's changes one item's (its open file changed in place, or moved to
+    `archive/<YYYY-MM>/<id>.md`), which gains a `Decided: D by <p> — <label>` and no other answer had, its head
+    file ``edit_item(base file, "decide", label, by, D, close=closes(…))`` byte for byte at ``item_path(id,
+    closed)``; (c) for this repo's entry, a v2 ledger whose changed files are exactly the item's files and those
+    decide_lift() changes, each byte-equal to its result, every new Log line one date T, with T within a day of
+    ``created_at`` and not after the merge; for another repo's entry, the item's files alone, the gate's person
+    and the answerer on `People:`; and the `Decided:` date D within ``created_at − 1`` and the merge (else
+    ``created_at``) ``+ 1``. (d), a PR only, is the consumer's: this judges a PR."""
     flags = tripwire(base_tree, head_tree, subject, repo)
     created = _verdict_day(created_at, "created_at")
     merged = None if merged_at is None else _verdict_day(merged_at, "merged_at")
@@ -8227,30 +8236,39 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
 
     def review(kind: str, text: str) -> dict:
         return {"carve_out": False, "flags": flags, "review": [(kind, text)]}
-    b_text, h_text = base_tree.get(BOARD_PATH), head_tree.get(BOARD_PATH)
-    if b_text is None or h_text is None:
-        return review("lift-no-board", f"the PR has no board at {BOARD_PATH} at its base and head")
-    b_lines, h_lines = str(b_text).split("\n"), str(h_text).split("\n")
-    diff = [n for n in range(max(len(b_lines), len(h_lines)))
-            if n >= len(b_lines) or n >= len(h_lines) or b_lines[n] != h_lines[n]]
-    if len(b_lines) != len(h_lines) or len(diff) != 1:
-        return review("lift-board-diff", "the board diff is not one item line changed in place")
-    end = "\r" if b_lines[diff[0]].endswith("\r") else ""
-    if h_lines[diff[0]].endswith("\r") != bool(end):
-        return review("lift-board-diff", "the answered line changes its line ending")
-    bl, hl = b_lines[diff[0]].removesuffix(end), h_lines[diff[0]].removesuffix(end)
-    if not ITEM_RE.match(bl) or not (ITEM_RE.match(hl) or CLOSED_ITEM_RE.match(hl)) or item_key(bl) != item_key(hl):
-        return review("lift-board-diff", "the changed board line is not one open item answered in place")
-    b_item = parse_board(bl, warn=False)[0]
-    h_item = (parse_board(hl, warn=False) if ITEM_RE.match(hl) else parse_closed_items(hl))[0]
-    ref, gate = _item_gate(b_item.text)
+    b_board, h_board = _tree_load(base_tree), _tree_load(head_tree)
+    if b_board.form is None or h_board.form is None:
+        return review("lift-no-board", f"the PR has no board at {BOARD_DIR}/ or {BOARD_V2_PATH} at its base or head")
+    if b_board.form != "dir" or h_board.form != "dir":
+        return review("lift-board-v2", "the PR's board is a v2 board at its base or head: a v3 writer writes none")
+    pre = BOARD_DIR + "/"
+    for f in sorted(set(files)):
+        if not (f.startswith(pre) or f.startswith(LEDGER_DIR + "/") or f in (LEDGER_V1_PATH, LEDGER_V1_ARCHIVE_PATH)):
+            return review("lift-files", f"the PR changes {f}, outside the board and the ledger")
+        if f.startswith(pre) and not _board_file_place(f[len(pre):]):
+            return review("lift-files", f"{f} is under {BOARD_DIR}/ but neither an item file in it nor one under "
+                          f"{BOARD_ARCHIVE}/<YYYY-MM>/")
+    changed = {p for p in {*base_tree, *head_tree} if base_tree.get(p) != head_tree.get(p)}
+    board_changed = sorted(p[len(pre):] for p in changed if p.startswith(pre))
+    rel = _one_items_change(board_changed, base_tree, head_tree)
+    if rel is None:
+        return review("lift-board-diff", "the board changes are not one item's file changed in place or moved to "
+                      f"{BOARD_ARCHIVE}/")
+    b_rel, h_rel = rel
+    b_item = next((it for it in b_board.items if it.path == b_rel), None)
+    h_item = next((it for it in [*h_board.items, *h_board.closed] if it.path == h_rel), None)
+    if b_item is None or h_item is None or h_item.id != b_item.id:
+        return review("lift-board-diff", "the changed board file is not one open item's file, changed in place or "
+                      f"moved to {BOARD_ARCHIVE}/")
+    item_files = {pre + p for p in board_changed}
+    ref, gate = _item_gate(b_item)
     if h_item.decided is None:
         return review("lift-not-answered", "the changed item gains no Decided:")
     if gate is None or b_item.kind != "decide":
         return review("lift-no-gate", "the answered item is not a decide whose Context names one entry and one gate")
     if b_item.decided is not None:
         return review("lift-reanswer", "the item was answered already — a re-answer takes ordinary review")
-    people = board_people(str(b_text))
+    people = board_people(b_board)
     if people is None:
         return review("lift-a0", "the base board declares no People: line, so who may answer is unchecked")
     if edit_action(subject or "") != "decide":
@@ -8263,13 +8281,13 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
         return review("lift-no-by", "the Decided: names no answerer (by <person>)")
     if not (created - one <= d <= (merged or created) + one):
         return review("lift-decided-date", f"the Decided: date {d} is outside {created - one} .. {(merged or created) + one}")
-    answered = answered_by(str(b_text))
+    answered = answered_by(b_board)
     if "#" in ref:
         other = ref.rpartition("#")[0]
         if other.lower() == repo.lower():
             return review("lift-own-ref", f"{ref} names this repo's entry as another repo's")
-        if list(files) != [BOARD_PATH]:
-            return review("lift-files", f"another repo's entry is answered on the board alone: {list(files)}")
+        if changed != item_files:
+            return review("lift-files", f"another repo's entry is answered on the board alone: {sorted(changed)}")
         on = {p.lower() for p in people}
         person = GATE_DECISION_RE.match(gate).group("who").strip() if GATE_DECISION_RE.match(gate) else None
         if person is not None and person.lower() not in on:
@@ -8295,7 +8313,7 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
         ls = _tree_ls(base_tree)
         h_ls = _tree_ls(head_tree)
         days = set()
-        for f in files:
+        for f in sorted(changed):
             if f.startswith(LEDGER_DIR + "/") and f in base_tree and f in head_tree:
                 body = head_tree[f]
                 if _entries(body):
@@ -8304,13 +8322,13 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
             return review("lift-log-date", f"the new Log lines carry more than one date: {sorted(days)}")
         t = date.fromisoformat(days.pop()) if days else created
         try:
-            result = decide_lift(bl, entries_given, label, by, t, people, answered, archived=gone)
+            result = decide_lift(b_item, entries_given, label, by, t, people, answered, archived=gone)
         except Refused as e:
             return review("lift-refused", f"decide_lift refuses it: {e}")
         if result and not (created - one <= t <= min(created + one, merged or created + one)):
             return review("lift-log-date", f"the Log date {t} is outside {created - one} .. "
                           f"{min(created + one, merged or created + one)}")
-        want = {BOARD_PATH}
+        want = set(item_files)
         for tid, text in result.items():
             path = entry_path(LEDGER_DIR, tid, ls)
             if path is None or path.startswith(LEDGER_DIR + "/" + LEDGER_ARCHIVE + "/") \
@@ -8319,16 +8337,51 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
             if head_tree.get(path) != text:
                 return review("lift-ledger", f"{path} is not what decide_lift writes, byte for byte")
             want.add(path)
-        if len(list(files)) != len(set(files)) or set(files) != want:
-            return review("lift-files", f"the PR changes {sorted(set(files))}, and a lift changes {sorted(want)}")
+        if changed != want:
+            return review("lift-files", f"the PR changes {sorted(changed)}, and a lift changes {sorted(want)}")
     try:
-        close = closes(bl, label, {**entries_given, **result})
-        line = edit_line(bl, "decide", answer=label, by=by, today=d, close=close)
-    except Refused as e:
+        close = closes(b_item, label, {**entries_given, **result})
+        want_path = item_path(b_item.id, d.isoformat() if close else None)
+        text = edit_item(base_tree[pre + b_rel], "decide", answer=label, by=by, today=d, close=close)
+    except (Refused, ValueError) as e:
         return review("lift-board-line", f"the decide writer refuses the answer: {e}")
-    if line != hl:
-        return review("lift-board-line", "the answered line is not what the decide writer writes, byte for byte")
+    if h_rel != want_path or head_tree.get(pre + h_rel) != text:
+        return review("lift-board-line", f"{pre + h_rel} at the head is not what the decide edit writes at {want_path}")
     return {"carve_out": True, "flags": flags, "review": []}
+
+
+def _board_file_place(rel: str) -> bool:
+    """Whether a path relative to a board's directory is one the verdicts read (v3.0): a file directly in it, or
+    one directly under `archive/<YYYY-MM>/`."""
+    parts = rel.split("/")
+    return len(parts) == 1 or (len(parts) == 3 and parts[0] == BOARD_ARCHIVE and bool(BOARD_MONTH_RE.fullmatch(parts[1])))
+
+
+def _one_items_change(changed: list[str], base_tree: Mapping[str, str], head_tree: Mapping[str, str]
+                      ) -> tuple[str, str] | None:
+    """(the base file, the head file) of the board's changed paths (each relative to its directory) when they are
+    one item's (v3.0, SPEC *The merge gate's verdicts* (b)): one open `<id>.md` changed in place, or one open
+    `<id>.md` removed and `archive/<YYYY-MM>/<id>.md` added, the same id; else None."""
+    pre = BOARD_DIR + "/"
+
+    def open_name(rel: str) -> bool:
+        return "/" not in rel and rel.endswith(".md") and is_item_id(rel[:-3])
+    if len(changed) == 1:
+        rel = changed[0]
+        return (rel, rel) if open_name(rel) and pre + rel in base_tree and pre + rel in head_tree else None
+    if len(changed) != 2:
+        return None
+    moved = [r for r in changed if r.startswith(BOARD_ARCHIVE + "/")]
+    opened = [r for r in changed if open_name(r)]
+    if len(moved) != 1 or len(opened) != 1:
+        return None
+    a, o = moved[0], opened[0]
+    parts = a.split("/")
+    if len(parts) != 3 or not BOARD_MONTH_RE.fullmatch(parts[1]) or parts[2] != o:
+        return None
+    if pre + o not in base_tree or pre + o in head_tree or pre + a in base_tree or pre + a not in head_tree:
+        return None
+    return o, a
 
 
 # ---------------------------------------------------------------------------------------------

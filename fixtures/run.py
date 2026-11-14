@@ -99,7 +99,9 @@ Fixtures, each an invented input and its expected JSON:
   is refused.
 - ``verdict/cases.json`` → ``verdict/expected.json`` (v2.4): the merge gate's verdicts — ``lift_pr_verdict()``,
   ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
-  ``cases/<name>/base/``, then its ``cases/<name>/head/`` over that, less its ``delete`` paths.
+  ``cases/<name>/base/``, less its ``delete_base`` paths, then its ``cases/<name>/head/`` over that, less its
+  ``delete`` paths (a path ending in ``/`` every path under it, v3.0); the board a v3 directory, and another
+  repo's board under ``boards/`` a directory or a v2 file read through ``load_board()`` (v3.0).
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from; from v3.0 the board a directory of item files, ``board/`` with its ``README.md``, or a v2 file
   for the reads and the refusals), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/``
@@ -1007,21 +1009,42 @@ def host_log_cases(L, spec: dict) -> dict:
             "count_host_log": {c["name"]: count(c) for c in spec["count_host_log"]}}
 
 
+def _fs_board(root: Path, rel: str, L):
+    """The board at ``root/rel`` read through ``load_board()`` from the file system (v3.0): a directory's names
+    with each subdirectory as ``<name>/``, a file's text read as bytes so its line endings stay."""
+    def ls(p: str):
+        q = root / p
+        return sorted(c.name + "/" if c.is_dir() else c.name for c in q.iterdir()) if q.is_dir() else None
+
+    def read(p: str):
+        q = root / p
+        return q.read_bytes().decode("utf-8") if q.is_file() else None
+    return L.load_board(rel, ls, read)
+
+
 def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
     """The merge gate's verdicts (v2.4): ``lift_pr_verdict()``, ``tripwire()`` and ``uncovered_decisions()`` of
     each case's base and head trees. ``verdict/base/`` is every case's base tree; a case's ``cases/<name>/base/``
-    and ``cases/<name>/head/`` lay files over it (the head over the base after its own overlay), and its
-    ``delete`` names paths the head drops. Boards another repo holds are files of ``verdict/boards/``."""
+    and ``cases/<name>/head/`` lay files over it (the head over the base after its own overlay), its ``delete_base``
+    names paths the base drops (after its overlay, before the head is laid over it) and its ``delete`` paths the
+    head drops, a path ending in ``/`` every path under it (v3.0). Boards another repo holds are under
+    ``verdict/boards/``, each a directory or a v2 file (its archive beside it as ``<stem>_archive.md``), read
+    through ``load_board()`` (v3.0)."""
     if not hasattr(L, "lift_pr_verdict"):
         return {"missing": "the module has no lift_pr_verdict — older than v2.4"}
     d = root / "verdict"
     shared = tree(d / "base")
 
+    def drop(t: dict, paths: list) -> None:  # v3.0: a path ending in `/` takes every path under it
+        for p in paths:
+            for k in [k for k in t if k == p or (p.endswith("/") and k.startswith(p))]:
+                del t[k]
+
     def trees(c):
         base = {**shared, **tree(d / "cases" / c["name"] / "base")}
+        drop(base, c.get("delete_base", []))
         head = {**base, **tree(d / "cases" / c["name"] / "head")}
-        for p in c.get("delete", []):
-            head.pop(p, None)
+        drop(head, c.get("delete", []))
         return base, head
 
     def verdict(c):
@@ -1033,9 +1056,7 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
 
     def uncovered(c):
         base, head = trees(c)
-        boards = [(b["url"], b["basename"], (d / "boards" / b["board"]).read_text(encoding="utf-8"),
-                   (d / "boards" / b["archive"]).read_text(encoding="utf-8") if b["archive"] else "")
-                  for b in c["boards"]]
+        boards = [(b["url"], b["basename"], _fs_board(d / "boards", b["board"], L)) for b in c["boards"]]
         refusals, flags = L.uncovered_decisions(base, head, boards, spec["repo"])
         return {"refusals": [list(x) for x in refusals], "flags": [list(x) for x in flags]}
     return {

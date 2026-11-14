@@ -1248,12 +1248,19 @@ them (v3.0). `README.md` is the one file a stamp rewrites, so two stamps written
 there. Which stamps a consumer writes and
 what they mean are the consumer's.
 
-**The merge gate's verdicts** (v2.4) are three pure functions over a PR's **trees**, each a map from path to
-text read at the PR's base or head: the ledger at `docs/ledger/` (v2; a tree with no file under it holds a v1
-ledger at `docs/technical_debt.md`), this repo's board at `docs/user_attention.md` and its archive at
-`docs/user_attention_archive.md` (`BOARD_PATH`, `BOARD_ARCHIVE_PATH`, `LEDGER_DIR`, `LEDGER_V1_PATH`). Each
-names what it finds as `(kind, text)` pairs; `repo` is as for the sweep. The consumer fetches the trees, the
-file list, the commits and the dates from the forge, and acts on the verdict.
+**The merge gate's verdicts** (v2.4) are three pure functions over a PR's **trees**, each a map from path to text
+read at the PR's base or head: the ledger at `docs/ledger/` (v2; a tree with no file under it holds a v1 ledger at
+`docs/technical_debt.md`), and this repo's board at `docs/user_attention/` (v3.0, `BOARD_DIR`), or, in a tree with
+no file under that directory, the v2 board at `docs/user_attention.md` and its archive at
+`docs/user_attention_archive.md` (`BOARD_V2_PATH`, `BOARD_V2_ARCHIVE_PATH`, until v3.0 `BOARD_PATH` and
+`BOARD_ARCHIVE_PATH`); the board is what `load_board()` over the tree reads at `BOARD_DIR` when the tree holds a
+file under it, else at `BOARD_V2_PATH`, and a stub alone there is no board; the ledger's paths are
+`LEDGER_DIR` and `LEDGER_V1_PATH`. A tree holds the same
+board paths at the base and the head: every file directly in `BOARD_DIR`, and every file under its `archive/` at a
+path the PR's file list names (a moved file's old and new paths both). A verdict judges a PR's board changes from
+the two trees, as the paths added, removed and changed in text, never from how the forge reports a move. Each
+verdict names what it finds as `(kind, text)` pairs; `repo` is as for the sweep. The consumer fetches the trees,
+the file list, the commits and the dates from the forge, and acts on the verdict.
 
 `tripwire(base_tree, head_tree, subject, repo)` runs on every PR, the `set by=` route included, and returns its
 flags: each `decision (<p>)` that an entry open at the base and at the head loses, unless the diff accounts for
@@ -1262,7 +1269,8 @@ the same on every machine. The diff accounts for a removal by a new `gate reassi
 the gate, or by a new `gate lifted … answer` line whose suffix fits the board (`covers()`, states `open` and
 `decided`, being what covers):
 - **no suffix:** an item covering the gate at the base carries a new or changed `Decided:` at the head (open and
-  decided, or closed), or, decided already, is newly closed `— lifted.` (the last part of a shared item an older
+  decided, or closed), or, decided already, is newly closed with the why `lifted` (`Closed: D — lifted`; on a v2
+  line `— lifted.`) (the last part of a shared item an older
   writer decided; from v2.7 the last part's item is undecided at the base and gains its `Decided:` with its
   `Closed:`);
 - **`; no board item`:** nothing covers the gate at the base, nor at the head, so closing a covering item with
@@ -1290,21 +1298,38 @@ commit count; `created_at` and `merged_at` (None while it is open) are the forge
 datetime, taken as its UTC date. The carve-out needs every one of:
 - **(a0)** the base board declares `People:`;
 - **(a)** the commit's subject is a board `decide` (`edit_action()`), and the PR is one commit (squash-merged);
-- **(b)** the board diff is one item line changed in place, an open `decide` naming one entry and one gate, never
-  answered at the base, that gains `Decided: <label> (by <p>) (D)`; its head line is `edit_line(base line,
-  "decide", label, by, D, close=closes(item, label, entries after))` byte for byte, so a work order is never
-  closed and a finished lift never left open; D lies from `created_at − 1` to the merge date (else
-  `created_at`) `+ 1`, the board's local day running up to a day from UTC;
+- **(b)** the PR's changes to the board are one item's: its open file changed in place, or removed with
+  `archive/<YYYY-MM>/<id>.md` added, the same `<id>` and any month (the item closed), and no other board path
+  changed. The base item is an open `decide` naming one entry and one
+  gate, never answered, that gains `Decided: D by <p> — <label>` (else review: `lift-board-diff` when the changes
+  are not one item's, the base file is no open item or the head file is no item file, open or closed, of that
+  id; `lift-no-gate`, `lift-reanswer` or `lift-not-answered` for the base item's kind and gate, its earlier
+  answer, or a missing `Decided:`); the head file is `edit_item(base file, "decide", label, by, D, close=closes(item, label,
+  entries after))` byte for byte at `item_path(id, closed)` (else `lift-board-line`), so a work
+  order is never closed and a finished lift never left open; D lies from `created_at − 1` to the merge date (else
+  `created_at`) `+ 1`, the board's local day running up to a day from UTC. A lift on a v2 board, a v2 base or head (a
+  split PR included), takes review (`lift-board-v2`, v3.0): no v3 writer writes one;
 - **(c)** for this repo's entry, the ledger is v2 (a v1 ledger's lift takes review) and `decide_lift()` of the
-  base line, the base texts of its Context and `Parts:` entries that the base ledger's directory holds, whatever
+  base item's file, the base texts of its Context and `Parts:` entries that the base ledger's directory holds, whatever
   their Status, and, in `archived`, the ids of those only its `archive/` holds (by which text holds the heading,
   not by Status; v2.6), with the base board's `People:` and `Answered by:`, accepts the answer, and `closes()`
-  reads the open texts after it; the PR changes exactly the board and the open file of each entry it changes, each
+  reads the open texts after it; the PR changes exactly the item's files and the open file of each entry it changes, each
   byte-equal to its result; every new Log line carries one date T, which is `decide_lift()`'s today, within a day
   of `created_at` and not after the merge (else `created_at + 1`). An answer that changes no entry is windowed by D
   alone. A suffix, a host's lift, an override or a reassign cannot equal `decide_lift()`'s output, so takes
-  review. **For another repo's entry** (`<repo>#TD-n`, never this repo's), the PR changes the board alone, the
+  review. **For another repo's entry** (`<repo>#TD-n`, never this repo's), the PR changes the item's files alone, the
   gate's person and the answerer are on `People:`, and under `owner` the answerer is the gate's person.
+
+**The order** (v3.0): `review` names the first condition that fails, the board's presence and form first, then
+the files, then the diff, each before (a0): a base or head with no board (`load_board()`'s `form` None, read from
+`BOARD_DIR` when the tree holds a file under it, else from `BOARD_V2_PATH`, so a stub with no directory is no
+board) takes review (`lift-no-board`, naming `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base or
+head (`lift-board-v2`); then a path in the file list outside `BOARD_DIR/`, `LEDGER_DIR/`, `LEDGER_V1_PATH` and the v1 archive, or under `BOARD_DIR/`
+but neither directly in it nor under `archive/<YYYY-MM>/` (`lift-files`); then board changes that are not one
+item's, then one item's change whose base file is no open item or whose head file is no item file (open or
+closed) of that id (both `lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
+(a) before the `Decided:` by and date), and last the head file's path and
+bytes (`lift-board-line`).
 
 (d), a PR only, is the consumer's: a direct commit that answers a gate's item is refused by its own audit.
 
@@ -1314,7 +1339,7 @@ names it. A `decision (<p>)` an open entry gains in the diff is refused (`decisi
 board lists `<p>` on `People:` and no item on it covers the gate, and flagged (`decision-elsewhere`) when the board
 does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A
 decision a base entry held in the old form (*The ledger*) is not gained when the head writes it `decision (<who>)`
-(v2.8). A new `decide` item on this repo's board (its key on no line of the base board) whose Context names a
+(v2.8). A new `decide` item on this repo's board (its id on no base item: open, or closed in an archive file the tree holds) whose Context names a
 decision and none of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on
 this repo's own board alone, so they are the same on every machine.
 
@@ -1541,7 +1566,8 @@ the directory; on an empty `Board`, the path that was missing).
       kind that takes none): read as written, as on a v2 line.
   15. `board_dir_problems() only`: a `Closed:` in its form on a file outside `archive/`: read as closed.
   16. `board_dir_problems() only`: an archived file in a month that is not its `Closed:` date's: read as closed.
-- **The readers take the `Board`**: `needs_you()`, `covers()`, `sweep()` and `board_problems()`; `board_people()`,
+- **The readers take the `Board`**: `needs_you()`, `covers()`, `sweep()`, `board_problems()` and the merge gate's
+  verdicts; `board_people()`,
   `answered_by()`, `people_problems()` and `answered_by_problems()` read its preamble, every line of `README.md`
   on a `"dir"` board and the lines above the first item on a `"file"` one, as `board.py`'s
   `who_answered(board, by)` does through `board_people()`; and a consumer calls
