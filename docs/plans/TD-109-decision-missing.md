@@ -59,11 +59,16 @@ An **open** entry is flagged `decision-missing` when all three hold:
    each have their own flag (`retired`), whose cure writes a `decision (<person>)`; counting them keeps one fault
    from being reported twice. Any other unreadable `decision (…)` item (`decision (the owner)`, which
    `parse_gates()` puts in `bad`) names no person, so it is not a decision here: the entry is flagged beside the
-   item's own `blocked-item` error, since no reader can tell whom it waits on. An `until` or an `event` gate is not a decision: an entry that waits on a date and
-   also asks a person something is flagged.
+   item's own `blocked-item` error, since no reader can tell whom it waits on. An `until` or an `event` gate is not
+   a decision: an entry that waits on a date and also asks a person something is flagged. That holds for an event a
+   person may lift from a sweep's item too: the event names a check, not a person, so no board item asks anyone the
+   entry's Ask, and the Ask is what a `decision (<person>)` exists to put in front of them.
 3. **It is not answered** (D2).
 
-An archived entry is never read for it, as no Log flag reads the archive. `pickable()` is unchanged: the flag says
+**Where it is raised.** In `check()`'s per-entry loop over the open entries' texts, beside the Log, event and
+`misplaced-name` flags, since it reads the Log, and never in `pickable()`'s `flag_recs` (where `ask-missing` is
+raised): `pickable()`'s callers see no new flag. An archived entry is never read for it, as no Log flag reads the
+archive. `pickable()` is unchanged: the flag says
 the entry is malformed; it does not hold the entry. (A held entry would still be invisible to the person; the cure is
 the gate, which both holds it and puts it in front of them.)
 
@@ -90,9 +95,15 @@ override alike. The person in the lines is not compared: a reassign or a lift na
 
 - A Log that cannot be read (`log_problems()` raises something) answers nothing: the entry is flagged, beside the
   Log's own error.
-- **A rewritten Ask is a new question.** On an edit (`check()` given `old`), an entry whose Ask the edit added, or
-  whose Ask's words changed (the section's text after its lead, compared as written; for a header field, its value),
-  is not answered whatever its Log says. Without `old`, or on an entry whose Ask is unchanged, the Log decides.
+- **The Log alone decides**, on a standing ledger and on an edit alike: `check()` never compares an Ask with
+  `old`'s. An entry the edit moved or made (a reopen, a renumber), or whose Ask a link rewrite or the canonical
+  form touched, reads as its Log says. A new question on an answered entry is caught where it is written instead
+  (D3): the writer refuses to write an Ask on an entry that names no decision.
+- **The rule trusts the Log.** A hand edit or a direct `edit_entry(…, "set")` that drops a decision writes no Log
+  line, so with two decisions, one lifted and the other then dropped by hand, the last decision line is still the
+  lift and the entry reads as answered. Through the writer every drop is a lift or a reassign (below), so only a
+  route that bypasses the writer can hide a wait this way; a check of the Log against the gates' history is not
+  attempted.
 
 Why the Log and not the base. agent-cadence's reading (TD-109's Fix, question 1) is that an entry whose base carried
 a decision the edit lifts is standing. That reading is right for the lift itself, and D2 gives the same answer
@@ -109,11 +120,23 @@ gate and rewrites the Ask, which a gated entry may do. The writer's `set` route 
 (`--by` the gate's person, or `--override`), so it too leaves the entry answered: through the writer, removing a
 decision is always recorded as somebody's answer. A decision dropped any other way (a direct `edit_entry(…,
 "set")`, a hand edit) leaves no lift line, so the last decision line is a `gate added` and the entry is flagged.
-Through the writer, then, the flag fires on `new` with an Ask and no decision, on an `edit --section Ask` that adds
-or rewrites an Ask on an entry with no decision, and on a gate-less entry that already had an unanswered Ask once an
-edit rewrites it (at a check given a base; `gate()` itself refuses no fault already there).
+Through the writer, then, the flag fires on `new` with an Ask and no decision, and on a gate-less entry that already
+had an unanswered Ask once an edit rewrites it (at a check given a base; `gate()` itself refuses no fault already
+there); an Ask written onto an entry with no decision is refused by `edit_entry()` itself (D3).
 
-### D3. The cure for an Ask that waits on no one: `edit --remove` takes it
+### D3. The Ask's writes: no Ask is written without a decision, and `edit --remove` takes one
+
+**Writing an Ask needs a decision.** `edit_entry(…, "edit")` with `section` `Ask` (replacing the section or adding
+it) is refused when the entry's `Blocked by` names no decision in D1's sense: *"TD-n names no decision (<person>):
+an Ask is what a decision waits on — set the gate first (set --blocked-by …), then write the Ask"*. So is
+`edit_entry(…, "set")` that writes a non-empty header `Ask` field, or changes one, when the resulting `Blocked by`
+names no decision. This replaces a `check()` rule that would compare an answered entry's Ask with the base's, which
+a reopen, a renumber, a link rewrite and the canonical form all trip (F9). A question asked again on an answered
+entry is gated first (`set`, logging `gate added`) and then written, and the entry is then gated, not answered. A
+`Hold: <note>` answer writes the Ask on an entry that keeps its gate, and is untouched. The refusal is the
+module's, so every writer that calls `edit_entry()` has it.
+
+**Removing one.**
 
 Today `edit --section <name> --remove` removes only a misplaced section (v2.8). An entry whose Ask was answered
 before the Log existed, or was written by mistake, needs a way out that is not a gate; no writer removes it now.
@@ -181,15 +204,25 @@ After "… ℹ on a standing ledger)." and before "A decision reassigned more th
 > each has its own flag whose cure writes one; an `until` or an `event` does not. An entry is **answered** when the
 > last of its Log's `gate added: decision (…)`, `gate reassigned:`, `kept waiting: decision (…)` and `gate lifted:
 > decision (…)` lines is a `gate lifted: decision (…)`: the Ask stays as the record of the question, as *Lifting is
-> text* keeps an event's section. A Log that cannot be read answers nothing, and on an edit (`check()` given
-> `old`) an Ask the edit added or whose words it changed is a new question, answered by nothing before it. An
-> `**Ask (…):**` lead is its own section, never an Ask. The cure is the gate (`set`), or, where nothing waits on a
+> text* keeps an event's section. A Log that cannot be read answers nothing, and the Log alone decides, on an edit
+> as on a standing ledger. An `**Ask (…):**` lead is its own section, never an Ask. The cure is the gate (`set`), or, where nothing waits on a
 > person, the Ask removed: `edit --section Ask --remove`, or a header `Ask` emptied with `set`. Which `Owner`
 > values name a person is a ledger's own, so an Owner is never read as a wait here.
 
-### In *Ledger entries and their edits*, *Edits*, the **edit** bullet
+### In *Ledger entries and their edits*, *Edits*, the **set** and **edit** bullets
 
-Replace "With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a header name, and is refused
+At the end of the **set** bullet (after "`set` refuses a non-empty value for a field named `Title` or `Log`."), add:
+
+> From v3.1 it refuses a non-empty `Ask` field it adds or changes when the `Blocked by` it leaves names no decision
+> (*The ledger*, `decision-missing`): an Ask is what a decision waits on, so the gate comes first.
+
+In the **edit** bullet, after "A section the body has is replaced whatever its name.", add:
+
+> From v3.1 it refuses to write an `Ask` section, replacing it or adding it, on an entry whose `Blocked by` names no
+> decision (as `decision-missing` counts one): set the gate first. An answered entry's Ask (*The ledger*) is
+> therefore never rewritten while ungated, and a question asked again is gated, then written.
+
+And replace "With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a header name, and is refused
 for any other, for a header name the entry's header lacks (`set` it first), and with words." with:
 
 > With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a header name, and (v3.1) the `Ask`
@@ -208,8 +241,8 @@ Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced on
 
 > **v3.1 adds `decision-missing`** (*The ledger*, `Blocked by`): `check()` flags an open entry with an Ask and no
 > decision whose Log does not show it answered — an error on an entry the edit changed, ℹ on a standing ledger — so
-> the ledger writer refuses a write that makes one; and `edit`'s `remove` takes the `Ask` section of an entry with
-> no decision. It reads every file v3.0 wrote, as v3.0 did: no field, Log line or key is new, and the canonical
+> the ledger writer refuses a write that makes one; `edit` and `set` refuse to write an Ask on an entry with no
+> decision; and `edit`'s `remove` takes the `Ask` section of an entry with no decision. It reads every file v3.0 wrote, as v3.0 did: no field, Log line or key is new, and the canonical
 > form is unchanged. A ledger v3.0 checked clean can show `decision-missing` ℹ on entries it already held; no write
 > is refused over one, and `check()` given a base names it an error once an edit rewrites that entry, so a consumer
 > gates each or removes its Ask when it takes v3.1.
@@ -231,22 +264,29 @@ Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced on
 - **`fixtures/ledger_edit/`, its `check` group (`check()` given `old`):** an ungated Ask added by the edit (error);
   an entry already ungated in `old` and untouched (standing ℹ); the same entry with a note added (error: its text
   changed); a lift written by `lift_gate()` (none); a decision dropped by a direct `edit_entry(…, "set")`, no lift
-  line (error); a lifted entry whose Ask the edit rewrites (error); a lifted entry the edit adds a note to (none).
+  line (error); a lifted entry the edit adds a note to (none); and, each on an answered entry (gate lifted, Ask
+  kept), a reopen (the entry absent from `old`), a renumber, an Ask whose relative link a move rewrote, and the
+  Ask's whitespace changed (none of them flagged: the Log decides, F9).
   That group's runner keeps only a listed set of kinds (`fixtures/run.py`, the `check` case: `archive-open-parts`,
   `part-of-archived`, `part-of-unknown`, `log-not-last`, `log-line`, `event-undated`, `status`, `misplaced-name`,
   `retired`), so the build adds `decision-missing` (and `blocked-item`, for the unreadable case if it is put here)
   to that list.
 - **`fixtures/ledger_edit/`, its `edit_entry` group:** `remove` of `Ask` with no decision (removed), with a decision
-  (refused), and of an `Ask (old)` section (refused: neither misplaced nor an Ask).
+  (refused), and of an `Ask (old)` section (refused: neither misplaced nor an Ask); `edit` of `Ask` with no
+  decision, replacing (refused) and adding (refused), and with `decision (pat)` (written); `edit` of `Ask` on an
+  answered entry (refused); `set` of a header `Ask` with no decision (refused), with `Blocked by: decision (pat)` in
+  the same call (written), and of an empty `Ask` (removed).
 - **`fixtures/ledger_writer/`:** `new` with an Ask section and no gate (refused, `decision-missing`); `new` with an
   Ask and `decision (pat)` (written); `set --blocked-by "" --by pat` dropping the decision from an entry with an Ask
   (written: the route lifts it, so the entry is answered, no flag); `edit --section Ask` adding an Ask to an entry
-  with no decision (refused); a `note` on an entry already ungated (written, the fault being there before);
+  with no decision (refused, by `edit_entry()`); `reopen` of an answered archived entry and `archive` of an entry an
+  answered entry's Ask links to (written, no flag); a `note` on an entry already ungated (written, the fault being there before);
   `edit --section Ask --remove` on an ungated entry (written, the flag gone) and on a gated one (refused).
 
 ## Builds
 
-One build, **B1**: the SPEC text above, `check()`'s flag (D1, D2), `edit_entry()`'s wider `remove` (D3), the
+One build, **B1**: the SPEC text above, `check()`'s flag (D1, D2), `edit_entry()`'s Ask refusals and wider `remove`
+(D3), the
 fixtures above and unit tests, in one PR. Then agent-cadence is told (D5). Each consumer's vendor PR follows the
 release, and is that consumer's.
 
