@@ -101,9 +101,14 @@ Fixtures, each an invented input and its expected JSON:
   ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
   ``cases/<name>/base/``, then its ``cases/<name>/head/`` over that, less its ``delete`` paths.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
-  starts from), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/`` (every file
-  as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s) and ``expected.json`` (its
-  exit code and the JSON it printed: the subject and the paths, the plan, or why it refused).
+  starts from; from v3.0 the board a directory of item files, ``board/`` with its ``README.md``, or a v2 file
+  for the reads and the refusals), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/``
+  (every file as the command leaves it: a refusal or a ``--plan`` leaves ``before/``'s; a close's item file moved
+  under ``archive/<YYYY-MM>/``) and ``expected.json`` (its exit code, argparse's 2 for a usage error, and the JSON
+  it printed: the subject, the item's id and the paths, the plan, or why it refused). A case holding
+  ``expected_stdout.txt`` (v3.0, ``show``) has its stdout compared with that file byte for byte, never stripped
+  or parsed, and its ``expected.json``'s ``out`` is null. A ``before/`` holds no empty directory (git keeps
+  none): an empty board is ``tests/``'.
 - ``ledger_writer/<case>/`` (v2.4): the ledger writer, ``ledger.py`` — laid out as ``board_writer/``'s cases, each
   ``argv`` carrying ``--json`` so what it prints is one object: a report, the paths written, the plan, why it
   refused, or the ids it ``needs``.
@@ -1150,9 +1155,13 @@ def tree(d: Path) -> dict[str, str]:
             for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
 
 
+STDOUT = "expected_stdout.txt"  # a writer case holding it has its stdout compared as text (v3.0, board.py show)
+
+
 def writer_case(L, case: Path, writer: str = "board") -> dict:
     """The writer's (``board.py``'s, ``ledger.py``'s) ``main()`` of the case's argv, in a copy of its ``before/``:
-    exit, printed JSON, files after."""
+    exit, printed JSON, files after; a usage error's exit is argparse's 2. A case holding ``expected_stdout.txt``
+    gives its stdout as text, ``stdout``, and no JSON."""
     board = importlib.import_module(f"{L.__name__}.{writer}")
     argv = json.loads((case / "cmd.json").read_text(encoding="utf-8"))["argv"]
     here = os.getcwd()
@@ -1163,9 +1172,14 @@ def writer_case(L, case: Path, writer: str = "board") -> dict:
         os.chdir(work)
         try:
             with contextlib.redirect_stdout(out):
-                code = board.main(argv)
+                try:
+                    code = board.main(argv)
+                except SystemExit as e:  # argparse's usage error (exit 2), its message on stderr
+                    code = e.code
         finally:
             os.chdir(here)
+        if (case / STDOUT).exists():  # v3.0: stdout as text, byte for byte, never stripped or parsed
+            return {"exit": code, "out": None, "after": tree(work), "stdout": out.getvalue()}
         printed = out.getvalue().strip()
         return {"exit": code, "out": json.loads(printed) if printed else None, "after": tree(work)}
 
@@ -1269,16 +1283,23 @@ def main(argv: list[str] | None = None) -> int:
         got = json.loads(json.dumps(got, default=str))
         if path.is_dir():  # a writer case: expected.json and the after/ directory
             after = got.pop("after")
+            stdout = got.pop("stdout", None)
             if a.write:
                 shutil.rmtree(path / "after", ignore_errors=True)
                 for rel, text in after.items():
                     (path / "after" / rel).parent.mkdir(parents=True, exist_ok=True)
                     (path / "after" / rel).write_bytes(text.encode("utf-8"))
+                if stdout is not None:
+                    (path / STDOUT).write_bytes(stdout.encode("utf-8"))
                 (path / "expected.json").write_text(
                     json.dumps(got, indent=1, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
                 continue
             want = (json.loads((path / "expected.json").read_text(encoding="utf-8"))
                     if (path / "expected.json").exists() else None)
+            if stdout is not None and stdout.encode("utf-8") != (path / STDOUT).read_bytes():
+                bad += 1
+                print(f"FAIL {path.relative_to(HERE)}: the writer's stdout differs from {STDOUT}")
+                continue
             if got != want or after != tree(path / "after"):
                 bad += 1
                 print(f"FAIL {path.relative_to(HERE)}: the writer's output or files differ from the expected")

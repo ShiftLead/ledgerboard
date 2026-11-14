@@ -1337,8 +1337,9 @@ docs/user_attention/
   line. Every line of it is preamble.
 - **An open item** is a file `<id>.md` directly in the directory; **a closed one** is `archive/<YYYY-MM>/<id>.md`,
   `<YYYY-MM>` its `Closed:` date's month (`item_path(id, closed=None)`, `closed` that date). Any other file is not
-  an item. No item's file is deleted.
-- **No sections and no stored view.** What needs the person, and in what order, is `needs_you()`'s.
+  an item. Closing an item moves its file in the same write; nothing else moves one, and none is deleted.
+- **No sections and no stored view.** What needs the person, and in what order, is `needs_you()`'s; a person reads
+  the board through `board.py show`.
 
 **The item id** is `YYYY-MM-DD-<8 hex>`: the item's `Added` date, a hyphen, and eight lower-case hex digits
 (`item_id(added, nonce)`, `added` a `YYYY-MM-DD` string and `nonce` a string, which raises `ValueError` for
@@ -1347,7 +1348,8 @@ anything that is no id, a date that is no day of the calendar among it).
 `2026-02-30-abcd1234` is none. `item_path(id, closed=None)` gives an item's path, `closed` its `Closed:` date as
 `YYYY-MM-DD`, or None when it is open, and raises `ValueError` for an `id` that is no id, or for a `closed` that
 is no day of the calendar in that form. `key_id(key)` is the first 8 lower-case hex digits of the SHA-256 of the
-key's UTF-8 bytes. A v2 item's id is its line's date and `key_id()` of its key (*Reading a board*).
+key's UTF-8 bytes. A v2 item's id is its line's date and `key_id()` of its key (*Reading a board*). The writer
+draws the nonce at random and draws again for a name the directory or its archive holds; the module draws nothing.
 No writers coordinate: two items added on one day share an id about once in four billion pairs, and two changes
 that add one id conflict as two files at one path. An id never changes.
 
@@ -1541,7 +1543,8 @@ the directory; on an empty `Board`, the path that was missing).
   16. `board_dir_problems() only`: an archived file in a month that is not its `Closed:` date's: read as closed.
 - **The readers take the `Board`**: `needs_you()`, `covers()`, `sweep()` and `board_problems()`; `board_people()`,
   `answered_by()`, `people_problems()` and `answered_by_problems()` read its preamble, every line of `README.md`
-  on a `"dir"` board and the lines above the first item on a `"file"` one; and a consumer calls
+  on a `"dir"` board and the lines above the first item on a `"file"` one, as `board.py`'s
+  `who_answered(board, by)` does through `board_people()`; and a consumer calls
   `version_problem(board)` before it trusts the rest. Each of these that also takes a v2 board's text tells a
   `Board` from the text by its type (`isinstance(x, Board)`). `people_problems(board)` and
   `answered_by_problems(board)` of a `Board` give `(path, problem)` pairs, the path `README.md` for a board read
@@ -1664,7 +1667,8 @@ sets that is there is rewritten in place. A line it adds or rewrites ends as the
 - **reply** appends `- <today>: <by>: <words>` to the Log, opening a `**Log:**` section after the body when there is
   none. It refuses a `by` holding `:` or of more than 40 characters, and empty or blank words.
 
-An edit that closes the item gives a file whose place is `item_path(id, closed)`.
+An edit that closes the item gives a file whose place is `item_path(id, closed)`; the writer moves it in the same
+write.
 
 **A new item** (`item_file(text, due, today, session, host, context, *, kind, answers, default, detail,
 hide_until, lifts, parts, doer)`, v3.0) is one file: `## <text>`, a blank line, the header block (`Kind` when
@@ -1753,26 +1757,44 @@ written before v1 by one consumer (`shiftlead: board|answer <head> (from <ref>)`
 ## The board writer (v2.3)
 
 `board.py`, beside the module in the `ledgerboard/` package, is the board and rank writer over files: an
-importable library (`plan_add`, `plan_edit`, `plan_archive`, `plan_fmt`, `plan_rank`, each returning a
-`Plan`, and `apply(plan)`) and a command line (`python3 -m ledgerboard.board <action>`, a consumer's wrapper
+importable library (`plan_add`, `plan_edit`, `plan_fmt`, `plan_rank`, each returning a `Plan`, `show`, and
+`apply(plan)`) and a command line (`python3 -m ledgerboard.board <action>`, a consumer's wrapper
 being the command people run). It reads the files it is given, applies the module's edit, and writes the files
 back; it never runs git, the network or anything of a consumer's. Its actions:
-- **`list`** — every open item's record (`item_record()`), read-only;
-- **`add`** — a new item (`item_line()`, any kind, its answers and detail block, `--hide-until`); with `--parts TD-a,TD-b` (v2.6), a
-  decide's snapshot (`item_line(parts=)`): the option may be repeated, each value is split on `,` and each piece
-  trimmed, and an empty piece is refused; `--parts` with `--decided` is refused, and so is `--ledger` without
-  `--parts`. With `--doer <value>` (v2.8), an act's doer (`item_line(doer=)`); `--doer` with `--decided` is
-  refused. The line's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default
-  `ledger/` beside the board when it is a directory, its open and archived entries), and the write is refused,
-  with every problem, when `parts_problems()` names any, or when no ledger is found; with `--said` and `--by`, a
-  question already answered, its answer following the text as ` — <by>, <date>: <words>`; with `--decided`, an
-  item the person decided elsewhere (`decided_line()`). It goes above the first item of the section the
-  `--under` heading opens (`## Needs the user` by default), or right under that heading when its section holds
-  none; with no such heading, above the board's first item; with no item, at the end. The write is refused when
-  `board_problems()` faults the line it adds;
-- **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_line()`) of the open item on `--line`, refused
-  when that line is not an open item or no longer starts with `--expect` (the board moved since it was read);
-  `reply` takes its `--by` from the caller;
+- **`list`** — every open item's record (`item_record()`), read-only; its plain line `<id>`, a tab, the due tag
+  (`-` for none), a tab and the item's words, `-` for `<id>` on a v2 item with no id; the board a directory, the
+  stub, or a v2 file;
+- **`show`** (v3.0) — the board for a person (`show_board(board, today, hidden=False)`): for each item
+  `needs_you()` gives, in its order, the line `*<id> · <class>*`, then the item's file as read, its trailing `\r`
+  and `\n` run cut to one `\n` (a v2 item's line and its detail block at the indent its file gives it), items
+  separated by one blank line; with `--hidden`, the hidden open items after them, in the board's order (*Reading a
+  board*), each `*<id> · hidden until <date>*` (`no id` for a v2 line with no readable date). Read-only; no file
+  holds it;
+- **`add`** — a new item (`item_file()`, any kind, its answers and detail block, `--hide-until`, `--doer`) at
+  `<board>/<id>.md`, the id drawn at random (redrawn while the id is held — an item's in the board, or `<id>.md` or
+  `archive/<YYYY-MM>/<id>.md` listed — at most 8 draws in all, the 8th held name refused, `<board>: no free id
+  after 8 draws`, exit 1), or `--id`'s, refused when it is no id, its date is not the item's `Added`, or it is
+  held (`<board>: <id> is held`). With `--parts TD-a,TD-b` (v2.6), a decide's snapshot (`item_file(parts=)`): the
+  option may be repeated, each value is split on `,` and each piece trimmed, and an empty piece is refused;
+  `--parts` with `--decided` is refused, and so is `--ledger` without `--parts`. With `--doer <value>` (v2.8), an
+  act's doer (`item_file(doer=)`); `--doer` with `--decided` is refused. Then the ledger is read (`--ledger <v2
+  directory>`, default `ledger/` beside the board when it is a directory, its open and archived entries), and the
+  write is refused, with every problem, when `parts_problems()` names any, or when no ledger is found. With
+  `--said` and `--by`, a question already answered: its answer is the item's first reply, the Log line `-
+  <today>: <by>: <said>`, refused as `reply` refuses (a `--by` holding `:` or of more than 40 characters, empty
+  or blank words); `--said` is refused when it holds a character `str.splitlines()` splits on, checked before
+  any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item
+  the person decided elsewhere (`decided_file()`). The write is refused when `board_problems()` faults the item
+  it adds. **The order** (v3.0): a usage error (exit 2); `--parts` or `--doer` with `--decided`, an empty
+  `--parts` piece, a `--detail` that is no JSON object (exit 1); a bad `--today` (exit 2); `--ledger` without
+  `--parts`, a `--decided` item given `--due`, `--kind`, `--detail`, `--session`, `--host`, `--said`,
+  `--hide-until` or `--lift`, and on an item not `--decided` `--said` without `--by` or the reverse (exit 1); a
+  board declaring a newer major; a write to no v3 board; `--id`'s, or the draw's; the item's own and `--said`'s;
+  the ledger's; then `board_problems()`;
+- **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_item()`) of the open item `--id` names,
+  refused when no open item has it; `done --why` strips the why's trailing `.`, `?` and `!` before the edit
+  (`edit_item()` collapses it); `done`, and a `decide` that closes the item, write its archived file and
+  remove its open one as one write; `reply` takes its `--by` from the caller;
 - **who answered** (v2.3) — `decide`, and `add --decided`, write who gave the answer (`who_answered(board, by)`):
   on a board whose `People:` lists one name, `--by` defaults to it; on one that lists several, `--by` is
   required. A `--by` the list does not hold is refused, and one it holds is written as the list spells it. On a
@@ -1783,13 +1805,13 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   board and the ledger (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory) as one write, both
   or neither: the entries `decide_lift()` changes, from their texts as they stand, each listed id the ledger's
   `archive/` holds passed in `archived` (as its heading spells it), never as a text (v2.6) (its `People:` and
-  `Answered by:` checks, and the ledger writer's refusal, *The ledger writer*), and the board line `edit_line(…, "decide", label,
-  by, today, close=closes(item, label, entries after))` — so a lifting answer closes the item when nothing listed
+  `Answered by:` checks, and the ledger writer's refusal, *The ledger writer*), and the item file `edit_item(…, "decide", label,
+  by, today, close=closes(item, label, entries after))`, moved when it closes — so a lifting answer closes the item when nothing listed
   still carries the gate, a waiting-only one closes it and logs `kept waiting`, and a work order leaves it open.
   The board's date is the local clock's and the ledger's the UTC clock's, unless `--today` gives both. Without a
   ledger it is refused. **`--board-only`** writes the board half alone, `closes()` reading the ledger as it
   stands: the `set by=` route, whose `set` has lifted the gate already, so nothing is lifted twice. A lifting
-  answer writes the line only when it closes the item; while a listed entry still carries the gate (a part of a
+  answer writes the item only when it closes it; while a listed entry still carries the gate (a part of a
   shared item, or a Context entry nothing has lifted) it writes nothing, exit 0, and reports `left_open`, those ids
   as the item spells them, in its order (v2.7). The item stays open and unanswered, still asking the person for the
   entries left, and the person's answer is the Log's `; shared board item left open` line. In every mode, `--json`
@@ -1800,34 +1822,49 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   `Answered by:` checks. An item whose Context names a gate but not one entry is answered on the board alone,
   closed per `closes()` (a waiting-only answer closes it). `--ledger` and `--board-only` on any item but a lift's
   are a refusal;
-- **`archive`** — `archive_closed()` of the board and its archive (created when missing), a two-file write;
-- **`fmt`** — `canonical_item()` of every open item line at column 0, a consumer's one-time format pass: the
-  lines it can rewrite without changing their key, and each line it cannot, with why, reported and kept;
+- **`fmt`** — `canonical_item_file()` of every open item file (each `*.md` file directly in the board's directory
+  but `README.md`; archived files, other names and subdirectories untouched, and an `*.md` file whose name is no
+  id reported as refused, its `id` the name less `.md`, why `not an item file name`): the files it rewrites, and
+  each file it cannot, with why, reported and kept; exit 0 as today, a refused file included;
 - **`rank`** — `set_rank()` of the rank file (created when missing), `--set TD-n=<key>` and `--drop TD-n`,
   under `--action rank|join|prune`; or (v2.3) `--action respace --ledger <ledger> [--fixed <key>]… [--repo
   <name>]`, `respace()` of the rank file against that ledger (a file or a v2 directory), which sets and drops
   nothing itself.
 
+A write to a v2 board is refused; `list` and `show` read one (v3.0). A write needs a v3 board: a
+missing board, a directory with no `README.md`, one whose `README.md` declares another major or none, and a v2
+board are refused before anything is written, `<board>: not a v3 board: <why>`, the README's own `Ledgerboard:`
+line read, never the stub's; `list` and `show` refuse only a missing board; `board.py` creates no board, and a
+close whose archived file exists is refused (v3.0). `--id` is required by the five edits; `--hidden` is `show`'s;
+`show` prints text only, so `--json` and `--plan` with it are usage errors (v3.0). Every action resolves a stub
+as `load_board()` does: given the stub's path as `--board`, `add` and the five edits write into the directory
+beside it (v3.0). `--board` is read as a normalised path, so a trailing `/` names the same board, and `ledger/`
+beside it is the same directory (v3.0).
+
 Each write prints the commit subject the module gives (`subject()` with `append` for an add, the edit's,
-`archive_subject()`, `queue_subject()`) and the paths it changed, or one JSON object with `--json`. `fmt` has no
-subject of its own, and a write that changes nothing (a rank line already so, or a `--board-only` answer left
-open) prints none, writing nothing; with `--json` its `subject` is null and its `paths` empty.
-`--plan` prints the changes as JSON (each path and its new text) and writes nothing. A decide lift also reports
-`entries` (the ids whose files it changed) and `notes`. A write of several files is
-both or neither: each is written to a temporary file beside it and renamed into place only when all are built,
-and a failed rename puts back the files already replaced. The caller passes what lies outside the files: the
-date (`--today`, else the local clock), who replies or answered (`--by`), and the tool and session the subject names
-(`--tool`, `--session`). A file that declares a newer major is refused unread. Exit (v2.4), the ledger writer's
-table: 0 written (or nothing to change), 1 refused, 2 usage (a bad `--today` among it) or, for `decide` and
-`add --parts`, a ledger that cannot be used as asked,
+`queue_subject()`; a board write's names the item's `id`) and the paths it changed, or one JSON object with
+`--json`. `fmt` has no subject of its own, and a write that changes nothing (a rank line already so, or a
+`--board-only` answer left open) prints none, writing nothing; with `--json` its `subject` is null and its `paths`
+empty. `--plan` prints the changes as JSON (each path and its new text, null for a file removed) and writes
+nothing. Every write that names an item reports its `id`. A decide lift also reports `entries` (the ids whose
+files it changed) and `notes`. A write of several files, and of the files it removes, is both or neither (v3.0:
+`done` and a closing `decide` remove the item's open file as they write its archived one): each is written to a
+temporary file beside it and renamed into place only when all are built, then each removal made, and a failed
+step puts back the files already replaced or removed. `fmt`'s JSON is `{"fixed": [<id>…], "refused": [{"id",
+"why"}]}`, and without `--json` it prints `<id>: kept: <why>` on stderr for each file it keeps. A refused write's
+gate faults read `<board>: <path>: <problem>`, `<path>` relative to the board's directory. The caller passes what
+lies outside the files: the date (`--today`, else the local clock), who replies or answered (`--by`), and the
+tool and session the subject names (`--tool`, `--session`). A file that declares a newer major is refused
+unread. Exit (v2.4), the ledger writer's table: 0 written (or nothing to change), 1 refused, 2 usage (a bad
+`--today` among it) or, for `decide` and `add --parts`, a ledger that cannot be used as asked,
 4 a write failed (every file restored); it never exits 3, which is the ledger writer's `needs`.
 
-From v2.4, a write that leaves an open line also reports that line's notes, as the write leaves it (`item_notes()`
-at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json` or `--plan`, the
-notes are `item_notes`, `[{"line", "note"}]` (each names its line, as a write names one, where `item_record()`'s
-`notes` is the record's own list of strings), always present and `[]` when there are none; a decide lift's `notes`
-(above) is a different key and unchanged. Without either, each is printed on stderr as `line n: ℹ <note>`. A note
-never changes the exit code.
+From v2.4, a write that leaves an open item also reports that item's notes, as the write leaves it
+(`item_notes()` at `--today`). The writes that do are `add`, `snooze`, `due`, `decide` and `reply`. With `--json`
+or `--plan`, the notes are `item_notes`, `[{"id", "note"}]` (each names its item's id, where `item_record()`'s
+`notes` is the record's own list of strings), always present and `[]` when there are none; a decide lift's
+`notes` (above) is a different key and unchanged. Without either, each is printed on stderr as `<id>: ℹ <note>`.
+A note never changes the exit code.
 
 ## The ledger writer (v2.4)
 
