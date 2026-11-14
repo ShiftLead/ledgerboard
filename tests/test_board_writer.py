@@ -405,10 +405,13 @@ class Usage(unittest.TestCase):
             self.assertIn(f"{action} needs --id", err)
 
     def test_the_line_options_are_gone(self):
-        for gone in (["--line", "5"], ["--expect", "act"], ["--under", "Needs"], ["--archive", "a.md"]):
+        for gone in (["--line", "5"], ["--expect", "act"], ["--under", "Needs"]):
             code, _, err = run("done", "--board", "b", "--id", ID, *gone)
             self.assertEqual(code, 2, gone)
             self.assertIn("unrecognized arguments", err)
+        code, _, err = run("done", "--board", "b", "--id", ID, "--archive", "a.md")  # v3.0: split's alone
+        self.assertEqual(code, 2)
+        self.assertIn("done does not take --archive", err)
         code, _, err = run("archive", "--board", "b")
         self.assertEqual(code, 2)
         self.assertIn("invalid choice: 'archive'", err)

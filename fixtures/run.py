@@ -30,7 +30,12 @@ Fixtures, each an invented input and its expected JSON:
   ``board/<case>/``, holds ``board.md`` and its archive ``board_archive.md`` beside it, and its ``expected.json``):
   every open and closed item's ``item_record()`` at ``TODAY``, each with its ``fields`` (``item_fields()``), the
   items' ids (open in the board's order, then closed), ``needs_you()`` at ``TODAY``, each row by id, and
-  ``board_people()`` (v2.3).
+  ``board_people()`` (v2.3). Its optional v3 twin, ``<case>.v3/`` beside it (v3.0), is what ``split_board()``
+  writes from the case's texts, and ``load_board()`` of it reads as the same JSON, compared as SPEC's *Two reads
+  of one board compared* says; ``board/split_notes.json`` holds ``split_board_notes()`` of each such split.
+- ``board_split/<case>/`` (v3.0): ``board.md`` and an optional ``archive.md`` through ``split_board()`` — the
+  files or the refusal, ``split_board_notes()`` of them, and whether each line's persisted key (the hash a
+  consumer's ``board:<8 hex>`` holds) ends an id — against ``expected.json``.
 - ``board_dir/<case>/`` (v3.0): ``board/`` (or ``case.json``'s ``path``, relative to the case, which need not
   exist; its ``unreadable`` paths read as None) through ``load_board()`` — its form, major, path and problems, its
   reads as ``board/``'s, ``board_dir_problems()`` and ``version_problem()``, and with ``since`` the ids such a read
@@ -535,6 +540,85 @@ def board_case(L, md: Path) -> dict:
     for rec, it in zip(got["closed"], board.closed):
         rec["raw"] = it.raw  # a closed line as written (v3.0)
     return got
+
+
+def _board_texts(md: Path) -> tuple[str, str]:
+    """A v2 board case's board and archive texts: ``<case>.md`` with ``<case>_archive.md`` beside it, or a case
+    directory's ``board.md`` with ``board_archive.md``."""
+    path = md / "board.md" if md.is_dir() else md
+    arch = Path(str(path)[:-3] + "_archive.md")
+    return fs_read(str(path)) or "", fs_read(str(arch)) or ""
+
+
+def _v3_dir(md: Path) -> Path:
+    return md.with_name((md.name if md.is_dir() else md.stem) + ".v3")
+
+
+def compared(got: dict) -> dict:
+    """Two reads of one board as SPEC compares them (v3.0, *Two reads of one board compared*): records keyed by id,
+    their ``path``, ``line`` and a closed record's ``raw`` left out; ``keys`` as a set; ``needs_you``'s tie groups
+    (each run of one class and one days) each as a set, the groups in order."""
+    def recs(rs: list[dict]) -> dict:
+        return {r["id"]: {k: v for k, v in r.items() if k not in ("path", "line", "raw")} for r in rs}
+    groups: list[list] = []
+    for iid, cls, days in got["needs_you"]:
+        if groups and groups[-1][:2] == [cls, days]:
+            groups[-1][2].append(iid)
+        else:
+            groups.append([cls, days, [iid]])
+    return {"items": recs(got["items"]), "closed": recs(got["closed"]), "keys": sorted(got["keys"]),
+            "people": got["people"], "needs_you": [[c, d, sorted(ids)] for c, d, ids in groups]}
+
+
+def board_v3_case(L, md: Path) -> dict:
+    """A v2 board case's split, ``<case>.v3/`` (v3.0): ``split_board()`` of the case's texts must give it file for
+    file, and ``load_board()`` of it must read as the case's expected JSON, compared as ``compared()`` says."""
+    d = _v3_dir(md)
+    board, archive = _board_texts(md)
+    got = compared(json.loads(json.dumps(board_read(L, L.load_board(str(d), fs_ls, fs_read)), default=str)))
+    got["split_matches_dir"] = _refused(lambda: L.split_board(board, archive)) == {"ok": v2_files(d)}
+    return got
+
+
+def v3_expected(want: dict | None) -> dict | None:
+    return None if want is None else dict(compared(want), split_matches_dir=True)
+
+
+def board_split_notes(L, root: Path) -> dict:
+    """``split_board_notes()`` of each ``fixtures/board/`` case that splits (v3.0), by case name."""
+    out = {}
+    for md in sorted([*(root / "board").glob("*.md"),
+                      *(p for p in (root / "board").glob("*") if p.is_dir() and not p.name.endswith(".v3"))]):
+        if _v3_dir(md).is_dir():
+            board, archive = _board_texts(md)
+            out[md.stem if not md.is_dir() else md.name] = [
+                list(n) for n in L.split_board_notes(L.split_board(board, archive), board, archive)]
+    return out
+
+
+def _persisted(L, text: str) -> list[str]:
+    """The hash ShiftLead's ``key()`` persisted for each item line of ``text``: the first 8 hex digits of the
+    SHA-256 of ``item_key("- [ ] " + <the line's text>)``."""
+    out = []
+    for ln in text.splitlines():
+        m = L.ITEM_RE.match(ln) or L.CLOSED_ITEM_RE.match(ln)
+        if m:
+            out.append(hashlib.sha256(L.item_key(f"- [ ] {m.group('text').strip()}").encode("utf-8")).hexdigest()[:8])
+    return out
+
+
+def board_split_case(L, case: Path) -> dict:
+    """``split_board()`` of a case's ``board.md`` and its optional ``archive.md`` (v3.0): the files, or the
+    refusal; ``split_board_notes()`` of them; whether every item line's persisted key is the end of an id."""
+    board = fs_read(str(case / "board.md")) or ""
+    archive = fs_read(str(case / "archive.md")) or ""
+    got = _refused(lambda: L.split_board(board, archive))
+    if "refused" in got:
+        return {"refused": got["refused"]}
+    files = got["ok"]
+    ids = {p.rsplit("/", 1)[-1][:-3][-8:] for p in files if p != "README.md"}
+    return {"files": files, "notes": [list(n) for n in L.split_board_notes(files, board, archive)],
+            "persisted_keys_found": all(h in ids for h in _persisted(L, board + "\n" + archive))}
 
 
 def board_dir_case(L, case: Path) -> dict:
@@ -1233,6 +1317,13 @@ def cases(L, root: Path):
         yield md.with_suffix(".json"), board_case(L, md)
     for case in sorted(p for p in (root / "board").glob("*") if p.is_dir() and not p.name.endswith(".v3")):
         yield case / "expected.json", board_case(L, case)  # v3.0: a board and its archive beside it
+    for md in sorted([*(root / "board").glob("*.md"),
+                      *(p for p in (root / "board").glob("*") if p.is_dir() and not p.name.endswith(".v3"))]):
+        if _v3_dir(md).is_dir():  # v3.0: its split
+            yield ((md / "expected.json" if md.is_dir() else md.with_suffix(".json")), "v3"), board_v3_case(L, md)
+    yield root / "board" / "split_notes.json", board_split_notes(L, root)  # v3.0
+    for case in sorted(p for p in (root / "board_split").glob("*") if p.is_dir()):
+        yield case / "expected.json", board_split_case(L, case)  # v3.0
     for case in sorted(p for p in (root / "board_dir").glob("*") if p.is_dir()):
         yield case / "expected.json", board_dir_case(L, case)  # v3.0
     for md in sorted((root / "archive").glob("*.board.md")):
@@ -1299,8 +1390,8 @@ def main(argv: list[str] | None = None) -> int:
     n = 0
     for path, got in cases(L, HERE):
         n += 1
-        twin = isinstance(path, tuple)  # a v2 case: its v1 twin's expected JSON is its own
-        path = path[0] if twin else path
+        twin = isinstance(path, tuple)  # a v2 (v3) case: its v1 (v2) twin's expected JSON is its own
+        path, kind = path if twin else (path, None)
         got = json.loads(json.dumps(got, default=str))
         if path.is_dir():  # a writer case: expected.json and the after/ directory
             after = got.pop("after")
@@ -1331,10 +1422,10 @@ def main(argv: list[str] | None = None) -> int:
             continue
         want = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
         if twin:
-            want = v2_expected(want)
+            want = v2_expected(want) if kind == "v2" else v3_expected(want)
         if got != want:
             bad += 1
-            print(f"FAIL {path.relative_to(HERE)}{' (its v2 twin)' if twin else ''}: "
+            print(f"FAIL {path.relative_to(HERE)}{f' (its {kind} twin)' if twin else ''}: "
                   "the module's output differs from the expected JSON")
     if a.write:
         print(f"wrote {n} expected file(s)")

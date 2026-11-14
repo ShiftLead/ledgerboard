@@ -1596,6 +1596,79 @@ the directory; on an empty `Board`, the path that was missing).
 board*'s `problems`). The gate judges an item only when it is added, so a consumer calls `board_dir_problems()` on
 the board it is about to merge, wherever it calls `v2_problems()` on the ledger.
 
+**Migration** is `split_board(board, archive)`, for a v2 board only: the v3 files of a v2 board and its archive,
+by their paths in the directory. **It refuses only where it cannot give an item an id or a month, or where the
+read-back's records of the v2 item and its split file would differ** (data lost, or read differently). Every other
+shape a v2 board holds and v2 reads is carried as v2 reads it and read alike by the v3 reader. A field not in its
+form or on a kind that does not take it, a `Doer` spelled as the writer would not, a `Kind` in the wrong case and
+a `Due` on an `fyi` are named by `board_dir_problems()` and listed by `split_board_notes()`, for the caller to fix
+on the directory; any other shape (a `decide` with no `Answers`, a `look` whose answers are not the fixed pair, an
+unreadable `Due`, reported as `due_error`) is carried silently, as a v2 board holds it, since the gate judges an
+item only when it is added.
+- Every line of one id across the board and the archive, with its detail block, is one item, closed when one of
+  its lines is; it becomes `<id>.md`, or `archive/<YYYY-MM>/<id>.md` when closed, its id the v2 item's. Of twins,
+  the closed line and its detail block give every field and the body. Its fields are what the v2 reader reads,
+  each in the file's form: `Kind`, `Added` (the line's date), `Session` (none for `n/a` and `(person)`),
+  `Context` (without its final period), `Parts`, `Doer` (as written; none for an empty value, whose words stay in
+  the heading), `Due` (from the match v2 reads: `Due:` and a day when the first such is a day, else the first
+  date-shaped `Due`, with or without its colon, an unreadable one as written), `Hide until`, `Answers`, `Lifts`,
+  `Decided` (`<date>[ by <person>] — <label>`) and
+  `Closed` (`<date>[ — <why>]`, the why the words after a ` — ` that follows the date, without its final period),
+  from the closed line, and any other field the v2 reader reads, as the header field of the same name, whatever
+  the item's kind. Its body is the detail block with its common
+  indent removed; its replies are its Log. Its heading is `item_words()` of the line: every word the v2 reader
+  reads as no field, no reply and no part of the prefix (the text, and any words a hand edit left outside the
+  fields), in their order, verbatim but for runs of whitespace collapsed to one space, so no word of the line outside its head is lost (a
+  head's text after its session and host, which no v2 reader reads, is not carried, and `split_board_notes()`
+  names it) and no
+  period is added or removed; a bold head stays in it as written.
+- `README.md` is the board's text before its first item, with `Ledgerboard: 3` under its title (any
+  `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
+  first item's section; any earlier `## ` heading stays), that heading's line going with the blank lines right
+  after it. Its trailing blank lines go and it ends in one newline, so a board whose text before its first item is
+  its title alone gives the title, a blank line and `Ledgerboard: 3`. With no `# ` title, `Ledgerboard: 3` is its first
+  line, followed by one blank line when other text follows and alone with its newline when none does. Each relative link there gains `../`, since the file
+  moves one directory down: the target of an inline link or image (`[t](target)`, `![t](target)`) and of a
+  reference definition (`[label]: target`), when it starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`,
+  `mailto:` among them), `#` and `/`, outside code spans and fenced code; inside `<…>` when the target is
+  bracketed, a title after it kept, and a leading `./` becoming `../`. The archive's text before its first item
+  is not carried, and `split_board_notes()` lists each of its non-blank lines but its `# ` title.
+  Of twins, the open twin's detail block and line are not carried, and `split_board_notes()` names each that
+  differs from the closed twin's.
+- A line after the first item that is no item, no detail block's line and not blank (a `- (none)` placeholder, a
+  note), on the board and then on the archive, is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
+  first item that stands above a carried line; a heading with no carried line under it is dropped. A relative link
+  in a carried line gains `../` by the rule above, the file having moved too. Nothing is
+  lost, and `split_board_notes()` lists what may describe the v2 board.
+- It refuses a board that declares a major above 2 (`Ledgerboard: 3`, a stub's, among them); an item with no date, or a date that is no day of the
+  calendar; a closed line with no readable
+  `Closed:` date (no month to file it under: date it first); two open lines, or two closed lines, of one id; two
+  items given one id; a carried line that is a `People:`, `Answered by:` or `Ledgerboard:` line, which a v2
+  reader never read below the first item and `README.md` would read (move or delete it first); a `Due` v2 reads
+  as unreadable that v3 would read otherwise: on any kind but `fyi`, a colonless `Due <day>.`, and on any kind
+  the `Due` v2 reads lying inside another field's words or a reply's (fix it first; a date-shaped `Due` there that
+  v2 does not read stays in those words); and a result that `load_board()`
+  does not read back as the same items (open and closed, at one date, compared as *Reading a board* compares two
+  reads), or that `board_dir_problems()` flags under any rule but the one that names a field not in its form or
+  on the wrong kind. A field on a kind that does not take it, a `Doer` spelled as the writer would not and a
+  `Due` on an `fyi` are carried and named; an unreadable `Due` on any other kind is carried and reported as
+  `due_error`, as on a v2 line, and named by no rule.
+- `board_stub(title, name)` is what `board.py split` leaves at the v2 path: `# <title>`, a blank line,
+  `Ledgerboard: 3`, a blank line, and `This board is the directory [<name>/](<name>/), one file per item
+  (ledgerboard v3.0).` A v2.x reader that checks the version refuses it, a v2.x writer refuses it unread, and
+  `load_board()` reads the directory through it.
+- `split_board_notes(files, board, archive="")`, over `split_board()`'s files and the v2 texts they were split
+  from, lists as `(path, line number, line, why)`, for the caller to warn about, nothing rewritten: the lines of
+  that `README.md` which may still describe the v2 board (a line naming `user_attention.md`,
+  `user_attention_archive.md`, `Needs the user` or `In-flight`, and a `Format:` line), then each shape the split
+  carried that `board_dir_problems()` names, at its field's line (the first header line of that field's name),
+  then each item whose v2 line's head group held more than its session and host, at its `Session` line (with
+  none, its heading), `why` `head text not carried: <text>`: the group's text less the session and the host,
+  which no file holds. A line of the archive's own text is named at the path `(archive)` and its line in the
+  archive, which `board.py split` gives as the archive's path; an open twin's note is at its file's heading,
+  `open twin's detail not carried` or `open twin's line not carried` (a reply, a `Due` or a `Hide until` the
+  closed line lacks or holds otherwise).
+
 ## Edits
 
 Every edit rewrites one open item line and nothing else, and is refused unless the reader reads
@@ -1783,7 +1856,7 @@ written before v1 by one consumer (`shiftlead: board|answer <head> (from <ref>)`
 ## The board writer (v2.3)
 
 `board.py`, beside the module in the `ledgerboard/` package, is the board and rank writer over files: an
-importable library (`plan_add`, `plan_edit`, `plan_fmt`, `plan_rank`, each returning a `Plan`, `show`, and
+importable library (`plan_add`, `plan_edit`, `plan_fmt`, `plan_split`, `plan_rank`, each returning a `Plan`, `show`, and
 `apply(plan)`) and a command line (`python3 -m ledgerboard.board <action>`, a consumer's wrapper
 being the command people run). It reads the files it is given, applies the module's edit, and writes the files
 back; it never runs git, the network or anything of a consumer's. Its actions:
@@ -1852,15 +1925,25 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   but `README.md`; archived files, other names and subdirectories untouched, and an `*.md` file whose name is no
   id reported as refused, its `id` the name less `.md`, why `not an item file name`): the files it rewrites, and
   each file it cannot, with why, reported and kept; exit 0 as today, a refused file included;
+- **`split`** (v3.0) — a v2 board (`--board`, its archive `--archive`, default the board's name with
+  `_archive.md` beside it, none if absent) split by `split_board()` into the directory beside it named the board's
+  name without `.md`, which must not exist, the directory the stub then reads as: every file written, the v2 file
+  replaced by `board_stub()` and its archive removed, as one write. It refuses, exit 1 and writing nothing, a
+  board that does not exist, one of a major newer than 3, one already v3 (`already a v3 board`), a `--board` not
+  ending `.md`, an `--archive` given that does not exist, what `split_board()` refuses, and an existing directory
+  (`<dir>/ exists`). `split_board_notes()`'s lines are printed as warnings, `<path>:<line>: ⚠ <why>`, and, when
+  `--archive` names another file and one of the default archive's name is beside the board, `<path>: ⚠ default
+  archive left in place` (`warnings` in `--json`, each `{"path", "line", "text", "why"}`, the last with `line`
+  null and `text` `""`, beside `files` and `removed`). It prints no subject;
 - **`rank`** — `set_rank()` of the rank file (created when missing), `--set TD-n=<key>` and `--drop TD-n`,
   under `--action rank|join|prune`; or (v2.3) `--action respace --ledger <ledger> [--fixed <key>]… [--repo
   <name>]`, `respace()` of the rank file against that ledger (a file or a v2 directory), which sets and drops
   nothing itself.
 
-A write to a v2 board is refused; `list` and `show` read one (v3.0). A write needs a v3 board: a
+A write to a v2 board is refused (*split first*); `list` and `show` read one (v3.0). A write needs a v3 board: a
 missing board, a directory with no `README.md`, one whose `README.md` declares another major or none, and a v2
 board are refused before anything is written, `<board>: not a v3 board: <why>`, the README's own `Ledgerboard:`
-line read, never the stub's; `list` and `show` refuse only a missing board; `board.py` creates no board, and a
+line read, never the stub's; a v2 board's reads `not a v3 board: a v2 board (split first: board.py split)`; `list` and `show` refuse only a missing board; `board.py` creates no board, and a
 close whose archived file exists is refused (v3.0). `--id` is required by the five edits; `--hidden` is `show`'s;
 `show` prints text only, so `--json` and `--plan` with it are usage errors (v3.0). Every action resolves a stub
 as `load_board()` does: given the stub's path as `--board`, `add` and the five edits write into the directory
@@ -1874,7 +1957,7 @@ Each write prints the commit subject the module gives (`subject()` with `append`
 empty. `--plan` prints the changes as JSON (each path and its new text, null for a file removed) and writes
 nothing. Every write that names an item reports its `id`. A decide lift also reports `entries` (the ids whose
 files it changed) and `notes`. A write of several files, and of the files it removes, is both or neither (v3.0:
-`done` and a closing `decide` remove the item's open file as they write its archived one): each is written to a
+`done` and a closing `decide` remove the item's open file as they write its archived one, and `split` removes the v2 archive): each is written to a
 temporary file beside it and renamed into place only when all are built, then each removal made, and a failed
 step puts back the files already replaced or removed. `fmt`'s JSON is `{"fixed": [<id>…], "refused": [{"id",
 "why"}]}`, and without `--json` it prints `<id>: kept: <why>` on stderr for each file it keeps. A refused write's
