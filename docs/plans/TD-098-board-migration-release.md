@@ -579,9 +579,10 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
     unchanged but for `widgets` (a rerun files and closes nothing, and the split keeps the ids). `widgets.md` holds
     two closed lines of one id (`TD-239`'s, answered twice, which its sweep cases need), a shape D11 refuses (round
     1's F351). It cannot leave the rerun, which runs one `sweep()` over every board and refuses a set without the
-    repo's own board, `widgets` (round 2's F385, reopening F384). So for the rerun alone the runner drops, in memory and
-    after the first run's closes and filings are applied (F391), the first of `widgets.md`'s two `TD-239` closed
-    lines (the one closed 2026-10-20), splits what is left and reruns
+    repo's own board, `widgets` (round 2's F385, reopening F384). So for the rerun alone, once the first `sweep()` runs have
+    given their results, the runner drops in memory the first of `widgets.md`'s two `TD-239` closed lines (the one
+    closed 2026-10-20), splits what is left, applies the first run's closes and filings to that split as for the
+    other boards (F391, F392; on `main`'s v2 path either order gives the same empty rerun) and reruns
     over that split as over the others; the file on disk and the first run's cases are untouched. `expected.json`'s
     `rerun` regenerates, and the case holds what it held: the rerun files and closes nothing on any board (were the
     reduced board to file or close anything, the builder raises it as a finding on this plan, not a fixture edit).
