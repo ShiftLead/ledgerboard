@@ -97,8 +97,9 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   returns `PersonTextProblem`s where the source leaves its type open. `PersonTextProblem` is a tuple, so a caller
   that unpacks `(rule, refuse, line)` as the source says still works.
 - *an empty sentence* is a rule-1 failure (`it is empty`), which the source did not name.
-- *punctuation*: `“ ” ‘` fold as `’` does; a span's stand-in sits in place, so a `?` after it ends the
-  sentence; a bare URL stops before its trailing punctuation; a stop before a closing `)` or quote is a sentence end.
+- *punctuation*: `‘ ’` fold to `'` and `“ ”` to `"`; a span or fence is a stand-in word no word list reads, and
+  the end is read from the text's last character, so a `?` after a span ends the sentence; a bare URL stops before
+  its trailing punctuation; a `. ? !` followed by `) ] } " ' * _` and a space or line break is a sentence end.
   The source read none of these.
 - *`sentence_problems` reads the word count, the sentence end and emptiness only*, never code, as the source says
   (the card reads an empty result as *is one sentence*); `person_text_problems` adds `code_tokens(sentence)` and
@@ -134,7 +135,9 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   here the line's words are read whole. The title rule
   runs on `set --title` (v2.8), the retitle path the source said would come (*any retitle path added later*).
 - *`people` compares case-insensitively*, as SPEC's *A person's name* does; the source said nothing.
-- *the title's labels*: the module keeps the format's ids (`TD-n`, `<repo>#TD-n`); the source's `[A-Z]{1,2}\d+`
+- *the title's labels*: the module keeps the format's ids (`TD-n`, `<repo>#TD-n`), its `<repo>` wider than the
+  source's `[\w-]+` (dots and `/`, as SPEC's repo names have) and on purpose wider than SPEC's repo grammar, since
+  a label in a title is refused, never parsed, and a near-miss should be refused too; the source's `[A-Z]{1,2}\d+`
   and `#\d+` are the caller's `labels` (D1), and the shape-label cure *spell it out* goes with them, since a
   pattern the caller passes is the caller's to keep free of *P0*.
 - *the lines*: the source gives three examples; the shapes in the SPEC text are this plan's, and where an example
@@ -210,12 +213,13 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > 4. **The context is plain words**: its code tokens are named in one warning; never refused, never capped.
 >
 > **The text read.** First, `’` and `‘` become `'`, and `“` and `”` become `"`. Then each fenced block — a line that is three or more backticks and
-> at most an info word after them, to the next line that is as many backticks or more, or the text's end — and each code span — a run of n backticks, then text
-> holding no run of exactly n backticks and no blank line, then n backticks — is found and replaced, in place and with
-> no space added, by a letter-holding stand-in that counts as one word and as one code token (a backtick with no
-> partner is a plain character). Then, outside them, a markdown link's target (`](…)`, the `]` kept) and a bare
-> URL are dropped; a bare URL is `https?://\S*` up to and not including a run of `. , ; : ! ? ) ] " '` that ends
-> its piece, so *see https://x.io/guide?* keeps its `?`. The rest is read as whitespace-separated pieces; each is
+> at most an info word of no whitespace and no backtick after them, to the next line that is as many backticks or more, or the text's end — and each code span — a run of n backticks, then text
+> holding no run of exactly n backticks and no blank line, then n backticks — is found and replaced by a stand-in word of its own, with one
+> space before and after it; the stand-in counts as one word and is the span's one code token, spelled as the
+> span, and no pattern, `ACTOR_WORDS`, `actors`, `people`, `coined` or `labels` entry reads it (a backtick with
+> no partner is a plain character). Then, outside them, a markdown link's target (`](…)`, the `]` kept) and a bare
+> URL are dropped; a bare URL is `https?://\S*` up to and not including a run of `. , ; : ! ? ) ] } " ' * _`
+> that ends its piece, so *see https://x.io/guide?* keeps its `?`. The rest is read as whitespace-separated pieces; each is
 > stripped of leading `( [ { " ' * _` and trailing `. , ; : ! ? ) ] } " ' * _`, and a piece holding no letter or
 > digit after the strip (`—`, `-`, `&`, `/`, `~/`) is no word; a letter and a digit are Python's (`str.isalnum()`
 > of a character), and a pattern's classes are as written. A pattern below matches the whole stripped word unless
@@ -247,13 +251,14 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >
 > **One sentence** (rule 1). The sentence is empty when it holds no word. It has more than `max_words` words when
 > its words, a span or fence counting as one, number more. It has a sentence end inside it when a `.`, `?` or `!`,
-> then any of `) ] " ' *`, then a space or a line break, stands before its last word, but not a `.` ending a word
+> then any of `) ] } " ' * _`, then a space or a line break, stands before its last word, but not a `.` ending a word
 > that is, case ignored, *e.g*, *i.e*, *vs*, *etc* or *cf* (so *Say (really?) what you think?* has one inside).
-> Its end is the read text's last character that is not whitespace or one of `) ] " ' *`: a question's must be
+> Its end is the read text's last character that is not whitespace or one of `) ] } " ' * _` (*_Is it ok?_*
+> ends in `?`): a question's must be
 > `?` (*Should I run `make test`?* and *Should I "ship it?"* end in `?`); a statement's end is not read. Known false positive: another abbreviation or an id followed by a stop and a
 > space (*U.S. law*, *TD-909. Which*), whose part says *write it without the stop*.
 >
-> **An actor** (rule 2): a match, in the bounds `(?<![\w'])` before and `(?![\w']|\.\w)` after, of an I-form (*I,
+> **An actor** (rule 2): a match, over the read words joined by single spaces, in the bounds `(?<![\w'])` before and `(?![\w']|\.\w)` after, of an I-form (*I,
 > I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
 > word or a phrase taken as literal text, its last word optionally followed by `'s` or `s` (case ignored); or of a
 > name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name, so a person named *Will* makes *it will be built* name an
@@ -298,7 +303,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > - **a `decide` item**: `person_text_problems(<question>, <its answers>, <context>, question=True)`, where the
 >   question is the line's bold head, else the line's words (`item_words()`, the fields and replies left out), whole,
 >   so a second sentence there is refused and belongs in the detail block; then the detail block's
->   `question` the same way, with no answers; the context is the detail block's `context` and the reason in its
+>   `question`, read whole as one sentence, `question=True`, with no answers; the context is the detail block's `context` and the reason in its
 >   `recommended` after the writer's own `<label> — `, read with `sentence` `None` (`question` is then not read); never the line's `Context:`
 >   field, which names a gate;
 > - **an `act` item**: the line's bold head, `question=False` (an `act` line with no bold head is refused: *an act
@@ -332,7 +337,7 @@ case, word for word.
 - **sentence_problems**: empty and blank; 25 and 26 words, and 25 words with a standalone `—` passing; a code span
   as one word, and a code token giving no problem here; a stop inside (*. Which*), each of the five abbreviations;
   a question without `?`; a statement ending in `.`, `!`, `:` and nothing, each passing; trailing `) ] " ' *`
-  before the end; `’`, `‘`, `“`, `”` folded (*Should I "ship it?"* in curly quotes passing); *Should I run `make
+  before the end, and *_Is it ok?_* passing; `’`, `‘`, `“`, `”` folded (*Should I "ship it?"* in curly quotes passing); *Should I run `make
   test`?* passing; *Should I follow https://x.io/guide?* passing; *(see https://x.io/a). Then merge?* and *Say
   (really?) what you think?* each with an end inside; its line with two and three parts.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
@@ -347,7 +352,8 @@ case, word for word.
 - **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
   refusing *B4* and *P0* (the caller's pattern, the caller's false positive), and `#\d+`; a `labels` entry that is
   no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; *US/EU/UK* refused (a path, the known false positive); a label inside a span
-  read only as the span; an id written in
+  read only as the span, *Fix `foo` B4 and `x`* naming `` `foo` ``, B4 and `` `x` `` once each, `` `a`/`b` `` two
+  tokens; an id written in
   words passing.
 
 Unit tests in `tests/test_person_text.py` check that the module carries the eight names, and scan the source of
