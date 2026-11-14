@@ -33,11 +33,13 @@ field, sections, listing the archive's months, the stub). Three are this part's 
   a split it may differ from leaves two answers to one question, and regenerating it from the split would check the
   split against itself (round 1's F383); once `split_board()` exists the runner splits `alpha.md` in memory and
   `alpha/` is deleted, the split's bytes being pinned by `fixtures/board/<case>.v3/` and `board_split`.
-- **Where a board splits in the release's order** (round 1's F376, F377): in each consumer's vendor PR (draft 1),
-  or once every reader of that board runs v3.0. A v2.x reader that checks no version reads a stub as an empty
+- **Where a board splits in the release's order** (round 1's F376, F377; round 2's F393): in each consumer's vendor PR (draft 1),
+  once every reader of that board runs v3.0 (round 1), or with each repo's own pin bump once both consumers run v3.0
+  (round 2: waiting for every roster pin leaves each bumped repo with no board writer, since v3.0's writers refuse
+  a v2 board). A v2.x reader that checks no version reads a stub as an empty
   board, and both consumers read other repos' boards (ShiftLead's `gatesweep` and `workorders`, agent-cadence's
   `nudge_user_attention.py`), so a split in agent-cadence's vendor PR would empty its board for ShiftLead's sweep
-  until ShiftLead synced. The second (D12).
+  until ShiftLead synced. The third (D12).
 - **`board.py split` under TD-095's write gate**: a gate exemption for `split` alone, or `split` as a separate
   tool. One `board.py` keeps one `--board` normalisation, one usage and one JSON shape; `split` is the one action
   whose gate is the reverse (it needs a v2 board), so it has its own gate (D11, *`board.py split`*).
@@ -70,7 +72,9 @@ on an `fyi` are all carried. The rule, for each:
   last 8 digits;
 - **a twin's closed line and its detail block supply every field and the body**; the open twin is read for nothing,
   as v2 reads it; where its detail block differs from the closed twin's, `split_board_notes()` names it at the
-  item's heading, `open twin's detail not carried`, so a person sees what the read never showed (round 1's F378);
+  item's heading, `open twin's detail not carried`, and where its line differs from the closed twin's but for the
+  close (a reply, a `Due` or a `Hide until` the closed line lacks: its `raw` against the closed line's less its
+  `Decided` and `Closed`), `open twin's line not carried` (round 2's F396), so a person sees what the read never showed (round 1's F378);
 - **the archive's own prose** (round 1's F378): its text before its first item (its title and any note) is not
   carried, since `README.md` is the board's, and `split_board_notes()` lists each of its non-blank lines but the `#
   ` title, `archive preamble not carried`; a line after its first item that is no item, no detail block's line and
@@ -179,8 +183,10 @@ F75): it always writes the directory beside the board, named the board's name le
 directory the stub reads as (D6); any other place would leave a stub reading as a missing directory. `split_board_notes(files)` names
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
-once every reader of it runs v3.0 (text 12), so never in a vendor PR: in a PR of its own, after D12's vendoring
-steps, landed when no open PR edits the board (each such PR is redone over the directory).
+once its own tooling and both consumers run v3.0 (text 12; D12's order, ShiftLead's in its sync PR and each other
+pinning repo's in its pin bump), landed when no open PR edits the board and no session holds an unpushed board
+commit (`board_edit.py` commits to the default branch directly; round 2's F397): a v2 edit that lands after is
+redone with `board.py` on the directory.
 
 **`board.py split`** (*rebased on TD-095*: its D7's gate, options and output, which B5 extends). `split` takes
 `--board` (a v2 file, normalised as every `--board` is), `--archive` (default the board's name with
@@ -190,7 +196,8 @@ steps, landed when no open PR edits the board (each such PR is redone over the d
 being optional; round 1's F353), `parser()` gains the `--archive` argument again (F380), and the usage docstring
 says so. Its
 gate is the reverse of a write's, checked in this order, each exit 1 and before anything is written (round 1's
-F380): `<board>: no such board` (`form` None); `version_problem(board)`, as after every read (a major newer than 3,
+F380): `<board>: a v3 stub whose directory is missing` (`form` None, the stub's major 3 and its problem; round 2's
+F399); `<board>: no such board` (`form` None); `version_problem(board)`, as after every read (a major newer than 3,
 F360); `<board>: already a v3 board` (`form` `"dir"`: the stub or the directory, `--board docs/user_attention`
 among them; F371); `<board>: not a v2 board file (.md)` for a `--board` not ending `.md`, whose stub would read as a
 missing directory (F365); `<archive>: no such file` (F379); then
@@ -213,14 +220,21 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
 - **The builds**, B1 to B5, merge in order with no release between them, B3 and B4 in either order (filed B3, TD-103,
   then B4, TD-104); TD-091 (TD-078's B4) follows B5 (round 9's F142); then v3.0. *Rebased:* v2.8 is tagged, and
   B1 and B2 are merged.
-- **After v3.0, in this order** (round 1's F376, F377): agent-cadence vendors v3.0 (no split); ShiftLead syncs it
-  through its pin; each repo that pins agent-cadence bumps its pin to one vendoring v3.0, this repo among them;
-  then, and only then, each repo splits its own board, in a PR of its own: agent-cadence's, this repo's and
-  ShiftLead's once their own tooling reads v3.0, a roster repo's as TD-100 designs. A board's readers are its own
-  repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, the session-start hook and
-  the attention procedure, `board_edit.py`) and every consumer that reads it from elsewhere (ShiftLead's `gatesweep`
-  and `workorders`, agent-cadence's `nudge_user_attention.py` over the roster), so each consumer entry carries the
-  line *split this repo's board only once both consumers run v3.0*.
+- **After v3.0, in this order** (round 1's F376, F377; round 2's F393, F398): (1) agent-cadence vendors v3.0, no
+  split; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR; (3) agent-cadence splits
+  its own board, in a PR of its own, at once after (2); (4) each other repo that pins agent-cadence, this repo
+  among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
+  TD-100 designs). A v3.0 writer refuses a v2 board (TD-095's D7), so a repo whose tooling reads v3.0 and whose
+  board is still v2 has no board writer: bump and split together leave no such repo but agent-cadence between (1)
+  and (3), a window named here and kept short (its board then takes no `board.py` or `board_edit.py` write; an
+  item that cannot wait is a hand edit to the v2 file, which the v3 reader reads). A board's readers are its own
+  repo's tooling (the pinned cadence scripts: the board row, `nudge_user_attention.py`, `gate_sweep.py`, the
+  session-start hook and the attention procedure, `board_edit.py`), which the bump makes v3.0, and the consumers
+  that read it from elsewhere: ShiftLead's `gatesweep` and `workorders`, which (2) makes v3.0 before any split,
+  and `nudge_user_attention.py` run from another roster repo under that repo's pin. That last, until its repo
+  bumps, refuses a split board if it checks the version and else reads it as empty: a display, never a write, and
+  accepted as the rollout's one transient; no split waits on every roster pin. Each consumer entry carries the
+  line for its step above.
 
 ## Consumers
 
@@ -237,9 +251,18 @@ board is split.
 
 - **agent-cadence**:
   - vendor v3.0 (no split in that PR); split its own `docs/user_attention.md` with `board.py split` in a PR of its
-    own once both consumers run v3.0 and every pin is bumped (D12), landed when no open PR edits the board;
+    own right after ShiftLead's sync (D12's step 3), landed when no open PR edits the board and no unpushed board
+    commit is held; between its vendor PR and that split its board takes no writer's write (D12's window);
+  - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
+    `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
+    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`;
+  - `scripts/ledger.py`'s `covers()` and `board_people()` callers pass the `Board` `load_board()` gives, never text
+    (F394); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
+    finds none outside the vendored module;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
-  - `nudge_user_attention.py`: read boards through `load_board()` (its own checkout's directory; another repo's
+  - `nudge_user_attention.py`: show an item from its `words` and `replies`, and its refs from
+    `context_refs(item.context)`, where it reads `item.text` (empty on a v3 item, gone at v3.0; round 2's F395);
+    read boards through `load_board()` (its own checkout's directory; another repo's
     through the forge's directory listing, with `since=` the months it shows); its `ARCHIVE_AT` prompt and its
     duplicate-key warning (`closed_items()`, `item_key()`) go; `--report --json` prints ids, not lines;
   - `check_cadence.py`'s `BOARD` and `classify_direct()` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
@@ -253,7 +276,8 @@ board is split.
     `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton (no `Format:` line
     for the item line, no sections, closing archives).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
-  - split its own board in its own PR once both consumers run v3.0 and every pin is bumped (D12; round 2's F387);
+  - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), landed when no open PR
+    edits the board and no unpushed board commit is held;
   - first, a check: the entry greps its stores and code for a persisted `board:` reference of any shape other than
     `board:` and 8 hex digits (a full key text, a line number) and names each it finds; `workorders.py`'s own
     `_REF_RE` (`board:[0-9a-f]{8}`) is the shape it persists;
@@ -333,7 +357,8 @@ v3.0 removes.)
 >   `mailto:` among them), `#` and `/`, outside code spans and fenced code; inside `<…>` when the target is
 >   bracketed, a title after it kept, and a leading `./` becoming `../`. The archive's text before its first item
 >   is not carried, and `split_board_notes()` lists each of its non-blank lines but its `# ` title.
->   Of twins whose detail blocks differ, the open twin's is not carried, and `split_board_notes()` names it.
+>   Of twins, the open twin's detail block and line are not carried, and `split_board_notes()` names each that
+>   differs from the closed twin's.
 > - A line after the first item that is no item, no detail block's line and not blank (a `- (none)` placeholder, a
 >   note), on the board and then on the archive, is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
 >   first item that stands above a carried line; a heading with no carried line under it is dropped. Nothing is
@@ -433,7 +458,8 @@ twin rule among them, and for `BOARD_MAJOR` and `version_problem(board)`; text 1
 > `canonical_item()`, and with them the refusal of a field's name in a text, context, answer, detail value or reply
 > and of an answer ending `(by …)`; the text forms of the board's readers; `subject()`'s form with no id;
 > `add --under`; and the edits' `--line` and `--expect`. **What a caller
-> changes:** `needs_you()`, `covers()`, `sweep()`, `board_problems()`, `board_people()`, `answered_by()`,
+> changes:** `BoardItem.text` is gone (an item's words are `words`, its replies `replies`); `needs_you()`,
+> `covers()`, `sweep()`, `board_problems()`, `board_people()`, `answered_by()`,
 > `people_problems()` and `answered_by_problems()` take a `Board` and no text, the sweep's board and
 > `uncovered_decisions()`'s are `(origin_url, basename, board)`, read whole, and the sweep's `to_close` are ids;
 > `board.py`'s edits name an item by `--id`, and a write's JSON and `list` give its id where they gave its line; `item_record()` loses `line`, gains `id`, `path`, `added`, `context`
@@ -530,7 +556,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_split/<case>/`** (a new kind, `board_split_case`: `board.md`, optional `archive.md`,
   `expected.json` holding the files or the refusal, and `split_board_notes()`): `twins` (an open and a closed line
   of one key, on the board and across board and archive, each one closed item, its fields and body the closed line's
-  although the open twin's detail block differs, the notes naming `open twin's detail not carried`, F378);
+  although the open twin's detail block differs, the notes naming `open twin's detail not carried`, F378, and
+  one open twin with a reply the closed line lacks, `open twin's line not carried`, F396);
   `archive_prose` (an archive with a title, a note before its first item, and a `- (none)` line after it: the note
   listed as not carried, the `- (none)` carried after the board's, F378); `sections` (the `## Needs the user` and `## In-flight` headings:
   an earlier `## ` heading kept and only the one nearest the first item dropped; the README's prose kept; its links:
@@ -568,7 +595,7 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
 - **`fixtures/board_writer/`** and **`fixtures/verdict/`** (B3's and B4's) — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md,
   *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split` and `split_exists` (exit 1),
   and `write_v2_refused`'s message gaining *split first*; *rebased* (round 1's F368): `split_not_md`,
-  `split_no_board`, `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379), `split_archive_other` (F388) and `split_refused` (an undated item: `split_board()`'s refusal through
+  `split_no_board`, `split_stub_no_dir` (F399), `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379), `split_archive_other` (F388) and `split_refused` (an undated item: `split_board()`'s refusal through
   `board.py`), each exit 1. Each refusal's wording is the builder's, `Refused("<why>")` as the module's are, and its
   case pins it. `board_split` gains `head_extra` (D11's head note) beside the cases listed above.
 - **`fixtures/sweep/`, `fixtures/lift/`, `fixtures/grammar/` and `fixtures/edit/`'s groups** (B1's and B2's) — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, *Fixtures* (2026-11-13 split). *Rebased:* their B5 steps,
@@ -677,7 +704,7 @@ a scratch copy, reads back (its `## In-flight` and `- (none)` carried to `README
 
 Order: B1, then B2 (both merged), then B3 and B4 (either order; filed TD-103, then TD-104), then B5; TD-091 (TD-078's B4, `Blocked by` TD-070) follows B5
 (round 9's F142). Then v3.0's release with TD-078's half (Paul's), each consumer's vendoring entry (agent-cadence's first),
-this repo's pin bump, and only then this repo's own split (D12's order; round 1's F377).
+and this repo's pin bump with its own split in one PR (D12's order; round 1's F377, round 2's F393).
 
 ## Not in this design
 
