@@ -301,7 +301,7 @@ board is split.
     round 3's F400, F408; round 5's F429);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
-    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`, its `unanswered()` (:200-239) returning
+    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`, its `unanswered()` (:196-244; F463) returning
     its own open items' `r["item"].id` where it built `item_key(r["line"])` (:238), so `to_close` is ids throughout,
     and `_read_boards()`' `line` key going at B5 (round 6's F455); its `_closes()` (:324-332, called at :387 and :512) matching by
     the item's `id` where it reads `it.line`, `lines[it.line - 1]` and `item_key(raw)`, and returning ids, so its
@@ -337,9 +337,12 @@ board is split.
     directory listing as above; and `checked()` (:168-178) takes the `Board`, `version_problem(board)` (round 6's
     F456);
   - `check_cadence.py`'s `BOARD` and `classify_direct()` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
-  - `list_sessions.py` `board_items()`: open items through `load_board()`, keyed on `item.session` and listing
-    `item.words` (round 6's F458); `SESSION_RE`'s parity test against the board's `Format:` line
-    (`tests/test_parity.sh`) is repointed at the item file's `Session` field, the `Format:` line going (F457);
+  - `list_sessions.py` `board_items()`: open items through `load_board()`, keyed on the session's name, the part
+    of `item.session` before ` on ` (a `Session` is `<name>` or `<name> on <host>`, SPEC; the name the v2 head
+    carried, the 8-character session id a session writes), and listing `item.words` (round 6's F458); `SESSION_RE`
+    (:76), read only on a v2 line, goes with that read; `tests/test_parity.sh`'s section 3 (the board's `Format:`
+    line read by `ITEM_RE`, `DUE_RE` and `SESSION_RE`, :73-85) goes with the `Format:` line, and its `Kinds:` check
+    (:91-95) reads the seed `README.md`'s `Kinds:` line, which the skeleton keeps, against `KINDS` (F457, F459);
   - its cadence check (`check_cadence.py`): its existing board row, `row_board` (:2161, TD-206), is rewritten,
     not joined by a second (round 6's F454). Beside the ledger row (which reads the PR's ledger through
     `ledger_pair_at()` and fails on `v2_problems()`'s faults), it reads the head's board through `load_board()` and
@@ -348,9 +351,14 @@ board is split.
     goes: `board_change_problems()` (:1960), `_item_lines()`, `_fields()`, `_read_back()` and `writers_made()`
     (:1781-1828), `archive_gain()`, `archive_net_problems()` and `classify_archive()` (:1721) with `ARCHIVE_AT`,
     since a v3 item is a file a writer's gate judged when written and B4's verdicts judge by id; what reads items
-    reads the `Board`: `_people_check()` its `people`, `_decided_check()` each item's `decided`,
-    `board_gate_answers()`, `gate_answer()` and `row_lift_pr()` (:2081-2118, :2457) the items by id through B4's
-    `lift_pr_verdict()`, and `_appends_gate_answer()` (:2520-2523) `_item_gate(item)` on the `BoardItem`; the
+    reads the `Board`: `_people_check()` `board_people(board)` and `people_problems(board)`, its *touched* test
+    comparing the base's and head's `README.md` `People:` line; `_decided_check()` each item's `decided` and
+    `decided_by`; `gate_answer()` (:2081) takes two `BoardItem`s, base and head paired by id, and tests `decided`
+    gained and `_item_gate(item)[1]`; `board_gate_answers()` (:2104-2117) pairs by id over the two `Board`s, still
+    the pre-filter ahead of B4's `lift_pr_verdict()` in `row_lift_pr()` (:2457); and `_appends_gate_answer()`
+    (:2520-2523) `_item_gate(item)` on the `BoardItem` (the closing fact-check's F460, F461). `_direct_rules()`
+    (:2060-2066), which calls `board_change_problems()`, goes with it; `classify_direct()` and its `gate_answer()`
+    call (:2149) are TD-095's, whose rule (item files added directly, each with a `Due:`) replaces it (F462). The
     done-when's grep covers each name that goes; `precheck.py` runs the repo's own command and reads no board;
   - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) stays the v2 file's path, which
     `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
