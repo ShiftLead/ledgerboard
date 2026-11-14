@@ -300,13 +300,17 @@ and the item's `id`, its fields (`words`, `context`, `session`, `decided`, `deci
 (`board_people()`, `people_problems()`); a check that compares a board across two trees pairs items by id. The
 entry's done-when is the grep that proves it, over the vendor PR's tree outside the vendored module, for patterns,
 not reads, so each hit is judged (round 7's F464–F467): it finds no name v3.0 removes (text 12's *What goes*) and
-no call of `parse_board(`, `parse_closed_items(`, `closed_items(` or `item_key(` (which v3.0 keeps for the module's
-own v2 reads alone), no `ARCHIVE_AT` or `SESSION_RE`, no `.text` or `.line` read on a `BoardItem` and no `r["line"]`
+no call of `parse_board(`, `parse_closed_items(`, `closed_items(` or `item_key(` (text 12 keeps `item_key()` alone, for the
+module's own v2 reads; F469), no `ARCHIVE_AT` or `SESSION_RE`, no `.text` or `.line` read on a `BoardItem` and no `r["line"]`
 on a `_read_boards()` record; and each hit of `user_attention.md` (the own board's path, a literal or the parts a
 path is built from, `"docs"` / `"user_attention.md"`) is a path passed on, to `load_board()`, `--own-board` or a
 directory test, never a read of that file's text by any means (`git show`, `read_file()`, `read_text()`, `open()`,
-a grep), and the entry's PR names each such pass-on (`cadence_hooks.sh:180` among them). A path held in a variable
-(`BOARD`, `rel`) is found through the read it reaches, which the inventory below names. The lines below are the inventory known at design time, each with the form its
+a grep), and the entry's PR names each such pass-on (`cadence_hooks.sh:180`, `nudge_user_attention.py:188` and `ledger.py`'s
+`BOARD_REL`, :1354, among them). A path held in a variable (`BOARD`, `rel`) is found through the read it reaches,
+which the inventory below names. A `.text`, `.line` or `r["line"]` hit is judged by what the object is: an argparse
+attribute (`a.line`) or another record (`cadence_layer.py`'s `rules()`, :352) is no board read (F473). The grep
+spans the tree's tests too: a test moves with the script it tests, and the entry's PR lists each test file it
+rewrites or retires (`tests/test_parity.sh`'s `parse_board` and `item_key` uses, :95-130, :193, among them; F472). The lines below are the inventory known at design time, each with the form its
 replacement takes where the rule alone leaves a choice (what a check keeps or retires, what a function returns); the
 entry's first step is its own run of that grep at the vendor PR's base, and a read the grep finds that no line names
 takes the rule, its replacement said in the entry's PR. A builder of B5 builds none of these: they are each
@@ -344,9 +348,14 @@ consumer's, in its own repo.
     finds none outside the vendored module;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split); and
     it edits through `board.py`'s `plan_edit()`, not the module's `edit_item()` alone, so a v2 board draws D7's
-    `not a v3 board: a v2 board (split first: board.py split)`, not a missing file (round 3's F404);
+    `not a v3 board: a v2 board (split first: board.py split)`, not a missing file (round 3's F404); its `done`
+    plan's archive widening (`closed_items()`, `ARCHIVE_AT`, :184-185, :399, and `item_key()`, :282) goes with the
+    v2 writers (round 7's F471);
   - `nudge_user_attention.py`: show an item from its `words` and `replies`, and its refs from
     `context_refs(item.context)`, where it reads `item.text` (empty on a v3 item, gone at v3.0; round 2's F395);
+    `needing()` (:243-252, `parse_board(content)` keyed on `it.line`) and the local roster read
+    (`read_board()`, :1614-1618, over `root/"docs"/"user_attention.md"`, :1545, :1576) go through `load_board()`,
+    `needing()` keyed on the id, another roster repo's board being v2 or a directory (round 7's F470);
     read boards through `load_board()` (its own checkout's directory; another repo's
     through the forge's directory listing, with `since=` the months it shows); its `ARCHIVE_AT` prompt and its
     duplicate-key warning (`closed_items()`, `item_key()`) go; `--report --json` prints ids, not lines; its
