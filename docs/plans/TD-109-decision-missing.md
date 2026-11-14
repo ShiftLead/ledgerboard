@@ -133,7 +133,9 @@ an Ask is what a decision waits on — set the gate first (set --blocked-by …)
 names no decision. This replaces a `check()` rule that would compare an answered entry's Ask with the base's, which
 a reopen, a renumber, a link rewrite and the canonical form all trip (F9). A question asked again on an answered
 entry is gated first (`set`, logging `gate added`) and then written, and the entry is then gated, not answered. A
-`Hold: <note>` answer writes the Ask on an entry that keeps its gate, and is untouched. The refusal is the
+`Hold: <note>` answer, as cadence.md §4.8 has a session record it, keeps the gate and puts the note in the Ask, so
+the Ask is written on a gated entry and is untouched. (Whether a `Hold` lifts is the item's `Lifts:`; one that lifts
+leaves an answered entry, whose Ask is then not rewritten.) The refusal is the
 module's, so every writer that calls `edit_entry()` has it.
 
 **Removing one.**
@@ -185,8 +187,8 @@ TD-247, TD-249); those whose wait is an Owner alone are D4's and are not flagged
 **Telling agent-cadence.** When the build merges, the builder mails agent-cadence's techlead that the next release
 carries `decision-missing`, so its TD-264 calls `check()` for the Ask half and keeps only its Owner half once it
 vendors that release. The mail names the one difference from agent-cadence's own copy (`ungated_waits()`, which
-reads `parse_blocked()`'s holders): here a retired item (`hold`, a role) and the old decision form count as a
-decision, since each already carries its own `retired` error. agent-cadence agreed to D4 at the design stage
+reads `parse_blocked()`'s holders, which already count a role in `decision (…)`): here `hold` and the old decision
+form count as a decision too, since each already carries its own `retired` error. agent-cadence agreed to D4 at the design stage
 (2026-11-14, its techlead's reply through ledgerboard's techlead): its TD-264 (PR #212, merged) keeps the Owner
 branch of its `ungated_waits()` and drops its Ask branch when it vendors the release. It asks to be told when that
 release is tagged, so the mail names the release number.
