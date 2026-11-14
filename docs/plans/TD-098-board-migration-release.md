@@ -292,6 +292,21 @@ commit by "the board alone" read "only files under the board's directory". Befor
 board row's `board_dir_problems()` gives `Board.problems` alone (TD-092's D11), so it is a partial check until the
 board is split.
 
+**The rule each consumer entry carries, and its inventory** (round 7, TD-105, on the recurring agent-cadence lines
+F442–F462): v3.0 removes the board's text forms, so in each consumer every read of a board as text or by line (a
+file's text, `parse_board()` or `parse_closed_items()` on it, `item_key()` of a line, a line number), and every read
+of a `BoardItem`'s `text` or `line` or a `_read_boards()` record's `line`, moves to the `Board` `load_board()` gives
+and the item's `id`, its fields (`words`, `context`, `session`, `decided`, `decided_by`) and its `Board`'s
+(`board_people()`, `people_problems()`); a check that compares a board across two trees pairs items by id. The
+entry's done-when is the grep that proves it: over the vendor PR's tree, outside the vendored module, it finds no
+name v3.0 removes (text 12's *What goes*), no `.text` or `.line` read on a `BoardItem`, no `r["line"]` on a
+`_read_boards()` record and no own-board path read as a file's text (`docs/user_attention.md` given to `git show`,
+`read_file()`, `open()` or a grep). The lines below are the inventory known at design time, each with the form its
+replacement takes where the rule alone leaves a choice (what a check keeps or retires, what a function returns); the
+entry's first step is its own run of that grep at the vendor PR's base, and a read the grep finds that no line names
+takes the rule, its replacement said in the entry's PR. A builder of B5 builds none of these: they are each
+consumer's, in its own repo.
+
 - **agent-cadence**:
   - vendor v3.0, its ledger first meeting TD-078's D5, and split its own `docs/user_attention.md` with `board.py
     split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board (a notices PR
