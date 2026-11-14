@@ -298,10 +298,15 @@ file's text, `parse_board()` or `parse_closed_items()` on it, `item_key()` of a 
 of a `BoardItem`'s `text` or `line` or a `_read_boards()` record's `line`, moves to the `Board` `load_board()` gives
 and the item's `id`, its fields (`words`, `context`, `session`, `decided`, `decided_by`) and its `Board`'s
 (`board_people()`, `people_problems()`); a check that compares a board across two trees pairs items by id. The
-entry's done-when is the grep that proves it: over the vendor PR's tree, outside the vendored module, it finds no
-name v3.0 removes (text 12's *What goes*), no `.text` or `.line` read on a `BoardItem`, no `r["line"]` on a
-`_read_boards()` record and no own-board path read as a file's text (`docs/user_attention.md` given to `git show`,
-`read_file()`, `open()` or a grep). The lines below are the inventory known at design time, each with the form its
+entry's done-when is the grep that proves it, over the vendor PR's tree outside the vendored module, for patterns,
+not reads, so each hit is judged (round 7's F464–F467): it finds no name v3.0 removes (text 12's *What goes*) and
+no call of `parse_board(`, `parse_closed_items(`, `closed_items(` or `item_key(` (which v3.0 keeps for the module's
+own v2 reads alone), no `ARCHIVE_AT` or `SESSION_RE`, no `.text` or `.line` read on a `BoardItem` and no `r["line"]`
+on a `_read_boards()` record; and each hit of `user_attention.md` (the own board's path, a literal or the parts a
+path is built from, `"docs"` / `"user_attention.md"`) is a path passed on, to `load_board()`, `--own-board` or a
+directory test, never a read of that file's text by any means (`git show`, `read_file()`, `read_text()`, `open()`,
+a grep), and the entry's PR names each such pass-on (`cadence_hooks.sh:180` among them). A path held in a variable
+(`BOARD`, `rel`) is found through the read it reaches, which the inventory below names. The lines below are the inventory known at design time, each with the form its
 replacement takes where the rule alone leaves a choice (what a check keeps or retires, what a function returns); the
 entry's first step is its own run of that grep at the vendor PR's base, and a read the grep finds that no line names
 takes the rule, its replacement said in the entry's PR. A builder of B5 builds none of these: they are each
@@ -352,9 +357,9 @@ consumer's, in its own repo.
     directory listing as above; and `checked()` (:168-178) takes the `Board`, `version_problem(board)` (round 6's
     F456);
   - `check_cadence.py`'s `BOARD` and `classify_direct()` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
-  - `list_sessions.py` `board_items()`: open items through `load_board()`, keyed on the session's name, the part
-    of `item.session` before ` on ` (a `Session` is `<name>` or `<name> on <host>`, SPEC; the name the v2 head
-    carried, the 8-character session id a session writes), and listing `item.words` (round 6's F458); `SESSION_RE`
+  - `list_sessions.py` `board_items()`: open items through `load_board()`, keyed on `item.session`, the
+    session's name (a `Session` is `<name>` or `<name> on <host>`, SPEC; the host is `item.host`; the name is the
+    one the v2 head carried, the 8-character session id a session writes; round 7's F468), and listing `item.words` (round 6's F458); `SESSION_RE`
     (:76), read only on a v2 line, goes with that read; `tests/test_parity.sh`'s section 3 (the board's `Format:`
     line read by `ITEM_RE`, `DUE_RE` and `SESSION_RE`, :73-85) goes with the `Format:` line, and its `Kinds:` check
     (:91-95) reads the seed `README.md`'s `Kinds:` line, which the skeleton keeps, against `KINDS` (F457, F459);
@@ -378,7 +383,8 @@ consumer's, in its own repo.
   - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) stays the v2 file's path, which
     `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
     change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:380), which a stub never
-    holds, so where `${BOARD%.md}/` is a directory it tests for an open item there instead, a top-level file
+    holds, so it tests the directory `${BOARD%.md}/` for an open item instead, and the v2 grep goes (after the
+    bump and split, no repo that runs this script holds a v2 board; round 7's F465), a top-level file
     of roughly an id's shape, the glob `[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md` (an open item is `<id>.md`
     there, D6; a name that fails `is_item_id()` is a stray file the board row names, TD-092's D11 rule 14, and its
     match only fires the soft warning; F439, F440, F441), keeping the script's order invariant (no subprocess
