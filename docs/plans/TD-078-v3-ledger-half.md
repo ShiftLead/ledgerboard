@@ -239,7 +239,8 @@ one is an agent-cadence wrapper's (`bump`, `ledger.py --split`, `migrate`'s git 
 there and changed without a ledgerboard release.
 
 - **The two pins are the procedure's to name.** agent-cadence's remodel procedure (*Consumers*), at its fixed path
-  on `main`, names both: the first, a commit on agent-cadence's `main` that vendors the last v2.x minor (v2.8,
+  on `main`, names both: the first, a commit of agent-cadence that vendors the last v2.x minor (on `main` until a repair, then
+  on its maintenance branch, below) (v2.8,
   tagged here 2026-11-13, #281, unless a v2.9 is cut before TD-070's B1 merges, D3), with the minor's number; the
   second, a commit that vendors v3.0 (or a later v3.x). Its test runs the procedure's commands at each named commit,
   in a fixture checkout. **It lands in two PRs (F218):** the first — the procedure, its first pin and its test at
@@ -248,8 +249,10 @@ there and changed without a ledgerboard release.
   pin, never by the second bump; the second — the second pin and its test there — merges after the v3.0 vendor PR.
   A later PR whose test passes may re-name either pin. A first-pin defect found only after the v3.0 vendor PR has
   merged, when no newer `main` commit vendors the minor, is mended on a maintenance branch of agent-cadence cut
-  from the first pin (wrapper fixes only), its fixed commit then named as the first pin; agent-cadence's
-  `agent-cadence run` and `bump` accept a pinned commit off `main` (*Consumers*). A remodel reads the pins when it
+  from the first pin (wrapper fixes only), its fixed commit then named as the first pin; the branch is kept in
+  agent-cadence's source, since the launcher fetches its branches to serve a pin, and agent-cadence's `agent-cadence
+  run` and `bump` accept a pinned commit off `main` and the second bump from it to a v3.0 commit on `main` that does
+  not descend from it (*Consumers*; F222). A remodel reads the pins when it
   starts, from a merged file: no reader computes one from where `main` stood at a merge (F126). A roster remodel
   starts only once the procedure's file names both. **`migrate` stays usable through the first pin after v3.0
   removes it:** a pin is a fixed commit of agent-cadence, which stays (on `main`, or on the maintenance branch), so
@@ -681,7 +684,10 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     then the v3.0 vendor PR, held until that test passes, whose cadence change entry points a roster repo at the
     procedure; then the procedure's second pin and its test there, since it names a commit vendoring v3.0 (F218);
   - `agent-cadence run` and `bump` accept a pin that is a commit off `main` (a maintenance branch cut from the first
-    pin, wrapper fixes only), with a test, for a first-pin defect found after the v3.0 vendor PR (D7);
+    pin, wrapper fixes only, kept in its source), and `bump` accepts the second bump from such a pin to a commit on
+    `main` that does not descend from it when the branch was cut from an ancestor of that commit (today it refuses
+    a pin off the default branch and a bump that does not descend from the old pin), with a test, for a first-pin
+    defect found after the v3.0 vendor PR (D7, F222);
   - its v3.0 vendor PR's tests read a roster-shaped fixture (a v1 ledger, old forms, a single-file board) without
     error, since its v3.0 tools still read an un-remodelled roster repo's ledger and board through the cross-repo
     resolver and the attention view, which D5's "untouched" does not cover;
@@ -707,7 +713,8 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     pinned tree predates it, and its §2.12 there still says the opposite, so the procedure lives at a fixed path on
     agent-cadence's `main`, read from there (not through `agent-cadence path`), named in the ledger entry or board
     item that starts each roster remodel, and it overrides that pin's §2.12 for the one PR. It names the two
-    pins, and its test runs its commands at each, in a fixture checkout, as well as on `main` (D7). Filed through agent-cadence's question seat with its v3.0 vendor entry;
+    pins, and its first PR's test runs its commands at the first pin, its second PR's at the second, in a fixture
+    checkout, as well as on `main` (D7, F224). Filed through agent-cadence's question seat with its v3.0 vendor entry;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
