@@ -245,14 +245,15 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   would have no board writer; bump and split together leave no such repo. A v3.0 writer may still meet another
   repo's board still v2: `gate_sweep.py` already skips a board it cannot write (`_other_board()`, *not done*, and
   goes on), so its message gains the split and nothing else changes; `ledger.py set`'s reassign or override that
-  writes another roster repo's board (§2.4) refuses the whole write, as `_set_moved()` does today for a target it
-  cannot write (both files put back, exit 1), its message naming that repo's split: a move to a board no v3.0 tool
+  writes another roster repo's board (§2.4) refuses, as `_set_moved()` does today for a target it cannot write
+  (both files put back, exit 1, a notices PR already opened to another repo left and named, as today; F437), its message naming that repo's split: a move to a board no v3.0 tool
   can write would leave the decision moved with no item to answer, so it waits for that repo's bump (round 3's
   F400, F408; round 5's F429).
   **The PR that bumps and splits is judged by its head's pin** (round 4's F423): `agent-cadence run` resolves the
-  pin from the checkout it runs in, so the cadence check and `precheck.py --pr` are run from the PR's own worktree
-  (its head), where v3.0's check judges it; run from a checkout of the base, the old pin would judge it and meet the
-  stub (round 5's F430). A split PR (a v2 pair at the base, the directory at the head) reads the same ids on both
+  pin from the checkout it runs in, so the cadence check is run from the PR's own worktree (its head), where v3.0's
+  check judges it; run from a checkout of the base, the old pin would judge it and meet the stub (round 5's F430).
+  `precheck.py --pr` reads no board and stays where it runs today, its command from the trusted checkout, never the
+  PR's (F438). A split PR (a v2 pair at the base, the directory at the head) reads the same ids on both
   sides and takes ordinary review (TD-095's D10 and *Consumers*, `lift-board-v2`; F431), and its board row reads the head's directory. No
   override is needed and none is used. In (1), agent-cadence's own scripts are the head's.
   A board's readers are its own
@@ -320,8 +321,10 @@ board is split.
     only there (D7); `precheck.py` runs the repo's own command and reads no board;
   - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) stays the v2 file's path, which
     `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
-    change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:363), which a stub never
-    holds, so it reads the board's open items through `load_board()` instead (round 5's F428); cadence.md
+    change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:380), which a stub never
+    holds, so where `${BOARD%.md}/` is a directory it tests for an open item there instead, a top-level `*.md`
+    other than `README.md` (an open item is such a file, D6), keeping the script's order invariant (no subprocess
+    before the board test; round 5's F428, F435, F436); cadence.md
     §3, §4.3 and §4.4, `docs/procedures/stranded-work.md`'s stamp step (`README.md`), and the board's SEED skeleton
     (no `Format:` line for the item line, no sections, closing archives) change in the vendor PR, beside the split
     (round 4's F421).
