@@ -400,8 +400,8 @@ consumer's, in its own repo.
     built from the `Format:` example through `parse_board`, goes with both), over `BOARDS` (:25) rewritten to the
     seed's `docs/user_attention/README.md` and agent-cadence's own board's `README.md` (the split carries the v2
     head, its `Kinds:` line among it, into the README; never the stub, which has none); its detail-label loop over
-    `BOARDS` (:198-200) retires with the `Format:` example it reads (F501); and the `ARCHIVE_AT` check goes whole, as
-    said above, over none of its three files, since the archive wording it compared is rewritten (F457, F459,
+    `BOARDS` (:198-200) retires with the `Format:` example it reads (F501); and the `ARCHIVE_AT` check goes whole with
+    `ARCHIVE_AT`, as said above, no file of its three kept, since the archive wording it compared is rewritten (F457, F459,
     round 7's F478, round 8's F490, F500);
   - its cadence check (`check_cadence.py`): its existing board row, `row_board` (:2161, TD-206), is rewritten,
     not joined by a second (round 6's F454). Beside the ledger row (which reads the PR's ledger through
@@ -447,7 +447,7 @@ consumer's, in its own repo.
     (:1022-1025) still reads a v2 board file, and a v3 board is judged by its directory's `board_dir_problems()`
     instead, since a list in the README is prose the scan would take for a malformed item (round 7's F476, round 8's
     F492); and the board leaves `_format_problems()`'s
-    text loop (:975-983, its `version_problem(texts[f])` at :982; round 8's F497), whose `version_problem(texts[f])` reads a text against `FORMAT_MAJOR` 2 and would refuse
+    text loop (:975-983; round 8's F497), whose `version_problem(texts[f])` (:982) reads a text against `FORMAT_MAJOR` 2 and would refuse
     the stub's and the README's `Ledgerboard: 3`, in `adopt` and `--migrate` both: the board's version is checked
     by `version_problem(load_board(...))` instead (round 8's F485), its `ls` the file system's, listing
     subdirectories as `ledger.py`'s `fs_io()` does once TD-095's B4 lands (TD-092's D6; at agent-cadence's
