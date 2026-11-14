@@ -1,9 +1,9 @@
 # TD-109: an Ask with no decision gate is flagged
 
-**Status:** Draft 5, 2026-11-14 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 6, 2026-11-14 (session lb-designer). Class: **wide** (a vendored, published format: a new
 `check()` flag that the ledger writer refuses on, new refusals in `edit_entry()`, and new writer arguments, which
-both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: four run, each raising build-changing findings;
-round 5 next (the record: [docs/reviews/TD-109.md](../reviews/TD-109.md)).
+both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: five run, each raising build-changing findings;
+round 6, the cap's last, next (the record: [docs/reviews/TD-109.md](../reviews/TD-109.md)).
 
 **Entry:** [TD-109](../ledger/TD-109.md). Asked for by agent-cadence (its TD-264 rule 6, 2026-11-14).
 
@@ -97,8 +97,11 @@ since: of its Log's lines `gate added: decision (…)`, `gate reassigned: …`, 
 `gate lifted: decision (…)` (read by `log_lines()`), the **last** is a `gate lifted: decision (…)`, answer or
 override alike. The person in the lines is not compared: a reassign or a lift names whom it names.
 
-- A Log that cannot be read (`log_problems()` raises something) answers nothing: the entry is flagged, beside the
-  Log's own error.
+- **"The last"** is the last in file order, never by date (as `gate_added()` reads the Log): a lift dated before the
+  `gate added` line that follows it does not answer.
+- **A Log that cannot be read answers nothing**: when `log_problems(text)` returns anything (`log-not-last`,
+  `log-line`), or `log_lines()` raises `Refused` (two Logs, an entry `_entry_parts()` refuses), the entry is not
+  answered and is flagged, beside the Log's own error.
 - **The Log alone decides**, on a standing ledger and on an edit alike: `check()` never compares an Ask with
   `old`'s. An entry the edit moved or made (a reopen, a renumber), or whose Ask a link rewrite or the canonical
   form touched, reads as its Log says. A new question on an answered entry is caught where it is written instead
@@ -107,7 +110,9 @@ override alike. The person in the lines is not compared: a reassign or a lift na
   line, so with two decisions, one lifted and the other then dropped by hand, the last decision line is still the
   lift and the entry reads as answered. Through the writer every drop is a lift or a reassign (below), so only a
   route that bypasses the writer can hide a wait this way; a check of the Log against the gates' history is not
-  attempted.
+  attempted. Through the writer, too, an entry is answered by whoever its caller lets lift (`set --blocked-by ""
+  --by <person>`, or `--override`): who may lift is the caller's (`_gate_route()`, *Lifting a gate*), as it is for
+  every decision, and the Log names who did.
 
 Why the Log and not the base. agent-cadence's reading (TD-109's Fix, question 1) is that an entry whose base carried
 a decision the edit lifts is standing. That reading is right for the lift itself, and D2 gives the same answer
@@ -132,8 +137,10 @@ there); an Ask written onto an entry with no decision is refused by `edit_entry(
 
 **Writing an Ask needs a decision.** `edit_entry(…, "edit")` with `section` `Ask` (replacing the section or adding
 it) is refused when the entry's `Blocked by` names no decision in D1's sense: *"TD-n names no decision (<person>):
-an Ask is what a decision waits on — write them together with set --blocked-by "…, decision (<person>)" --ask
-FILE"*. So is
+an Ask is what a decision waits on — if it waits on a person, write them together with set --blocked-by "…,
+decision (<person>)" --ask FILE; if it waits on no one, remove the Ask with edit --section Ask --remove"*. An
+answered entry's Ask is therefore not editable while ungated, a typo or a stale link included: its cures are a
+gate, removal, or a hand edit and `fmt`, and that is accepted (the Ask is a record of the question as asked). So is
 `edit_entry(…, "set")` that writes a non-empty header `Ask` field, or changes one, when the resulting `Blocked by`
 names no decision. This replaces a `check()` rule that would compare an answered entry's Ask with the base's, which
 a reopen, a renumber, a link rewrite and the canonical form all trip (F9). A question asked again on an answered
@@ -172,14 +179,21 @@ visibly, which is all TD-109 asks, and a guard against a stale question would ne
 exceptions (a reassign, a second person's decision, a header Ask) and its own fixtures (F31, F32; withdrawn in
 round 4, F34).
 
-**What "answered" is, in code.** D2's rule is one module function, `ask_answered(text) -> bool` over an entry's
-text (its Log read by `log_lines()`), which `check()` calls; it is public so a consumer reading a ledger can ask
-the same question.
+**What "answered" is, in code.** D2's rule is one private module function, `_ask_answered(text) -> bool` over an
+entry's text (its Log read by `log_lines()` and `log_problems()`), which `check()` calls; nothing outside the module
+needs it, so no new public name enters the vendored API. Unit tests pin it beside the fixtures, and pin
+`plan_edit(…, "note" | "edit", ask=…)` raising `Unusable`.
 
 **`new --ask`.** `plan_new()` already writes both at once (its `sections`). The `ledger.py new` command takes only
-`--why`, `--fix` and `--done-when`, so it gains `--ask FILE|-`, written as the `Ask` section beside them, so a new
-entry that waits on a person is filed whole: `new --blocked-by "decision (<person>)" --ask FILE`. Without the
-gate, `decision-missing` refuses it, as it does any `new` with an Ask and no decision.
+`--why`, `--fix` and `--done-when`, so it gains `--ask FILE|-`, so a new entry that waits on a person is filed whole:
+`new --blocked-by "decision (<person>)" --ask FILE`. Its edges:
+- **Placement:** the sections are written Why, Ask, Fix, Done when, so the Ask sits after the Why, where `edit` adds
+  one.
+- **Stdin:** `--ask -` joins the count of section flags reading stdin, so at most one of `--why`, `--ask`, `--fix`
+  and `--done-when` is `-`, as today for the three.
+- **A declared `Ask`:** in a ledger whose `Fields:` declares `Ask`, `new --ask` is refused with `entry_text()`'s own
+  refusal of a section named after a declared field (v2.8); there the Ask is `--field 'Ask=…'`.
+- Without the gate, `decision-missing` refuses it, as it does any `new` with an Ask and no decision.
 
 **Removing one.**
 
@@ -187,7 +201,9 @@ Today `edit --section <name> --remove` removes only a misplaced section (v2.8). 
 before the Log existed, or was written by mistake, needs a way out that is not a gate; no writer removes it now.
 `edit_entry(…, remove=True)` also removes the section `Ask` (matched as leads are, so never a qualified `Ask (…)`)
 when the entry's `Blocked by` names no decision in D1's sense. It is refused while one does: the Ask is what the
-decision waits on (`ask-missing` would follow). A header `Ask` field is already removed by `set`'s empty value.
+decision waits on (`ask-missing` would follow). In a ledger whose `Fields:` declares `Ask`, a body `Ask` section is
+a misplaced section and stays removable as v2.8 has it, whatever `Blocked by` says: the new condition applies only
+to an `Ask` that is not misplaced. A header `Ask` field is already removed by `set`'s empty value.
 The build updates every place that says what `remove` takes: SPEC *Ledger entries and their edits* and *The ledger
 writer* (below), `edit_entry()`'s docstring and its refusal *"{name} is not misplaced: only a section named Title or as a header
 field is removed"*, `plan_edit()`'s docstring, and `ledger.py`'s `edit` description in its
@@ -282,7 +298,8 @@ After "… ℹ on a standing ledger)." and before "A decision reassigned more th
 > each has its own flag whose cure writes one; an `until` or an `event` does not. An entry is **answered** when the
 > last of its Log's `gate added: decision (…)`, `gate reassigned:`, `kept waiting: decision (…)` and `gate lifted:
 > decision (…)` lines is a `gate lifted: decision (…)`: the Ask stays as the record of the question, as *Lifting is
-> text* keeps an event's section. A Log that cannot be read answers nothing, and the Log alone decides, on an edit
+> text* keeps an event's section. "Last" is in file order. A Log that cannot be read (one `log_problems()` faults, or
+> two Logs) answers nothing, and the Log alone decides, on an edit
 > as on a standing ledger. An `**Ask (…):**` lead is its own section, never an Ask. The cure is the gate (`set`), or, where nothing waits on a
 > person, the Ask removed: `edit --section Ask --remove`, or a header `Ask` emptied with `set`. Which `Owner`
 > values name a person is a ledger's own, so an Owner is never read as a wait here.
@@ -306,7 +323,7 @@ for any other, for a header name the entry's header lacks (`set` it first), and 
 
 > With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a header name, and (v3.1) the `Ask`
 > section of an entry whose `Blocked by` names no decision (as `decision-missing` counts one, *The ledger*); it is
-> refused for any other section, for an `Ask` while a decision holds, for a header name the entry's header lacks
+> refused for any other section, for an `Ask` that is not misplaced while a decision holds, for a header name the entry's header lacks
 > (`set` it first), and with words.
 
 ### In *The ledger writer*, the `set` and `edit` commands
@@ -354,7 +371,9 @@ and after the `set` command's `--title` clause add:
   (`retired` only); an Ask with an unreadable `decision (the owner)` (`blocked-item` and `decision-missing`); a
   `**Ask (earlier):**` section with no gate (none); a `**Ask:**` line inside a code fence and no gate (none); two
   decisions, one lifted and one still carried (none); an answered entry whose Log has a malformed line (ℹ, beside
-  `log-line`: an unreadable Log answers nothing). And in `gates.archive.md`, an archived entry with an Ask and no
+  `log-line`: an unreadable Log answers nothing); an Ask whose Log's `gate lifted` line is dated before the `gate
+  added` line after it (ℹ: file order decides). And a v1-ledger case (`fixtures/ledger/`, a one-file ledger) with an
+  ungated Ask (ℹ) and an answered one (none). And in `gates.archive.md`, an archived entry with an Ask and no
   gate (none). The case's `check_since_empty` (`check(old="")`) shows each flagged entry as an error, since every
   entry is new against an empty base; that is expected.
 - **`fixtures/ledger_edit/`, its `check` group (`check()` given `old`):** an ungated Ask added by the edit (error);
@@ -373,7 +392,9 @@ and after the `set` command's `--title` clause add:
 - **`fixtures/ledger_edit/`, its `edit_entry` group:** `remove` of `Ask` with no decision (removed), with a decision
   (refused), and of an `Ask (old)` section (refused: neither misplaced nor an Ask); `edit` of `Ask` with no
   decision, replacing (refused) and adding (refused), and with `decision (pat)` (written); `edit` of `Ask` on an
-  answered entry (refused); `set` of a header `Ask` with no decision (refused), with `Blocked by: decision (pat)` in
+  answered entry (refused); `edit` of `Ask` on an entry blocked by `decision (designer)` and by `hold` (written:
+  a retired item counts as a decision for D3 too); `remove` of a body `Ask` in a ledger declaring `Ask`, on a gated
+  entry (removed: misplaced, as v2.8); `set` of a header `Ask` with no decision (refused), with `Blocked by: decision (pat)` in
   the same call (written), and of an empty `Ask` (removed).
 - **`fixtures/ledger_writer/`:** `new` with an Ask section and no gate (refused, `decision-missing`); `new` with an
   Ask and `decision (pat)` (written); `set --blocked-by "" --by pat` dropping the decision from an entry with an Ask
@@ -388,7 +409,11 @@ and after the `set` command's `--title` clause add:
   and `new --ask` with no gate (refused); `set --ask` with a decision kept, reassigned, and lifted while another
   remains (each written), replacing an existing Ask on a gated entry with `--field` beside it (written), with nothing
   else to set (refused), and on an entry holding a header `Ask` (refused); `set --blocked-by "decision (pat)"` alone on an
-  answered entry (written: D3 *Re-asking*) and on a standing, unanswered ungated Ask (written: its cure).
+  answered entry (written: D3 *Re-asking*) and on a standing, unanswered ungated Ask (written: its cure); `new --ask
+  -` beside `--why -` (refused: one stdin); `new --ask` in a ledger declaring `Ask` (refused) and `new --field
+  'Ask=…' --blocked-by "decision (pat)"` there (written); `set --ask` in that ledger (refused) and `set --blocked-by
+  "decision (pat)" --field 'Ask=…'` there (written); an empty `--ask` (refused); and an answered entry rewritten by
+  `fmt` and by a relink (written, no flag).
 
 ## Builds
 
@@ -401,6 +426,8 @@ release, and is that consumer's.
 ## Not done
 
 - **No Owner rule** (D4).
+- **No re-gate guard** (D3 *Re-asking*): refusing a gate alone on an answered entry was designed in round 3 and
+  withdrawn in round 4 (F25, F31, F32, F34); a stale Ask on a re-gated entry is the session's to rewrite.
 - **No pickability change** (D1): the flag names the fault; holding the entry would hide it further.
 - **No board-side check.** A board item whose Context names no gate but which waits on a person is the board's own
   question, not this flag's.
