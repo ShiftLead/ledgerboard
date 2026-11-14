@@ -110,9 +110,9 @@ override alike. The person in the lines is not compared: a reassign or a lift na
   line, so with two decisions, one lifted and the other then dropped by hand, the last decision line is still the
   lift and the entry reads as answered. Through the writer every drop is a lift or a reassign (below), so only a
   route that bypasses the writer can hide a wait this way; a check of the Log against the gates' history is not
-  attempted. Through the writer, too, an entry is answered by whoever its caller lets lift (`set --blocked-by ""
-  --by <person>`, or `--override`): who may lift is the caller's (`_gate_route()`, *Lifting a gate*), as it is for
-  every decision, and the Log names who did.
+  attempted. Through the writer, too, an entry is answered by a lift the caller permits: `set --blocked-by "" --by
+  <person>` takes only the gate's own person (*Lifting a gate*), while `--override` takes anyone with a why; who
+  may run an override is the caller's to check (`_gate_route()`), as for every decision, and the Log names who did.
 
 Why the Log and not the base. agent-cadence's reading (TD-109's Fix, question 1) is that an entry whose base carried
 a decision the edit lifts is standing. That reading is right for the lift itself, and D2 gives the same answer
@@ -202,8 +202,9 @@ before the Log existed, or was written by mistake, needs a way out that is not a
 `edit_entry(…, remove=True)` also removes the section `Ask` (matched as leads are, so never a qualified `Ask (…)`)
 when the entry's `Blocked by` names no decision in D1's sense. It is refused while one does: the Ask is what the
 decision waits on (`ask-missing` would follow). In a ledger whose `Fields:` declares `Ask`, a body `Ask` section is
-a misplaced section and stays removable as v2.8 has it, whatever `Blocked by` says: the new condition applies only
-to an `Ask` that is not misplaced. A header `Ask` field is already removed by `set`'s empty value.
+a misplaced section and keeps v2.8's rule, whatever `Blocked by` says: it is removed when the header holds an `Ask`
+field, and otherwise refused with v2.8's *set Ask first: removing it would lose its only words*. The new
+condition applies only to an `Ask` that is not misplaced. A header `Ask` field is already removed by `set`'s empty value.
 The build updates every place that says what `remove` takes: SPEC *Ledger entries and their edits* and *The ledger
 writer* (below), `edit_entry()`'s docstring and its refusal *"{name} is not misplaced: only a section named Title or as a header
 field is removed"*, `plan_edit()`'s docstring, and `ledger.py`'s `edit` description in its
@@ -394,7 +395,7 @@ and after the `set` command's `--title` clause add:
   decision, replacing (refused) and adding (refused), and with `decision (pat)` (written); `edit` of `Ask` on an
   answered entry (refused); `edit` of `Ask` on an entry blocked by `decision (designer)` and by `hold` (written:
   a retired item counts as a decision for D3 too); `remove` of a body `Ask` in a ledger declaring `Ask`, on a gated
-  entry (removed: misplaced, as v2.8); `set` of a header `Ask` with no decision (refused), with `Blocked by: decision (pat)` in
+  entry with a header `Ask` (removed: misplaced, as v2.8) and without one (refused: *set Ask first*); `set` of a header `Ask` with no decision (refused), with `Blocked by: decision (pat)` in
   the same call (written), and of an empty `Ask` (removed).
 - **`fixtures/ledger_writer/`:** `new` with an Ask section and no gate (refused, `decision-missing`); `new` with an
   Ask and `decision (pat)` (written); `set --blocked-by "" --by pat` dropping the decision from an entry with an Ask
