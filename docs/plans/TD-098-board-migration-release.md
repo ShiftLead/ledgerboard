@@ -194,10 +194,10 @@ directory the stub reads as (D6); any other place would leave a stub reading as 
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377; round 4's F420):* a repo's board
 splits in the change that makes its own tooling v3.0 (text 12; D12's order: agent-cadence's in its vendor PR, ShiftLead's in its sync PR,
-this repo's in its pin bump, these by the end of the UTC day after agent-cadence's merged, and a roster repo's in
+this repo's in its pin bump, ShiftLead's and this repo's by the end of the UTC day after agent-cadence's merged, and a roster repo's in
 its own pin bump when TD-100 has it bump; round 4's F420, round 5's F444), landed when no open PR edits the board
-(a notices PR another repo's sweep or `set` left open on it is closed first, and refiled by that tool on the
-directory once the split lands; round 5's F445) and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
+(a notices PR another repo's sweep or `set` left open on it is closed first, and refiled once the split lands: a
+sweep's by its next run, a `set`'s by running that `set` again; round 5's F445, round 6's F448) and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
 PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
 
@@ -269,8 +269,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   on its own board, and a `set` there logs `no board item` for a decision the split board holds. ShiftLead's
   v2.x `gatesweep` and `workorders` read agent-cadence's split board as empty between (1) and (2), which (2)'s
   readiness keeps short. **The default** (the author's, put to the person as a steer): (2), and of (3) this repo's
-  own bump (the one pinning repo in the three repos' rollout; each other pinning repo follows when TD-100 has it
-  bump; F444), land by the end of the UTC day after (1) merged, so that
+  own bump (ShiftLead's is (2); F444, round 6's F449), land by the end of the UTC day after (1) merged, so that
   is the window; a roster repo bumps when TD-100 has it do so, on v2.x tooling and a v2 board until then (TD-078's
   D5 and D7; round 5's F434); a duplicate an old-pin sweep files in it
   (ShiftLead's v2.x `gatesweep` among them) is closed by hand, and the rollout's entry says so. The alternatives
@@ -296,8 +295,7 @@ board is split.
 - **agent-cadence**:
   - vendor v3.0, its ledger first meeting TD-078's D5, and split its own `docs/user_attention.md` with `board.py
     split` in that same PR (D12's step 1; round 4's F420), landed when no open PR edits the board (a notices PR
-    another repo's sweep or `set` left open on it is closed first, and refiled by that tool on the directory once
-    the split lands; round 5's F445) and no unpushed
+    another repo's sweep or `set` left open on it is closed first and refiled after, as D11 says; round 5's F445) and no unpushed
     board commit is held; `gate_sweep.py`'s skip of a board it cannot write names the split, and `ledger.py set`'s
     reassign or override refuses a target board still v2, both files put back, naming that repo's split (D12;
     round 3's F400, F408; round 5's F429);
@@ -308,12 +306,17 @@ board is split.
     board's `archive/` as empty; round 3's F406); and its own-board dedupe of a *lift was closed* item (`asked`,
     :421-424, from `parse_board()` and `parse_closed_items()` over `BOARD_PATH` and `BOARD_ARCHIVE_PATH` text, by
     `it.text` and `CONTEXT_RE`), which over the stub would read nothing and refile the item every run, reads the
-    loaded `Board`'s open and archived items' `context` instead (round 5's F442);
+    `Board` loaded whole (no `since`, as it reads the whole archive today) over its open and archived items'
+    `context`, compared as today (`" ".join(…).rstrip(".").lower()`; round 5's F442, round 6's F447);
   - `scripts/ledger.py`'s `covers()` and `board_people()` callers pass the `Board` `load_board()` gives, never text,
     read with an `ls` that lists subdirectories (F394, F406); its own-board reads and edits by line and by text go
     to the item and its id (round 5's F443): `LB._item_gate(it.text)` (:1457-1468, :1687) becomes `_item_gate(it)`
     on the `BoardItem`, which the module already takes, and each `plan_edit(…, item.line, item.text[:40], …)`
-    (:1490, :1595, :1652) becomes `board.py`'s `plan_edit(board, action, item.id, …)` (TD-095's D7); the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
+    (:1490, :1595, :1652) becomes `board.py`'s `plan_edit(board, action, item.id, …)` (TD-095's D7); `rank()`'s
+    tie-break `LB.item_key(it.text)` (:1459) becomes the item's `id` (text 12: tied items may change order at the
+    split), and the refusal messages' `pick[1].text[:80]` (:1465, :1468), the `- close:` lines' `it.text` (:1665)
+    and the note's `item.line` (:1500) read the item's `words` and `id` (round 6's F446); the done-when's grep also
+    finds no `.text` or `.line` read on a `BoardItem`; the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
     finds none outside the vendored module;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split); and
     it edits through `board.py`'s `plan_edit()`, not the module's `edit_item()` alone, so a v2 board draws D7's
