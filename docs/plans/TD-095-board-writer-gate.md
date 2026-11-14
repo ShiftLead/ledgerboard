@@ -250,6 +250,21 @@ archive files the consumer fetches.
   `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and (a) before the `Decided:` by
   and date), the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
   path and bytes (`lift-board-line`) last, where today's byte compare is.
+- **One path rule for the three verdicts** (round 6's F338): `_tree_board_path(tree)` is `BOARD_DIR` when a key
+  of the tree starts with `BOARD_DIR + "/"`, else `BOARD_V2_PATH`; `lift_pr_verdict()`, `tripwire()` and
+  `uncovered_decisions()` (through `_tree_board()`) each call `load_board()` on it, at the base and the head alike,
+  so the three read one board from one tree. Another repo's board read from a file system takes the same rule: its
+  directory when `ls` of it lists at least one name, else its `docs/user_attention.md`.
+- **The messages** (round 6's F340), each pinned by `fixtures/verdict/expected.json`: `lift-no-board` is `the PR
+  has no board at docs/user_attention/ or docs/user_attention.md at its base and head`; `lift-board-v2` is `the
+  PR's board is a v2 board at its base or head: a v3 writer writes none`; the stray board path's `lift-files` is
+  `<path> is under docs/user_attention/ but neither an item file in it nor one under archive/<YYYY-MM>/`; the
+  shape's `lift-board-diff` is `the board changes are not one item's file changed in place or moved to archive/`,
+  replacing today's *not one item line changed in place* and *changes its line ending* (a file's bytes are
+  `lift-board-line`'s); (b)'s `lift-board-diff` keeps today's text with *file* for *line* (`the changed board file
+  is not one open item answered in place`); `lift-board-line` is `<path> at the head is not what the decide edit
+  writes at <item_path(id, closed)>`. Every other message keeps today's text, a list of `files` it printed now the
+  sorted changed paths.
 - `tripwire()` reads covering items through `load_board()`, and matches a base item to its head counterpart by
   id among the head's open items and the closed ones in the archive files the tree holds (a close moves it), its
   `gained`, `newly_lifted` and `still` sets compared by id, an undated v2 item (id None) by `item_key()` as
@@ -516,9 +531,18 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   `lift-no-board`, F328), `v3_lift_work_order_archived` (a work order moved to `archive/` at the head: review,
   `lift-board-line`, F306), `v3_lift_closes_listed_once` (as `v3_lift_closes`, the file list naming the move by its new path alone: the same
   verdict, F153), `v3_tripwire_lifted`, `v3_uncovered_new_decide`, `v2_lift` (`lift-board-v2`), and `split_pr` (a v2 pair at the
-  base, the directory at the head: no tripwire flag; review, `lift-board-v2`). The existing cases move their board into the directory with
+  base, the directory at the head: no tripwire flag; review, `lift-board-v2`). **The runner's trees** (round 6's
+  F337): `trees()` gains `delete_base`, paths taken out of the base after the shared base and the case's `base/`
+  are laid together and before the head is laid over it, beside `delete` for the head; a path in either ending in
+  `/` takes every path under it. `v2_lift` and `split_pr` give `delete_base: ["docs/user_attention/"]` and put the
+  v2 pair in their `base/` (`v2_lift`'s head keeping it, `split_pr`'s `head/` holding the directory);
+  `v3_lift_no_board`, `v3_head_v2` and `v3_stub_only_head` give `delete: ["docs/user_attention/"]`, the last two
+  putting the v2 pair, or the stub alone, in their `head/`. **The other repos' boards** (round 6's F339):
+  `uncovered()` reads each `boards` entry's `board`, a directory or a `.md` file under `boards/`, through
+  `load_board()` (a v2 file's archive beside it as `<stem>_archive.md`), and `cases.json`'s `archive` key goes.
+  The existing cases move their board into the directory with
   the same items, except that `a CRLF board whose answered line drops its CR`'s expected verdict becomes
-  `lift-board-line`; the other `lift-board-diff` messages are those of text 7's (b).
+  `lift-board-line`; the messages are D10's (*The messages*).
 
 **Unit tests** — the opening is TD-092's plan's, B5's bullet TD-070's plan's; B3's and B4's:
 - **B3**: `tests/test_board_writer.py` is rewritten over a directory: each run's `--line`/`--expect` becomes `--id`,
@@ -579,7 +603,8 @@ search finds its names only where it allows.
 trees, `tripwire()`, `lift_pr_verdict()`, `uncovered_decisions()`, each reading `_item_gate(item)` of a
 `BoardItem` where it read `_item_gate(it.text)`, TD-092's D4 (*`words` and `text`*); `lift_pr_verdict()` judging the changed set from the trees and
 `files` only for a path outside the board and the ledger, F153; `decision-no-lift` naming the item's id, F156;
-`uncovered_decisions()`'s `boards` as `Board` triples, F290), `fixtures/run.py` (`uncovered()`, F290),
+`uncovered_decisions()`'s `boards` as `Board` triples, F290; `_tree_board_path()`, F338), `fixtures/run.py`
+(`uncovered()`, F290, F339; `trees()`'s `delete_base` and prefix deletes, F337),
 `SPEC.md` (text 7, and text 8's *The readers take the `Board`* bullet's "and the merge gate's verdicts", which
 TD-092's B2 leaves out, TD-092's round 1's F192), `fixtures/verdict/`, `tests/test_ledgerboard.py`'s verdict tests (F149).
 **Records:** none change. Done when: the precheck is green, every verdict case passes, and *The search*'s B4 search
