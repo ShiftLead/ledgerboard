@@ -1304,6 +1304,9 @@ v2.7 on the roster repos whose ledgers still hold `Waits` lines.)*
 
 ### 7.3 What each remodel session does
 
+This is what the remodels of agent-cadence and ShiftLead (and ledgerboard's own) do on their v2.4 and v2.7 bumps; a
+roster repo's way to v3.0 is TD-100's, designed when the first resumes (cut 2026-11-14, TD-099).
+
 **Mechanical** (`ledger.py migrate --dry-run`, then without):
 - **under v2.4:**
   - `Waits: until DATE` → `until DATE`, and each gate the remodel writes from a `Waits` line gets a `gate added` line dated the remodel day, since the remodel reviewed it (from v2.8 `migrate` stops on an open `Waits` instead, rule 6; how a roster repo writes such a gate is TD-100's);
