@@ -5371,8 +5371,9 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                     raise Refused(f"set {name} first: removing it would lose its only words")
             elif key == "ask":  # v3.1: the Ask of an entry that names no decision
                 if _names_decision(_value(header, "blocked by")):
-                    raise Refused(f"{tid}'s Blocked by names a decision: its Ask is what the decision waits on "
-                                  "(ask-missing would follow) — lift the decision first")
+                    raise Refused(f"{tid}'s Blocked by names a decision (or a retired item standing for one): its "
+                                  "Ask is what the decision waits on (ask-missing would follow) — lift or remove "
+                                  "the decision first")
                 if not at:
                     raise Refused(f"the body has no section named {name!r} to remove")
             else:

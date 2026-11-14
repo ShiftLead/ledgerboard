@@ -548,6 +548,8 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
             if "ask" in {field_key(str(k)) for k in declared(led.texts()[0])[0]}:
                 raise Refused(f"this ledger's Fields: declares Ask, so {tid_}'s Ask is that header field: set it with "
                               "--field 'Ask=…' beside the gate")
+            if any(field_key(str(k)) == "ask" and str(v or "").strip() for k, v in (fields or {}).items()):
+                raise Refused(f"{tid_} would hold two Asks: give --ask or --field Ask=…, not both")
             if "ask" in entries(text)[0]["fields"]:
                 raise Refused(f"{tid_} holds its Ask in the header: set it with --field Ask=… beside the gate")
         out = edit_entry(lifted, "set", fields=dict(fields or {}), today=day,  # v2.5: dates a gate it adds

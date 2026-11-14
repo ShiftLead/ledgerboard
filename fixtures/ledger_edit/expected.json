@@ -1938,7 +1938,7 @@
    "refused": "Ask (old) is not misplaced: only a section named Title or as a header field, or the Ask of an entry with no decision, is removed"
   },
   "remove_ask_refused_gated": {
-   "refused": "TD-802's Blocked by names a decision: its Ask is what the decision waits on (ask-missing would follow) — lift the decision first"
+   "refused": "TD-802's Blocked by names a decision (or a retired item standing for one): its Ask is what the decision waits on (ask-missing would follow) — lift or remove the decision first"
   },
   "remove_ask_ungated": {
    "ok": "## TD-801: An Ask with no decision\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n"

@@ -7,6 +7,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -400,6 +401,31 @@ class DecisionMissing(unittest.TestCase):  # v3.1 (TD-112, TD-109 B1): an Ask wi
             self.assertIn("**Blocked by:** decision (pat)\n", out)
             self.assertIn("**Ask:** pat says which way.\n", out)
             self.assertEqual(plan.info["notes"], [])
+
+    def test_set_ask_refused_beside_a_header_ask_field(self):  # one Ask (review nit)
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(Refused, "two Asks"):
+                W.plan_edit(W.Ledger.open(ledger(tmp)), "set", "TD-001",
+                            fields={"Blocked by": "decision (pat)", "Ask": "in the header"}, ask="in the body",
+                            today="2026-01-15")
+
+    def test_a_decide_lift_leaves_its_entry_clean(self):  # the plan's board_writer case: D2's decide lift end state
+        case = Path(__file__).resolve().parent.parent / "fixtures" / "board_writer" / "decide_lift_default_ledger"
+        argv = json.loads((case / "cmd.json").read_text())["argv"]
+        from ledgerboard import board as B
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(case / "before", tmp, dirs_exist_ok=True)
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(B.main(argv), 0)
+                led = W.Ledger.open("docs/ledger")
+                self.assertIn("gate lifted: decision (Robin)", Path("docs/ledger/TD-001.md").read_text())
+                flags = L.check(*led.texts(), today="2026-01-15")
+            finally:
+                os.chdir(cwd)
+        self.assertEqual([r for r in flags if r["kind"] == "decision-missing"], [])
 
     def test_set_ask_refused_in_a_ledger_declaring_ask_even_over_a_body_ask(self):  # F48
         with tempfile.TemporaryDirectory() as tmp:
