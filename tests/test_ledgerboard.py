@@ -1181,17 +1181,27 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
     D = Path(__file__).resolve().parent.parent / "fixtures" / "verdict"
 
     def trees(self, name):
-        read = lambda d: {str(p.relative_to(d)): p.read_text(encoding="utf-8")  # noqa: E731
+        read = lambda d: {str(p.relative_to(d)): p.read_bytes().decode("utf-8")  # noqa: E731
                           for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
-        base = {**read(self.D / "base"), **read(self.D / "cases" / name / "base")}
-        return base, {**base, **read(self.D / "cases" / name / "head")}
+        spec = json.loads((self.D / "cases.json").read_text(encoding="utf-8"))
+        case = next(c for k in ("verdict", "tripwire", "uncovered") for c in spec[k] if c["name"] == name)
+
+        def drop(t, paths):  # v3.0: a path ending in `/` takes every path under it
+            return {k: v for k, v in t.items() if not any(k == p or (p.endswith("/") and k.startswith(p))
+                                                          for p in paths)}
+        base = drop({**read(self.D / "base"), **read(self.D / "cases" / name / "base")}, case.get("delete_base", []))
+        return base, drop({**base, **read(self.D / "cases" / name / "head")}, case.get("delete", []))
+
+    @staticmethod
+    def board_of(tree):  # v3.0: the paths of the board's directory
+        return {k: v for k, v in tree.items() if k.startswith(L.BOARD_DIR + "/")}
 
     def test_the_tripwire_reads_the_base_as_well_as_the_head(self):
         base, head = self.trees("no board item, but the base had one (read the head alone and it passes)")
         self.assertEqual([k for k, _ in L.tripwire(base, head, "ledger: set TD-150 (session w-1)", "acme/widgets")],
                          ["tripwire-no-board-item"])
         # the same diff with the base's board read as the head's: nothing covers at either, so it passes
-        alone = {**base, L.BOARD_PATH: head[L.BOARD_PATH]}
+        alone = {**{k: v for k, v in base.items() if k not in self.board_of(base)}, **self.board_of(head)}
         self.assertEqual(L.tripwire(alone, head, "ledger: set TD-150 (session w-1)", "acme/widgets"), [])
 
     def test_a_shared_lift_whose_item_gains_a_decided_is_flagged(self):  # v2.7 (TD-067 D3)
@@ -1216,6 +1226,34 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         with self.assertRaises(L.Refused):
             L.lift_pr_verdict(base, head, files, subject, True, "2026-01-15", None, "acme/widgets")
 
+    def test_a_move_reported_as_one_path_or_two_gives_one_verdict(self):  # v3.0 (TD-095 D10, F153)
+        base, head = self.trees("v3_lift_closes")
+        subject = "board: decide Warm the cache nightly?: Go (session w-1)"
+        moved = f"{L.BOARD_DIR}/archive/2026-01/2026-01-06-85a7b461.md"
+        for files in (["docs/ledger/TD-100.md", f"{L.BOARD_DIR}/2026-01-06-85a7b461.md", moved],
+                      ["docs/ledger/TD-100.md", moved],  # a forge that reports the move as a rename
+                      [moved, "docs/ledger/TD-100.md", moved]):  # a path listed twice
+            with self.subTest(files=files):
+                got = L.lift_pr_verdict(base, head, files, subject, 1, "2026-01-15", "2026-01-15", "acme/widgets")
+                self.assertEqual(got, {"carve_out": True, "flags": [], "review": []})
+        # what changed is read from the trees: a list that leaves the ledger file out changes no verdict
+        got = L.lift_pr_verdict(base, head, [moved], subject, 1, "2026-01-15", "2026-01-15", "acme/widgets")
+        self.assertTrue(got["carve_out"], got)
+
+    def test_a_tree_lists_its_subdirectories(self):  # v3.0 (TD-092 D6): _tree_ls() as a file system's ls
+        ls = L._tree_ls({"docs/user_attention/README.md": "", "docs/user_attention/archive/2026-01/x.md": "",
+                         "docs/user_attention/archive/2026-02/y.md": "", "docs/ledger/TD-1.md": ""})
+        self.assertEqual(ls("docs/user_attention"), ["README.md", "archive/"])
+        self.assertEqual(ls("docs/user_attention/archive"), ["2026-01/", "2026-02/"])
+        self.assertIsNone(ls("docs/user_attention.md"))
+        self.assertEqual(L._tree_board_path({"docs/user_attention.md": "x"}), L.BOARD_V2_PATH)
+        self.assertEqual(L._tree_board_path({"docs/user_attention/README.md": "x"}), L.BOARD_DIR)
+
+    def test_the_v2_paths_are_renamed_with_no_alias(self):  # v3.0 (TD-095 D10, F311)
+        self.assertEqual((L.BOARD_DIR, L.BOARD_V2_PATH, L.BOARD_V2_ARCHIVE_PATH),
+                         ("docs/user_attention", "docs/user_attention.md", "docs/user_attention_archive.md"))
+        self.assertFalse(hasattr(L, "BOARD_PATH") or hasattr(L, "BOARD_ARCHIVE_PATH"))
+
     def test_a_repo_outside_the_grammar_is_refused(self):
         base, head = self.trees("a decide lift")
         for call in (lambda: L.tripwire(base, head, "", "acme widgets"),
@@ -1233,15 +1271,16 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
                 L.migrate_subject(*bad)
 
     def test_a_line_break_that_split_misses_numbers_as_parse_board_does(self):
-        base, head = self.trees("a decide lift")
+        base, head = self.trees("v2_lift")  # a v2 board, at L.BOARD_V2_PATH
+        P = L.BOARD_V2_PATH  # noqa: N806
         for b in ("\x0c", " "):  # str.splitlines() breaks on these, as parse_board() numbers lines
             with self.subTest(brk=repr(b)):
                 odd = lambda t: t.replace("\n\n", "\n" + b + "\n", 1)  # noqa: E731
-                bt, ht = {**base, L.BOARD_PATH: odd(base[L.BOARD_PATH])}, {**head, L.BOARD_PATH: odd(head[L.BOARD_PATH])}
+                bt, ht = {**base, P: odd(base[P])}, {**head, P: odd(head[P])}
                 self.assertEqual(L.tripwire(bt, ht, "", "acme/widgets"), [])
-                new = ht[L.BOARD_PATH] + "- [ ] decide 2026-01-06 (n/a) — Which store? Context: TD-100 decision (pat). " \
+                new = ht[P] + "- [ ] decide 2026-01-06 (n/a) — Which store? Context: TD-100 decision (pat). " \
                     "Due: 2026-01-20. Answers: Files | Db.\n"
-                got = L.uncovered_decisions(bt, {**ht, L.BOARD_PATH: new}, [], "acme/widgets")[0]
+                got = L.uncovered_decisions(bt, {**ht, P: new}, [], "acme/widgets")[0]
                 self.assertEqual([k for k, _ in got], ["decision-no-lift"])
 
 
