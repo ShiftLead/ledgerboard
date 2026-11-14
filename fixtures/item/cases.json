@@ -741,6 +741,14 @@
       "text": "## Rotate the key\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Answers:** Go | Hold: <note> (default)\n**Decided:** 2026-11-12 — Go\n"
     },
     {
+      "name": "two_forms_closed",
+      "text": "## Rotate the key\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Answers:** Go | Hold: <note> | hold: <why>\n**Closed:** 2026-11-12\n"
+    },
+    {
+      "name": "marked_form_closed",
+      "text": "## Rotate the key\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Answers:** Go | Hold: <note> (default)\n**Closed:** 2026-11-12\n"
+    },
+    {
       "name": "log_not_last",
       "text": "## Rotate the key\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: pat: ok\n\n- **Context:** after the Log.\n"
     },

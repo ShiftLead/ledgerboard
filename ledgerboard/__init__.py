@@ -3768,7 +3768,7 @@ def _item_values_problems(seen: Mapping[str, str]) -> list[str]:
     if raw is not None and not all(x.strip() for x in pieces):
         out.append("answers: an empty answer between bars")
     marks = sum(mk for _, _, mk in offered)
-    if decided:
+    if decided or "Closed" in seen:  # the form rules bind an open decide with no Decided alone (TD-075)
         if marks > 1:
             out.append("answers: more than one marked ` (default)`")
     elif kind == "decide":

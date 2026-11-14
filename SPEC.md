@@ -1299,7 +1299,7 @@ docs/user_attention/
 
 - **An open item** is a file `<id>.md` directly in the directory; **a closed one** is `archive/<YYYY-MM>/<id>.md`,
   `<YYYY-MM>` its `Closed:` date's month (`item_path(id, closed=None)`, `closed` that date). Any other file is not
-  an item, and none is deleted.
+  an item. No item's file is deleted.
 
 **The item id** is `YYYY-MM-DD-<8 hex>`: the item's `Added` date, a hyphen, and eight lower-case hex digits
 (`item_id(added, nonce)`, `added` a `YYYY-MM-DD` string and `nonce` a string, which raises `ValueError` for

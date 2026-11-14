@@ -74,7 +74,7 @@ FILE_EDITS = (("snooze", {"to": date(2026, 12, 1)}), ("due", {"to": date(2026, 1
               ("decide", {"answer": "Context: x, Decided: y"}), ("decide", {"answer": "Go (by Friday)", "by": "pat.lee"}),
               ("decide", {"answer": "Hold: after the freeze"}), ("decide", {"answer": "Go", "close": True}),
               ("decide", {"answer": "Not yet", "close": True}), ("reply", {"reply": "see Due: 2026-05-01", "by": "w-2"}),
-              ("reply", {"reply": "ok", "by": "sam lee"}))
+              ("reply", {"reply": "ok", "by": "sam lee"}), ("done", {}), ("done", {"why": "fixed it"}))
 
 
 def written_files() -> list[str]:
