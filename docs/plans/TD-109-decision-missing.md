@@ -128,15 +128,30 @@ there); an Ask written onto an entry with no decision is refused by `edit_entry(
 
 **Writing an Ask needs a decision.** `edit_entry(…, "edit")` with `section` `Ask` (replacing the section or adding
 it) is refused when the entry's `Blocked by` names no decision in D1's sense: *"TD-n names no decision (<person>):
-an Ask is what a decision waits on — set the gate first (set --blocked-by …), then write the Ask"*. So is
+an Ask is what a decision waits on — write them together with set --blocked-by "…, decision (<person>)" --ask
+FILE"*. So is
 `edit_entry(…, "set")` that writes a non-empty header `Ask` field, or changes one, when the resulting `Blocked by`
 names no decision. This replaces a `check()` rule that would compare an answered entry's Ask with the base's, which
 a reopen, a renumber, a link rewrite and the canonical form all trip (F9). A question asked again on an answered
-entry is gated first (`set`, logging `gate added`) and then written, and the entry is then gated, not answered. A
-`Hold: <note>` answer, as cadence.md §4.8 has a session record it, keeps the gate and puts the note in the Ask, so
-the Ask is written on a gated entry and is untouched. (Whether a `Hold` lifts is the item's `Lifts:`; one that lifts
-leaves an answered entry, whose Ask is then not rewritten.) The refusal is the
-module's, so every writer that calls `edit_entry()` has it.
+entry is gated and written in one `set --ask` (below), and the entry is then gated, not answered. A `Hold: <note>`
+answer, as cadence.md §4.8 has a session record it, keeps the gate and puts the note in the Ask, so the Ask is
+written on a gated entry and is untouched. Whether a `Hold` lifts is the item's `Lifts:`; where one lifts, the entry
+is answered and its Ask is not rewritten, so the session records the note with `note` (a Log line), not in the Ask.
+The refusal is the module's, so every writer that calls `edit_entry()` has it.
+
+**The gate and its Ask in one write: `set --ask`.** `ask-missing` already refuses a decision added to an entry with
+no Ask (an error on a changed entry, so `gate()` refuses it), and `decision-missing` with the refusal above refuses
+an Ask written to an entry with no decision. So an open entry that comes to wait on a person can no longer take its
+gate and its Ask as two writes, in either order: the two-write flow consumers use today (*the Ask first with `edit
+--section Ask`, then the gate with `set`*) stops at its first write (F14). The ledger writer's `set` gains `ask`
+(`plan_edit(…, "set", ask=<text>)`; `ledger.py set TD-n --ask FILE|-`): the Ask's words, written as the `Ask`
+section, replacing it or adding it, in the same write as the fields. `plan_edit()` runs the gate route, then
+`edit_entry(…, "set")` with the fields, then `edit_entry(…, "edit", section="Ask")` on that result (whose `Blocked
+by` now names the decision, so D3's refusal passes), and `gate()` judges the whole write once: the entry ends with
+both halves, so neither `ask-missing` nor `decision-missing` fires. `ask` is refused when the resulting `Blocked by`
+names no decision (the module's refusal, as for a lone `edit`), and when empty. It composes with a decision added,
+kept or reassigned; with one lifted by the gate route only if another decision remains. `new` already writes both
+at once.
 
 **Removing one.**
 
@@ -177,12 +192,36 @@ field, Log line, prefix or item key is new, the canonical form is unchanged, and
 *Versions*). It tightens `check()`, which a minor may do (v2.1's `cycle`, v2.4's `ask-missing`, v2.8's
 `misplaced-name` each did).
 
+**What a consumer's flows need (F14, F15).** Two things change for a caller, and each consumer's vendor PR takes
+them with the release:
+- **A wait is written in one write.** Any flow that writes an Ask and then the gate, as two writer calls (agent-cadence's
+  cadence and ShiftLead's session briefs both describe *its Ask first, `ledger.py edit TD-n --section Ask`, then the
+  gate, `set --blocked-by`*), becomes `ledger.py set TD-n --blocked-by "<ids>, decision (<person>)" --ask FILE`. A
+  consumer's wrapper passes `--ask` through. The old order is refused at its first write.
+- **`edit_entry()` refuses an Ask on an ungated entry.** A consumer that calls the module directly with
+  `edit_entry(…, "edit", section="Ask")` before setting the gate gets `Refused`. A minor may add refusals (v2.4's
+  `ask-missing` did); this one is named in *Versions* so a consumer finds it.
+So the design needs a consumer entry in each repo, filed there through its question seat once Paul gives the go:
+*agent-cadence: its cadence.md's wait-on-the-person steps and its `ledger.py` wrapper write the gate and its Ask with
+`set --ask` when it vendors ledgerboard v3.1*, and *ShiftLead: its briefs' and writer's wait-on-the-person steps do
+the same when its sync PR takes v3.1*.
+
 **What a consumer's existing entries need.** Nothing before it vendors. An open entry that already has an unanswered
 Ask and no decision is standing ℹ, and `gate()` never refuses a write over a fault already there. It becomes an
 error only where a check given a base meets it rewritten: a consumer's merge gate on a PR that edits that entry. So
 each consumer, in a PR of its own after vendoring, lists its `decision-missing` notes (`ledger.py --check`) and gates
 each entry or removes its Ask. agent-cadence's TD-264 already does this for its six (TD-156, TD-187, TD-194, TD-243,
 TD-247, TD-249); those whose wait is an Owner alone are D4's and are not flagged here.
+
+**The writes a standing fault still blocks** (F17, F18). `gate()` passes a write over a fault already there by
+comparing the flag's kind, id and words, so two writes of an entry with an unanswered, ungated Ask are refused:
+- **`renumber`** gives it a new id, so its flag is new. Gate it or remove its Ask first. (Every id-naming flag
+  behaves so today.)
+- **`reopen`** of an archived entry whose Ask the Log never answered (one answered before the Log existed): the
+  entry is absent from the open ledger before the write, so its flag is new, and an archived entry takes no `edit
+  --remove`. Its cure is the one the retired forms already have: fix the archived file by hand (remove the Ask, or
+  rename its lead `**Ask (answered):**`), then `ledger.py fmt TD-n`, then reopen. An archived entry whose decision
+  was lifted through the writer is answered and reopens cleanly.
 
 **Telling agent-cadence.** When the build merges, the builder mails agent-cadence's techlead that the next release
 carries `decision-missing`, so its TD-264 calls `check()` for the Ask half and keeps only its Owner half once it
@@ -232,22 +271,34 @@ for any other, for a header name the entry's header lacks (`set` it first), and 
 > refused for any other section, for an `Ask` while a decision holds, for a header name the entry's header lacks
 > (`set` it first), and with words.
 
-### In *The ledger writer*, the `edit` command
+### In *The ledger writer*, the `set` and `edit` commands
 
 Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced one; …)" with:
 
 > (or, v2.8, with `--remove` in place of `--from`, removes a misplaced one, or (v3.1) the `Ask` of an entry with no
 > decision; …)
 
+and after the `set` command's `--title` clause add:
+
+> From v3.1 `set` also takes `--ask FILE|-` (`plan_edit(…, ask=)`): the words of the entry's `Ask` section, written
+> (replacing it or adding it) after the fields, in the same write, so a decision and its Ask arrive together. An
+> entry cannot take a decision before its Ask (`ask-missing`) nor an Ask before its decision (*Edits*,
+> `decision-missing`), so this is the one way an existing entry comes to wait on a person. `--ask` is refused when the
+> `Blocked by` the write leaves names no decision, and when its words are empty.
+
 ### In *Versions*, after v3.0's paragraphs
 
 > **v3.1 adds `decision-missing`** (*The ledger*, `Blocked by`): `check()` flags an open entry with an Ask and no
 > decision whose Log does not show it answered — an error on an entry the edit changed, ℹ on a standing ledger — so
-> the ledger writer refuses a write that makes one; `edit` and `set` refuse to write an Ask on an entry with no
-> decision; and `edit`'s `remove` takes the `Ask` section of an entry with no decision. It reads every file v3.0 wrote, as v3.0 did: no field, Log line or key is new, and the canonical
-> form is unchanged. A ledger v3.0 checked clean can show `decision-missing` ℹ on entries it already held; no write
-> is refused over one, and `check()` given a base names it an error once an edit rewrites that entry, so a consumer
-> gates each or removes its Ask when it takes v3.1.
+> the ledger writer refuses a write that makes one. With it, `edit` and `set` refuse to write an Ask on an entry with
+> no decision (*Edits*), `edit`'s `remove` takes such an entry's `Ask` section, and the ledger writer's `set` takes
+> `--ask`, which writes a decision and its Ask in one write. It reads every file v3.0 wrote, as v3.0 did: no field,
+> Log line or key is new, and the canonical form is unchanged. **What it refuses that v3.0 wrote:** an Ask written to
+> an entry with no decision, so a caller that wrote an Ask and then its gate, as two writes, writes both with `set
+> --ask`; and `edit_entry()` raises `Refused` for such an Ask. A ledger v3.0 checked clean can show
+> `decision-missing` ℹ on entries it already held. A write over one is not refused, except a `renumber` or a
+> `reopen` of that entry, whose flag is then new; `check()` given a base names it an error once an edit rewrites the
+> entry. So a consumer gates each such entry or removes its Ask when it takes v3.1.
 
 (If another minor lands first, the build writes that number in every place above.)
 
@@ -268,7 +319,10 @@ Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced on
   changed); a lift written by `lift_gate()` (none); a decision dropped by a direct `edit_entry(…, "set")`, no lift
   line (error); a lifted entry the edit adds a note to (none); and, each on an answered entry (gate lifted, Ask
   kept), a reopen (the entry absent from `old`), a renumber, an Ask whose relative link a move rewrote, and the
-  Ask's whitespace changed (none of them flagged: the Log decides, F9).
+  Ask's whitespace changed (none of them flagged: the Log decides, F9). The existing case `edit_adds_after_why`
+  writes an `Ask` on `reordered.md`, whose `Blocked by` names no decision, so D3 refuses it: the build gives that
+  entry a `decision (…)` in the fixture so the case still pins section placement, and adds the refusal as its own
+  case (F16).
   That group's runner keeps only a listed set of kinds (`fixtures/run.py`, the `check` case: `archive-open-parts`,
   `part-of-archived`, `part-of-unknown`, `log-not-last`, `log-line`, `event-undated`, `status`, `misplaced-name`,
   `retired`), so the build adds `decision-missing` (and `blocked-item`, for the unreadable case if it is put here)
@@ -283,12 +337,17 @@ Replace "(or, v2.8, with `--remove` in place of `--from`, removes a misplaced on
   (written: the route lifts it, so the entry is answered, no flag); `edit --section Ask` adding an Ask to an entry
   with no decision (refused, by `edit_entry()`); `reopen` of an answered archived entry and `archive` of an entry an
   answered entry's Ask links to (written, no flag); a `note` on an entry already ungated (written, the fault being there before);
-  `edit --section Ask --remove` on an ungated entry (written, the flag gone) and on a gated one (refused).
+  `edit --section Ask --remove` on an ungated entry (written, the flag gone) and on a gated one (refused); `set
+  --blocked-by "decision (pat)" --ask` on an entry with no Ask (written, no flag: the one-write route); the old two
+  writes, `edit --section Ask` then `set --blocked-by`, each refused alone; `set --ask` with no decision left
+  (refused); `renumber` of an entry with an unanswered, ungated Ask (refused) and of an answered one (written); and
+  `reopen` of an archived entry with an unanswered Ask (refused).
 
 ## Builds
 
 One build, **B1**: the SPEC text above, `check()`'s flag (D1, D2), `edit_entry()`'s Ask refusals and wider `remove`
-(D3), the
+(D3), the writer's `set --ask` (D3: `plan_edit()`, its `ask` argument and docstring, `ledger.py set`'s `--ask` and
+its help), the
 fixtures above and unit tests, in one PR. Then agent-cadence is told (D5). Each consumer's vendor PR follows the
 release, and is that consumer's.
 
