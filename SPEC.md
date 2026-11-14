@@ -1128,7 +1128,7 @@ the same either way.
 **A closed item** is read as an open one is, once its trailing `Closed:` field is cut (`parse_closed_items(content)`,
 v2.4, of a board or its archive: each a `BoardItem` with its line and detail block). On a v3 board a closed item
 is a file under `archive/` with its `Closed:` (*Reading a board*). Its `raw`, `closed`, `fields`, `words` and
-`context` (v3.0) are read from the `- [x]` line as written; only its `text` is the cut line's.
+`context` (v3.0) are read from the `- [x]` line as written.
 
 **The decide lift** (v2.4) is what a lifting answer on a `decide` item whose Context names one entry and one gate
 does to the ledger: `decide_lift(item, entries, label, by, today, board_people, answered_by, archived=())`,

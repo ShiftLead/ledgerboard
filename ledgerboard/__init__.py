@@ -1801,7 +1801,7 @@ def parse_closed_items(content: str) -> list[BoardItem]:
     """The board's (or its archive's) closed items, in order, each read as parse_board() reads an open one
     (v2.4): its trailing `Closed:` field cut first, since the fields before it are anchored at the line's
     end. Each keeps its 1-based line and its detail block. Its ``raw``, ``closed``, ``fields``, ``words`` and
-    ``context`` (v3.0) are read from the `- [x]` line as written; only its ``text`` is the cut line's."""
+    ``context`` (v3.0) are read from the `- [x]` line as written."""
     lines = content.splitlines()
     shown = []
     for ln in lines:
