@@ -27,7 +27,16 @@ plan's and TD-092's plan's (*What is already settled*). This plan's decisions ta
 ## Options weighed
 
 The options are TD-070's plan's (S1, the directory) and TD-092's plan's (the id, the item's form, `Decided:` in a
-field, sections, listing the archive's months, the stub); none is about B3 or B4 alone.
+field, sections, listing the archive's months, the stub)). Three are this part's own:
+
+- **One plan for B3 to B5.** It would keep the list of what B5 removes beside what B3 and B4 replace; Paul chose the
+  split (TD-095's Ask, 2026-11-13), so B5 is TD-098's.
+- **`board.py` creating a missing board** on its first write. A mistyped `--board` would then start a second board
+  with no `README.md` and no `People:`, silently; so a write needs a v3 board (D7) and only B5's `split`, or a
+  person, makes one.
+- **Judging a lift by the forge's file list.** Forges report a move as a rename or as a removal and an addition, so
+  the verdict would turn on the forge; the verdicts read the two trees instead (D10), and the list only chooses
+  which archive files are fetched.
 
 ## Decisions
 
