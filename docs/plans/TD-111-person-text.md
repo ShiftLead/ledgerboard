@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** design, round 4 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** design, round 5 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -86,7 +86,7 @@ ACTOR_WORDS = ("me", "my", "myself", "you", "you'll", "you're", "you've", "you'd
 def code_tokens(text: str) -> list[str]
 def sentence_problems(text: str, *, question: bool, max_words: int) -> list[PersonTextProblem]
 def person_text_problems(sentence: str | None, answers: Sequence[str] = (), context: str | None = None, *,
-                         question: bool, people: Sequence[str] = (), actors: Sequence[str] = (),
+                         question: bool, people: Sequence[str] | None = (), actors: Sequence[str] = (),
                          default: str | None = None) -> list[PersonTextProblem]
 def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[str] = ()) -> list[PersonTextProblem]
 ```
@@ -304,8 +304,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > **A label** (rule 3): a word matching `(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+#TD-\d+|TD-\d+` (the format's
 > `<repo>#TD-n` and `TD-n`), a word matching any of `labels` (each compiled
 > on its own by Python's `re`, case-sensitive unless the pattern says otherwise, and `fullmatch`ed against the
-> word with an ending `'s` split off), or a word of `coined`, case ignored, with `s`
-> or `es` after it or not; each optionally followed by `'s` (*TD-5's*).
+> stripped word, its `'s` already gone, so *TD-5's* is a label), or a word of `coined` (each entry one word,
+> refused with `ValueError` if it holds whitespace), case ignored, with `s` or `es` after it or not.
 >
 > **The lines**, one per problem, rule 1's first, then rule 2's in the answers' order with the default last, then
 > rule 4's (`title_problems` gives rule 3's alone). A `<list>` names each distinct item once, up to three, in the order found: `a`,
@@ -334,9 +334,10 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > functions or the module's edits (`item_file()`, `edit_entry()`), which sweeps and migrations also call, and never
 > a file already written. A writer refuses the write when any problem's `refuse` is true, naming every problem,
 > and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
-> item, and the caller's for a ledger entry. It runs:
+> item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
 > - **a `decide` item**: `person_text_problems(<question>, <its answers>, <context>, question=True)`, where the
->   question is the line's bold head, else the line's words (`item_words()`, the fields and replies left out), whole,
+>   question is the text the writer is given for the item (`item_file()`'s `text`, before any line or file is
+>   written): its bold head, else that text whole,
 >   so a second sentence there is refused and belongs in the detail block; then the detail block's
 >   `question`, read whole as one sentence, `question=True`, with no answers; the context is the detail block's parts `context`, `caveats` and `recommended`, and its `otherwise` text, as
 >   the writer is given them (the `recommended` before the writer adds the default's label and ` — `), joined by blank lines in
@@ -405,8 +406,11 @@ Unit tests in `tests/test_person_text.py` check that the module carries the eigh
 
 One build, **B1**: the module's functions, constants and `PersonTextProblem`, in `ledgerboard/__init__.py` (where
 agent-cadence's TD-268 event gate reads `person_text_problems`); the SPEC section and the *Versions* paragraph;
-the fixture kind, its runner function in `fixtures/run.py`, its cases; and the unit tests, in one PR. It is not
-held for TD-112 (D4). On its merge the builder tells agent-cadence's techlead which release carries it.
+the fixture kind, its runner function in `fixtures/run.py`, its cases; and the unit tests, in one PR. The
+fixtures' expected results come from this plan's SPEC text and its examples first, never from the module's output;
+a case where the build finds the prose wrong is named in the PR, with the SPEC fix beside it. The release number
+in the SPEC heading and *Versions* paragraph is the next unreleased minor when B1 merges (v3.2 if TD-109's
+release is v3.1). It is not held for TD-112 (D4). On its merge the builder tells agent-cadence's techlead which release carries it.
 
 ## Not done
 
