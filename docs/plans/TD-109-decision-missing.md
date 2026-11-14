@@ -1,9 +1,9 @@
 # TD-109: an Ask with no decision gate is flagged
 
-**Status:** Draft 4, 2026-11-14 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 5, 2026-11-14 (session lb-designer). Class: **wide** (a vendored, published format: a new
 `check()` flag that the ledger writer refuses on, new refusals in `edit_entry()`, and new writer arguments, which
-both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: three run, each raising build-changing findings;
-round 4 next (the record: [docs/reviews/TD-109.md](../reviews/TD-109.md)).
+both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: four run, each raising build-changing findings;
+round 5 next (the record: [docs/reviews/TD-109.md](../reviews/TD-109.md)).
 
 **Entry:** [TD-109](../ledger/TD-109.md). Asked for by agent-cadence (its TD-264 rule 6, 2026-11-14).
 
@@ -163,14 +163,18 @@ both halves, so neither `ask-missing` nor `decision-missing` fires. Its edges:
   set it with --field Ask=… beside the gate"*), and in a ledger whose `Fields:` line declares `Ask`, where an Ask is
   that header field and the body section is a misplaced name (v2.8); there `set --blocked-by "…" --field 'Ask=…'`
   is the one write, which D3's `set` refusal already judges on the resulting `Blocked by`.
-- **Re-gating an answered entry needs the question asked now.** An entry that already has an Ask can take a gate
-  alone (`ask-missing` is satisfied by the old Ask). On an answered entry (D2) that would put the old, answered
-  question in front of the person as if new. So the writer's `set` (`plan_edit()`) refuses a decision added to an
-  answered entry without `ask` (*"TD-n's Ask was answered (gate lifted …): give the question asked now with --ask"*);
-  `ask` with the same words is accepted, as a deliberate re-ask. A standing, unanswered Ask is the entry's open
-  question, so gating it alone is accepted: that is its cure. This refusal is the writer's, since the module's
-  `edit_entry(…, "set")` cannot see an Ask written in the same call; a direct module caller is trusted here, as
-  for F10.
+
+**Re-asking an answered entry.** An entry that already has an Ask can take a gate alone (`ask-missing` is satisfied
+by the old Ask), so an answered entry is gated again with `set --blocked-by` and needs no `--ask`. Its Ask then
+still holds the question already answered; the session that re-asks rewrites it in the same PR (`edit --section
+Ask`, allowed once the entry is gated) or passes `--ask`. Nothing refuses a gate alone there: the entry waits
+visibly, which is all TD-109 asks, and a guard against a stale question would need its own trigger, its own
+exceptions (a reassign, a second person's decision, a header Ask) and its own fixtures (F31–F33, withdrawn in
+round 4).
+
+**What "answered" is, in code.** D2's rule is one module function, `ask_answered(text) -> bool` over an entry's
+text (its Log read by `log_lines()`), which `check()` calls; it is public so a consumer reading a ledger can ask
+the same question.
 
 **`new --ask`.** `plan_new()` already writes both at once (its `sections`). The `ledger.py new` command takes only
 `--why`, `--fix` and `--done-when`, so it gains `--ask FILE|-`, written as the `Ask` section beside them, so a new
@@ -293,8 +297,9 @@ At the end of the **set** bullet (after "`set` refuses a non-empty value for a f
 In the **edit** bullet, after "A section the body has is replaced whatever its name.", add:
 
 > From v3.1 it refuses to write an `Ask` section, replacing it or adding it, on an entry whose `Blocked by` names no
-> decision (as `decision-missing` counts one): set the gate first. An answered entry's Ask (*The ledger*) is
-> therefore never rewritten while ungated, and a question asked again is gated, then written.
+> decision (as `decision-missing` counts one): the writer's `set --ask` writes the gate and the Ask together
+> (*The ledger writer*), and an entry that already has an Ask may take its gate first. An answered entry's Ask
+> (*The ledger*) is therefore never rewritten while ungated.
 
 And replace "With `remove` (v2.8) it removes a **misplaced section**, one named `Title` or a header name, and is refused
 for any other, for a header name the entry's header lacks (`set` it first), and with words." with:
@@ -319,8 +324,7 @@ and after the `set` command's `--title` clause add:
 > `decision-missing`), so for an entry with no Ask this is the one way it comes to wait on a person. `--ask` is
 > refused when the `Blocked by` the write leaves names no decision, when its words are empty, with nothing else to
 > set, on an entry holding a header `Ask`, and in a ledger whose `Fields:` declares `Ask` (there the Ask is that
-> field, set beside the gate). A decision added to an entry whose Ask was answered (*The ledger*) is refused
-> without `--ask`: the person is shown the question asked now, never the answered one. `new` takes `--ask FILE|-`
+> field, set beside the gate). `new` takes `--ask FILE|-`
 > too, written as the `Ask` section beside `--why`, `--fix` and `--done-when`.
 
 ### In *Versions*, after v3.0's paragraphs
@@ -329,8 +333,7 @@ and after the `set` command's `--title` clause add:
 > decision whose Log does not show it answered — an error on an entry the edit changed, ℹ on a standing ledger — so
 > the ledger writer refuses a write that makes one. With it, `edit` and `set` refuse to write an Ask on an entry with
 > no decision (*Edits*), `edit`'s `remove` takes such an entry's `Ask` section, and the ledger writer's `set` and
-> `new` take `--ask`, which writes a decision and its Ask in one write; the writer's `set` refuses a decision added
-> to an answered entry without `--ask`. It reads every file v3.0 wrote, as v3.0 did: no field,
+> `new` take `--ask`, which writes a decision and its Ask in one write. It reads every file v3.0 wrote, as v3.0 did: no field,
 > Log line or key is new, and the canonical form is unchanged. **What it refuses that v3.0 wrote:** an Ask written to
 > an entry with no decision, so a caller that wrote an Ask and then its gate, as two writes, writes both with `set
 > --ask`; and `edit_entry()` raises `Refused` for such an Ask. A ledger v3.0 checked clean can show
@@ -384,14 +387,13 @@ and after the `set` command's `--title` clause add:
   `reopen` of an archived entry with an unanswered Ask (refused); `new --blocked-by "decision (pat)" --ask` (written)
   and `new --ask` with no gate (refused); `set --ask` with a decision kept, reassigned, and lifted while another
   remains (each written), replacing an existing Ask on a gated entry with `--field` beside it (written), with nothing
-  else to set (refused), and on an entry holding a header `Ask` (refused); `set --blocked-by "decision (pat)"` on an
-  answered entry without `--ask` (refused) and with it (written); and the same on a standing, unanswered ungated Ask
-  (written: its cure).
+  else to set (refused), and on an entry holding a header `Ask` (refused); `set --blocked-by "decision (pat)"` alone on an
+  answered entry (written: D3 *Re-asking*) and on a standing, unanswered ungated Ask (written: its cure).
 
 ## Builds
 
 One build, **B1**: the SPEC text above, `check()`'s flag (D1, D2), `edit_entry()`'s Ask refusals and wider `remove`
-(D3), the writer's `set --ask` and its re-gate refusal (D3: `plan_edit()`, its `ask` argument and docstring,
+(D3), the writer's `set --ask` (D3: `plan_edit()`, its `ask` argument and docstring,
 `ledger.py set`'s `--ask` and its help) and `new --ask`, the
 fixtures above and unit tests, in one PR. Then agent-cadence is told (D5). Each consumer's vendor PR follows the
 release, and is that consumer's.
