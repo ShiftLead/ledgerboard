@@ -1,6 +1,6 @@
 # TD-095: the board's writer and the merge gate's verdicts (TD-070's B3 and B4)
 
-**Status:** Draft 6, 2026-11-14 (session lb-designer). Round 3: its fact-check (R50) over round 2's fixes raised one build-changing finding (F300: the write gate read the README with `format_major()`, not TD-092's `board_major()`) and five minor; its design review (R51) one build-changing (F306: *the item's files* in (c) and another repo's case, now the changed board paths, open or closed judged by the byte compare) and five minor, one rejected; the rest applied, so round 4 follows. Round 2: fact-check (R48) three build-changing and two minor; design review (R49) four build-changing (two repeating the fact-check's) and six minor; all applied. Round 1: fact-check (R44) four build-changing and nine minor, re-checks six minor (R45) and none (R46); design review (R47) four build-changing and four minor; all applied. Trend, build-changing per design review: 4, 4, 1; fact-checks apart: 4, 3, 1. Draft 2 rebased draft 1 (TD-070's unreviewed B3 and B4 text, moved unchanged) on TD-092's plan as designed (draft 10, Go'd), each change marked *rebased on TD-092*. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 3 of 6.
+**Status:** Draft 7, 2026-11-14 (session lb-designer). The rounds ended by the stop rule after round 4, whose design review (R53) raised nothing build-changing; the closing fact-check follows, then Paul's end-of-rounds item. Round 4: its fact-check (R52) over round 3's fixes raised one build-changing finding (F312: how the write gate tells a README declaring no `Ledgerboard:` from one declaring 1) and one minor; its design review four minor; all applied. Round 3: fact-check (R50) one build-changing and five minor; design review (R51) one build-changing (F306) and five minor, one rejected. Round 2: fact-check (R48) three build-changing and two minor; design review (R49) four build-changing (two repeating the fact-check's) and six minor. Round 1: fact-check (R44) four build-changing and nine minor, re-checks six minor (R45) and none (R46); design review (R47) four build-changing and four minor. Trend, build-changing per design review: 4, 4, 1, 0; fact-checks apart: 4, 3, 1, 1. Recurring: the write gate's reading of `README.md`'s major (F278, F285–F286, F300, F307, F312), each fix refining the reader, none undoing an earlier one. Draft 2 rebased draft 1 (TD-070's unreviewed B3 and B4 text, moved unchanged) on TD-092's plan as designed (draft 10, Go'd), each change marked *rebased on TD-092*. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: 4 of 6.
 
 **Entry:** [TD-095](../ledger/TD-095.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-095's Fix (the
 scope, Paul's Split, decided 2026-11-13: B3 and B4 here, B5 TD-098's); [TD-070's plan](TD-070-board-directory.md),
@@ -59,12 +59,13 @@ not an item, and moving stamps out (a file per stamp, say) is the consumer's cho
 
 **D3. The item id (S2): its writer half** (restated from TD-092's plan, D3, which keeps the text; round 1's F183
 there). `board.py add` draws the nonce (`secrets.token_hex(4)`) and draws again
-while the name is held open or in any archive month: it draws at most 8 times in all; the 8th held name is refused
+while the name is held open or in any archive month: it draws at most 8 times in all; the 8th held name is refused,
+`<board>: no free id after 8 draws` (round 4's F316),
 (round 1's F262: this plan's reading of TD-092's D3 "up to 8 times", pinned by B3's unit test "eight held names refused"). `add --id <id>` takes a caller's id instead (a
 service writer that keys its appends on an event, cadence §4.4), refused when malformed, when its date is not the
 item's `Added`, or when held. So `--id` is idempotent within a day and not across days, as intended: an id names one
-day's add, a retry of a written add is refused as held, its message `<board>: <id> is held` (round 2's F294: a refused add exits 1
-whatever the refusal, so a caller that tells its own retry from another refusal reads that message), and a caller that retries on
+day's add, a retry of a written add is refused as held, its message `<board>: <id> is held` (round 2's F294, round 4's F313: a held-id
+refusal exits 1, as most refusals do, so a caller that tells its own retry from another refusal reads that message), and a caller that retries on
 a later day passes `--today` the id's date or draws a new id. Two changes that add one id conflict as two files at
 one path, which is the safe failure; 32 bits within one day make it rare. An id never changes: a retitle, an edit
 and a close keep it.
@@ -84,9 +85,14 @@ declaration raises (TD-092's D6: a stub declaring 3 over a README declaring 2 re
 for a README declaring none. `version_problem(board)`, which `board.py` calls first after every read, refuses a
 major newer than 3 before any of these checks (round 3's F303). The message is `<board>: not a v3 board: <why>`,
 `<why>` one of `no such board` (a missing path, or a stub with no directory beside it: `form` None), `a v2 board`
-(`form` `"file"`, a file declaring 3 among them), `no README.md` (a directory without one), `README.md declares no
-Ledgerboard` (the search `board_major()` makes finds no `Ledgerboard:` line) and `README.md declares Ledgerboard:
-<n>` (a line declaring any `<n>` but 3, 1 included; round 3's F307). `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
+(`form` `"file"`, a file declaring 3 among them), `no README.md` (the board's `ls` lists no `README.md` in the directory; an empty `README.md` is not this, round 4's
+F317), `README.md declares no Ledgerboard` and `README.md declares Ledgerboard: <n>` (a line declaring any `<n>` but
+3, 1 included; round 3's F307). The gate tells those two apart by its own search (round 4's F312): the module's
+`VERSION_RE` over every line of `README.md`'s text with its HTML comments taken out (`COMMENT_RE`), the lines
+`board_major()` reads; no match is *declares no*, a match its `<n>`, whatever `board_major()` gives for none. **The
+order of an `add`'s refusals** (F316): `version_problem(board)`, then this gate, then `--id`'s (malformed, its date
+not the item's `Added`, held), then the item's own (`item_file()`'s), then the ledger's (`--parts`); the five
+edits' the same, `--id`'s being *no open item has it*. `board.py` never creates a board's directory or its `README.md`: a v3 board is made by B5's `split`,
 or by hand. `list` and `show` read what `load_board()` reads, a v2 board and a v3 one alike, and refuse only a board
 with `form` None, exit 1, `<board>: no such board` (round 2's F297). A write's checks run in the order the `<why>`s are
 listed. **The options** (round 2's F293): `--id` is required
@@ -188,8 +194,8 @@ trees** (paths added, removed, or changed in text), never from how a forge repor
 a moved file as a rename, or as a removal and an addition, gives one verdict; the file list decides only which
 archive files the consumer fetches.
 - `lift_pr_verdict()`'s **(b)** becomes: the PR's board changes are one item's, and the head file is `edit_item(base file, "decide", …, close=closes(…))`
-  byte for byte at `item_path(id, closed)` (`closed` the head's `Closed:` date as a `YYYY-MM-DD` string, None when
-  it stays open: TD-092's D2 and D4); board changes that are not one item's take review (`lift-board-diff`), and a
+  byte for byte at `item_path(id, closed)` (`closed` D, the `Decided:` date the edit writes as `Closed:`, as a
+  `YYYY-MM-DD` string when `closes(…)` is true, else None: TD-092's D2 and D4; round 4's F314); board changes that are not one item's take review (`lift-board-diff`), and a
   head file at a path other than `item_path(id, closed)`, or not those bytes, `lift-board-line`. **One item's**
   (round 1's F280) is exactly one of two shapes of the changed board paths: one open path `<id>.md` changed in
   place; or one open path `<id>.md` removed and one path `archive/<YYYY-MM>/<id>.md` added, the same `<id>`, any
@@ -256,6 +262,10 @@ TD-070's plan's, *Consumers* (TD-098's). These are the lines for those entries t
     directory, each with a `Due:` (its `## Needs` test becomes the kind test it stood for, its choice), its
     board-edit is one item file changed in place or moved into `archive/` under an edit subject;
     `row_board_edit_pr()` the same;
+- **Both**, from B4 (round 4's F315): the consumer fetches, at the base and at the head alike, the files directly
+  in `BOARD_DIR`, the `archive/` paths the PR's file list names, and the v2 pair `BOARD_V2_PATH` and
+  `BOARD_V2_ARCHIVE_PATH` where the tree has them, whichever form the other ref holds, so a v2 head over a v3 base
+  reads as `lift-board-v2`, never `lift-no-board`;
 - **Both**, from B4 (round 2's F290): a caller of `uncovered_decisions()` passes each other repo's board as
   `(origin_url, basename, Board)`, read through `load_board()` from that repo's board (its `docs/user_attention/`
   directory, or its v2 pair), where it passed the board's and its archive's texts;
@@ -346,7 +356,7 @@ round 9's F155). Its actions list is replaced by (the `add` bullet keeping v2.8'
 >   (v2.6), a decide's snapshot (`item_file(parts=)`): the option may be repeated, each value is split on `,` and each
 >   piece trimmed, and an empty piece is refused; `--parts` with `--decided` is refused, and so is `--ledger` without
 >   `--parts`. With `--doer <value>` (v2.8), an act's doer (`item_file(doer=)`); `--doer` with `--decided` is
->   refused. The item's own refusals come first. Then the ledger is read (`--ledger <v2 directory>`, default
+>   refused. The gate and `--id`'s refusals come first, then the item's own (v3.0). Then the ledger is read (`--ledger <v2 directory>`, default
 >   `ledger/` beside the board when it is a directory, its open and archived entries), and the write is refused, with every problem, when
 >   `parts_problems()` names any, or when no ledger is found. With `--said` and `--by`, a question already answered:
 >   its answer is the item's first reply, the Log line `- <today>: <by>: <said>`, refused as `reply` refuses (a
