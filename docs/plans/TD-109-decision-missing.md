@@ -6,7 +6,7 @@ both consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the s
 build-changing findings by the design reviews, rounds 1–6: 1, 2, 3, 2, 3, 0; by the fact-checks: 2, 1, 1, 0, 0, 1).
 Recurring topic: how an Ask and its gate are written (F14, F23–F25, F31, F32, F37, F38, F44). Paul's answer is the board's decide item, *One more round* recommended (F46–F52 were fact-checked, not design-reviewed) (the record: [docs/reviews/TD-109.md](../reviews/TD-109.md)).
 
-**Entry:** [TD-109](../ledger/archive/TD-109.md). Asked for by agent-cadence (its TD-264 rule 6, 2026-11-14).
+**Entry:** [TD-109](../ledger/TD-109.md). Asked for by agent-cadence (its TD-264 rule 6, 2026-11-14).
 
 ## The problem
 
