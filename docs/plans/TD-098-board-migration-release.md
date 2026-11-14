@@ -191,7 +191,7 @@ directory the stub reads as (D6); any other place would leave a stub reading as 
 README lines that may describe the v2 board and the carried shapes rule 14 names (above). `board_dir_problems(path, ls, read)`, `v2_problems()`'s twin — moved to TD-092's plan, docs/plans/TD-092-board-item-reader.md, D11 (2026-11-13 split).
 `key_id(key)` and `item_key()` are kept through v3.x. *Rebased (round 1's F376, F377):* a repo's board splits only
 once its own tooling and both consumers run v3.0 (text 12; D12's order: ShiftLead's in its sync PR, agent-cadence's
-in a PR of its own right after, or one UTC day after its vendor PR if the sync has not merged (D12, round 3's F409), each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
+in a PR of its own right after, or by the end of the UTC day after its vendor PR merged if the sync has not (D12, round 3's F409), each other pinning repo's in its pin bump; round 3's F406), landed when no open PR
 edits the board and no session holds an unpushed board commit (`board_edit.py` leaves a local commit, landed by a
 PR or a direct push; round 2's F397, round 3's F405): a v2 edit that lands after is
 redone with `board.py` on the directory.
@@ -231,7 +231,7 @@ v3 only. It goes out with TD-078's ledger half as one v3.0; when, and what else 
   B1 to B4 are merged.
 - **After v3.0, in this order** (round 1's F376, F377; round 2's F393, F398): (1) agent-cadence vendors v3.0, no
   split; (2) ShiftLead syncs it through its pin, splitting its own board in the same PR; (3) agent-cadence splits
-  its own board, in a PR of its own, at once after (2), or one UTC day after (1) if (2) has not merged (below); (4) each other repo that pins agent-cadence, this repo
+  its own board, in a PR of its own, at once after (2), or by the end of the UTC day after (1) merged if (2) has not (below); (4) each other repo that pins agent-cadence, this repo
   among them, bumps its pin to a v3.0 agent-cadence and splits its board **in that same PR** (a roster repo as
   TD-100 designs). The ledger's precondition is TD-078's D5, not B5's (round 3's F412, round 4's F414): it binds
   ledgerboard, agent-cadence and ShiftLead, met when `ledger.py migrate --plan --release <x.y>`, run with the last
@@ -393,7 +393,8 @@ v3.0 removes.)
 >   `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
 >   first item's section; any earlier `## ` heading stays), that heading's line going with the blank lines right
 >   after it. Its trailing blank lines go and it ends in one newline, so a board whose text before its first item is
->   its title alone gives the title, a blank line and `Ledgerboard: 3`. Each relative link there gains `../`, since the file
+>   its title alone gives the title, a blank line and `Ledgerboard: 3`. With no `# ` title, `Ledgerboard: 3` is its first
+>   line, followed by one blank line when other text follows and alone with its newline when none does. Each relative link there gains `../`, since the file
 >   moves one directory down: the target of an inline link or image (`[t](target)`, `![t](target)`) and of a
 >   reference definition (`[label]: target`), when it starts with none of a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`,
 >   `mailto:` among them), `#` and `/`, outside code spans and fenced code; inside `<…>` when the target is
