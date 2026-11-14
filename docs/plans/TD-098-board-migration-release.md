@@ -323,8 +323,10 @@ file, ids for line numbers aside and `list_sessions.py`'s item text being `item.
 `gate_sweep.py` without `--apply` (its dry-run plan; F480), which reads `origin/<default>`'s board and so runs once
 the split has merged, against a run just before it on the same day, prints the same plan, its `to_close` paired by
 item rather than by key or id; `--report --fetch`, whose origin is still the v2 file while the PR is open, runs
-after the merge and reads *matches*; and the cadence check's board row passes on both trees. A reader that prints
-less after the split still reads text, whatever the grep says. ShiftLead's entry carries the same pair over its own
+after the merge and reads *matches*; and the cadence check's board row passes on both trees. The vendor PR records the runs it can make before its
+merge; the two after it (`gate_sweep.py`'s and `--fetch`'s) are recorded on the entry by the session that merges
+it, and the entry archives only once they print as said (round 8's F494). A reader that prints less after the split
+still reads text, whatever the grep says. ShiftLead's entry carries the same pair over its own
 board (`workorders`, `gatesweep`, the Inbox). The lines below are the inventory known at design time, each with the form its
 replacement takes where the rule alone leaves a choice (what a check keeps or retires, what a function returns); the
 entry's first step is its own run of that grep at the vendor PR's base, and a read the grep finds that no line names
@@ -437,11 +439,17 @@ consumer's, in its own repo.
     follows the stub's in `SEED_FILES`, and the seed loop (`launcher/words.py`, :1163-1195) writes the README only
     where it writes the stub, so a repo that keeps its v2 `docs/user_attention.md` (an existing file, or one named in
     `skip-seed`) gets no stray `docs/user_attention/README.md` beside it, and `skip-seed`'s board name covers both.
+    A `skip-seed` that names the README alone is refused (it would seed a stub whose directory is missing; round 8's
+    F491). The parity test asserts the seed stub's bytes are `board_stub()`'s for the skeleton's title and
+    `user_attention`, so the static file cannot drift from the module (F493).
     `launcher/words.py`'s `adopt` check of the board (`texts[BOARD]`, `SKIP_BOARD`, :965-1025): the `SKIP_BOARD` scan
-    (:1022-1025) reads the directory's `README.md` (round 7's F476), and the board leaves `_format_problems()`'s
+    (:1022-1025) still reads a v2 board file, and a v3 board is judged by its directory's `board_dir_problems()`
+    instead, since a list in the README is prose the scan would take for a malformed item (round 7's F476, round 8's
+    F492); and the board leaves `_format_problems()`'s
     text loop (:1007-1015), whose `version_problem(texts[f])` reads a text against `FORMAT_MAJOR` 2 and would refuse
     the stub's and the README's `Ledgerboard: 3`, in `adopt` and `--migrate` both: the board's version is checked
-    by `version_problem(load_board(...))` instead (round 8's F485).
+    by `version_problem(load_board(...))` instead (round 8's F485), its `ls` the file system's, listing
+    subdirectories as `ledger.py`'s file-system `io` does (TD-095's F406), so `archive/` is read (F495).
 - **ShiftLead** (after agent-cadence's vendor PR, through its pin):
   - split its own board in the sync PR that brings v3.0 (D12's step 2; round 2's F387, F393), its ledger first
     meeting TD-078's D5, landed as D11 says when no open PR
@@ -773,7 +781,8 @@ All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions 
   `due_no_colon` (an `act` carrying `Due 2026-11-05.`, which v3 would read as a day) and `due_in_context` (an `act`
   whose Context holds `Due 3/4` and which has no other `Due`, so v2 reads that one, F164).
 - **`fixtures/board_writer/`** and **`fixtures/verdict/`** (B3's and B4's) — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md,
-  *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split` and `split_exists` (exit 1),
+  *Fixtures* (2026-11-14 split); B5's `fixtures/board_writer/` cases stay here: `split`, `split_no_title` (a board with no `# ` line: the stub's
+  bytes pinned, its title the file's name, D11's fallback, F358; round 8's F496) and `split_exists` (exit 1),
   and `write_v2_refused`'s message gaining *split first*; *rebased* (round 1's F368): `split_not_md`,
   `split_no_board`, `split_stub_no_dir` (F399), `split_already_v3` (with `--board` the directory, F380), `split_archive_missing` (F379), `split_archive_other` (F388) and `split_refused` (an undated item: `split_board()`'s refusal through
   `board.py`), each exit 1. Each refusal's wording is the builder's, `Refused("<why>")` as the module's are, and its
