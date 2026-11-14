@@ -301,7 +301,9 @@ board is split.
     round 3's F400, F408; round 5's F429);
   - `scripts/gate_sweep.py` (round 2's F394): reads boards through `load_board()` (its `LB.BOARD_PATH` and
     `LB.BOARD_ARCHIVE_PATH` become `BOARD_DIR`, or `BOARD_V2_PATH` and `BOARD_V2_ARCHIVE_PATH` for a v2 one), passes
-    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`, its `_closes()` (:324-332, called at :387 and :512) matching by
+    `(origin_url, name, Board)` to `sweep()`, reads `to_close` as ids and closes by `--id`, its `unanswered()` (:200-239) returning
+    its own open items' `r["item"].id` where it built `item_key(r["line"])` (:238), so `to_close` is ids throughout,
+    and `_read_boards()`' `line` key going at B5 (round 6's F455); its `_closes()` (:324-332, called at :387 and :512) matching by
     the item's `id` where it reads `it.line`, `lines[it.line - 1]` and `item_key(raw)`, and returning ids, so its
     callers close by `--id` where they took a line and an expect string (round 6's F450, F453); the `ls` it passes
     `load_board()` lists subdirectories with `/` (its `git_io` `ls` lists files alone, which reads a directory
@@ -318,7 +320,7 @@ board is split.
     tie-break `LB.item_key(it.text)` (:1459) becomes the item's `id`, ascending, so `min()` picks the oldest `Added` date, then the lowest
     hex (F452) (text 12: tied items may change order at the split; F451), and the refusal messages' `pick[1].text[:80]` (:1465, :1468), the `- close:` lines' `it.text` (:1665)
     and the note's `item.line` (:1500) read the item's `words` and `id` (round 6's F446); the done-when's grep also
-    finds no `.text` or `.line` read on a `BoardItem`; the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
+    finds no `.text` or `.line` read on a `BoardItem`, and no `r["line"]` on a `_read_boards()` record; the entry's done-when: a grep of the vendor PR's tree for each name v3.0 removes (text 12's *What goes*)
     finds none outside the vendored module;
   - `board_edit.py` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split); and
     it edits through `board.py`'s `plan_edit()`, not the module's `edit_item()` alone, so a v2 board draws D7's
@@ -327,14 +329,29 @@ board is split.
     `context_refs(item.context)`, where it reads `item.text` (empty on a v3 item, gone at v3.0; round 2's F395);
     read boards through `load_board()` (its own checkout's directory; another repo's
     through the forge's directory listing, with `since=` the months it shows); its `ARCHIVE_AT` prompt and its
-    duplicate-key warning (`closed_items()`, `item_key()`) go; `--report --json` prints ids, not lines;
+    duplicate-key warning (`closed_items()`, `item_key()`) go; `--report --json` prints ids, not lines; its
+    `--fetch` read (`_fetch_board()`, :946-1039, a `git show <ref>:docs/user_attention.md`) compares and returns
+    the board's directory at the ref (its files by `ls-tree`, read through `load_board()`), so `FetchResult`
+    carries a `Board` where it carried `content` and *matches*, *differs* and *behind* judge the directory, not the
+    stub; the remote tier (`forge.read_file(name, "docs/user_attention.md")`, :1333) reads through the forge's
+    directory listing as above; and `checked()` (:168-178) takes the `Board`, `version_problem(board)` (round 6's
+    F456);
   - `check_cadence.py`'s `BOARD` and `classify_direct()` — moved to TD-095's plan, docs/plans/TD-095-board-writer-gate.md, *Consumers* (2026-11-14 split);
-  - `list_sessions.py` `board_items()`: open items' `Session` through `load_board()`;
-  - its cadence check (`check_cadence.py`) gains a board row beside its ledger row, which today reads the PR's
-    ledger through `ledger_pair_at()` and fails on `v2_problems()`'s faults (through `ledger.py`'s `v2_unread()`):
-    the board row reads the head's board, fails on `board_dir_problems()`'s and on `version_problem(board)` (D6),
-    since the gate judges an item only when it is added and damage a hand edit does to an existing file is caught
-    only there (D7); `precheck.py` runs the repo's own command and reads no board;
+  - `list_sessions.py` `board_items()`: open items through `load_board()`, keyed on `item.session` and listing
+    `item.words` (round 6's F458); `SESSION_RE`'s parity test against the board's `Format:` line
+    (`tests/test_parity.sh`) is repointed at the item file's `Session` field, the `Format:` line going (F457);
+  - its cadence check (`check_cadence.py`): its existing board row, `row_board` (:2161, TD-206), is rewritten,
+    not joined by a second (round 6's F454). Beside the ledger row (which reads the PR's ledger through
+    `ledger_pair_at()` and fails on `v2_problems()`'s faults), it reads the head's board through `load_board()` and
+    fails on `board_dir_problems()`'s and on `version_problem(board)` (D6), since the gate judges an item only when
+    it is added and damage a hand edit does to an existing file is caught only there (D7). Its v2 line machinery
+    goes: `board_change_problems()` (:1960), `_item_lines()`, `_fields()`, `_read_back()` and `writers_made()`
+    (:1781-1828), `archive_gain()`, `archive_net_problems()` and `classify_archive()` (:1721) with `ARCHIVE_AT`,
+    since a v3 item is a file a writer's gate judged when written and B4's verdicts judge by id; what reads items
+    reads the `Board`: `_people_check()` its `people`, `_decided_check()` each item's `decided`,
+    `board_gate_answers()`, `gate_answer()` and `row_lift_pr()` (:2081-2118, :2457) the items by id through B4's
+    `lift_pr_verdict()`, and `_appends_gate_answer()` (:2520-2523) `_item_gate(item)` on the `BoardItem`; the
+    done-when's grep covers each name that goes; `precheck.py` runs the repo's own command and reads no board;
   - the own-board path in `cadence_hooks.sh` (`docs/user_attention.md`, :180) stays the v2 file's path, which
     `nudge_user_attention.py --own-board` reads through `load_board()` and the stub to the directory, so it needs no
     change; `check_claude_memory.sh`'s check 6 greps `$BOARD` for an open `- [ ]` line (:380), which a stub never
@@ -751,7 +768,7 @@ B3, B4 or B5 beside B1 or B2 is shared"), each done at B5:
 | `_item_gate()` | the string form goes |
 | `closes()`, `decide_lift()`, `parts_problems()`, `board.py`'s `_decide_ledger()` and `_check_parts()` | D7's one rule's second branch (a v2 line's string) goes (TD-092's F124, F139): an item file's text or a `BoardItem` |
 | `needs_you()`, `board_people()`, `answered_by()`, `people_problems()`, `answered_by_problems()` | the text forms go: a `Board` only |
-| `_read_boards()`, `covers()`, `sweep()` | the text-board form `(origin_url, basename, text, archive_text)` and its keys in `to_close` go |
+| `_read_boards()`, `covers()`, `sweep()` | the text-board form `(origin_url, basename, text, archive_text)` and its keys in `to_close` go; `_read_boards()`' records lose their `line` key (round 6's F455) |
 | `edit_line()`, `item_problem()`, `canonical_item()`, `item_line()` (its read-back `written()`), `decided_line()`, `archive_closed()` | removed |
 | `board.py` `plan_split()` | new (D11, *`board.py split`*) |
 
