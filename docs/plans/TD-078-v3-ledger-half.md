@@ -1,7 +1,7 @@
 # TD-078: v3.0's ledger half — the last migration, a note for archived entries, and the removals
 
-**Status:** Designed 2026-11-13 (session lb-designer), Go by Paul 2026-11-12; draft 9. Class: **wide** — it changes a vendored, published format
-read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: six ran, the cap (build-changing per design review 6, 2, 2, 1, 2, 1; fact-checks 7, 1, 1, 0, 0, 1), their fixes applied; the rounds ended at the cap. Paul answered the end-of-rounds item **One more round** (2026-11-12), run as TD-082: round 7's fact-check raised one build-changing finding (B3's count of entries `migrate` changes, now five), its design review SHIP with two minor, and it found the recurring consumer-lines topic ended (R18 read them against agent-cadence's `main` and found no format question in them); all applied, then the closing fact-check (two minor, applied), and the item again. Paul answered it **One more round** (2026-11-12), run as TD-086: round 8's fact-check (R20) found B3's count stale after PR #249 migrated this ledger (build-changing, F104: 59 archived entries, no open one) and its re-check (R21) two minor; its design review (R22) raised one build-changing finding, F109 (TD-075's B1 has merged, so it leaves D3's number rule and TD-070's B1's blocks and Ask), and nine minor (F110–F118), all applied or rejected as the record says; the closing fact-check (R23) SHIP with five minor, applied (F119–F123), and the item again, recommending One more round. Paul answered it **Go** (2026-11-12): the builds are filed, TD-088 (B1), TD-089 (B2), TD-090 (B3) and TD-091 (B4), each `Part of` TD-078, round 8's fixes no design review read in their Fix. Trend, build-changing per design review 6, 2, 2, 1, 2, 1, 0, 1 (fact-checks 7, 1, 1, 0, 0, 1, 1, 1). **Revision, 2026-11-13 (TD-096, on Paul's input relayed that day):** the roster repos are not worked until ledgerboard, agent-cadence and ShiftLead are in shape, so they skip their v2.7 remodel and take one remodel straight to v3.0. D5 now binds the three repos that move with the release, D7 is new (a roster repo's one remodel, after v3.0), B4 gains text 5′ (*Versions*' precondition sentence, consumer-neutral), and agent-cadence's *Consumers* line gains the remodel procedure, which names the two pins a roster repo bumps to; TD-091 (B4) is `Blocked by` TD-096 until Paul's go on the revision. The revision keeps the record's numbering (R24 on) and starts its own count against the cap (6, class wide). Rounds 9–14 ran to the cap (R24–R41, F126–F215): build-changing per design review 1, 2, 5, 1, 2, 2; fact-checks, with their re-checks and round 14's closing one (R41), 2, 0, 1, 0, 0, 0. Round 11 reshaped D7 (F177): the remodel's commands are agent-cadence's procedure, which names the two pins (F204, round 14). Recurring topics: the first pin (F126, F134, F194, F204), the remodel's commands (ended by F177), v1-ledger severity (F142, F160, F166, F182), the old-form detector (F113, F197, F205). Round 14's closing fact-check (R41) found six minor (F210–F215), applied. Paul answered the end-of-rounds item **One more round** (2026-11-13), run as TD-097: round 15's fact-check (R42) found two minor (F216, F217); its design review (R43) read round 14's fixes, found F205 holding and v1 severity and the detector not recurring, and raised one build-changing finding, F218 (reopening F204, F194: no newer first pin exists once agent-cadence's v3.0 vendor PR has merged, so the procedure lands in two PRs, its first pin tested before that PR, with a maintenance branch as the last repair), and three minor (F219–F221); the closing fact-check (R44) raised one build-changing finding, F222 (agent-cadence's `bump` refuses the second bump from a maintenance-branch pin: now a Consumers requirement), and two minor (F223, F224), all applied. Trend for the revision, build-changing per design review 1, 2, 5, 1, 2, 2, 1; fact-checks 2, 0, 1, 0, 0, 0, 0; the closing fact-check's F222 is unread by a design review. Recurring: the first pin (F126, F134, F194, F204, F218, F222). Paul's end-of-rounds item follows, recommending One more round.
+**Status:** Designed 2026-11-13 (session lb-designer), Go by Paul 2026-11-12; draft 10, 2026-11-14 (session lb-designer). Class: **wide** — it changes a vendored, published format
+read and written by both consumers, and plans a major (cadence.md §4.8; cap 6 rounds). Rounds: six ran, the cap (build-changing per design review 6, 2, 2, 1, 2, 1; fact-checks 7, 1, 1, 0, 0, 1), their fixes applied; the rounds ended at the cap. Paul answered the end-of-rounds item **One more round** (2026-11-12), run as TD-082: round 7's fact-check raised one build-changing finding (B3's count of entries `migrate` changes, now five), its design review SHIP with two minor, and it found the recurring consumer-lines topic ended (R18 read them against agent-cadence's `main` and found no format question in them); all applied, then the closing fact-check (two minor, applied), and the item again. Paul answered it **One more round** (2026-11-12), run as TD-086: round 8's fact-check (R20) found B3's count stale after PR #249 migrated this ledger (build-changing, F104: 59 archived entries, no open one) and its re-check (R21) two minor; its design review (R22) raised one build-changing finding, F109 (TD-075's B1 has merged, so it leaves D3's number rule and TD-070's B1's blocks and Ask), and nine minor (F110–F118), all applied or rejected as the record says; the closing fact-check (R23) SHIP with five minor, applied (F119–F123), and the item again, recommending One more round. Paul answered it **Go** (2026-11-12): the builds are filed, TD-088 (B1), TD-089 (B2), TD-090 (B3) and TD-091 (B4), each `Part of` TD-078, round 8's fixes no design review read in their Fix. Trend, build-changing per design review 6, 2, 2, 1, 2, 1, 0, 1 (fact-checks 7, 1, 1, 0, 0, 1, 1, 1). **Revision, 2026-11-13 (TD-096, on Paul's input relayed that day):** the roster repos are not worked until ledgerboard, agent-cadence and ShiftLead are in shape. D5 binds the three repos that move with the release, and B4 gains text 5′ (*Versions*' precondition sentence, consumer-neutral); TD-091 (B4) is `Blocked by` TD-096 until Paul's Go on the revision. The revision keeps the record's numbering (R24 on) and its own count against the cap (6, class wide). Rounds 9–15 (R24–R44, F126–F224; round 15 run as TD-097) also designed a roster repo's one remodel straight to v3.0 (D7 as they had it: agent-cadence's remodel procedure naming two pins, landed in two PRs, with a maintenance branch and a requirement on agent-cadence's `bump`); build-changing per design review 1, 2, 5, 1, 2, 2, 1, fact-checks 2, 0, 1, 0, 0, 0, 0; the first pin recurred in four rounds (F126, F134, F194, F204, F218, F222). **The cut (draft 10, TD-099):** Paul answered round 15's end-of-rounds item **Hold** (2026-11-14): the revision is cut to the precondition. v3.0 binds ledgerboard, agent-cadence and ShiftLead only, and a roster repo is untouched by v3.0 until it bumps its own pin (D5, text 5′); how a roster repo reaches v3.0 is TD-100's, designed when the first one resumes (D7). The remodel procedure, its two pins, the two-PR split, the maintenance branch and the requirement on `bump` are removed from this plan and from target design §7.1–§7.3. D7 says which of the revision's B4 additions B4 keeps. The cut's rounds (cadence.md §4.8: class wide, a new count against the cap, the record continuing at R45, F225): round 16, the first, ended them by the stop rule. Its fact-check (R45) raised four minor findings (F225–F228) and its design review (R46) five minor (F229–F233), none build-changing; five applied in the plan, one in target design §7.3, the synopsis rewritten, TD-098 re-pointed (TD-070's plan had no such text) and the shared id take rejected. The closing fact-check (R47) raised five minor findings (F234–F238), applied. The design review judged the cut the right shape. Paul's end-of-rounds item on TD-096 waits, recommended **Go**: no fix from round 16 or its closing fact-check changes a build.
 
 **Entry:** [TD-078](../ledger/TD-078.md). **Source:** the entry's Why and Fix; [target design](target-design.md)
 §2.1 (the retired fields and words) and §7.1's v3.0 row; [TD-070's plan](TD-070-board-directory.md) D12 (the
@@ -16,8 +16,8 @@ v2 keeps reading four forms only because old files hold them: the `Waits` field,
 decision form `decision (<who>) <text>` in `Blocked by`, and a `Resolved` header field. v2.7's `migrate` maps the
 old Status words, `Added` comments and a header `Location`, and leaves those four as they are (*Migrating to
 v2.7*, rule 5). §7.1 plans v3.0 to stop reading them and to remove `migrate` (its row stands as a summary: D4 makes v2.7's
-retired header `Location` a v3.0 error too, round 8's F117), once every repo holds none of them,
-in open entries and archived ones alike.
+retired header `Location` a v3.0 error too, round 8's F117), once the repos that take it —
+ledgerboard, agent-cadence and ShiftLead (D5) — hold none of them, in open entries and archived ones alike.
 
 Two things stand in the way.
 
@@ -119,15 +119,10 @@ corrected by a later dated line, never rewritten: the Log is history.
 **D3. The release.** D1 and D2 ship in the **last v2.x minor**, which TD-070's D12 makes a precondition of its B1
 ("v2.8 is released before B1 merges", and "No v2.x release after B1 merges"): `migrate` goes in v3.0, so a repo
 must be able to run the new rules on a v2.x before it vendors v3.0. The builds for D1 and D2 therefore merge
-before TD-070's B1, and B1 is `Blocked by` them (*The builds*). The minor is v2.8 when it is cut after they merge;
-the board's open *Release v2.8* item asks for v2.8 now, without them, and if it is cut first they ship as v2.9,
-still before B1 merges. TD-065's and TD-075's builds have merged (TD-083, TD-084, 2026-11-12) and ship in whichever
-minor is tagged first, v2.8 (round 8's F109). The rule for the number: each of this design's B1 and B2 writes,
-wherever its texts say v2.8, the first minor not yet tagged when it merges (v2.8 if it is untagged then, else v2.9),
-and the later of the two to merge rewrites the other's number to its own where that is still untagged, so both name
-one minor; the Consumers lines say *the last v2.x minor*. TD-070's D12, where it names v2.8 as the release before
-its B1, reads as that minor. *(TD-075's B1 joined this rule on 2026-11-12 and left it in round 8, once it had
-merged.)*
+before TD-070's B1, and B1 is `Blocked by` them (*The builds*). The minor is v2.8, tagged 2026-11-13 (#281) with B1 and B2 (TD-088, TD-089) and TD-065's and TD-075's builds
+(TD-083, TD-084), before TD-070's B1 (TD-092's B1, TD-093) merged; no v2.x is cut after it, so v2.8 is the last v2.x
+minor and every *v2.8* in this plan's texts names it (round 16's F227: the rule for the number, which picked the
+first minor untagged when each build merged, has done its work). The Consumers lines say *the last v2.x minor*.
 
 `Blocked by` the two builds alone would let TD-070's B1 merge while they sit untagged on `main`, after which D12
 allows no v2.x release. So TD-070's B1, when filed, is `Blocked by` TD-078's B1 and B2 and `decision (paul)`, its Ask:
@@ -167,7 +162,7 @@ error's text is text 7's, and `status_problem()`'s text 10's, each defined once 
   caller checked), and `edit_entry`'s carried-gates clause, with their
   docstrings and `parse_gates()`'s; `_without`'s refusal, which `lift_gate()` and `reassign_gate()` share; `reassign_gate()`'s
   own; `_blocked_items`', `_one_copy`'s and `_item_gate_key`'s old-form branches; and `ledger.py`'s `set`-route
-  refusal (*migrate it first*); and B2's base-side count in `uncovered_decisions()` (D1), which reads `old_form`
+  refusal (*migrate it first*); and B2's base-side count in `uncovered_decisions()` (D1; its helper `_held_old_form()`, round 16's F229), which reads `old_form`
   and would raise once the record loses it. A value holding the item is then written by `new` and `set` as any unreadable item
   is, for `check()`, whose error the writer's refusal rule (an error the ledger before did not have) refuses; and
   `lift_gate()` and `reassign_gate()` refuse it as a gate the entry does not carry. `parse_blocked()` keeps its
@@ -214,10 +209,10 @@ ShiftLead. It is met in such a repo when, run with the last v2.x, `ledger.py mig
 entry holding `changes` or `stops`. With D1 that covers every old form: the Status set, `Added`, `Location` and
 the four. Each consumer runs it first in its v3.0 vendor PR, before vendoring, and records its output in the PR.
 No new check is added: the command exists, and its output is what the precondition means. A roster repo (any
-other repo that pins agent-cadence) is outside it: v3.0 leaves it untouched until it bumps its own pin, and it meets
-the same check, with D7's added conditions, in its own remodel, between that remodel's two bumps (D7). Ledgerboard
-has no vendor PR: its check is B4's guard run (*The builds*), stated in B4's PR. *(Amended 2026-11-13, TD-096, on Paul's
-input: the roster repos skip their v2.7 remodel and take one remodel straight to v3.0.)*
+other repo that pins agent-cadence) is outside it: v3.0 leaves it untouched until it bumps its own pin, and how it
+reaches v3.0 is TD-100's (D7). Ledgerboard has no vendor PR: its check is B4's guard run (*The builds*), stated in
+B4's PR. *(Amended 2026-11-13, TD-096, on Paul's input: the roster repos are not worked until the three repos are in
+shape; cut 2026-11-14, TD-099, on Paul's Hold: the precondition alone.)*
 
 **D6. What v3.0's ledger half leaves.** `status_notes_to_log()` and the lifting of a Status's notes in `note`,
 `archive` and `reopen` stay: on an entry in the closed set they lift nothing, and removing them changes nothing a
@@ -225,85 +220,54 @@ precondition-clean ledger reads. Their date fallback loses the header `Resolved`
 `**Resolved:**` line, else `Added`, as v3.0 reads no retired field for its old meaning (text 7); after the
 precondition no entry holds one, and on an entry that still does (a retired error) a lifted note is dated by
 `Added`. `_closing_source()`'s like read goes with `migrate_entry()`. The retired gate `hold` and the role `decision (designer)` stay retired items
-that keep the block (none of the three repos holds either; a roster repo's remodel leaves no open entry
-holding either, D7's predicate). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
+that keep the block (none of the three repos holds either). The ledger's declared major stays 2 (`FORMAT_MAJOR` untouched, as TD-070's B5 leaves it), since a v2 ledger that meets the
 precondition reads the same under v3.0. A ledger that declares `Ledgerboard: 3` is refused by v3.0 as by v2.x
 (`version_problem()`: newer than the module reads), which is right: no ledger form of major 3 exists.
 
-**D7. A roster repo's one remodel, after v3.0** (TD-096, on Paul's input, 2026-11-13). A roster repo takes no v2.7
-remodel (target design §7.2 step 6, amended). When its own team picks it up again, after v3.0 is cut and both
-consumers vendor it, it takes one remodel: one session and one PR, by its own team, in two bumps of its agent-cadence
-pin (`docs/cadence.toml`'s `ref`, a full commit). This design fixes what that PR must show and how v3.0 grades it;
-the commands, their order and their commit points are agent-cadence's remodel procedure (*Consumers*), since every
-one is an agent-cadence wrapper's (`bump`, `ledger.py --split`, `migrate`'s git dating, `board_edit.py`), tested
-there and changed without a ledgerboard release.
+**D7. A roster repo's way to v3.0 is TD-100's** (TD-096, on Paul's input, 2026-11-13; cut 2026-11-14, TD-099, on
+Paul's Hold). A roster repo takes no v2.7 remodel (target design §7.2 step 6) and is untouched by v3.0 until it bumps
+its own agent-cadence pin (D5). How it then reaches v3.0 — its ledger and board from their v1 or v2 forms to v3.0's,
+and who runs what — is designed in TD-100 when the first roster repo resumes, from where ledgerboard and agent-cadence
+then stand. Rounds 9–15's findings on such a remodel (`docs/reviews/TD-078.md`, F126–F224) are that design's starting
+point, not part of this one. No roster ledger is counted here.
 
-- **The two pins are the procedure's to name.** agent-cadence's remodel procedure (*Consumers*), at its fixed path
-  on `main`, names both: the first, a commit of agent-cadence that vendors the last v2.x minor (on `main` until a repair, then
-  on its maintenance branch, below) (v2.8,
-  tagged here 2026-11-13, #281, unless a v2.9 is cut before TD-070's B1 merges, D3), with the minor's number; the
-  second, a commit that vendors v3.0 (or a later v3.x). Its test runs the procedure's commands at each named commit,
-  in a fixture checkout. **It lands in two PRs (F218):** the first — the procedure, its first pin and its test at
-  that pin — merges before agent-cadence's v3.0 vendor PR, which waits until that test passes, so a wrapper defect
-  at the first pin is found while `main` still vendors the minor and is mended there, by a fix and a newer first
-  pin, never by the second bump; the second — the second pin and its test there — merges after the v3.0 vendor PR.
-  A later PR whose test passes may re-name either pin. A first-pin defect found only after the v3.0 vendor PR has
-  merged, when no newer `main` commit vendors the minor, is mended on a maintenance branch of agent-cadence cut
-  from the first pin (wrapper fixes only), its fixed commit then named as the first pin; the branch is kept in
-  agent-cadence's source, since the launcher fetches its branches to serve a pin, and agent-cadence's `agent-cadence
-  run` and `bump` accept a pinned commit off `main` and the second bump from it to a v3.0 commit on `main` that does
-  not descend from it (*Consumers*; F222). A remodel reads the pins when it
-  starts, from a merged file: no reader computes one from where `main` stood at a merge (F126). A roster remodel
-  starts only once the procedure's file names both. **`migrate` stays usable through the first pin after v3.0
-  removes it:** a pin is a fixed commit of agent-cadence, which stays (on `main`, or on the maintenance branch), so
-  `agent-cadence run ledger.py migrate` under that pin runs the last v2.x's `migrate` whatever v3.0 has removed. Nothing in
-  ledgerboard or agent-cadence keeps `migrate` past v2.x for it.
-- **What the PR shows between the bumps** — the precondition, met per repo (D5), taken under the last v2.x pin
-  before the second bump, its output in the PR body: the ledger is a v2 directory (a v1 file split first: the
-  writers, `migrate` among them, refuse one); `ledger.py migrate --plan --release <the minor>` shows no entry with
-  changes or stops; every entry file is canonical (`ledger.py fmt --check` exits 0: no entry would change and none
-  is refused); no open entry's `Blocked by` holds the retired gate `hold` or the reserved role `decision
-  (designer)` (each a retired item v3.0 still reads as a block, ℹ only, D6); `ledger.py --check` reports no error;
-  and the board carries its `People:` line and is in `fmt`'s form (`board_edit.py fmt --board <board> --plan` lists
-  no line in `fixed` and none in `refused`). It is the PR's evidence, not a graded row: the merge gate reads the PR's
-  base and head alone, and the squash drops the commits between, so the techlead who merges it (target design §7.3,
-  *Who merges*) reads it before merging.
-- **How v3.0 grades the PR**, at its head, under the v3.0 pin (where the gate runs from is the procedure's). It
-  reads no old form (D4): at the head, v3.0's retired errors (on a v2 ledger) refuse any old form the remodel
-  left. `check()` grades what the head holds, reading the base only to tell a standing finding from one the edit
-  made; `tripwire()` reads the base through `_decisions()`, and `uncovered_decisions()` through `_carried()` and, today,
-  `_held_old_form()`, which B4 removes, so once B4 removes it a base old-form item is unseen by both (under v2.8
-  `uncovered_decisions()` still sees it): under v3.0, removing one trips nothing, and every `decision (<who>)` the remodel writes, from an old form or a `Waits`, reads as gained. Each
-  needs a board item that covers it (its Context `TD-n decision (<who>)`), else the gate refuses it
-  (`decision-uncovered`, when the board's `People:` lists the person) or flags it (`decision-elsewhere`). The gate
-  sweep owes such an item in any case, since the old form hid it (D1).
-- **The board** takes, in the same PR, under the last v2.x pin, the v2.x steps a roster board missed (its `People:`
-  line, target design §7.2 step 0; `fmt`'s key rule, §7.3) and, under the v3.0 pin, its split, which TD-070's second part (TD-095) designs,
-  a split PR whose base board predates v2.3 included; the board items above are written after the split, under the
-  v3.0 pin, in the form TD-095 gives, since the v3.0 gate reads the head's board, which is the split one.
-- **What it supersedes for a roster repo:** cadence.md §2.12's "`--split` as its own PR" and its `migrate` run as a
-  PR of its own both give way to this one PR, as Paul asked (agent-cadence's line, *Consumers*). The roster repos'
-  own counts are their remodels' to take: no roster ledger is counted here.
-- **A roster remodel starts only once agent-cadence's procedure has merged naming both pins** (*Consumers*), and its board half once
-  TD-095's design gives the split and the board's writer under v3.0.
+**What B4 keeps of the revision's additions.** The test: B4 keeps what v3.0's ledger half needs in ledgerboard,
+agent-cadence and ShiftLead whether or not a roster repo exists, and drops what served only a roster repo's remodel.
 
-*Alternatives weighed.* (a) Two PRs, the first merged under the last v2.x pin, so v2.8's gate grades the rewrite and
-the rewritten decisions need no board item in that PR: two remodels where Paul asked one, and the board items are
-owed anyway. (b) v3.0 keeping the old-form base-side count for a roster repo's rewrite: a v3.0 reader carrying a
-retired form's meaning for one migration, which D4 rules out. (c) Keeping `migrate` in v3.0 for the roster repos:
-the old forms' code would stay in every v3.x reader for a run each roster repo makes once, under a pin that already
-has it. (d) A pin fixed in agent-cadence's v3.0 vendor PR: the last commit before that PR merges, read literally from
-Paul's note ("the last agent-cadence that vendors v2.8"), is known only once it has merged, so the entry would race
-its own merge (F126); the vendoring PR's own squash commit (rounds 9–12), or the newest passing commit when named
-(round 13), is fixed but frozen with whatever wrapper defect it carries, which the second bump cannot mend (F194,
-round 14). The procedure's file names the pins and a passing PR may re-name them: the latest agent-cadence the note
-asks for that the procedure has tested, fixed for each remodel when it starts. Its first pin is tested before the
-v3.0 vendor PR merges, so the mending commit can still be on `main` (F218); a procedure landed whole after that PR
-would first exercise the first pin when only older commits vendor the minor (round 15).
-(e) The remodel's commands, in order, in this plan (D7 as rounds 9–11 had it): every build-changing finding on them
-(F142, F153, F154, F162, and round 11's) was an agent-cadence wrapper's argument form, side effect or commit point,
-which ledgerboard cannot check from its tree and which moves with agent-cadence; so this plan keeps the predicate and
-the grading, and the procedure is agent-cadence's (*Consumers*).
+- **Text 5′, kept, cut to the precondition and the untouched ledger.** Text 5 (B2's) says the precondition holds
+  "in every repo", which stops being true once the roster is outside it; text 5′ says which ledgers it binds and that
+  another is untouched, which is true for any repo. Its sentence on running the last v2.x's `migrate` first is
+  dropped: it describes a roster repo's way to v3.0, TD-100's.
+
+- **Text 7's v1-ledger clause on the old decision form, kept.** It states what D4 makes `check()` do on any v1
+  ledger (on an open entry the unreadable item is an error beside the retired record's ℹ; on an archived one, ℹ
+  alone); without it text 7 would say ℹ where v3.0 reports an error. The three repos' ledgers are v2, but the module
+  reads any ledger it is given, a roster repo's v1 one among them (through agent-cadence's resolver), and what it
+  reports there is defined whoever owns the ledger (round 16's F230, F238).
+- **Text 12's v1-ledger clause, kept,** for the same reason: *Versions* says what v3.0 reports on a ledger that did
+  not meet the precondition.
+- **Text 12's gained-decision clause, kept.** D4 removes B2's base-side count in `uncovered_decisions()` regardless
+  of the roster (it reads `old_form`, which the record loses); the clause tells a reader that an old form rewritten
+  `decision (<who>)` on a stale branch in any repo is a gained decision under v3.0, owed a board item.
+- **`_old_form_item()` and `OLD_FORM_HEAD_RE` (D4), kept.** D4 names the old decision form wherever it stands, which
+  a stale branch can bring back in any repo; once `GATE_DECISION_RE` is end-anchored (F113) the retired record needs
+  its own finder, and the helper is that finder.
+- **The five fixtures, kept:** `retired_old_form_v1_open` and `retired_old_form_v1_archived` pin text 7's v1
+  clause; `retired_old_form_second` and `retired_old_form_mid` pin `_old_form_item()`'s bounds;
+  `old_form_rewrite_gained` pins the removal of B2's base-side count, which no other B4 fixture does once
+  `migrate_old_form_not_gained` goes.
+- **Kept, not tied to the roster:** F219's correction of `fixtures/ledger/gates.json` (`gates.md` declares major 2),
+  F221's wording of text 8, B4's guard run on the last minor's tag tree, and agent-cadence's roster-shaped fixture
+  (*Consumers*: its v3.0 tools read roster repos that v3.0 leaves untouched, D5).
+- **Dropped:** text 5′'s `migrate`-first sentence; D6's and text 7's closing note's clauses on what a roster remodel
+  leaves; D7's remodel procedure, its two pins, the PR's evidence between the bumps and v3.0's grading of that PR;
+  *Consumers*' remodel-procedure, two-PR, maintenance-branch and `bump` lines. Each served only a roster repo's
+  remodel.
+
+*Alternative weighed.* The remodel rounds 9–15 designed (one PR per roster repo across two agent-cadence pins named by
+an agent-cadence procedure, landed in two PRs, with a maintenance branch and a requirement on agent-cadence's `bump`):
+the first pin recurred in four rounds, and each fix (F218, F222) added machinery for repos nobody is working, to run at
+an unknown date by which agent-cadence's pins will have moved. Paul's Hold cut it (TD-096's Ask).
 
 ## The `SPEC.md` text
 
@@ -418,15 +382,15 @@ whose precondition is that `migrate --plan` shows no entry with changes in every
 > `migrate` stays through v2.x and goes in v3.0, whose precondition is that, with the last v2.x, `migrate --plan`
 > shows no entry with changes or stops in every repo (v2.8: its rules cover every old form, open and archived).
 
-**Text 5′ (B4), *Versions*, the v2.7 paragraph's last sentence** (text 5's, which B2 landed, TD-089; TD-096). "`migrate`
+**Text 5′ (B4), *Versions*, the v2.7 paragraph's last sentence** (text 5's, which B2 landed, TD-089; TD-096, cut by
+TD-099: how such a ledger then reaches v3.0 is TD-100's). "`migrate`
 stays through v2.x and goes in v3.0, whose precondition is that, with the last v2.x, `migrate --plan` shows no entry
 with changes or stops in every repo (v2.8: its rules cover every old form, open and archived)." becomes:
 
 > `migrate` stays through v2.x and goes in v3.0, whose precondition is that, with the last v2.x, `migrate --plan`
-> shows no entry with changes or stops in every ledger that takes v3.0 when it is cut (v2.8: its rules cover every
-> old form, open and archived). A ledger whose repo stays on an older v2.x is untouched by v3.0 until that repo takes
-> it: it runs the last v2.x's `migrate` first, with a tool that still carries it (its rules are that release's
-> `SPEC.md`'s, *Migrating to v2.7*), and takes v3.0 once the same `migrate --plan` shows nothing.
+> shows no entry with changes or stops in every ledger whose repo vendors v3.0 when it is cut (v2.8: its rules cover
+> every old form, open and archived). A ledger whose repo stays on an older v2.x is untouched by v3.0 until that repo
+> vendors it.
 
 **Text 6 (B4), *The ledger*, *The old form*, replaced whole:**
 
@@ -457,7 +421,7 @@ which from v2.7 is an error (*The closed Status set*):" becomes:
 > with what replaces each:
 
 That cost is accepted (round 8's F115): the precondition (D5) leaves none of the three repos holding the old form when it vendors
-v3.0, and a roster repo none once its remodel has merged (D7), so the cure meets only an entry a v2.x writer of another tree filed late.
+v3.0, so the cure meets only an entry a v2.x writer of another tree filed late.
 
 Its second item, "in `Blocked by`, the gate `hold` (…), the old form above, and a role in `decision (…)`, …",
 loses "the old form above,", reading "the gate `hold` (…) and a role in `decision (…)`, …" (round 8's F116): the old form is no longer read as a retired item (text 6). Its third item's
@@ -644,7 +608,7 @@ with the code, and the precheck green.
   `check()`'s retired records over every entry (fields and the old decision form), `GATE_DECISION_RE`'s whole match
   and `parse_gates()`, `edit_entry`'s `set`, `archive` and `reopen`, `_written_blocked()`, `OLD_FORM_REPLACES`,
   `_without`, `reassign_gate()`, `_blocked_items`, `_one_copy`, `_item_gate_key`, `ENTRY_ORDER`, `judge_takes()`,
-  `status_problem()`'s message, `_fallback_day()`'s header read, `uncovered_decisions()`' `_held_old_form()` (D6); `migrate_entry()`, `migrate_subject()` and the helpers only they use removed, `MIGRATE_SUBJECT_RE` kept, D4),
+  `status_problem()`'s message, `_fallback_day()`'s header read, `uncovered_decisions()`' `_held_old_form()` (D4); `migrate_entry()`, `migrate_subject()` and the helpers only they use removed, `MIGRATE_SUBJECT_RE` kept, D4),
   `ledgerboard/ledger.py` (`migrate` and the `set` route's old-form refusal removed; `note`'s refusal of an
   archived Status outside the closed set kept, its message text 10's cure in place of *run migrate first*),
   `fixtures/run.py`, `SPEC.md` (texts 5′ and 6–12), the fixtures above, `tests/` (`test_ledgerboard.py`'s migrate cases,
@@ -655,6 +619,11 @@ with the code, and the precheck green.
   Before B4 starts, its builder runs `migrate --plan` on this repo's ledger with the last v2.x minor's module (its
   tag's tree, since by then `main` carries TD-070's builds past it), a cheap guard; if
   entries filed since B3 show changes, a re-run of B3's command lands first as its own PR. B4's PR states that run.
+  Of the revision's additions to B4 (TD-096) it keeps text 5′ as cut, texts 7's and 12's v1-ledger clauses, text
+  12's gained-decision clause, `_old_form_item()` with `OLD_FORM_HEAD_RE`, and the five fixtures
+  (`retired_old_form_v1_open`, `retired_old_form_v1_archived`, `retired_old_form_second`, `retired_old_form_mid`,
+  `old_form_rewrite_gained`); it builds nothing for a roster repo's remodel (D7, *What B4 keeps*). TD-091's Fix
+  gains this list, and its block on TD-096 drops, on Paul's Go on the cut.
 
 **The order with TD-070's builds:** B1 and B2, then the last v2.x minor (Paul's), and B3; TD-070's B1 is `Blocked
 by` B1, B2 and Paul's decision that the minor is cut (D3; written on whichever of the two designs' filings comes
@@ -679,42 +648,12 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
     its refusal of an archived Status outside the closed set; its wrapper's own `migrate` action (`ledger.py
     migrate`, over `LBL.run_migrate`, adding git's `--closed-dates`) then runs that minor's rules on its ledger as
     its own PR;
-  - its PR vendoring the last v2.x minor merges first, since D5's check in the v3.0 vendor PR runs under the minor,
-    so a first pin exists to name; then the remodel procedure below (D7), its first pin and its test at that pin;
-    then the v3.0 vendor PR, held until that test passes, whose cadence change entry points a roster repo at the
-    procedure; then the procedure's second pin and its test there, since it names a commit vendoring v3.0 (F218);
-  - `agent-cadence run` and `bump` accept a pin that is a commit off `main` (a maintenance branch cut from the first
-    pin, wrapper fixes only, kept in its source), and `bump` accepts the second bump from such a pin to a commit on
-    `main` that does not descend from it when the branch was cut from an ancestor of that commit (today it refuses
-    a pin off the default branch and a bump that does not descend from the old pin), with a test, for a first-pin
-    defect found after the v3.0 vendor PR (D7, F222);
+  - its PR vendoring the last v2.x minor merges before its v3.0 vendor PR, since D5's check in the v3.0 vendor PR
+    runs under the minor;
   - its v3.0 vendor PR's tests read a roster-shaped fixture (a v1 ledger, old forms, a single-file board) without
-    error, since its v3.0 tools still read an un-remodelled roster repo's ledger and board through the cross-repo
-    resolver and the attention view, which D5's "untouched" does not cover;
-  - **a roster repo's remodel procedure** (D7), beside its `cadence.md` §2.12 and §9.19, which a roster session
-    follows: the commands, their order and their commit points for the one PR, superseding for it §2.12's
-    "`--split` as its own PR" and `migrate` as a PR of its own. What rounds 9–11 of this design found it must get
-    right, each an agent-cadence wrapper's behaviour (F142–F175, `docs/reviews/TD-078.md`): open ledger and board PRs
-    land or close first, and the team does no other work until it merges; a pin whose `bump` has no hand-off bumps
-    by §9.19's manual form; the pinned tree's vendored `ledgerboard/__init__.py` names the minor before anything
-    runs; a v1 ledger is split, and the split is not committed before `migrate` runs, since the wrapper dates an
-    undated archived Status by the day git added its archive file (the split's day, once committed); a missing date
-    is answered only by `--closed-dates` (a file holding a JSON object, TD-n to the UTC day of the newest commit that
-    added the entry's heading to the v1 archive, covering every undated archived entry, since giving it replaces
-    git's dates), and `--as` answers a stop on the word (an unmapped word, a `Superseded` with no `by`, a `Moved`
-    naming several ids), never a date; what `canonical()` refuses is put right by hand
-    before any writer runs, since `set`, `edit` and `migrate` refuse or stop on it; target design §7.3's judgment
-    steps (an old-form holder that is no person, a role, `hold`, each `Waits`, an entry holding both an open `Waits`
-    and the old form rewritten first) run before `migrate`; `fmt` runs after it; `board_edit.py`'s `fmt` and `add`
-    take `--board`, and `add` commits and refuses a dirty board, so the commit points are the procedure's; the gate
-    and every check run from the PR's own worktree (`agent-cadence run` reads the pin of the checkout it runs in,
-    and the repo's main checkout and its hooks keep the old pin until the PR merges); and the
-    check D7 names is taken at a commit the procedure fixes. It is read without the repo's pin: a roster session's
-    pinned tree predates it, and its §2.12 there still says the opposite, so the procedure lives at a fixed path on
-    agent-cadence's `main`, read from there (not through `agent-cadence path`), named in the ledger entry or board
-    item that starts each roster remodel, and it overrides that pin's §2.12 for the one PR. It names the two
-    pins, and its first PR's test runs its commands at the first pin, its second PR's at the second, in a fixture
-    checkout, as well as on `main` (D7, F224). Filed through agent-cadence's question seat with its v3.0 vendor entry;
+    error — the resolver and the attention view return the ledger, an old-form decision keeping its block as an
+    unreadable item, without raising (round 16's F231, F238) — since its v3.0 tools still read a roster repo's ledger and board, untouched by v3.0 (D5), through the
+    cross-repo resolver and the attention view;
   - its v3.0 vendor PR first runs `migrate --plan` with the last v2.x minor (D5) and records it, then removes its
     wrapper's `migrate` action (it calls `LBL.run_migrate`, which v3.0 removes) with its helpers `archived_dates()` and `_undated()`, whose
     `LB.migrate_entry()` call feeds its `--closed-dates`, drops
@@ -732,4 +671,4 @@ Lines for each consumer's own entry, filed there through its question seat (`ao 
 
 The board's half of v3.0 (TD-070). When v3.0 is cut, and what else it carries (Paul's). Renaming `**Resolved:**`
 to a status-neutral lead (target design §2.2, "v3.0 material"): no entry needs it, and it would rewrite every
-archived entry. Removing `status_notes_to_log()` (D6).
+archived entry. Removing `status_notes_to_log()` (D6). How a roster repo reaches v3.0 (TD-100, D7).
