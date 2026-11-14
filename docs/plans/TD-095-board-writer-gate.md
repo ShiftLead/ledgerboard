@@ -1,6 +1,6 @@
 # TD-095: the board's writer and the merge gate's verdicts (TD-070's B3 and B4)
 
-**Status:** Draft 3, 2026-11-14 (session lb-designer): round 1's fact-check (R44) raised four build-changing findings (F258–F261) and nine minor (F262–F270), all applied. Draft 2: draft 1's moved text rebased on TD-092's plan as designed (draft 10, Go'd): every name, signature, decision and text number of B1 and B2 now TD-092's, where TD-070's text differed from TD-092's design, TD-092's is followed and each change is marked *rebased on TD-092* (`read_ledger()`'s `ls`, the B3 refusal's words, the B3 sentences that name `split`), and one need in B1 stated as a build of its own before v3.0 (D7's `done --why`). Draft 1 was TD-070's unreviewed B3 and B4 text, moved unchanged. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: none yet at draft 2.
+**Status:** Draft 3, 2026-11-14 (session lb-designer): round 1's fact-check (R44) raised four build-changing findings (F258–F261) and nine minor (F262–F270), all applied. Its re-check (R45) raised six minor (F271–F276), applied; a second re-check and round 1's design review follow. Draft 2: draft 1's moved text rebased on TD-092's plan as designed (draft 10, Go'd): every name, signature, decision and text number of B1 and B2 now TD-092's, where TD-070's text differed from TD-092's design, TD-092's is followed and each change is marked *rebased on TD-092* (`read_ledger()`'s `ls`, the B3 refusal's words, the B3 sentences that name `split`), and one need in B1 stated as a build of its own before v3.0 (D7's `done --why`). Draft 1 was TD-070's unreviewed B3 and B4 text, moved unchanged. Class: **wide** — it changes a vendored, published format read and written by both consumers, and is part of a major (cadence.md §4.8; cap 6 rounds). Rounds: none yet at draft 2.
 
 **Entry:** [TD-095](../ledger/TD-095.md), `Part of` [TD-070](../ledger/TD-070.md). **Source:** TD-095's Fix (the
 scope, Paul's Split, decided 2026-11-13: B3 and B4 here, B5 TD-098's); [TD-070's plan](TD-070-board-directory.md),
@@ -60,7 +60,7 @@ not an item, and moving stamps out (a file per stamp, say) is the consumer's cho
 **D3. The item id (S2): its writer half** (restated from TD-092's plan, D3, which keeps the text; round 1's F183
 there). `board.py add` draws the nonce (`secrets.token_hex(4)`) and draws again
 while the name is held open or in any archive month: it draws at most 8 times in all; the 8th held name is refused
-(round 1's F262: this is how TD-092's D3 reads by its unit test "eight held names refused", TD-092's plan unedited). `add --id <id>` takes a caller's id instead (a
+(round 1's F262: this plan's reading of TD-092's D3 "up to 8 times", pinned by B3's unit test "eight held names refused"). `add --id <id>` takes a caller's id instead (a
 service writer that keys its appends on an event, cadence §4.4), refused when malformed, when its date is not the
 item's `Added`, or when held. So `--id` is idempotent within a day and not across days, as intended: an id names one
 day's add, a retry of a written add is refused as held (which a caller reads as done), and a caller that retries on
@@ -115,7 +115,7 @@ Each of `board.py`'s helpers that reads the board or an item (round 8's F127, ea
   as the write leaves the board, each `{"id", "note"}` (text 10), `[]` when the item closed;
 - `_find()` and `_under()` go, with `--line`, `--expect` and `--under`;
 - **`add --said --by`**: the answer is the item's first reply, a Log line `- <today>: <by>: <said>` (`edit_item()`'s
-  reply form), never words after the heading; `<said>` is refused when it holds a line break, checked before any collapse;
+  reply form), never words after the heading; `<said>` is refused when it holds a character `str.splitlines()` splits on, checked before any collapse;
   the rest of its whitespace, and `<by>`'s, is collapsed as today (round 1's F259), and the add is refused when
   either is empty, or when `<by>` holds a `:` or is over 40 characters (the Log's rule, `reply`'s refusal). The heading is `--text` alone, so the subject's head
   never holds the person's words (today's `bare` line). *Rebased on TD-092:* `item_file()` takes no `said` (TD-092's
@@ -173,16 +173,18 @@ archive files the consumer fetches.
   (added, removed or changed): another repo's case needs its board paths to be exactly the item's files and its
   ledger paths none; (c) needs the changed set to be exactly the item's files and each entry file `decide_lift()`
   writes; the Log-date loop runs over the changed ledger paths. The trees hold only the board's and the ledger's
-  paths, so `files` keeps one job beside choosing the archive paths fetched: a path in `files` outside
+  paths, so `files` chooses the archive paths fetched, and a path in `files` outside
   `BOARD_DIR/` and `LEDGER_DIR/` sends the PR to review (`lift-files`), as a stray path does today, and so does a
   path under `BOARD_DIR/` that is neither directly in it nor under `archive/<YYYY-MM>/` (round 1's F258); its board
-  paths are never compared, so a move reported as a rename or as two paths gives one verdict.
+  paths are checked only for their shape, never compared between the trees, so a move reported as a rename or as
+  two paths gives one verdict.
 - **The order of the checks** (round 1's F260): the board's presence and form first, then the files, then the
   diff, each before (a0) as today's `lift-no-board` and `lift-board-diff` are: no board at the base or the head,
   neither a file under `BOARD_DIR/` nor `BOARD_V2_PATH`, takes review (`lift-no-board`, its message naming
   `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base (`lift-board-v2`); then a stray path in `files` (`lift-files`,
-  above); then board changes that are not one item's (`lift-board-diff`); then (b)'s other checks, (a0), (a) and
-  (c) in today's order, the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
+  above); then board changes that are not one item's (`lift-board-diff`); then the checks from
+  `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and (a) before the `Decided:` by
+  and date), the changed-set `lift-files` of (c) and another repo's case among them, and the head file's
   path and bytes (`lift-board-line`) last, where today's byte compare is.
 - `tripwire()` reads covering items through `load_board()`; "newly closed `— lifted.`" is a `Closed:` whose why is
   `lifted` at the head and none at the base (*rebased on TD-092*: `BoardItem.closed[1] == "lifted"`, the why read
@@ -256,7 +258,8 @@ After the list, add:
 > `BOARD_V2_PATH`, takes review (`lift-no-board`, naming `BOARD_DIR` and `BOARD_V2_PATH`); then a v2 base
 > (`lift-board-v2`); then a path in the file list outside `BOARD_DIR/` and `LEDGER_DIR/`, or under `BOARD_DIR/`
 > but neither directly in it nor under `archive/<YYYY-MM>/` (`lift-files`); then board changes that are not one
-> item's (`lift-board-diff`); then (b)'s other conditions, (a0), (a) and (c), and last the head file's path and
+> item's (`lift-board-diff`); then the checks from `lift-not-answered` to the ledger and changed-set checks in today's order ((a0) and
+> (a) before the `Decided:` by and date), and last the head file's path and
 > bytes (`lift-board-line`).
 
 In **(c)**, "the PR changes exactly the board and the open file of each entry it changes" becomes "the PR changes
@@ -297,7 +300,7 @@ round 9's F155). Its actions list is replaced by (the `add` bullet keeping v2.8'
 >   `parts_problems()` names any, or when no ledger is found. With `--said` and `--by`, a question already answered:
 >   its answer is the item's first reply, the Log line `- <today>: <by>: <said>`, refused as `reply` refuses (a
 >   `--by` holding `:` or of more than 40 characters, empty or blank words); `--said` is refused when it holds a
->   line break, checked before any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item the person decided elsewhere (`decided_file()`).
+>   character `str.splitlines()` splits on, checked before any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item the person decided elsewhere (`decided_file()`).
 >   The write is refused when `board_problems()` faults the item it adds;
 > - **`snooze`, `due`, `done`, `decide`, `reply`** — the five edits (`edit_item()`) of the open item `--id` names,
 >   refused when no open item has it; `done`, and a `decide` that closes the item, write its archived file and
@@ -353,7 +356,7 @@ board's directory.
 All invented names (`pat`, `sam.lee`, `acme/widgets`, `ops`, `host-a`, sessions `w-9`, `lb-x`).
 
 - **`fixtures/board_writer/`**: new cases over a v3 directory: `add_v3`, `add_id_given`, `add_id_taken` (exit 1),
-  `add_id_wrong_date` (exit 1), `add_said`, `add_via_stub`
+  `add_id_wrong_date` (exit 1), `add_said`, `add_said_lines` (exit 1), `add_via_stub`
   (`--board` the stub's path: the file written in the directory beside it), `snooze_id`, `due_id`, `done_moves` (the
   file under `archive/<month>/`), `decide_close_moves`, `reply_id`,
   `edit_no_such_id` (exit 1), `edit_closed` (exit 1; it replaces the existing `edit_not_open`, whose `--line` named a
@@ -364,7 +367,7 @@ spaces, printed at four), `show_empty` (no item to show: no output),
 `fmt_v3` (B3: it needs only B1's `canonical_item_file()`; beside the existing `fmt`, which is rewritten); and, in
   B5, `split` and `split_exists` (exit 1). **Every case that runs `add`** (round 8's F121) passes `--id` and
   `--today` (the id's date; `board.py` takes `--today` already), so its written path and its JSON are fixed: the new
-  `add_v3`, `add_id_given`, `add_id_taken`, `add_id_wrong_date`, `add_said` and `add_via_stub`, and every rewritten
+  `add_v3`, `add_id_given`, `add_id_taken`, `add_id_wrong_date`, `add_said`, `add_said_lines` and `add_via_stub`, and every rewritten
   `add_*` case (`add_act`, `add_answered`, `add_crlf`, `add_decide`, `add_decide_lifts`, `add_decided`,
   `add_detail_recommended_doubled`, `add_doer`, `add_doer_decide`, `add_doer_decided`, `add_doer_repo`,
   `add_gate_off_people`, `add_hidden`, `add_ledger_without_parts` and each `add_parts*` case). The random draw,
@@ -386,7 +389,8 @@ spaces, printed at four), `show_empty` (no item to show: no output),
   `archive/<YYYY-MM>/`), `v3_other_repo`,
   `v3_tripwire_lifted`, `v3_uncovered_new_decide`, `v2_lift` (`lift-board-v2`), and `split_pr` (a v2 pair at the
   base, the directory at the head: no tripwire flag; review, `lift-board-v2`). The existing cases move their board into the directory with
-  the same items.
+  the same items, except that `a CRLF board whose answered line drops its CR`'s expected verdict becomes
+  `lift-board-line`; the other `lift-board-diff` messages are those of text 7's (b).
 
 **Unit tests** — the opening is TD-092's plan's, B5's bullet TD-070's plan's; B3's and B4's:
 - **B3**: `tests/test_board_writer.py` is rewritten over a directory: each run's `--line`/`--expect` becomes `--id`,
@@ -413,7 +417,6 @@ build is B3 or B4:
 | `_tree_board()`, `_board_line_reads()`, `_lifted_close()`, `tripwire()`, `uncovered_decisions()`, `lift_pr_verdict()` | the board text's lines, `item_key()`, `.line`, `_item_gate(it.text)` | `load_board()` over the tree, ids, `closed`'s why, `_item_gate(item)` | B4 |
 | `board.py` `items()`, `_gate()`, `who_answered()`, `_may_answer()`, `_check_parts()`, `_decide_ledger()`, `_line_notes()` | `parse_board()`, `ITEM_RE` over a line, `_item_gate()` over its text, a board's text | the `Board`, the item file, `BoardItem` fields (D7's F127 list) | B3 |
 | `show_board()` (new) | — | the `Board`: `needs_you()`'s rows, each item's `raw`, a v2 item's `detail_source` (D8) | B3 |
-
 | `board.py` `plan_add()`, `plan_edit()`, `plan_fmt()` | `ITEM_RE` over the line, `parse_answers()` for the fill, `canonical_item()` | `item_file()`, `edit_item()` by id, `BoardItem.answers`, `canonical_item_file()` | B3 |
 | `board.py` `_find()`, `_under()`, `plan_archive()` | a line number, a section, `closed_items()` | none | gone B3 |
 
