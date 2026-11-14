@@ -96,11 +96,15 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
   `None`, which reads no rule 1, so a writer reads rule 4 alone on a detail block's context; `sentence_problems`
   returns `PersonTextProblem`s where the source leaves its type open. `PersonTextProblem` is a tuple, so a caller
   that unpacks `(rule, refuse, line)` as the source says still works.
+- *an empty sentence* is a rule-1 failure (`it is empty`), which the source did not name.
 - *`sentence_problems` reads the word count, the sentence end and emptiness only*, never code, as the source says
   (the card reads an empty result as *is one sentence*); `person_text_problems` adds `code_tokens(sentence)` and
   writes **one** rule-1 line whose parts name each failure, so rule 1 gives at most one problem.
-- *the text read is ordered*: code spans and fences are found first and stand as one word each, then link targets
-  and URLs are dropped, so a URL inside a span cannot break the span; the source did not order them.
+- *the text read is ordered and its spans defined*: code spans and fences are found first and stand as one word
+  each, then link targets and URLs are dropped (a link's text kept), so a URL inside a span cannot break the span;
+  the source did not order them, nor say what a span or fence is. Here a span holds no blank line, a backtick
+  with no partner is plain, and a fence is a line of backticks with at most an info word. A sentence end is a stop
+  followed by a space *or a line break* (the source: a space).
 - *a word holds a letter or a digit*: a standalone `—`, `-`, `&`, `/` or `~/` is no word, counts toward no limit and
   is no token; the source counted every whitespace-separated piece.
 - *every word pattern matches the whole stripped word* (`GitHub`, `PowerPoint` and `PhD` are no camelCase name),
@@ -118,6 +122,12 @@ def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[s
 - *a coined term* matches with `s` or `es` after it, where the source says only *its plural*.
 - *a form* is defined: an answer whose label `is_form()` reads as a form (`Hold: <note>`, `Not right: <what>`,
   `Other:`) is read by its consequence alone; the label and consequence are `split_answer()`'s.
+- *the writes*: the source's ledger row read the whole Ask as the sentence and no context; here the Ask's first
+  paragraph is the sentence and its later paragraphs the context, as mail's first paragraph is (an Ask of three
+  sentences is the common case, and its later sentences are context, not the question). The source's `decide` row
+  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The title rule
+  runs on `set --title` (v2.8), the retitle path the source said would come (*any retitle path added later*).
+- *`people` compares case-insensitively*, as SPEC's *A person's name* does; the source said nothing.
 - *the title's labels*: the module keeps the format's ids (`TD-n`, `<repo>#TD-n`); the source's `[A-Z]{1,2}\d+`
   and `#\d+` are the caller's `labels` (D1), and the shape-label cure *spell it out* goes with them, since a
   pattern the caller passes is the caller's to keep free of *P0*.
@@ -193,8 +203,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > 3. **A title is plain words** (`title_problems(title, coined=, labels=)`): no code token and no label.
 > 4. **The context is plain words**: its code tokens are named in one warning; never refused, never capped.
 >
-> **The text read.** First, `’` becomes `'`. Then each fenced block — a line opening three or more backticks, to
-> the next line opening as many or more, or the text's end — and each code span — a run of n backticks, then text
+> **The text read.** First, `’` becomes `'`. Then each fenced block — a line that is three or more backticks and
+> at most an info word after them, to the next line that is as many backticks or more, or the text's end — and each code span — a run of n backticks, then text
 > holding no run of exactly n backticks and no blank line, then n backticks — is found and stands as one word
 > (a backtick with no partner is a plain character). Then, outside them, a markdown link's target (`](…)`, the
 > `]` kept) and a bare URL (`https?://\S+`) are dropped. The rest is read as whitespace-separated pieces; each is
@@ -208,8 +218,9 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > - a *path*: opens `/`, `~/`, `./` or `../`; or splits on `/` into three parts or more of which one holds a
 >   letter, or into two whose last is a file name; or holds a `\` between two word characters;
 > - a *file name*: `[\w.-]*\w\.(<ext>)`, case ignored, `<ext>` one of `CODE_EXTS`;
-> - a *call*: holds `[A-Za-z_][\w.]*\(` not followed by `s)` or `es)`, spelled as the name before the `(` and
->   `()` (`one_sentence(x` gives `one_sentence()`);
+> - a *call*: a piece that, before the strip, holds `[A-Za-z_][\w.]*\(` whose `(` is not followed by `s)` or
+>   `es)`, spelled as the name before the `(` and `()` (`one_sentence(x)` gives `one_sentence()`; `file(s)` is no
+>   call);
 > - a *snake_case name* `[a-z][a-z0-9]*(_[a-z0-9]+)+`; a *dotted name* `[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*){2,}`,
 >   case ignored; an *upper-case name* `[A-Z][A-Z0-9]*(_[A-Z0-9]+)+`; a *camelCase name* `[a-z]+[A-Z]\w*`;
 > - a *range*: holds `..` between two word characters;
@@ -224,7 +235,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >
 > **One sentence** (rule 1). The sentence is empty when it holds no word. It has more than `max_words` words when
 > its words, a span or fence counting as one, number more. It has a sentence end inside it when a `.`, `?` or `!`
-> followed by whitespace stands before its last word, but not a `.` ending a word that is, case ignored, *e.g*,
+> followed by a space or a line break stands before its last word, but not a `.` ending a word that is, case ignored, *e.g*,
 > *i.e*, *vs*, *etc* or *cf*. Its end is read after trailing `) ] " ' *` are dropped: a question must end in `?`;
 > a statement's end is not read. Known false positive: another abbreviation or an id followed by a stop and a
 > space (*U.S. law*, *TD-909. Which*), whose part says *write it without the stop*.
@@ -232,27 +243,28 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > **An actor** (rule 2): a match, in the bounds `(?<![\w'])` before and `(?![\w']|\.\w)` after, of an I-form (*I,
 > I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
 > word or a phrase taken as literal text, its last word optionally followed by `'s` or `s` (case ignored); or of a
-> name in `people`, literal, optionally followed by `'s` (case-sensitive). An answer is read through
+> name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name). An answer is read through
 > `split_answer()`: its label and its consequence, the ` (default)` mark dropped; an answer whose label is a form
-> (`is_form()`: `Hold: <note>`, `Not right: <what>`) is read by its consequence alone, and any other by its label
-> and consequence. `default` is read as an answer is, and skipped when it equals, after `split_answer()`, an
-> answer's label or its whole text. Known gaps: the check sees words, not meaning (*you will not hear of it
+> (`is_form()`: `Hold: <note>`, `Not right: <what>`, `Other:`) is read by its consequence alone, and any other by its label
+> and consequence. `default` is read as an answer is, and skipped when its label, after `split_answer()`, equals an
+> answer's label, or its text with the mark dropped equals an answer's with the mark dropped. Known gaps: the check sees words, not meaning (*you will not hear of it
 > again* passes), and an actor before a `-` in a word (*agent-cadence*) counts; a caller's `actors` bring their
 > own (a noun *lead* matches *lead-in*).
 >
-> **A label** (rule 3): a word matching `(?:[\w-]+#)?TD-\d+`, a word matching any of `labels` whole, or a word of
-> `coined`, case ignored, with `s` or `es` after it or not.
+> **A label** (rule 3): a word matching `(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+#TD-\d+|TD-\d+` (the format's
+> `<repo>#TD-n` and `TD-n`), a word matching any of `labels` whole, or a word of `coined`, case ignored, with `s`
+> or `es` after it or not; each optionally followed by `'s` (*TD-5's*).
 >
 > **The lines**, one per problem, rule 1's first, then rule 2's in the answers' order with the default last, then
 > rule 4's (`title_problems` gives rule 3's alone). A `<list>` names up to three items, in the order found: `a`,
 > `a and b`, `a, b and c`, and from four `a, b, c and <k> more`. `<i>` counts the answers from 1.
 > - rule 1: `rule 1: the question is one plain sentence of at most <n> words ending in ?: <parts>` for a question,
->   `rule 1: the sentence is one plain sentence of at most <n> words: <parts>` for a statement; `<parts>` a
->   `<list>` of the failures in this order: `it is empty`, `this has <m> words`, `this has a sentence end inside
+>   `rule 1: the sentence is one plain sentence of at most <n> words: <parts>` for a statement; `<parts>` every
+>   failure, in this order, joined with `; `: `it is empty`, `this has <m> words`, `this has a sentence end inside
 >   it (write it without the stop)`, `this does not end in ?`, and `the code token <list>` (`the code tokens
 >   <list>` for two or more). `sentence_problems` writes the same line without the code part. Example: *rule 1:
->   the question is one plain sentence of at most 25 words ending in ?: this has 26 words, this does not end in ?
->   and the code token profiles.yml*.
+>   the question is one plain sentence of at most 25 words ending in ?: this has 26 words; this does not end in ?;
+>   the code tokens profiles.yml and one_sentence()*.
 > - rule 2: `rule 2: answer <i> names nobody who acts — say who: I'll…, you…`, then `, or <a>…` when `actors` is
 >   not empty (`<a>` its first entry as given); `the default` in place of `answer <i>`. Example: *rule 2: answer 1
 >   names nobody who acts — say who: I'll…, you…, or session…*.
@@ -265,17 +277,19 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > **Which writes a writer checks.** The rules reach text a writer writes for a person, never the writers' `plan_*`
 > functions or the module's edits (`item_file()`, `edit_entry()`), which sweeps and migrations also call, and never
 > a file already written. A writer refuses the write when any problem's `refuse` is true, naming every problem,
-> and writes with rule 4's line shown. `people` is the board's `People:` (`answered_by()`'s source) for a board
+> and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
 > item, and the caller's for a ledger entry. It runs:
 > - **a `decide` item**: `person_text_problems(<question>, <its answers>, <context>, question=True)`, where the
 >   question is the line's bold head, else the line's text up to its first sentence end; then the detail block's
 >   `question` the same way, with no answers; the context is the detail block's `context` and the reason in its
->   `recommended` after the writer's own `<label> — `, read with `sentence` `None`;
+>   `recommended` after the writer's own `<label> — `, read with `sentence` `None`; never the line's `Context:`
+>   field, which names a gate;
 > - **an `act` item**: the line's bold head, `question=False` (an `act` line with no bold head is refused: *an act
 >   line leads with its task in bold*), and its detail block's `context` with `sentence` `None`;
-> - **an entry's Ask and Answers**, on any write of either (`new`, `edit --section Ask|Answers`, and `set --ask`
->   where the writer has it): the Ask's first paragraph is the sentence, `question=True`, its `**Answers:**`
->   answers the answers, and the Ask's later paragraphs the context;
+> - **an entry's Ask**, on any write of it (`new`, `edit --section Ask`, and `set --ask` where the writer has it):
+>   the Ask's text after its `**Ask:**` lead, its first paragraph the sentence, `question=True`, and its later
+>   paragraphs the context. An Ask carries no answers in this format; a ledger that keeps its own `Answers`
+>   (a repo's own field or section) passes them, read as a board's `Answers:` value (`parse_answers_value()`);
 > - **an entry's title**, on `new` and `set --title`: `title_problems()`; never on `renumber`, `archive` or
 >   `reopen`, which carry a title already written.
 > This package's own command lines do not run it: the writer that holds the caller's vocabulary does.
@@ -293,11 +307,11 @@ A new kind, `fixtures/person_text/cases.json` → `expected.json`, each case a c
 list, or the problems as `[rule, refuse, line]` lists, or `{"error": "ValueError"}`. Each SPEC example above is a
 case, word for word.
 - **code_tokens**: one case per kind, with each spelling (a span with its backticks, `a code block`, a call's
-  `()`); each known false positive and gap; an id (*TD-1845*, *#3878*, *F12*) and *v2.7.1* as none; `(s)` and
-  `(es)` as no call; a lone `--`, `—`, `/` and `~/` as none; a commit of 6 and 7 characters, *deadbeef* and
+  `()`); each known false positive and gap; an id (*TD-1845*, *#3878*, *F12*) and *v2.7.1* as none; `file(s)` and
+  `item(es)` as no call, `one_sentence(x)` as `one_sentence()`; a lone `--`, `—`, `/` and `~/` as none; a commit of 6 and 7 characters, *deadbeef* and
   *added* as none; *GitHub*, *PowerPoint*, *PhD* as none (whole-word match); a word of two kinds once; a link's
   target and a bare URL dropped; `` `curl https://x.io/a` `` one span; a double-backtick span holding a backtick;
-  an unmatched backtick plain; a fence holding spaces and a blank line as one token; order by place, each once.
+  an unmatched backtick plain; a fence holding spaces and a blank line as one token, and a line ```` ```x``` is y ```` as a span, no fence; order by place, each once.
 - **sentence_problems**: empty and blank; 25 and 26 words, and 25 words with a standalone `—` passing; a code span
   as one word, and a code token giving no problem here; a stop inside (*. Which*), each of the five abbreviations;
   a question without `?`; a statement ending in `.`, `!`, `:` and nothing, each passing; trailing `) ] " ' *`
@@ -305,13 +319,13 @@ case, word for word.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
   it* passing; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
   (literal), *agent-cadence* (passes, a known gap); `actors` empty refusing *a session pins it*, with the cure
-  line's `, or <a>…` absent and present; `people` case-sensitive, with `'s`; a form (`Hold: <note> — a session
-  revises it` passes; `Hold: <note>` and `Not right: <what>` alone refused; `Not right: wrong repo` read as
+  line's `, or <a>…` absent and present; `people` case ignored, with `'s`; a form (`Hold: <note> — a session
+  revises it` passes; `Hold: <note>`, `Not right: <what>` and `Other:` alone refused; `Not right: wrong repo` read as
   label); `(default)` dropped; `default` equal to a label (marked or not) skipped, unequal and actorless named
   *the default*; rule 4 with one, two, three, four and five tokens; rule 1 as a statement, and with every part
-  failing at once (the parts' order); `sentence` `None` reading no rule 1; rule order across rules 1, 2 and 4; an
+  failing at once (all named, in order); an Ask's `**Ask:**` lead not counted (a writer's case, by its text); `sentence` `None` reading no rule 1; rule order across rules 1, 2 and 4; an
   empty or multi-line entry in each list refused.
-- **title_problems**: `TD-078`, `ledgerboard#TD-12` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
+- **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
   refusing *B4* and *P0* (the caller's pattern, the caller's false positive), and `#\d+`; a `labels` entry that is
   no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; an id written in
   words passing.
