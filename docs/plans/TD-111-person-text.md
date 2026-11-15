@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** the rounds ended at round 6, the cap, on 2026-11-14; Paul answered One more round (#338), and round 7 runs as [TD-113](../ledger/TD-113.md). Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** class wide (two consumers' writers call what it exports). The rounds ended at round 6, the cap, on 2026-11-14; Paul answered One more round (#338), and round 7 ran as TD-113 and ended 2026-11-15 (design review: 2 build-changing, F127 and F128, applied; closing fact-check: 0). Build-changing per design review, rounds 1 to 7: 7, 3, 4, 0, 1, 0, 2. Waiting on Paul's answer. Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -366,7 +366,7 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >   default=)`, the context being the tail, then the detail block's parts `context`, `caveats` and `recommended`
 >   and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds the default's
 >   label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which names a gate.
->   A text with no lead is read whole, so a second sentence there is refused and belongs in the detail block; a
+>   A text with no lead and no bold run is read whole, so a second sentence there is refused and belongs in the detail block; a
 >   lead is the whole question, so *\*\*Merge the PR\*\* now?* is refused (its lead has no `?`). Second, the
 >   detail block's `question`, `person_text_problems(<question>, question=True, people=, actors=)` with the same
 >   `people` and `actors`. The writer lists the first call's problems, then the second's, each line after the
@@ -375,7 +375,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >   sees which to rewrite.
 > - **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence and its tail context. An
 >   `act` whose text opens with no lead is refused by the writer, with the line *an act item leads with its task in
->   bold* (a writer's refusal, not a `PersonTextProblem`). Example: *Reply to \*\*Dana\*\* about the budget* has
+>   bold* (a writer's refusal, not a `PersonTextProblem`; for an `act` this line is the one given, not the
+>   `decide`'s bold-run line). Example: *Reply to \*\*Dana\*\* about the budget* has
 >   no lead and is refused; *Should I merge \*\*#42\*\*?*, a `decide`, has no lead and is refused for its bold
 >   run, and *Should I merge #42?* is read whole. An `act`'s detail `question`, where it has one, is read by the
 >   `decide`'s second call (`question=True`, the same `people` and `actors`), its lines after `detail question: `.
