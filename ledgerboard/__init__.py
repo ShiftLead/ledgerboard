@@ -7094,7 +7094,7 @@ def _tree_ledger_by_place(tree: Mapping[str, str]) -> tuple[dict[int, str], dict
 
 def _tree_board_path(tree: Mapping[str, str]) -> str:
     """Where a tree's board is read (v3.0, SPEC *The merge gate's verdicts*): ``BOARD_DIR`` when the tree holds a
-    file under it, else ``BOARD_V2_PATH``, the one rule the three verdicts share."""
+    file under it, else ``BOARD_V2_PATH``, the one rule the verdicts share."""
     pre = BOARD_DIR + "/"
     return BOARD_DIR if any(k.startswith(pre) for k in tree) else BOARD_V2_PATH
 
