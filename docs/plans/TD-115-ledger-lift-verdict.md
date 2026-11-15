@@ -5,8 +5,8 @@ verdict, a new commit-subject kind and its writer, which both consumers vendor; 
 Rounds: **ended at the cap**, round 6, 2026-11-15 (its design review raised one build-changing finding, F64;
 trend of build-changing findings by the design reviews, rounds 1–6: 4, 1, 1, 2, 1, 1; by the fact-checks: 3, 0,
 0, 1, 1, 1, closing 0). Recurring topics: D4's trust argument, the release number, unreadable text (settled by
-F58). F63–F72 were fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round*
-recommended (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
+F58). Paul answered *One more round* (#349); round 7, past the cap, runs as TD-117 (the record:
+[docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
@@ -90,7 +90,7 @@ entry spells it and `<name>` the caller's session, else `n/a`. It is ShiftLead's
 no consumer's existing PR or commit changes.
 
 - `lift_subject(tid, gate, tool, session=None)` writes it, the id as the caller gives it (the entry's heading
-  spells it, `TD-12` or `TD-012`; condition 3 below finds either by number). It refuses a `tid` that is not a bare `TD-n`, a `gate`
+  spells it, `TD-12` or `TD-012`; condition 3 below finds either by number). It refuses a `tid` that is not a bare `TD-n` of 1 to 18 ASCII digits (the reader's cap, below), a `gate`
   that is not `decision (<p>)` (an `until` or event lift has its own routes, and a host writes those), and a
   `tool` or `session` that is not a token of `[A-Za-z0-9_.@/-]+` (the Log's rule for who and a session).
 - `subject_kind()` names it `lift`. `edit_action()` and `subject_id()` stay None for it: they read board writes,
@@ -261,7 +261,8 @@ parse, field, Log line, item key or canonical form changes. One reading changes:
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
 carve-out `lift`. v3.2 follows v3.1, so a consumer vendoring v3.2 takes v3.1's refusals too (SPEC
-*Versions*, v3.1's paragraph).
+*Versions*, v3.1's paragraph). Should this build's release be tagged before TD-111's build merges, TD-111's own rule (its
+D4: the next unreleased minor when its build merges) gives it the minor after.
 
 ## Options set aside
 
@@ -373,8 +374,9 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 **Under that block, in prose (what a production cannot say):**
 
 > `lift-subject` (v3.2) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
-> matches the whole line, nothing after its `)` (no trailing newline), and its digits are ASCII alone (`[0-9]`,
-> never `\d` unless `re.ASCII`, so `TD-١٢` is refused), and `lift_subject()` writes the gate as
+> matches the whole line, nothing after its `)` (no trailing newline), and its digits are ASCII alone and at most 18 (`[0-9]{1,18}`, as a part's id reads,
+> never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, and the id's number always fits the
+> lookup by number), and `lift_subject()` writes the gate as
 > `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
 > `_one_gate()` refuses (`decision (Ann )`, say) is refused.
 
@@ -459,7 +461,7 @@ v3.2): the press's own subject read back; a
 
 The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
 `fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
-it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id among its refused strings, the new start carrying all four itself
+it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id and a 19-digit id among its refused strings, the new start carrying all four itself
 (the test reads each start's own groups), and `fixtures/run.py`'s
 `grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
 production to that).
