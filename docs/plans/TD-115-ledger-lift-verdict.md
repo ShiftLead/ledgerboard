@@ -1,15 +1,12 @@
 # TD-115: a merge-gate verdict for a PR that only lifts a gate
 
-**Status:** Draft 7, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 8, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
 Rounds: **ended at the cap**, round 6, 2026-11-15 (build-changing findings by the design reviews, rounds 1–6: 4,
 1, 1, 2, 1, 1). Paul answered *One more round* (#349); round 7, past the cap, ran as TD-117 and ended 2026-11-15: its
-design review raised one build-changing finding (F76, a grammar fixture the build's own test would fail on),
-applied; fact-checks 0 build-changing, closing 0. Recurring topics: D4's trust argument, the release number,
-unreadable text (settled by F58), each judged again in round 7. F76–F80 were fact-checked, not design-reviewed, and
-F81, the closing fact-check's own, was neither;
-Paul's answer is the board's decide item, *One more round* recommended (the record:
-[docs/reviews/TD-115.md](../reviews/TD-115.md)).
+design review raised one build-changing finding (F76), applied. Paul answered *One more round* again (#365); round 8
+runs as TD-121, on round 7's fixes and on D5 moved to v3.3 (v3.2 was tagged, #359, so the build waits on no tag).
+The record: [docs/reviews/TD-115.md](../reviews/TD-115.md).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
@@ -255,26 +252,17 @@ machine's log is not the same on every machine.
 
 ### D5. The release
 
-A minor release, **v3.2**: the next minor after the newest *Versions* paragraph on main, v3.1's. v3.1 (TD-109's
-`decision-missing`) is on main but not yet tagged (the last stamped is v3.0), and `release.sh` stamps whatever
-main holds, so a v3.1 cut after this build merged would carry it under marks that say v3.2. The build therefore
-waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)` and carries its own `**Event
-(v3-1-tagged):**` section (a gate's section is its own entry's, `event-section`), with the same check TD-109's
-carries, `check: ref-includes ShiftLead/ledgerboard@v3.1 ce8b7687e9b47783c3f0639431eea8541f443a5e` (TD-112's
-merge), which passes once the tag exists. TD-111's build may also
-write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it in one paragraph, and
-the build writes no second v3.2 paragraph: its bold lead names both additions (**v3.2 adds the check of text a
-person reads and the ledger lift's verdict**, each with its sections), this build's sentences follow TD-111's, and
-TD-111's *no existing function's output changes* reads *no existing function's output changes but
-`subject_kind()`'s, below*, so the joined paragraph does not contradict its own *One reading changes*; if v3.2 is
-already tagged then, every `v3.2` in this build's SPEC text, fixtures and runner becomes the next untagged
-minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+A minor release, **v3.3**: v3.2 (TD-111's check, carrying v3.1's `decision-missing`, which was never tagged on its
+own) was tagged on 2026-11-15 (#359), so the next untagged minor is v3.3 and the build waits on no tag. TD-119's
+build also writes v3.3. If its v3.3 paragraph is on main and untagged when this build merges, the two share one
+*Versions* paragraph and this build writes no second one: its bold lead names every addition (**v3.3 adds the
+entry's own answers and the ledger lift's verdict**, each with its sections), and this build's sentences follow the
+others'; if v3.3 is already tagged then, every `v3.3` in this build's SPEC text, fixtures and runner becomes the next
+untagged minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
-v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
-carve-out `lift`. v3.2 follows v3.1, so a consumer vendoring v3.2 takes v3.1's refusals too (SPEC
-*Versions*, v3.1's paragraph). Should this build's release be tagged before TD-111's build merges, TD-111's own rule (its
-D4: the next unreleased minor when its build merges) gives it the minor after.
+v3.3. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
+carve-out `lift`.
 
 ## Options set aside
 
@@ -296,13 +284,13 @@ D4: the next unreleased minor when its build merges) gives it the minor after.
 The build adds these, word for word.
 
 **In *The merge gate's verdicts*, its first sentence** reads *(v2.4) are pure functions over a PR's **trees***
-in place of *(v2.4) are three pure functions over a PR's **trees***, since v3.2's makes four and the paragraph
+in place of *(v2.4) are three pure functions over a PR's **trees***, since v3.3's makes four and the paragraph
 names none by count again.
 
 **In *The merge gate's verdicts*, after the paragraph that ends *(d), a PR only, is the consumer's: a direct
 commit that answers a gate's item is refused by its own audit.*:**
 
-> `lift_form(tree, tid, gate, repo)` (v3.2) returns `(case, items)` for open entry `tid` (found by number, and
+> `lift_form(tree, tid, gate, repo)` (v3.3) returns `(case, items)` for open entry `tid` (found by number, and
 > open as the tripwire reads the ledger: its file directly in `LEDGER_DIR`, its Status open) carrying `gate`, a
 > `decision (<p>)`, read against the tree's own board: the form a lift of it takes. An item *lists another gated
 > entry* when its Context entry or one of its `Parts:` ids is a bare `TD-n`, open in the tree's ledger (as the
@@ -315,7 +303,7 @@ commit that answers a gate's item is refused by its own audit.*:**
 > does not carry `gate`, a gate that is no decision, a v1 ledger, and a `repo`
 > `_check_repo()` refuses; a tree with no board is `none`.
 >
-> `ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.2)
+> `ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.3)
 > returns `{carve_out, flags, review}` for a PR that lifts one entry's decision on the ledger, its arguments
 > and its `flags` as `lift_pr_verdict()`'s. `carve_out` says the diff is exactly the writers' lift of one gate by its
 > person, the shape the person's press writes; otherwise `review` names the first condition that fails, in this order:
@@ -358,9 +346,9 @@ commit that answers a gate's item is refused by its own audit.*:**
 
 **In *Edits*, after the paragraph *The commit subject of a board write* (its last sentence, *`subject_kind()`
 names a subject `edit`, `append`, `archive` or (a rank write) `queue`.*, becomes *`subject_kind()` names a
-subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v3.2) `lift`.*):**
+subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v3.3) `lift`.*):**
 
-> **The commit subject of a ledger lift** (v3.2) is one line, `<tool>: lift decision (<p>) on TD-n (session
+> **The commit subject of a ledger lift** (v3.3) is one line, `<tool>: lift decision (<p>) on TD-n (session
 > <name>)`, for a commit that lifts one entry's decision and writes nothing else but the closes the lift owes
 > (*The merge gate's verdicts*, `lift_form()`): `<p>` the gate's person as the entry spells it, `<name>` the
 > caller's session, else `n/a`. `lift_subject(tid, gate, tool, session=None)` writes it, refusing a `tid` that is
@@ -369,13 +357,13 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 > written (`n/a` too), or None.
 > `edit_action()` and `subject_id()` read board writes alone, and are None for it.
 
-**In *Versions*, after v3.1's paragraph:**
+**In *Versions*, after v3.2's paragraph:**
 
-> **v3.2 adds the ledger lift's verdict** (*The merge gate's verdicts*, *Edits*): `ledger_lift_verdict()`, the
+> **v3.3 adds the ledger lift's verdict** (*The merge gate's verdicts*, *Edits*): `ledger_lift_verdict()`, the
 > carve-out for a PR that lifts one entry's decision on the ledger with no board answer, `lift_form()`, which
 > names the form such a lift takes, and the ledger lift's commit subject, written by `lift_subject()` and read
 > by `lift_subject_parts()`. No parse, field, Log line, item key or canonical form changes. One reading
-> changes: `subject_kind()` names that subject `lift`, where v3.1 read None.
+> changes: `subject_kind()` names that subject `lift`, where v3.2 read None.
 
 **In *Appendix: grammar*, beside `lift-suffix`:**
 
@@ -385,7 +373,7 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 
 **Under that block, in prose (what a production cannot say):**
 
-> `lift-subject` (v3.2) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
+> `lift-subject` (v3.3) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
 > matches the whole line, nothing after its `)` (no trailing newline); it reads the gate's person as `person`
 > and the session as `log-token`; its digits are ASCII alone and at most 18 (`[0-9]{1,18}`, as a part's id reads,
 > never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, the cap being the reader's, which
@@ -393,7 +381,7 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 > `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
 > `_one_gate()` refuses (`decision (Ann )`, say) is refused.
 
-**And the appendix's first sentence** gains *v3.2: the ledger lift's commit subject;* before *later releases add
+**And the appendix's first sentence** gains *v3.3: the ledger lift's commit subject;* before *later releases add
 the rest*.
 
 ## The fixtures
@@ -457,7 +445,7 @@ every name is invented (AGENTS.md).
   `tripwire()` to return a flag and expects it.
 
 The runner guards the new lists apart from `lift_pr_verdict()`: with no `ledger_lift_verdict` (or no
-`lift_form`) on the module, its list reports `missing`, so a module older than v3.2 still runs the rest.
+`lift_form`) on the module, its list reports `missing`, so a module older than v3.3 still runs the rest.
 
 `lift_form`: each case names a `ledger_lift` case whose base it reads (one that `lift_form()` accepts; its
 refusals are the unit tests'), plus two with overlays of their own: a gate covered only through `Part of` (the parent's item with the
@@ -468,7 +456,7 @@ A `ledger_lift` case passes with a `decided` item whose `Decided:` spells the ga
 The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
 `subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
 `hasattr(L, "lift_subject")` guard to that block, reporting `lift_subjects` as `missing` for a module older than
-v3.2): the press's own subject read back; a
+v3.3): the press's own subject read back; a
 `<repo>#TD-n`, an `until` gate, a session with a space and a 19-digit id refused by `lift_subject()`, and
 the 19-digit subject read None by `lift_subject_parts()` (the cap the prose states); and `subject_kind()`'s
 `lift`, with `edit_action()` and `subject_id()` None.
@@ -486,10 +474,9 @@ and `lift_form()`'s refusals, a bad `repo` among them.
 
 ## What a build does
 
-One build, `Blocked by: event (v3-1-tagged)` (D5): the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
+One build, waiting on no tag (D5): the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
 `lift_subject_parts()` and the `lift` kind in `ledgerboard/__init__.py`, the fixtures and the runner's
-`ledger_lift` and `lift_form` lists, and the unit tests, in one PR. The release (v3.2) is Paul's; agent-cadence
+`ledger_lift` and `lift_form` lists, and the unit tests, in one PR. The release (v3.3) is Paul's; agent-cadence
 then wires carve-out `lift` (its TD-262) on its vendor PR, and its techlead is told which release carries it.
-The build entry, filed on Paul's go with the design's other builds, carries that gate and its Event section
-from its filing; TD-115 itself carries neither. ShiftLead needs no change to its subject, which is already
+The build entry is filed on Paul's go with no gate. ShiftLead needs no change to its subject, which is already
 this one, but its own lifts reach the carve-out only once its board is v3 (D4).
