@@ -1,8 +1,8 @@
 # TD-115: a merge-gate verdict for a PR that only lifts a gate
 
-**Status:** Draft 5, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 6, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
-Rounds: running, round 5 of 6 (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
+Rounds: ended at the cap, round 6, 2026-11-15 (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
@@ -104,7 +104,7 @@ ledger (found by number, and open as `_tree_ledger()` reads it: its file directl
 open), read against the tree's own board (`load_board()`, as the verdicts read it): `case` one of `asked`,
 `decided`, `shared`, `none` by the order above, and `items` the covering `BoardItem`s that decide it (for
 `decided`, every item to close; for `shared` and `asked`, the items that matched; for `none`, empty), in the board's item order
-(`load_board().items`). It refuses
+(`load_board().items`). It checks `repo` as `_check_repo()` does, raising `Refused`, and refuses
 an entry the tree's ledger does not hold open, one not carrying `gate`, and a `gate` that is no decision. A v1
 ledger is refused; a tree with no board is `none`, as `covers()` reads it.
 
@@ -139,7 +139,8 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
    under its `archive/<YYYY-MM>/`), and every path whose text the trees change (read from the trees, never
    from `files`, as `lift_pr_verdict()` reads them) is that entry's open file or under `BOARD_DIR/`, so a changed
    `LEDGER_V1_PATH`, another entry or any other path is refused too (`ledger-lift-files`). Which board paths may change is condition 8's, by the form:
-   a changed `README.md` is never an item's change, so it is `ledger-lift-board`.
+   a changed `README.md` is never an item's change, so it is `ledger-lift-board`. *The board's changes* there
+   are every changed tree path under `BOARD_DIR/`, a file the board reader skips among them.
 5. **The Log line:** the head entry's Log adds exactly one line to the base's, as `_new_log()` reads it (the
    tripwire's reading, a multiset of lines, so a dropped old line is left to condition 8's bytes), and it is a `gate lifted:` line
    for the subject's gate with an `answer` (`log_line()`'s `via` `answer`, as `tripwire()` reads it)
@@ -212,11 +213,13 @@ by a button press*):
   (v2.7); today only a caller that passes the suffix writes it (the ledger writer's `set` and `lift
   --shared-item`), and each takes review.
 
-**Where the verdict is stricter than the press.** Two presses ShiftLead's §4.4 lands take review here: a case
+**Where the verdict is stricter than the press.** Three presses ShiftLead's §4.4 lands take review here: a case
 (b) close of an item whose `Decided:` names someone else (an `Answered by: any` board) or no one (a `Decided:`
-with no `by`), which condition 8 refuses, and a press on a board with no `People:` (its `by` the git author), which condition 1 refuses. Each
-lands, then fails the consumer's review row, as a lift-only PR does today; ShiftLead may refuse the first at the
-press. Both are kept: the carve-out rests on the gate's person's own answer and on a board that names its
+with no `by`), which condition 8 refuses, and a press on a board with no `People:` (its `by` the git author), which condition 1 refuses, and any press on a v2 board, which condition 1 refuses too
+(`ledger-lift-board-v2`), as `lift_pr_verdict()` does: ShiftLead's own board is v2 today (its
+`docs/user_attention.md`), so its own lifts take review until it moves to v3, and agent-cadence's techlead is
+told so. Each lands, then fails the consumer's review row, as a lift-only PR does today; ShiftLead may refuse the first at the
+press. All three are kept: the carve-out rests on the gate's person's own answer and on a board that names its
 people.
 
 **Who would forge it.** The forger that matters is a session writing the press's exact bytes to unblock its own
@@ -246,13 +249,15 @@ main holds, so a v3.1 cut after this build merged would carry it under marks tha
 waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)` and carries its own `**Event
 (v3-1-tagged):**` section (a gate's section is its own entry's, `event-section`), with the same check TD-109's
 carries, `check: ref-includes ShiftLead/ledgerboard@v3.1 ce8b7687e9b47783c3f0639431eea8541f443a5e` (TD-112's
-merge), which passes once the tag exists. Should TD-111's
-build reach v3.2 first, the two share v3.2's *Versions* paragraph. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+merge), which passes once the tag exists. TD-111's build may also
+write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it; if v3.2 is
+already tagged then, every `v3.2` in this build's SPEC text, fixtures and runner becomes the next untagged
+minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
-carve-out `lift`. v3.1 (`decision-missing`) is in SPEC and on main but not yet tagged, so a consumer that
-vendors v3.2 takes v3.1's refusals with it (SPEC *Versions*, v3.1's paragraph).
+carve-out `lift`. v3.2 follows v3.1, so a consumer vendoring v3.2 takes v3.1's refusals too (SPEC
+*Versions*, v3.1's paragraph).
 
 ## Options set aside
 
@@ -314,7 +319,8 @@ commit that answers a gate's item is refused by its own audit.*:**
 >   form's suffix, any refusal from `lift_gate()` failing too (`ledger-lift-bytes`); the board is unchanged for
 >   `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
 >   `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)`, `C` the head file's
->   readable `Closed:` date, each such item's base `Decided:` naming the gate's person in any case
+>   readable `Closed:` date and one head file for each id, the board's changes being every changed tree path
+>   under `BOARD_DIR/`, each such item's base `Decided:` naming the gate's person in any case
 >   (`ledger-lift-board`); the entry's bytes are judged before the board's;
 > - `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and each `C` from
 >   `created_at − 1` to the merge date (else `created_at`) `+ 1`, the board's local day running up to a day
@@ -327,7 +333,7 @@ commit that answers a gate's item is refused by its own audit.*:**
 > answered. Its suffix is read from this repo's board alone, so a `; board <repo>` lift takes review
 > (`ledger-lift-bytes`). As for `lift_pr_verdict()`, a `Refused` from `tripwire()`, which runs first, or
 > from the dates and `commits` escapes; past them a text the verdict cannot read is a reason: an item file the
-> board reader skips, or a refusal from `edit_item()` or `item_path()`, is `ledger-lift-board`, and any refusal
+> board reader skips, or a `Refused` or `ValueError` from `edit_item()` or `item_path()`, is `ledger-lift-board`, and any refusal
 > from `lift_gate()` is `ledger-lift-bytes`. The Log line stays forgeable, and nothing in the format
 > re-reads the lift once it merges (the sweep's audit reads `; board <repo>` lifts alone): the consumer's own
 > audit is its backstop, and a direct commit of this shape is the consumer's to refuse, as for the decide lift.
@@ -362,7 +368,8 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 **Under that block, in prose (what a production cannot say):**
 
 > `lift-subject` (v3.2) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
-> matches the whole line, nothing after its `)` (no trailing newline), and `lift_subject()` writes the gate as
+> matches the whole line, nothing after its `)` (no trailing newline), and its digits are ASCII alone (`[0-9]`,
+> never `\d` unless `re.ASCII`, so `TD-١٢` is refused), and `lift_subject()` writes the gate as
 > `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
 > `_one_gate()` refuses (`decision (Ann )`, say) is refused.
 
@@ -434,7 +441,9 @@ The runner guards the new lists apart from `lift_pr_verdict()`: with no `ledger_
 
 `lift_form`: each case names a `ledger_lift` case whose base it reads (one that `lift_form()` accepts; its
 refusals are the unit tests'), plus two with overlays of their own: a gate covered only through `Part of` (the parent's item with the
-entry in `Parts:`), and a `<repo>#TD-n` in `Parts:` that is not counted.
+entry in `Parts:`), and a `<repo>#TD-n` in `Parts:` that is not counted; and a `Parts:` id whose entry is
+open but no longer carries the gate, and one archived, neither counted, so the item reads `asked` or `decided`.
+A `ledger_lift` case passes with a `decided` item whose `Decided:` spells the gate's person in another case.
 
 The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
 `subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
@@ -445,13 +454,13 @@ v3.2): the press's own subject read back; a
 
 The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
 `fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
-it reaches (`log-token`, `person`, `person-part`, `digit`), the new start carrying all four itself
+it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id among its refused strings, the new start carrying all four itself
 (the test reads each start's own groups), and `fixtures/run.py`'s
 `grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
 production to that).
 
 The unit tests (`tests/`) hold what a fixture cannot: a bad `repo`, which raises; the dates as aware datetimes, `commits` that is no count,
-and `lift_form()`'s refusals.
+and `lift_form()`'s refusals, a bad `repo` among them.
 
 ## What a build does
 
@@ -459,4 +468,6 @@ One build, `Blocked by: event (v3-1-tagged)` (D5): the SPEC text above, `lift_fo
 `lift_subject_parts()` and the `lift` kind in `ledgerboard/__init__.py`, the fixtures and the runner's
 `ledger_lift` and `lift_form` lists, and the unit tests, in one PR. The release (v3.2) is Paul's; agent-cadence
 then wires carve-out `lift` (its TD-262) on its vendor PR, and its techlead is told which release carries it.
-ShiftLead needs no change: its subject is already this one.
+The build entry, filed on Paul's go with the design's other builds, carries that gate and its Event section
+from its filing; TD-115 itself carries neither. ShiftLead needs no change to its subject, which is already
+this one, but its own lifts reach the carve-out only once its board is v3 (D4).
