@@ -140,7 +140,9 @@ entry the edit changed (its whole text, as for the Log), ℹ on a standing ledge
 the ledger writer refuses an edit that makes one, as it refuses `ask-missing`. An entry with no decision gate is
 not flagged, whatever its sections hold: nothing reads them, and a repo's own prose `**Answers:**` section,
 which *Text a person reads* allowed before v3.N, stays legal there. The flag comes with the gate: an edit that adds
-a decision to an entry whose sections cannot be offered is refused, naming why.
+a decision to an entry whose sections cannot be offered is refused, naming why. As for every edit flag, the
+writer refuses only a fault the edit makes: a standing `answers-unusable` does not block an unrelated edit (a Log
+note, a Status).
 
 Since a `**Lifts:**` with no `**Answers:**` is refused, a writer adds `**Answers:**` first (or both in one
 whole-entry write): `edit --section Lifts` on a gated entry with no `**Answers:**` is refused.
@@ -162,8 +164,10 @@ becomes the next untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
 sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
-gated entry whose section is not usable gains a standing ℹ `answers-unusable`, and an edit of it is refused until
-the section is fixed: the repo's own section, which v3.2 left to the repo, is the format's on a gated entry. No parse, field, Log line, item key or
+gated entry whose section is not usable gains a standing ℹ `answers-unusable`; as for every edit flag, an edit
+is refused only where it makes the fault (breaks the section, or adds a decision to an entry whose section is
+unusable), and a standing one does not block an unrelated edit (the writer's gate matches it to the standing
+flag). The repo's own section, which v3.2 left to the repo, is the format's on a gated entry. No parse, field, Log line, item key or
 canonical form changes.
 
 **The consumers.** Neither needs code: both pass the sweep's item through. On the build's merge the builder tells
@@ -240,7 +244,8 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   items are written from this SPEC text, never from the module's output.
 - **`fixtures/ledger_edit/check/`**: `answers-unusable` as an error on an edited entry and ℹ on a standing one,
   and a usable section that flags nothing; an unusable section on an entry with no decision, not flagged; an edit
-  adding a decision to such an entry, refused; `edit --section Lifts` with no `**Answers:**`, refused.
+  adding a decision to such an entry, refused; a Log note on a gated entry whose section already cannot be
+  offered, not refused; `edit --section Lifts` with no `**Answers:**`, refused.
 - **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
   result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
   lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), two marks (refused), a form marked
