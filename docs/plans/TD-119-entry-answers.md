@@ -3,7 +3,7 @@
 **Status:** Draft 2, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
 entry sections the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both
 consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule** at round 2, 2026-11-15 (build-changing findings by the design reviews, rounds
-1–2: 2, 0; by the fact-checks: 7, 1; the closing fact-check: 1, F30, which adds a reader rule). F23–F31 were
+1–2: 2, 0; by the fact-checks: 6, 1; the closing fact-check: 1, F30, which adds a reader rule). F23–F31 were
 fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
 record: [docs/reviews/TD-119.md](../reviews/TD-119.md)). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
@@ -139,7 +139,8 @@ waiting`), which closes the item and writes `kept waiting` as today.
 and it covers the gate, so the sweep asks nothing while the entry's session acts. That session closes the item
 when it has acted (`done`, as for any work order), and asks again itself where the work ends in a question (a
 design's next end-of-rounds item, a check run again): once closed, the item's answer is one that does not lift,
-dated within `reask_days` of its `Decided:` date (not its close), so the sweep files no item of its own over the session's for that window. That window
+dated within `reask_days` of its `Decided:` date (not its close), so the sweep files no item of its own over the session's for that window (`reask_days`, 30 by
+default, `SWEEP_REASK_DAYS`; a host may pass its own). That window
 is accepted: the session that acted knows when to ask, and the sweep is the backstop for a gate nobody asks
 about.
 
@@ -171,14 +172,11 @@ package's writers run no check (TD-111 D3), so no fixture of this package covers
 
 ### D6. The release
 
-A minor release, **v3.3**. Today only v3.0 is tagged; v3.1 (TD-109's `decision-missing`) and v3.2 (TD-111's
-check, TD-118) are on main, and `release.sh` stamps whatever main holds, so a v3.2 cut after this build merged
-would carry it under marks that say v3.3. The build therefore waits for v3.2's tag, as TD-118's entry does: its
-entry is `Blocked by: event (v3-2-tagged)` and carries its own `**Event (v3-2-tagged):**` section with TD-118's
-check, `check: ref-includes ShiftLead/ledgerboard@v3.2 f45380ed059ef239ed4a37536b410c907f783e90`. If another
-build's v3.3 paragraph (TD-115's, say) is on main and untagged when this one merges, the two share one *Versions*
-paragraph, whose bold lead names every addition, this build's sentences after the others'; if v3.3 is already
-tagged, every `v3.N` this build writes becomes the next untagged minor.
+A minor release, **v3.3**: v3.2 (TD-111's check, with v3.1's `decision-missing`) was tagged on 2026-11-15
+(#359), so the next untagged minor is v3.3 and the build waits on no tag. If another build's v3.3 paragraph
+(TD-115's, say) is on main and untagged when this one merges, the two share one *Versions* paragraph, whose bold
+lead names every addition, this build's sentences after the others'; if v3.3 is already tagged, every `v3.N` this
+build writes becomes the next untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
 sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
