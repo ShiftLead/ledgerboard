@@ -1,10 +1,12 @@
 # TD-119: the gate sweep offers the entry's own answers
 
-**Status:** Draft 2, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
+**Status:** Draft 3, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
 entry sections the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both
-consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule** at round 2, 2026-11-15 (build-changing findings by the design reviews, rounds
-1–2: 2, 0; by the fact-checks: 6, 1; the closing fact-check: 1, F30, which adds a reader rule). F23–F31 were
-fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
+consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: ended by the stop rule at round 2, 2026-11-15; Paul
+answered *One more round* (#361), and round 3 ran as TD-122 and ended 2026-11-15. Build-changing findings by the
+design reviews, rounds 1–3: 2, 0, 3; by the fact-checks: 6, 1, 3. Recurring topic: where the answer sections start
+and end (F23, F30, F33, F38, F41, F42), now one rule over the whole body. F39–F48, round 3's design-review fixes,
+were fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
 record: [docs/reviews/TD-119.md](../reviews/TD-119.md)). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
