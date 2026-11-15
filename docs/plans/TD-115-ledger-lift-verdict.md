@@ -152,6 +152,10 @@ as two carve-outs (agent-cadence's `decide` and `lift`).
 10. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–9 raises none by construction; the
    condition keeps a future tripwire rule from being skipped by this carve-out.
 
+A text the verdict cannot read never escapes as `Refused`: an entry or Log `log_lines()` refuses (two Log
+sections, say) is `ledger-lift-log` at the base or the head, and an item file `parse_item()` refuses is
+`ledger-lift-board`, as `lift_pr_verdict()` turns `decide_lift()`'s refusals into reasons.
+
 As for `lift_pr_verdict()`, (d) is the consumer's: a direct commit with this shape is refused by its own audit.
 
 ### D4. What stands in for the person's answer
@@ -331,7 +335,7 @@ every name is invented (AGENTS.md).
   that change any board item → `ledger-lift-board`.
 - a v2 board at the head only → `ledger-lift-board-v2`.
 - the Log: no new line, two new lines, a `gate lifted` line for another gate, an `override:` lift, and a note
-  in place of the lift → `ledger-lift-log`; a waiting-only label (`lift_gate()` refuses it) →
+  in place of the lift, and a head entry with two Log sections → `ledger-lift-log`; a waiting-only label (`lift_gate()` refuses it) →
   `ledger-lift-bytes`.
 - a subject naming `TD-12` for the file `TD-012.md` passes.
 
@@ -347,7 +351,8 @@ v3.2): the press's own subject read back; a
 
 The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
 `fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
-it reaches (`log-token`, `person`, `person-part`, `digit`), where they have none yet, and `fixtures/run.py`'s
+it reaches (`log-token`, `person`, `person-part`, `digit`), the new start carrying all four itself
+(the test reads each start's own groups), and `fixtures/run.py`'s
 `grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
 production to that).
 
