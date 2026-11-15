@@ -243,8 +243,10 @@ machine's log is not the same on every machine.
 A minor release, **v3.2**: the next minor after the newest *Versions* paragraph on main, v3.1's. v3.1 (TD-109's
 `decision-missing`) is on main but not yet tagged (the last stamped is v3.0), and `release.sh` stamps whatever
 main holds, so a v3.1 cut after this build merged would carry it under marks that say v3.2. The build therefore
-waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)`, the event TD-109 already carries (its
-check, `ref-includes ShiftLead/ledgerboard@v3.1 <TD-112's merge>`, passes once the tag exists). Should TD-111's
+waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)` and carries its own `**Event
+(v3-1-tagged):**` section (a gate's section is its own entry's, `event-section`), with the same check TD-109's
+carries, `check: ref-includes ShiftLead/ledgerboard@v3.1 ce8b7687e9b47783c3f0639431eea8541f443a5e` (TD-112's
+merge), which passes once the tag exists. Should TD-111's
 build reach v3.2 first, the two share v3.2's *Versions* paragraph. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
