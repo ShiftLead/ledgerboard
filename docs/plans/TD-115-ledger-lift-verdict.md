@@ -6,7 +6,8 @@ Rounds: **ended at the cap**, round 6, 2026-11-15 (build-changing findings by th
 1, 1, 2, 1, 1). Paul answered *One more round* (#349); round 7, past the cap, ran as TD-117 and ended 2026-11-15: its
 design review raised one build-changing finding (F76, a grammar fixture the build's own test would fail on),
 applied; fact-checks 0 build-changing, closing 0. Recurring topics: D4's trust argument, the release number,
-unreadable text (settled by F58), each judged again in round 7. F76–F81 were fact-checked, not design-reviewed;
+unreadable text (settled by F58), each judged again in round 7. F76–F80 were fact-checked, not design-reviewed, and
+F81, the closing fact-check's own, was neither;
 Paul's answer is the board's decide item, *One more round* recommended (the record:
 [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
