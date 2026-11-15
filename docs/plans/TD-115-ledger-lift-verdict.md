@@ -63,8 +63,10 @@ cover the gate, the first case that holds decides:
 - **(d) asked:** an open, undecided covering item lists no other gated entry. The press is refused and writes
   nothing: that item is the person's question, and its answer there is the decide lift (`lift_pr_verdict()`).
 - **(b) decided:** an open, decided covering item lists no other gated entry. Every such item is closed in the
-  same commit, `Closed: D — lifted` (the board writer's `done` with the why `lifted`), and the lift has no
-  suffix.
+  same commit, `Closed: D — lifted` (the board writer's `done` with the why `lifted`; ShiftLead's text writes
+  the v2 line's `— lifted.`, and a v3 item file has no period), and the lift has no suffix. Before it writes,
+  the press also refuses where a live session's claim holds the item (`board:<key>`) or the entry: a host-side
+  check, which no tree shows and the format does not read.
 - **(c) shared:** a covering item lists another gated entry. The lift is `; shared board item left open`, and
   the board is unchanged.
 - **(a) none:** nothing covers the gate. The lift is `; no board item`, and the board is unchanged.
@@ -133,9 +135,13 @@ as two carve-outs (agent-cadence's `decide` and `lift`).
    `decided`, `shared board item left open` for `shared`, `no board item` for `none` (`ledger-lift-bytes`). The
    board's changes are none for `shared` and `none`; for `decided`, exactly each item `lift_form()` names, its
    open file removed and `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)` byte
-   for byte (`ledger-lift-board`).
-8. **The dates:** `T`, and each item's close date `C`, lie within a day of `created_at` and not after the merge
-   (else `created_at + 1`) (`ledger-lift-date`), as `lift_pr_verdict()`'s (c) windows `T`.
+   for byte; and each such item's base `Decided:` names the gate's person (`decided_by`, any case), so the close
+   rests on that person's own merged answer and on no one else's (`ledger-lift-board`).
+8. **The dates:** `T`, a UTC ledger date, lies within a day of `created_at` and not after the merge (else
+   `created_at + 1`), as `lift_pr_verdict()`'s (c) windows its `T`; each item's close date `C`, a board date
+   written by the board's local clock, lies from `created_at − 1` to the merge date (else `created_at`) `+ 1`, as
+   that verdict windows its `Decided:` date D, since the board's local day runs up to a day from UTC
+   (`ledger-lift-date`). `C` is not tied to `T`: the two writers each read their own clock.
 9. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–8 raises none by construction; the
    condition keeps a future tripwire rule from being skipped by this carve-out.
 
@@ -150,8 +156,10 @@ The verdict trusts exactly what `lift_pr_verdict()`'s carve-out trusts, no more:
   owes. Nothing else changes: no code, no other entry, no other item.
 - **The answerer is the gate's person, on the board's `People:`.** This is stricter than the decide carve-out,
   which admits anyone listed under `Answered by: any`.
-- **The question existed, or was already answered.** In case `decided` the base board holds the person's own
-  `Decided:`, merged before the press. In cases `none` and `shared` there is no open question for the lift
+- **The question existed, or was already answered.** In case `decided` the base board holds the gate's
+  person's own `Decided:` on each item closed (condition 7), merged before the press; the open, decided item is
+  a work order the person answered (an answer that lifts or only waits closes its item, `closes()`), and the
+  press's lift supersedes it. In cases `none` and `shared` there is no open question for the lift
   to bypass; in case `asked` there is one, and the lift takes review, since that item's answer is the way.
 
 A forger who can push can write this PR, but can write a decide PR just as well: the worst either does is lift
@@ -166,7 +174,8 @@ A minor release, **v3.2**: one new verdict, one new helper, one new subject kind
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
-carve-out `lift`.
+carve-out `lift`. v3.1 (`decision-missing`) is in SPEC and on main but not yet tagged, so a consumer that
+vendors v3.2 takes v3.1's refusals with it (SPEC *Versions*, v3.1's paragraph).
 
 ## Options set aside
 
@@ -186,6 +195,10 @@ carve-out `lift`.
 ## The SPEC text
 
 The build adds these, word for word.
+
+**In *The merge gate's verdicts*, its first sentence** reads *(v2.4) are pure functions over a PR's **trees***
+in place of *(v2.4) are three pure functions over a PR's **trees***, since v3.2's makes four and the paragraph
+names none by count again.
 
 **In *The merge gate's verdicts*, after the paragraph that ends *(d), a PR only, is the consumer's: a direct
 commit that answers a gate's item is refused by its own audit.*:**
@@ -219,8 +232,10 @@ commit that answers a gate's item is refused by its own audit.*:**
 >   and `T` the new Log line's and `S` the form's suffix (`ledger-lift-bytes`); the board is unchanged for
 >   `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
 >   `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)` (`ledger-lift-board`);
-> - `T` and each `C` lie within a day of `created_at` and not after the merge (else `created_at + 1`)
->   (`ledger-lift-date`);
+> - each item the form closes has a base `Decided:` by the gate's person (`ledger-lift-board`);
+> - `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and each `C` from
+>   `created_at − 1` to the merge date (else `created_at`) `+ 1`, the board's local day running up to a day
+>   from UTC (`ledger-lift-date`);
 > - `flags` is empty (`ledger-lift-flagged`).
 >
 > The carve-out trusts what `lift_pr_verdict()`'s does: a diff that is one writer's output from the base, for
@@ -250,15 +265,17 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 **In *Appendix: grammar*, beside `lift-suffix`:**
 
 > ```
-> lift-subject      ::= token ": lift decision (" name ") on TD-" digits " (session " token ")"
+> lift-subject      ::= log-token ": lift decision (" person ") on TD-" digit+ " (session " log-token ")"
 > ```
 
 ## The fixtures
 
 All under `fixtures/verdict/`: a new `ledger_lift` list in `cases.json` beside `verdict`, `tripwire` and
 `uncovered`, each case's expected `{carve_out, flags, review}` in `expected.json`, and a `lift_form` list
-(each case's `tid`, `gate` and expected `[case, item ids]`). The base tree gains an entry carrying `decision
-(<p>)` for each case; every name is invented (AGENTS.md).
+(each case's `tid`, `gate` and expected `[case, item ids]`). The shared `verdict/base/` is
+left as it is, since every existing case reads it: each new case lays its own entries and items over it in
+`cases/<name>/base/` (the existing base has no `none` case of its own, its `decision (pat)` gates being covered);
+every name is invented (AGENTS.md).
 
 `ledger_lift` (one case per condition and per form):
 - `none` passes: one ledger file, `; no board item`, nothing covering.
@@ -276,14 +293,19 @@ All under `fixtures/verdict/`: a new `ledger_lift` list in `cases.json` beside `
   `none` lift → `ledger-lift-files`.
 - a `decide` subject, two commits, a subject naming another `TD-n` than the diff's → `ledger-lift-subject`,
   `ledger-lift-files`.
-- an entry archived by the PR, and one not carrying the gate at the base → `ledger-lift-entry`.
+- an entry archived by the PR (both its paths in `files`) → `ledger-lift-files`; one not carrying the gate at
+  the base, and one whose open file the head drops while `files` names only that path → `ledger-lift-entry`.
+- a `decided` item whose base `Decided:` names someone else (an `Answered by: any` board) → `ledger-lift-board`.
+- a `C` a day after the merge passes; a `T` a day after the merge → `ledger-lift-date`.
 - a Log date two days before `created_at`, and one after `merged_at` → `ledger-lift-date`.
 - a v2 board at the base → `ledger-lift-board-v2`; no board → `ledger-lift-no-board`.
 
 `lift_form`: each case above's base, plus a gate covered only through `Part of` (the parent's item with the
 entry in `Parts:`), and a `<repo>#TD-n` in `Parts:` that is not counted.
 
-The subject's writer and reader are held by `fixtures/grammar/` strings: the press's own subject read back; a
+The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
+`subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the runner reporting it
+`missing` for a module older than v3.2, as its other sections do): the press's own subject read back; a
 `<repo>#TD-n`, an `until` gate and a session with a space refused by `lift_subject()`; and `subject_kind()`'s
 `lift`, with `edit_action()` and `subject_id()` None.
 
