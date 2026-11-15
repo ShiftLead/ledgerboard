@@ -254,11 +254,10 @@ machine's log is not the same on every machine.
 
 A minor release, **v3.3**: v3.2 (TD-111's check, carrying v3.1's `decision-missing`, which was never tagged on its
 own) was tagged on 2026-11-15 (#359), so the next untagged minor is v3.3 and the build waits on no tag. TD-119's
-build also writes v3.3. If its v3.3 paragraph is on main and untagged when this build merges, the two share one
-*Versions* paragraph and this build writes no second one: its bold lead names every addition (**v3.3 adds the
-entry's own answers and the ledger lift's verdict**, each with its sections), and this build's sentences follow the
-others'; if v3.3 is already tagged then, every `v3.3` in this build's SPEC text, fixtures and runner becomes the next
-untagged minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+build also writes v3.3; each writes its own *Versions* paragraph with its own bold lead, after the newest paragraph
+on main when it merges, as *Versions* already holds several paragraphs for one release (v2.4, v2.7, v3.0), so
+neither paragraph's claims are the other's. If v3.3 is already tagged when this build merges, every `v3.3` in this
+build's SPEC text, fixtures and runner becomes the next untagged minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.3. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
@@ -357,13 +356,13 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 > written (`n/a` too), or None.
 > `edit_action()` and `subject_id()` read board writes alone, and are None for it.
 
-**In *Versions*, after v3.2's paragraph:**
+**In *Versions*, a paragraph of its own, after the newest:**
 
 > **v3.3 adds the ledger lift's verdict** (*The merge gate's verdicts*, *Edits*): `ledger_lift_verdict()`, the
 > carve-out for a PR that lifts one entry's decision on the ledger with no board answer, `lift_form()`, which
 > names the form such a lift takes, and the ledger lift's commit subject, written by `lift_subject()` and read
 > by `lift_subject_parts()`. No parse, field, Log line, item key or canonical form changes. One reading
-> changes: `subject_kind()` names that subject `lift`, where v3.2 read None.
+> changes: `subject_kind()` names that subject `lift`, where earlier releases read None.
 
 **In *Appendix: grammar*, beside `lift-suffix`:**
 
