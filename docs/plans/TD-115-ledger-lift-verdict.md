@@ -65,8 +65,8 @@ cover the gate, the first case that holds decides:
 - **(b) decided:** an open, decided covering item lists no other gated entry. Every such item is closed in the
   same commit, `Closed: D — lifted` (the board writer's `done` with the why `lifted`; ShiftLead's text writes
   the v2 line's `— lifted.`, and a v3 item file has no period), and the lift has no suffix. Before it writes,
-  the press also refuses where a live session's claim holds the item (`board:<key>`) or the entry: a host-side
-  check, which no tree shows and the format does not read.
+  the press runs a host-side claim check (ShiftLead §4.4, case (b)), which no tree shows and the format does
+  not read.
 - **(c) shared:** a covering item lists another gated entry. The lift is `; shared board item left open`, and
   the board is unchanged.
 - **(a) none:** nothing covers the gate. The lift is `; no board item`, and the board is unchanged.
@@ -158,8 +158,9 @@ The verdict trusts exactly what `lift_pr_verdict()`'s carve-out trusts, no more:
   which admits anyone listed under `Answered by: any`.
 - **The question existed, or was already answered.** In case `decided` the base board holds the gate's
   person's own `Decided:` on each item closed (condition 7), merged before the press; the open, decided item is
-  a work order the person answered (an answer that lifts or only waits closes its item, `closes()`), and the
-  press's lift supersedes it. In cases `none` and `shared` there is no open question for the lift
+  a work order the person answered (as the writers since v2.7 leave it, an answer that lifts or only waits
+  closes its item, `closes()`; a v2.4–v2.6 writer or a hand edit could leave a lifting answer open, which
+  condition 7 closes all the same), and the press's lift supersedes it. In cases `none` and `shared` there is no open question for the lift
   to bypass; in case `asked` there is one, and the lift takes review, since that item's answer is the way.
 
 A forger who can push can write this PR, but can write a decide PR just as well: the worst either does is lift
@@ -304,10 +305,17 @@ every name is invented (AGENTS.md).
 entry in `Parts:`), and a `<repo>#TD-n` in `Parts:` that is not counted.
 
 The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
-`subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the runner reporting it
-`missing` for a module older than v3.2, as its other sections do): the press's own subject read back; a
+`subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
+`hasattr(L, "lift_subject")` guard to that block, reporting `lift_subjects` as `missing` for a module older than
+v3.2): the press's own subject read back; a
 `<repo>#TD-n`, an `until` gate and a session with a space refused by `lift_subject()`; and `subject_kind()`'s
 `lift`, with `edit_action()` and `subject_id()` None.
+
+The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
+`fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
+it reaches (`log-token`, `person`, `person-part`, `digit`), where they have none yet, and `fixtures/run.py`'s
+`grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
+production to that).
 
 The unit tests (`tests/`) hold what a fixture cannot: the dates as aware datetimes, `commits` that is no count,
 and `lift_form()`'s refusals.
