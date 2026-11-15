@@ -14,6 +14,8 @@ A question ends with its answers after `Due:` — `Answers: <answer> | <answer>.
 
 Closing an entry never deletes it: `agent-cadence run board_edit.py done --why <why>` ticks it and appends `Closed: YYYY-MM-DD — <why>.` A merge conflict here is resolved by keeping both sides; 10 or more closed entries are archived to `user_attention_archive.md` in a PR of their own.
 
+People: paul
+
 ## Needs the user
 
 - [ ] decide 2026-11-15 (session `lb-designer`) — Should the rule that lets a Lift the hold change merge on its own get one more review round before it is built? Context: TD-115 decision (paul). Due: 2026-11-22. Answers: One more round (default) — a session runs one more review round, then asks again | Go — the grinders build it | Hold: <note> — a session revises the design as your note says.
