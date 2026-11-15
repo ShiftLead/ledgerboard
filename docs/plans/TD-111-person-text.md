@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** class wide (two consumers' writers call what it exports). The rounds ended at round 6, the cap, on 2026-11-14; Paul answered One more round (#338), and round 7 ran as TD-113 and ended 2026-11-15 (design review: 2 build-changing, F127 and F128, applied; closing fact-check: 0). Build-changing per design review, rounds 1 to 7: 7, 3, 4, 0, 1, 0, 2. Waiting on Paul's answer. Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** class wide (two consumers' writers call what it exports). The rounds ended at round 6, the cap, on 2026-11-14; Paul answered One more round (#338), and round 7 ran as TD-113 and ended 2026-11-15 (design review: 2 build-changing, F127 and F128, applied; closing fact-check: 0). Paul answered One more round again (#341), and round 8 ran as TD-114 and ended 2026-11-15 (fact-check: 1 minor, F132; design review: 0 build-changing, 5 minor, F133–F137, all applied; closing fact-check: 0 build-changing, 3 minor, F138–F140, applied). Build-changing per design review, rounds 1 to 8: 7, 3, 4, 0, 1, 0, 2, 0. Waiting on Paul's answer on the board's decide item. Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -113,7 +113,7 @@ this list is the review trail):
   each, then link targets and URLs are dropped (a link's text kept), so a URL inside a span cannot break the span;
   the source did not order them, nor say what a span or fence is. Here a span holds no blank line, a backtick
   with no partner is plain, and a fence is *Ledger entries*' fence with three points that passage leaves open settled
-  (an info word on the opener, an unclosed fence, the closing line's shape). A sentence end is a stop
+  (the info text on the opener, an unclosed fence, the closing line's shape). A sentence end is a stop
   followed by a space *or a line break* (the source: a space).
 - *a word holds a letter or a digit*: a standalone `—`, `-`, `&`, `/` or `~/` is no word, counts toward no limit and
   is no token; the source counted every whitespace-separated piece.
@@ -216,7 +216,9 @@ ShiftLead's to amend, and so is TD-1846's Fix step 1, which bumps its pin to a c
 its call passes `actors=` or refuses *a session pins it*. Each consumer's
 Ask template changes too: an Ask is now a question of one sentence ending in `?`, with any more in a later
 paragraph, where most Asks written today (*Say Go to file the one build, One more round, or Hold with a note*) are
-statements; the consumer notes say so. On Paul's go the designer sends both question seats one
+statements; and a board item's shape changes: a `decide`'s bold opening, when it has one, is the whole question
+ending in `?` (today's *\*\*Title\*\* — question?* is refused), a `decide` with a bold run mid-text is refused, and an
+`act` opens with its task in bold. The consumer notes say each, with the lead and tail cases in *The fixtures*. On Paul's go the designer sends both question seats one
 note each (`ao td add`); on the build's merge, the builder tells agent-cadence's techlead which release carries it
 (TD-111's Done when).
 
@@ -245,8 +247,8 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > 4. **The context is plain words**: its code tokens are named in one warning; never refused, never capped.
 >
 > **The text read.** First, `’` and `‘` become `'`, and `“` and `”` become `"`. Then each fenced block — a fence as *Ledger entries and their edits*
-> reads one: an opening line of three or more backticks or tildes, indented at most three spaces, then at most an
-> info word holding no whitespace (and, after backticks, no backtick); to a closing line of the same character at
+> reads one: an opening line of three or more backticks or tildes, indented at most three spaces, then any info
+> text, spaces included (after backticks, holding no backtick), as the module's fence line reads it; to a closing line of the same character at
 > least as long, indented at most three spaces and holding nothing else; or, with no closing line, to the text's
 > end — and each code span outside them — a run of n backticks,
 > then text holding no run of exactly n backticks and no blank line, then n backticks — is found and replaced, in
@@ -355,18 +357,20 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 >   `text`, collapsed and trimmed as `item_file()` does, before any line or file is written). Its **lead** is
 >   `bold_head(text, heading=True)` (*The bold head*, read whole as an item file's heading is) when
 >   `BOLD_RE.match(text)` succeeds and that is not `None` (a blank run gives none); its **tail** is the text after
->   the matched run, trimmed. Otherwise it has no lead and no tail, and a text with no lead that holds a bold run
->   anywhere (`bold_head(text, heading=True)` is not `None`) is the writer's refusal, with the line *a bold run
+>   the matched run, trimmed. Otherwise it has no lead and no tail, and a text with no lead whose first bold run
+>   is not blank (`bold_head(text, heading=True)` is not `None`) is the writer's refusal, with the line *a bold run
 >   that does not open the text becomes the board's headline: open the text with it, or write it plain* (a
 >   writer's refusal, not a `PersonTextProblem`), since the board would show that run as the headline. A text of more than one line, or an empty one,
->   is the writer's refusal before the check, as `item_file()`'s. The lead is the board's headline,
+>   is the writer's refusal before the check, as `item_file()`'s. Each of these writer's refusals (the bold-run line,
+>   and an `act`'s lead line below) comes before the check and stands alone: the writer gives that line and runs
+>   neither call, so the session rewrites the text's shape first. The lead is the board's headline,
 >   so it must stand as the question by itself; reading the lead and tail as one sentence was weighed and
 >   rejected, since a person scanning headlines would meet *Merge the PR* with no question in it. First,
 >   `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True, people=, actors=,
 >   default=)`, the context being the tail, then the detail block's parts `context`, `caveats` and `recommended`
 >   and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds the default's
 >   label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which names a gate.
->   A text with no lead and no bold run is read whole, so a second sentence there is refused and belongs in the detail block; a
+>   A text with no lead and no non-blank first bold run (a blank first run reads as none, *The bold head*) is read whole, so a second sentence there is refused and belongs in the detail block; a
 >   lead is the whole question, so *\*\*Merge the PR\*\* now?* is refused (its lead has no `?`). Second, the
 >   detail block's `question`, `person_text_problems(<question>, question=True, people=, actors=)` with the same
 >   `people` and `actors`. The writer lists the first call's problems, then the second's, each line after the
@@ -405,17 +409,23 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 
 A new kind, `fixtures/person_text/cases.json` → `expected.json`, each case a call and its result: `code_tokens`'
 list, or the problems as `[rule, refuse, line]` lists, or `{"error": "ValueError"}`. Each SPEC example of the module's
-functions is a case, word for word; the examples of the writer's lead and tail are a consumer's cases, since the
-module has no function for that split: *  \*\*Merge?\*\** after leading spaces has a lead, and *\*\* \*\* Merge
-\*\*PR\*\*?* (a blank run) has none and is read whole, while *Should I merge \*\*#42\*\*?* (a bold run mid-text) is
-refused; an `act`'s detail `question` read as a `decide`'s.
+functions is a case, word for word. The examples of the writer's lead and tail are not in `cases.json`, since the
+module has no function for that split: they are a consumer's cases, which the consumer notes (D4) list and each
+consumer's writer tests in its own repo: *  \*\*Merge?\*\** after leading spaces has a lead, and *\*\* \*\* Merge
+\*\*PR\*\*?* (a blank run) has none and is read whole, as is *Should I \*\* \*\* and \*\*x\*\*?* (a blank first run before a later one), while *Should I merge \*\*#42\*\*?* (a bold run mid-text) is
+refused; *\*\*Merge the PR\*\* now?* refused (its lead has no `?`); *\*\*\*x\*\*\* now?*, whose lead is `*x` and
+tail `* now?`; a lead with an empty tail; *Reply to \*\*Dana\*\* about the budget*, an `act`, refused by the `act`
+line, as is an `act` whose first run is blank; an `act`'s detail `question` read as a `decide`'s; a detail part whose
+value is a list read as its first string and its nested bullets'; and a bold-run or `act` refusal given alone, with
+no check line beside it.
 - **code_tokens**: *foo.py:42*, *foo.py:42.* and *src/foo.py:42* as one token each, *foo.py:42:7* and
   *foo.py:42-50* as the gap; one case per kind, with each spelling (a span with its backticks, `a code block`, a call's
   `()`); each known false positive and gap; an id (*TD-1845*, *#3878*, *F12*) and *v2.7.1* as none; `file(s)` and
   `item(es)` as no call, `one_sentence(x)` as `one_sentence()`; a lone `--`, `—`, `/` and `~/` as none; a commit of 6 and 7 characters, *deadbeef* and
   *added* as none; *GitHub*, *PowerPoint*, *PhD* as none (whole-word match); a word of two kinds once; a link's
   target and a bare URL dropped; `` `curl https://x.io/a` `` one span; a double-backtick span holding a backtick;
-  an unmatched backtick plain; a fence holding spaces and a blank line as one token, and a line ```` ```x``` is y ```` as a span, no fence; order by place, each once.
+  an unmatched backtick plain; a tilde fence, an unclosed fence read to the text's end, an opener whose info text
+  holds spaces (still a fence), and a closing line longer than its opener; a fence holding spaces and a blank line as one token, and a line ```` ```x``` is y ```` as a span, no fence; order by place, each once.
 - **sentence_problems**: empty and blank; 25 and 26 words, and 25 words with a standalone `—` passing; a code span
   as one word, and a code token giving no problem here; a stop inside (*. Which*), each listed abbreviation and a month's;
   a question without `?`; a statement ending in `.`, `!`, `:` and nothing, each passing; trailing `) ] " ' *`
@@ -426,8 +436,7 @@ refused; an `act`'s detail `question` read as a `decide`'s.
   empty* alone; its line with two and three parts.
 - **person_text_problems**: each I-form, *is*, *i.e.* and *I.e.* as no actor; each `ACTOR_WORDS` entry, *We'll pin
   it* passing; *you* inside a span or a URL not read; `actors` with a noun, its plural and `'s`, a phrase (*the host agent*), an entry holding `+`
-  (literal); *agent-cadence*, *us-east-1*, *I/O*, *my-app* naming no actor; *the US market* naming one (a known
-  gap); `actors` empty refusing *a session pins it*, with the cure
+  (literal); *agent-cadence*, *us-east-1*, *I/O*, *my-app* naming no actor; *the US market* naming one and *me/you* naming none (the known gaps); `actors` empty refusing *a session pins it*, with the cure
   line's `, or <a>…` absent and present; `people` case ignored, with `'s`, and *Will* matching *will* (the known gap); a form (`Hold: <note> — a session
   revises it` passes; `Hold: <note>`, `Not right: <what>` and `Other:` alone refused; `Not right: wrong repo` read as
   label); `(default)` dropped; `default` equal to a label (marked or not) skipped, unequal and actorless named
@@ -435,13 +444,14 @@ refused; an `act`'s detail `question` read as a `decide`'s.
   failing at once (all named, in order); an Ask's `**Ask:**` lead not counted (a writer's case, by its text); `sentence` `None` reading no rule 1; rule order across rules 1, 2 and 4; an
   empty or multi-line entry in each list refused, an `actors` entry *the  host\tagent* matching *the host agent*, an entry of spaces alone refused, and a `coined` entry holding a space; `people=None` read as no
   names; *Say no. Then what?* passing (the known gap).
-- **ACTOR_WORDS**: its exact contents, and the I-forms absent from it.
+- **ACTOR_WORDS**: its exact contents, and the I-forms absent from it, as a case `{"constant": "ACTOR_WORDS"}` whose
+  expected result is the tuple as a list.
 - **title_problems**: `TD-078`, `TD-5's`, `ledgerboard#TD-12`, `acme/tools#TD-5`, `my.repo#TD-5` and a code token refused; `labels` with `[A-Z]{1,2}\d+`
   refusing *B4* and *P0* (the caller's pattern, the caller's false positive), and `#\d+`; a `labels` entry that is
   no regular expression refused; `coined` with case, `s` and `es`; *S3* passing with no `labels`; *US/EU/UK* refused (a path, the known false positive); *B4 B4 and B4s* listing *B4* once with `labels`; `foo.py's` a file name; a label inside a span
   read only as the span, *Fix `foo` B4 and `x`* naming `` `foo` ``, B4 and `` `x` `` once each, `` `a`/`b` `` two
   tokens; an id written in
-  words passing.
+  words passing; rule 3's `<list>` with four or more labels (`and <k> more`).
 
 Unit tests in `tests/test_person_text.py` check that the module carries the eight names, and scan the source of
 `ledgerboard/board.py` and `ledgerboard/ledger.py` for no call of the four functions (D3).
