@@ -62,7 +62,7 @@ People: paul
   - **Context:** shiftlead/shiftlead#TD-071 (Org page review, 2026-09-18 — what was built, and the ideas that were not) waits on decision (paul), and no board item asked for it.
   - **Question:** Will you finish the look-and-feel pass on your design canvas (the Org page, the Inbox page and the state icons), so a design round can build from it?
   - **Recommended:** Only paul can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days.
-- [ ] decide 2026-11-15 (session `gate-sweep` on kmaster) — Will you run one attended Claude Code launch in a fresh worktree of a repo whose main checkout is trusted, to see whether the trust dialog still appears? Context: shiftlead/shiftlead#TD-005 decision (paul). Due: 2026-11-15. Answers: Go | Not yet.
+- [x] decide 2026-11-15 (session `gate-sweep` on kmaster) — Will you run one attended Claude Code launch in a fresh worktree of a repo whose main checkout is trusted, to see whether the trust dialog still appears? Context: shiftlead/shiftlead#TD-005 decision (paul). Due: 2026-11-15. Answers: Go | Not yet. Closed: 2026-11-15 — duplicate: filed here by ShiftLead's gate sweep while the home ran pre-v3.0 code, which read ShiftLead's split board as empty; the question stays on ShiftLead's own board.
   - **Context:** shiftlead/shiftlead#TD-005 (`pretrust()` can lose a concurrent Claude Code rewrite of `.claude.json`) waits on decision (paul), and no board item asked for it.
   - **Question:** Will you run one attended Claude Code launch in a fresh worktree of a repo whose main checkout is trusted, to see whether the trust dialog still appears?
   - **Recommended:** Only paul can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days.
