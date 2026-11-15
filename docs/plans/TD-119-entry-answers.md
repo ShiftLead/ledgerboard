@@ -27,16 +27,21 @@ machine's roster declares an `Ask` or `Answers` header field, and none writes a 
 
 - **The board's answers** (SPEC *The board*, the `Answers:` and `Lifts:` bullets): a `decide`'s answers are read by
   `parse_answers_value()` and each by `split_answer()` into label, consequence and the ` (default)` mark; a form
-  (`Hold: <note>`) is filled by the answer; `Lifts:` names which labels (or form heads) lift, and an item with no
-  `Lifts:` lifts on `Go` alone (`_lifting()`); the two waiting-only answers, `Keep waiting` and `Not yet`, never lift.
-  `item_file()` refuses a `Lifts:` naming a waiting-only answer or a label not offered, two forms with one head,
-  and a form marked ` (default)`; it takes the default as an index (`default=`), never as a mark in an answer.
+  (`Hold: <note>`) is filled by the answer; `Lifts:` names which answers lift, each by its whole label (a form by its offered label, `Hold: <note>`,
+  whose fills then lift), and an item with no `Lifts:` lifts on `Go` alone (`_lifting()`); the two waiting-only answers, `Keep waiting` and `Not yet`, never lift.
+  `item_file()` refuses, for a `decide`, fewer than two answers, two answers of one label, an answer with an empty
+  consequence (`a —`), a `Lifts:` that is empty, repeats a label, names a waiting-only answer or names a label not
+  offered, two forms with one head and a form as the default; it takes the default as an index (`default=`), and
+  refuses any ` (default)` mark written in an answer (the mark is the writer's). It takes a literal `|` in an
+  answer and escapes it.
 - **What an answer does** (`closes()`): a waiting-only answer closes the item and keeps the gate (the host writes
-  `kept waiting`); a lifting answer closes it and lifts the gate; any other answer is a work order and leaves the
+  `kept waiting`); a lifting answer on an item about this repo's own entry closes it and lifts the gate (an item about another
+  repo's entry, `<repo>#TD-n`, stays open, and its lift goes through *an answer owing a lift*); any other answer is a work order and leaves the
   item open, `decided`, which still covers the gate, so the sweep does not ask again.
 - **The entry's body** (SPEC *Ledger entries and their edits*): a body section is kept byte for byte by
   `canonical()`, so a new section name changes no canonical form and no item key. `_entry_ask()` reads the body's
-  `**Ask:**` section alone, its words joined to one line.
+  `**Ask:**` section alone, its words joined to one line, the literal `**Ask:**` stripped, the title when it is
+  empty.
 - **The sweep's consumers pass its item through:** ShiftLead's `gatesweep.py` and agent-cadence's
   `gate_sweep.py` both hand `answers`, `default` and `lifts` from `sweep()`'s item to the board writer unchanged,
   so neither needs code for the sweep to offer other answers.
@@ -52,11 +57,13 @@ An entry that waits on a person may carry two body sections:
 - `**Answers:** a | b | c` — the answers the person may give, in the board's `Answers:` value form (each
   `<label>` or `<label> — <consequence>`, one marked ` (default)` at most, a form `<head>: <words>` among them,
   `\|` for a literal bar).
-- `**Lifts:** a | b` — which of them lift the gate, each an answer's label or a form's head. With no `**Lifts:**`
-  section, `Go` lifts, as on the board.
+- `**Lifts:** a | b` — which of them lift the gate, each an answer's whole label (a form by its offered label,
+  `Hold: <note>`, so its fills lift). With no `**Lifts:**` section, `Go` lifts, as on the board.
 
-Each section's value is its words after its lead, joined to one line (`_entry_ask()`'s reading). Only the body
-sections are read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
+Each section is found by its lead's name (`Answers`, `Lifts`, the colon optional, as every lead is matched), and
+its value is its text with its own lead removed and its words joined to one line, `\|` kept for
+`parse_answers_value()` to read; an empty value is an empty section, never the title. Only the body sections are
+read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
 qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the Log;
 the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section, and no new command or
 flag is added.
@@ -71,20 +78,23 @@ nothing, which is the bug.
 
 ### D2. One reader decides whether the answers can be offered
 
-`entry_answers(entry_text)` (v3.N) reads one entry's two sections and returns:
+`entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
-- `None` when the entry has no `**Answers:**` section and no `**Lifts:**` section;
-- `{"answers": [...], "default": <int or None>, "lifts": [...] or None}` when they can be offered: `answers` each
-  answer as written with its ` (default)` mark removed (its label and ` — <consequence>`), `default` the index of
-  the marked one, `lifts` the `**Lifts:**` labels as written, or None when the section is absent;
-- and it raises `Refused`, naming why, when they cannot: a `**Lifts:**` with no `**Answers:**`; answers that
-  `item_file()` refuses as a `decide`'s `answers`, `default` and `lifts` (its own rules, above: a label not
-  offered in `Lifts`, a waiting-only one there, two forms with one head, a form marked ` (default)`, two marks);
-  or **no answer that lifts**: none of the answers is `Go` when there is no `**Lifts:**`. (A `**Lifts:**` that
-  names only answers offered always has one.) An empty `**Answers:**` section is refused as no answers.
+1. The entry is read as `canonical()` reads it; an entry it refuses is refused (`Refused`, its reason). Neither
+   section: `None`. Two sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
+2. A `**Lifts:**` with no `**Answers:**`: refused. An empty `**Answers:**` value: refused, *no answers*.
+3. The answers are `parse_answers_value()`'s, each split by `split_answer()`: more than one marked ` (default)`
+   is refused; each is returned with its mark removed, as `<label>` or `<label> — <consequence>`, a bar in it a
+   literal `|`; `default` is the marked one's index, else None.
+4. The lifts are `parse_answers_value()` of the `**Lifts:**` value, as written (literal bars), else None.
+5. `item_file("x", None, "2000-01-01", None, None, "<the entry's id> decision (p)", kind="decide",
+   answers=…, default=…, lifts=…)` is called with them: what it refuses is refused, with its reason. Its rules
+   (*What is already settled*) are the authority; the list there is for the reader of this plan.
+6. No answer lifts — no `**Lifts:**` and no answer whose label is `Go` (compared as `_lifting()` compares):
+   refused. (A `**Lifts:**` step 5 passes always names an offered answer.)
 
-It reads no board and no person: the same text gives the same result for the sweep, `check()` and a consumer's
-writer.
+Otherwise it returns `{"answers": [...], "default": <int or None>, "lifts": [...] or None}`. It reads no board and
+no person: the same text gives the same result for the sweep, `check()` and a consumer's writer.
 
 ### D3. The sweep offers them
 
@@ -92,12 +102,13 @@ The `decision (<p>)` bullet of *The gate sweep* keeps its rule for *when* it fil
 entry whose `entry_answers()` returns answers, the `decide` it files carries them: `answers`, `default` and
 `lifts` from the reader, and a detail block whose `recommended` names what lifts — *Only <p> can say: <a>, <b>
 lift the gate* (the lifting labels, or `Go`, in the answers' order, joined by commas), *and the other answers
-leave it standing*. For an entry with no answers (the reader returns `None`), and for one whose answers the
+leave it standing* (with a default, `item_file()` writes it after the default's label, `<label> — …`, as for
+every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
 reader refuses, it files `Go | Not yet` as today; for the refused case its detail context gains *; its own answers
 could not be offered (the ledger check names why)*. The sweep never raises for an entry's answers.
 
-What the person's press then does is the board's rule, unchanged: a lifting answer closes the item and the
-decide lift drops the gate; `Not yet` or `Keep waiting`, where offered, closes it and keeps the gate; any other
+What the person's press then does is the board's rule, unchanged: a lifting answer lifts the gate (on this
+repo's own entry by the decide lift, closing the item; on another repo's, through *an answer owing a lift*); `Not yet` or `Keep waiting`, where offered, closes it and keeps the gate; any other
 answer (*One more round*, *Hold: <note>*, *Not right: <what it printed>*) is a work order the entry's session
 acts on, and the item stays open and `decided`, covering the gate.
 
@@ -108,7 +119,8 @@ rewritten when an entry gains answers: the sweep files only uncovered gates.
 
 `check()` flags an open entry whose `entry_answers()` raises (`answers-unusable`), with the reader's reason; an
 error on an entry the edit changed (its whole text, as for the Log), ℹ on a standing ledger. It joins
-`EDIT_ERRORS`, so the ledger writer refuses an edit that makes one, as it refuses `ask-missing`. Answers on an
+`EDIT_ERRORS` and `TEXT_KINDS`, so it is scoped to an entry's whole text (an `edit --section Answers` changes
+the body alone) and the ledger writer refuses an edit that makes one, as it refuses `ask-missing`. Answers on an
 entry with no decision gate are read and checked the same way and do nothing: nothing reads them until a decision
 is added.
 
@@ -149,13 +161,15 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > **An entry's own answers** (v3.N). An entry that waits on a person may name the answers it offers in a body
 > section `**Answers:**`, in the form of a board `decide`'s `Answers:` value (*The board*: each `<label>` or
 > `<label> — <consequence>`, one marked ` (default)` at most, forms among them), and which of them lift its gate
-> in a body section `**Lifts:**`, labels or form heads; with no `**Lifts:**`, `Go` lifts. Each section's value is
-> its words after its lead, joined to one line; a header field of either name, and a qualified lead
-> (`**Answers (…):**`), are not these. `entry_answers(entry_text)` reads them: None when the entry has neither
-> section; `{"answers", "default", "lifts"}` when they can be offered (each answer as written with its mark
-> removed, the marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why,
-> for a `**Lifts:**` with no `**Answers:**`, for answers `item_file()` refuses as a `decide`'s `answers`,
-> `default` and `lifts`, and for answers of which none lifts. `check()` flags an open entry it refuses
+> in a body section `**Lifts:**`, each an answer's whole label (a form by its offered label, `Hold: <note>`); with
+> no `**Lifts:**`, `Go` lifts. Each section's value is its text with its own lead removed, its words joined to
+> one line; a header field of either name, and a qualified lead (`**Answers (…):**`), are not these.
+> `entry_answers(entry_text)` reads them: None when the entry has neither section; `{"answers", "default",
+> "lifts"}` when they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the
+> marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an
+> entry `canonical()` refuses, two sections of one name, a `**Lifts:**` with no `**Answers:**`, an empty
+> `**Answers:**`, two answers marked, answers `item_file()` refuses as a `decide`'s `answers`, `default` and
+> `lifts` (fewer than two among them), and answers of which none lifts. `check()` flags an open entry it refuses
 > (`answers-unusable`; an error on an entry the edit changed — its whole text — ℹ on a standing ledger). The
 > gate sweep offers them (*The gate sweep*).
 
@@ -195,18 +209,22 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` and no `**Lifts:**`
   (`default` 0, `lifts` None); one whose `**Lifts:**` names a label not offered (refused: `Go | Not yet`, the
   detail context's added clause); one with no lifting answer (`One more round | Hold: <note>`, no `**Lifts:**`);
-  one with `**Lifts:**` and no `**Answers:**`. The runner calls `sweep()` over them on one date; the expected
+  one with `**Lifts:**` and no `**Answers:**`; one whose `**Lifts:**` names a form, `Hold: <note>`. The runner
+  (`sweep_cases()`, which today reads `sweep/`'s top-level `ledger.md` and `archive.md`) gains the key's own
+  ledger text and its v3 board directory, read apart from the existing runs; it calls `sweep()` over them on one date; the expected
   items are written from this SPEC text, never from the module's output.
 - **`fixtures/ledger_edit/check/`**: `answers-unusable` as an error on an edited entry and ℹ on a standing one,
   and a usable section that flags nothing; a section on an entry with no decision, checked the same way.
 - **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
   result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
-  lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), a form marked
-  ` (default)` (refused), a section spanning two paragraphs (joined).
+  lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), two marks (refused), a form marked
+  ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), two `**Answers:**` sections
+  (refused), `Lifts: Hold` for an offered `Hold: <note>` (refused: a form is listed by its whole label), a section
+  spanning two paragraphs (joined).
 
 ## Builds
 
-One build, **B1**: `entry_answers()`, the sweep's use of it, `check()`'s `answers-unusable` in `EDIT_ERRORS`,
+One build, **B1**: `entry_answers()`, the sweep's use of it, `check()`'s `answers-unusable` in `EDIT_ERRORS` and `TEXT_KINDS`,
 the SPEC text above, the fixtures and unit tests (the reader's refusals by reason; the sweep never raising on
 an entry's answers), in one PR; the release number as D6 says. On its merge the builder tells agent-cadence's
 techlead which release carries it.
