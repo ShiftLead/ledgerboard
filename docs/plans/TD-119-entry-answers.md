@@ -1,0 +1,220 @@
+# TD-119: the gate sweep offers the entry's own answers
+
+**Status:** Draft 1, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
+entry sections the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both
+consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: running (the record:
+[docs/reviews/TD-119.md](../reviews/TD-119.md)).
+
+**Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
+ShiftLead ran onto this repo's board in PR #355.
+
+## The problem
+
+When an entry waits on a person (`decision (<p>)`) and no board item asks for it, the gate sweep files one: a
+`decide` whose text is the entry's Ask and whose answers are always `Go | Not yet` (SPEC *The gate sweep*,
+`SWEEP_DECISION_ANSWERS` in `_sweep_item()`). Many Asks ask something else. In #355, ShiftLead's TD-1879 asked
+*one more round, or go ahead now?* and named Hold too; ShiftLead's TD-1404 asked for *Works* or *Not right: <what it
+printed>*. Both items offered Go | Not yet, so the person could not press the answer the question asks for, and a
+*Works* typed as a reply would not lift the gate, since only `Go` lifts an item with no `Lifts:`.
+
+The sweep cannot know an entry's answers today because the format gives them no home: SPEC *Text a person reads*
+says *An Ask carries no answers in this format; a ledger that keeps its own `Answers` (a repo's own field or
+section) passes them*. ShiftLead already keeps one such section, on its TD-1845 (`**Answers:** Go (default) — the
+grinders build it | One more round — … | Hold: <note> — …`), in the board's `Answers:` form. No ledger on this
+machine's roster declares an `Ask` or `Answers` header field, and none writes a `**Lifts:**` section.
+
+## What is already settled
+
+- **The board's answers** (SPEC *The board*, the `Answers:` and `Lifts:` bullets): a `decide`'s answers are read by
+  `parse_answers_value()` and each by `split_answer()` into label, consequence and the ` (default)` mark; a form
+  (`Hold: <note>`) is filled by the answer; `Lifts:` names which labels (or form heads) lift, and an item with no
+  `Lifts:` lifts on `Go` alone (`_lifting()`); the two waiting-only answers, `Keep waiting` and `Not yet`, never lift.
+  `item_file()` refuses a `Lifts:` naming a waiting-only answer or a label not offered, two forms with one head,
+  and a form marked ` (default)`; it takes the default as an index (`default=`), never as a mark in an answer.
+- **What an answer does** (`closes()`): a waiting-only answer closes the item and keeps the gate (the host writes
+  `kept waiting`); a lifting answer closes it and lifts the gate; any other answer is a work order and leaves the
+  item open, `decided`, which still covers the gate, so the sweep does not ask again.
+- **The entry's body** (SPEC *Ledger entries and their edits*): a body section is kept byte for byte by
+  `canonical()`, so a new section name changes no canonical form and no item key. `_entry_ask()` reads the body's
+  `**Ask:**` section alone, its words joined to one line.
+- **The sweep's consumers pass its item through:** ShiftLead's `gatesweep.py` and agent-cadence's
+  `gate_sweep.py` both hand `answers`, `default` and `lifts` from `sweep()`'s item to the board writer unchanged,
+  so neither needs code for the sweep to offer other answers.
+- **Text a person reads** (v3.2): the package's own writers do not run the check; a consumer's writer of an Ask
+  passes the entry's answers to it, read as a board `Answers:` value.
+
+## The design
+
+### D1. An entry's answers live in its own `**Answers:**` section, and its lifts in `**Lifts:**`
+
+An entry that waits on a person may carry two body sections:
+
+- `**Answers:** a | b | c` — the answers the person may give, in the board's `Answers:` value form (each
+  `<label>` or `<label> — <consequence>`, one marked ` (default)` at most, a form `<head>: <words>` among them,
+  `\|` for a literal bar).
+- `**Lifts:** a | b` — which of them lift the gate, each an answer's label or a form's head. With no `**Lifts:**`
+  section, `Go` lifts, as on the board.
+
+Each section's value is its words after its lead, joined to one line (`_entry_ask()`'s reading). Only the body
+sections are read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
+qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the Log;
+the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section, and no new command or
+flag is added.
+
+**Options set aside.** *A header field* (`Answers:` in the header block): header values are the summary's
+metadata, one line each, and the format already keeps the Ask, what the person reads, in the body; ShiftLead
+writes the section. *Reading the Ask's prose* (bold words, *or*): a guess, and TD-1879's Ask names its options in
+running prose; a sweep that guessed would lift on the wrong press. *Answers inside the Ask section*: the Ask's
+first paragraph is its question sentence (*Text a person reads*), so a second home inside it would split one
+section two ways. *Leaving `Go | Not yet` and teaching the person to type the answer*: a typed *Works* lifts
+nothing, which is the bug.
+
+### D2. One reader decides whether the answers can be offered
+
+`entry_answers(entry_text)` (v3.N) reads one entry's two sections and returns:
+
+- `None` when the entry has no `**Answers:**` section and no `**Lifts:**` section;
+- `{"answers": [...], "default": <int or None>, "lifts": [...] or None}` when they can be offered: `answers` each
+  answer as written with its ` (default)` mark removed (its label and ` — <consequence>`), `default` the index of
+  the marked one, `lifts` the `**Lifts:**` labels as written, or None when the section is absent;
+- and it raises `Refused`, naming why, when they cannot: a `**Lifts:**` with no `**Answers:**`; answers that
+  `item_file()` refuses as a `decide`'s `answers`, `default` and `lifts` (its own rules, above: a label not
+  offered in `Lifts`, a waiting-only one there, two forms with one head, a form marked ` (default)`, two marks);
+  or **no answer that lifts**: none of the answers is `Go` when there is no `**Lifts:**`. (A `**Lifts:**` that
+  names only answers offered always has one.) An empty `**Answers:**` section is refused as no answers.
+
+It reads no board and no person: the same text gives the same result for the sweep, `check()` and a consumer's
+writer.
+
+### D3. The sweep offers them
+
+The `decision (<p>)` bullet of *The gate sweep* keeps its rule for *when* it files; it changes only *what*. For an
+entry whose `entry_answers()` returns answers, the `decide` it files carries them: `answers`, `default` and
+`lifts` from the reader, and a detail block whose `recommended` names what lifts — *Only <p> can say: <a>, <b>
+lift the gate* (the lifting labels, or `Go`, in the answers' order, joined by commas), *and the other answers
+leave it standing*. For an entry with no answers (the reader returns `None`), and for one whose answers the
+reader refuses, it files `Go | Not yet` as today; for the refused case its detail context gains *; its own answers
+could not be offered (the ledger check names why)*. The sweep never raises for an entry's answers.
+
+What the person's press then does is the board's rule, unchanged: a lifting answer closes the item and the
+decide lift drops the gate; `Not yet` or `Keep waiting`, where offered, closes it and keeps the gate; any other
+answer (*One more round*, *Hold: <note>*, *Not right: <what it printed>*) is a work order the entry's session
+acts on, and the item stays open and `decided`, covering the gate.
+
+The item's identity, its filing rule and the `kept waiting` window are unchanged. An item already open is not
+rewritten when an entry gains answers: the sweep files only uncovered gates.
+
+### D4. The ledger check flags answers the sweep cannot offer
+
+`check()` flags an open entry whose `entry_answers()` raises (`answers-unusable`), with the reader's reason; an
+error on an entry the edit changed (its whole text, as for the Log), ℹ on a standing ledger. It joins
+`EDIT_ERRORS`, so the ledger writer refuses an edit that makes one, as it refuses `ask-missing`. Answers on an
+entry with no decision gate are read and checked the same way and do nothing: nothing reads them until a decision
+is added.
+
+### D5. The answers are text a person reads
+
+*Text a person reads*' Ask bullet now names the format's section: a consumer's writer of an entry's Ask, or of
+its `**Answers:**` section, passes the entry's answers to the check (`entry_answers()`'s, else a repo's own
+field), so rule 2 (*each answer names who acts*) holds for them at the writer, as for any board answer. The sweep
+and the package's writers run no check (TD-111 D3).
+
+### D6. The release
+
+A minor release: the next unreleased minor when the build merges (v3.2 is TD-111's, built and untagged; TD-115's
+build waits for v3.1's tag and takes the next untagged minor too). If another build's paragraph for that minor is
+on main and untagged when this one merges, the two share one *Versions* paragraph, whose bold lead names every
+addition, this build's sentences after the others'; if that minor is tagged, every `v3.N` this build writes
+becomes the next untagged minor.
+
+**What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
+sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). An
+entry whose section is not usable gains a standing ℹ `answers-unusable`. No parse, field, Log line, item key or
+canonical form changes.
+
+**The consumers.** Neither needs code: both pass the sweep's item through. On the build's merge the builder tells
+agent-cadence's techlead which release carries it; on Paul's go the designer sends ShiftLead's question seat one
+note (`ao td add --repo shiftlead`): once the release is vendored, TD-1879 and TD-1404 (and any entry whose Ask
+names its own answers) can carry `**Answers:**` and `**Lifts:**` sections. The two items #355 filed for them on this
+repo's board, with `Go | Not yet`, stay as filed, since an open item is never rewritten; closed unanswered once
+the sections land, they are filed again by the next sweep with the entries' own answers (an item closed with no
+answer opens no window).
+
+## The SPEC text
+
+The build adds these, word for word, `v3.N` the release D6 names.
+
+**In *The ledger*, after the paragraph ending *A `Waits` field is never read as a gate.*:**
+
+> **An entry's own answers** (v3.N). An entry that waits on a person may name the answers it offers in a body
+> section `**Answers:**`, in the form of a board `decide`'s `Answers:` value (*The board*: each `<label>` or
+> `<label> — <consequence>`, one marked ` (default)` at most, forms among them), and which of them lift its gate
+> in a body section `**Lifts:**`, labels or form heads; with no `**Lifts:**`, `Go` lifts. Each section's value is
+> its words after its lead, joined to one line; a header field of either name, and a qualified lead
+> (`**Answers (…):**`), are not these. `entry_answers(entry_text)` reads them: None when the entry has neither
+> section; `{"answers", "default", "lifts"}` when they can be offered (each answer as written with its mark
+> removed, the marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why,
+> for a `**Lifts:**` with no `**Answers:**`, for answers `item_file()` refuses as a `decide`'s `answers`,
+> `default` and `lifts`, and for answers of which none lifts. `check()` flags an open entry it refuses
+> (`answers-unusable`; an error on an entry the edit changed — its whole text — ℹ on a standing ledger). The
+> gate sweep offers them (*The gate sweep*).
+
+**In *The gate sweep*, the `decision (<p>)` bullet:** *`Answers: Go | Not yet.`* becomes
+
+> its answers the entry's own (*An entry's own answers*: `entry_answers()`'s `answers`, `default` and `lifts`),
+> else `Answers: Go | Not yet.` (v3.N: also when the entry's answers are refused, its detail context then saying
+> so), …
+
+and the paragraph after the bullets gains, as its last sentence:
+
+> An item the sweep filed is never rewritten: an entry that gains answers keeps the item already open.
+
+**In *Text a person reads*, the Ask bullet:** *An Ask carries no answers in this format; a ledger that keeps its
+own `Answers` (a repo's own field or section) passes them, read as a board's `Answers:` value
+(`parse_answers_value()`);* becomes
+
+> An entry's answers (*An entry's own answers*, v3.N) are passed with it, `entry_answers()`'s `answers`, else a
+> repo's own `Answers` field, read as a board's `Answers:` value (`parse_answers_value()`); and a write of the
+> entry's `**Answers:**` section is checked as a write of its Ask;
+
+**In *Versions*, a paragraph for the release:**
+
+> **v3.N gives an entry its own answers** (*The ledger*, *The gate sweep*): `**Answers:**` and `**Lifts:**`
+> sections, `entry_answers()` that reads them, and `check()`'s `answers-unusable`, which the ledger writer
+> refuses on an edit. The gate sweep's item for an uncovered decision offers the entry's answers where it has
+> usable ones, and `Go | Not yet` otherwise. No parse, field, Log line, item key or canonical form changes; an
+> entry that already holds an `**Answers:**` section is offered its own answers, and one whose section cannot be
+> offered is flagged ℹ.
+
+## The fixtures
+
+- **`fixtures/sweep/`**: a new key `answers` in `cases.json`, its own small ledger `sweep/answers/ledger.md` and a
+  board `sweep/answers/board/` listing `People: pat`, so the existing runs' expected results do not move. Its
+  entries, each `decision (pat)` and uncovered: one with no section (`Go | Not yet`, today's item); one with
+  `Answers: Works — a session archives the check | Not right: <what it printed> — a session files what is wrong`
+  and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` and no `**Lifts:**`
+  (`default` 0, `lifts` None); one whose `**Lifts:**` names a label not offered (refused: `Go | Not yet`, the
+  detail context's added clause); one with no lifting answer (`One more round | Hold: <note>`, no `**Lifts:**`);
+  one with `**Lifts:**` and no `**Answers:**`. The runner calls `sweep()` over them on one date; the expected
+  items are written from this SPEC text, never from the module's output.
+- **`fixtures/ledger_edit/check/`**: `answers-unusable` as an error on an edited entry and ℹ on a standing one,
+  and a usable section that flags nothing; a section on an entry with no decision, checked the same way.
+- **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
+  result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
+  lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), a form marked
+  ` (default)` (refused), a section spanning two paragraphs (joined).
+
+## Builds
+
+One build, **B1**: `entry_answers()`, the sweep's use of it, `check()`'s `answers-unusable` in `EDIT_ERRORS`,
+the SPEC text above, the fixtures and unit tests (the reader's refusals by reason; the sweep never raising on
+an entry's answers), in one PR; the release number as D6 says. On its merge the builder tells agent-cadence's
+techlead which release carries it.
+
+## Not done
+
+- **The item's text** stays the entry's whole Ask joined to one line, as today. Since v3.2 an Ask's first
+  paragraph is its question and its later paragraphs context; filing only the first paragraph as the item's text
+  and the rest as its detail context is a change of its own, not this one.
+- **No rewrite of an open item** when its entry's answers change (D3).
+- **No writer flags**: `edit --section Answers|Lifts` writes the sections; `new` and `set` gain nothing.
