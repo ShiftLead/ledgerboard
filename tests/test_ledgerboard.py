@@ -1150,7 +1150,8 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         read = lambda d: {str(p.relative_to(d)): p.read_bytes().decode("utf-8")  # noqa: E731
                           for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
         spec = json.loads((self.D / "cases.json").read_text(encoding="utf-8"))
-        case = next(c for k in ("verdict", "tripwire", "uncovered") for c in spec[k] if c["name"] == name)
+        case = next(c for k in ("verdict", "tripwire", "uncovered", "ledger_lift", "lift_form")  # v3.3: the last two
+                    for c in spec.get(k, []) if c["name"] == name)
 
         def drop(t, paths):  # v3.0: a path ending in `/` takes every path under it
             return {k: v for k, v in t.items() if not any(k == p or (p.endswith("/") and k.startswith(p))
@@ -1244,6 +1245,94 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
                     "Due: 2026-01-20. Answers: Files | Db.\n"
                 got = L.uncovered_decisions(bt, {**ht, P: new}, [], "acme/widgets")[0]
                 self.assertEqual([k for k, _ in got], ["decision-no-lift"])
+
+
+class LedgerLiftVerdict(unittest.TestCase):  # v3.3 (TD-115, TD-123): what the ledger_lift fixtures do not carry
+    D = MergeGateVerdicts.D
+    trees = MergeGateVerdicts.trees
+    REPO = "acme/widgets"
+    SUBJECT = "shiftlead: lift decision (pat) on TD-160 (session n/a)"
+
+    def verdict(self, base, head, *, subject=None, commits=1, created="2026-01-15", merged="2026-01-15",
+                repo=REPO):
+        files = sorted(p for p in {*base, *head} if base.get(p) != head.get(p))
+        return L.ledger_lift_verdict(base, head, files, subject or self.SUBJECT, commits, created, merged, repo)
+
+    def test_the_none_form_passes(self):
+        self.assertEqual(self.verdict(*self.trees("lift-none")), {"carve_out": True, "flags": [], "review": []})
+
+    def test_a_bad_repo_raises(self):
+        base, head = self.trees("lift-none")
+        for repo in ("acme widgets", "", None):
+            with self.subTest(repo=repo), self.assertRaises(L.Refused):
+                self.verdict(base, head, repo=repo)
+
+    def test_aware_datetimes_are_their_utc_dates(self):
+        base, head = self.trees("lift-none")
+        late = datetime(2026, 1, 14, 23, 30, tzinfo=timezone(timedelta(hours=-7)))  # 2026-01-15 in UTC
+        self.assertTrue(self.verdict(base, head, created=late, merged=late)["carve_out"])
+        with self.assertRaises(L.Refused):  # a naive datetime names no day
+            self.verdict(base, head, created=datetime(2026, 1, 15, 12), merged=None)  # noqa: DTZ001
+        with self.assertRaises(L.Refused):  # merged before it was opened
+            self.verdict(base, head, created="2026-01-15", merged="2026-01-14")
+
+    def test_commits_that_is_no_count_raises(self):
+        base, head = self.trees("lift-none")
+        for commits in (True, -1, "1", 1.0):
+            with self.subTest(commits=commits), self.assertRaises(L.Refused):
+                self.verdict(base, head, commits=commits)
+
+    def test_a_head_entry_with_two_log_sections_raises(self):
+        base, head = self.trees("lift-none")
+        path = "docs/ledger/TD-160.md"
+        two = {**head, path: head[path] + "\n**Log:**\n- 2026-01-15: a second Log\n"}
+        with self.assertRaises(L.Refused):
+            self.verdict(base, two)
+
+    def test_a_flag_the_conditions_miss_is_a_reason(self):  # ledger-lift-flagged: unreachable by construction
+        base, head = self.trees("lift-none")
+        real = L.tripwire
+        try:
+            L.tripwire = lambda *a, **k: [("tripwire-future", "a rule a later release adds")]
+            got = self.verdict(base, head)
+        finally:
+            L.tripwire = real
+        self.assertEqual(got["review"][0][0], "ledger-lift-flagged")
+        self.assertFalse(got["carve_out"])
+
+    def test_lift_form_refuses(self):
+        base, _ = self.trees("lift-none")
+        v1 = {k: v for k, v in base.items() if not k.startswith("docs/ledger/")}
+        v1["docs/technical_debt.md"] = "# Technical debt\n\n" + base["docs/ledger/TD-160.md"]
+        for tree, tid, gate, repo in ((base, "TD-160", "decision (pat)", "acme widgets"),  # a bad repo
+                                      (base, "TD-999", "decision (pat)", self.REPO),  # no such entry
+                                      (base, "TD-120", "decision (pat)", self.REPO),  # not carrying it
+                                      (base, "TD-140", "event (vendor-ships)", self.REPO),  # no decision
+                                      (base, "TD-160", "decision (Ann )", self.REPO),  # no gate at all
+                                      (base, "acme/other#TD-5", "decision (pat)", self.REPO),  # not a bare TD-n
+                                      (v1, "TD-160", "decision (pat)", self.REPO)):  # a v1 ledger
+            with self.subTest(tid=tid, gate=gate, repo=repo), self.assertRaises(L.Refused):
+                L.lift_form(tree, tid, gate, repo)
+        archived = {**base, "docs/ledger/TD-160.md": base["docs/ledger/TD-160.md"].replace(
+            "**Status:** Open", "**Status:** Resolved 2026-01-10")}
+        with self.assertRaises(L.Refused):  # an archived Status in the directory is not open
+            L.lift_form(archived, "TD-160", "decision (pat)", self.REPO)
+
+    def test_lift_form_with_no_board_is_none(self):
+        base, _ = self.trees("lift-none")
+        bare = {k: v for k, v in base.items() if not k.startswith(L.BOARD_DIR + "/")}
+        self.assertEqual(L.lift_form(bare, "TD-100", "decision (pat)", self.REPO), ("none", []))
+
+    def test_the_subject_writer_normalises_and_refuses(self):
+        self.assertEqual(L.lift_subject("TD-12", "Decision(Ann)", "shiftlead"),
+                         "shiftlead: lift decision (Ann) on TD-12 (session n/a)")
+        with self.assertRaises(L.Refused):
+            L.lift_subject("TD-12", "decision (Ann )", "shiftlead")
+        for line in (L.lift_subject("TD-12", "decision (paul)", "shiftlead", "w-1"),):
+            self.assertEqual(L.subject_kind(line), "lift")
+            self.assertIsNone(L.edit_action(line))
+            self.assertIsNone(L.subject_id(line))
+        self.assertIsNone(L.lift_subject_parts(None))
 
 
 class UnknownStatus(unittest.TestCase):

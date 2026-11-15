@@ -100,7 +100,9 @@ Fixtures, each an invented input and its expected JSON:
   ``tripwire()`` and ``uncovered_decisions()`` of each case's trees: ``base/`` under each case's
   ``cases/<name>/base/``, less its ``delete_base`` paths, then its ``cases/<name>/head/`` over that, less its
   ``delete`` paths (a path ending in ``/`` every path under it, v3.0); the board a v3 directory, and another
-  repo's board under ``boards/`` a directory or a v2 file read through ``load_board()`` (v3.0).
+  repo's board under ``boards/`` a directory or a v2 file read through ``load_board()`` (v3.0); and (v3.3)
+  ``ledger_lift_verdict()`` of each ``ledger_lift`` case, and ``lift_form()``'s ``[case, item ids]`` of each
+  ``lift_form`` case, read from the base of the ``ledger_lift`` case it names (``case``), else its own overlay.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from; from v3.0 the board a directory of item files, ``board/`` with its ``README.md``, or a v2 file
   for the reads and the refusals), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/``
@@ -787,7 +789,13 @@ def item_cases(L, spec: dict) -> dict:
                 session=c.get("session"))) for c in subj["subjects"]],  # v3.0 removed the form with no id
             "subject_kinds": {s: L.subject_kind(s) for s in subj["subject_kinds"]},
             "edit_actions": {s: L.edit_action(s) for s in subj["edit_actions"]},  # v2.3
-            "subject_ids": {s: L.subject_id(s) for s in subj["subject_ids"]}},
+            "subject_ids": {s: L.subject_id(s) for s in subj["subject_ids"]},
+            "lift_subjects": ({  # v3.3: a ledger lift's subject, written and read back
+                "writer": [_refused(lambda c=c: L.lift_subject(c["tid"], c["gate"], c["tool"], c.get("session")))
+                           for c in subj["lift_subjects"]["writer"]],
+                "reader": {s: L.lift_subject_parts(s) for s in subj["lift_subjects"]["reader"]}}
+                if hasattr(L, "lift_subject") else
+                {"missing": "the module has no lift_subject — older than v3.3"})},
     }
 
 
@@ -1148,11 +1156,29 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
         boards = [(b["url"], b["basename"], _fs_board(d / "boards", b["board"], L)) for b in c["boards"]]
         refusals, flags = L.uncovered_decisions(base, head, boards, spec["repo"])
         return {"refusals": [list(x) for x in refusals], "flags": [list(x) for x in flags]}
+
+    def ledger_lift(c):  # v3.3: the ledger lift's verdict
+        base, head = trees(c)
+        got = L.ledger_lift_verdict(base, head, c["files"], c["subject"], c["commits"], c["created_at"],
+                                    c["merged_at"], spec["repo"])
+        return {"carve_out": got["carve_out"], "flags": [list(x) for x in got["flags"]],
+                "review": [list(x) for x in got["review"]]}
+    lifts = {c["name"]: c for c in spec.get("ledger_lift", [])}
+
+    def form(c):  # v3.3: the base a named ledger_lift case reads, else the form case's own overlay
+        case, items = L.lift_form(trees(lifts[c["case"]] if "case" in c else c)[0], c["tid"], c["gate"],
+                                  spec["repo"])
+        return [case, [it.id for it in items]]
     return {
         "verdict": {c["name"]: verdict(c) for c in spec["verdict"]},
         "tripwire": {c["name"]: [list(x) for x in L.tripwire(*trees(c), c["subject"], spec["repo"])]
                      for c in spec["tripwire"]},
         "uncovered": {c["name"]: uncovered(c) for c in spec["uncovered"]},
+        "ledger_lift": ({c["name"]: ledger_lift(c) for c in spec.get("ledger_lift", [])}
+                        if hasattr(L, "ledger_lift_verdict") else
+                        {"missing": "the module has no ledger_lift_verdict — older than v3.3"}),
+        "lift_form": ({c["name"]: form(c) for c in spec.get("lift_form", [])} if hasattr(L, "lift_form") else
+                      {"missing": "the module has no lift_form — older than v3.3"}),
     }
 
 
@@ -1179,9 +1205,12 @@ def grammar_cases(L, spec: dict) -> dict:
         "rank-file": lambda s: (not L.rank(s)[1], L.rank(s)[1]),
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
         "event-section": lambda s: (L.parse_event_section(s)["problem"] is None, L.parse_event_section(s)["problem"]),
+        "lift-subject": lambda s: (L.lift_subject_parts(s) is not None, None),  # v3.3: a ledger lift's subject
     }
-    return {start: {prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
-                    for prod, g in groups.items()}
+    return {start: ({prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
+                     for prod, g in groups.items()}
+                    if start != "lift-subject" or hasattr(L, "lift_subject_parts") else
+                    {"missing": "the module has no lift_subject_parts — older than v3.3"})
             for start, groups in spec.items()}
 
 
