@@ -441,6 +441,27 @@
   ]
  },
  {
+  "name": "code_tokens: standin-chars-in-text",
+  "fn": "code_tokens",
+  "args": [
+   "999 x and x7 foo_bar"
+  ]
+ },
+ {
+  "name": "code_tokens: crlf-fence",
+  "fn": "code_tokens",
+  "args": [
+   "```\r\nx\r\n```\r\ny foo_bar"
+  ]
+ },
+ {
+  "name": "code_tokens: crlf-blank-line-span-plain",
+  "fn": "code_tokens",
+  "args": [
+   "a `b\r\n\r\nc` foo_bar"
+  ]
+ },
+ {
   "name": "code_tokens: www-dotted",
   "fn": "code_tokens",
   "args": [
@@ -969,6 +990,17 @@
   "fn": "sentence_problems",
   "args": [
    "Is it Dana’s call?"
+  ],
+  "kwargs": {
+   "question": true,
+   "max_words": 25
+  }
+ },
+ {
+  "name": "sentence_problems: span-one-line",
+  "fn": "sentence_problems",
+  "args": [
+   "Should I run `make test`?"
   ],
   "kwargs": {
    "question": true,
@@ -2421,6 +2453,22 @@
   "kwargs": {
    "question": true,
    "people": null
+  }
+ },
+ {
+  "name": "person_text_problems: people-space-entry",
+  "fn": "person_text_problems",
+  "args": [
+   null,
+   [
+    "Go — it merges"
+   ]
+  ],
+  "kwargs": {
+   "question": true,
+   "people": [
+    " "
+   ]
   }
  },
  {

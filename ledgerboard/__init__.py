@@ -7520,6 +7520,9 @@ class _pt_Read:
 
 
 def _pt_fold(text: str) -> str:
+    """The quotes folded; a CRLF or a lone CR read as a line break; and the stand-in's own characters, should the
+    text hold them, read as U+FFFD, so no caller's text is taken for a stand-in."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace(_pt_SI, "\ufffd").replace(_pt_SO, "\ufffd")
     return text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
 
 

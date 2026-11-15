@@ -16,6 +16,13 @@
  ],
  "code_tokens: commit-letters-only": [],
  "code_tokens: commit-six": [],
+ "code_tokens: crlf-blank-line-span-plain": [
+  "foo_bar"
+ ],
+ "code_tokens: crlf-fence": [
+  "a code block",
+  "foo_bar"
+ ],
  "code_tokens: dotted": [
   "a_b.c_d.e"
  ],
@@ -138,6 +145,9 @@
  "code_tokens: span-blank-line-plain": [],
  "code_tokens: span-not-fence": [
   "```x```"
+ ],
+ "code_tokens: standin-chars-in-text": [
+  "foo_bar"
  ],
  "code_tokens: standin-word-two-spans": [
   "`a`",
@@ -435,6 +445,13 @@
   ]
  ],
  "person_text_problems: people-possessive": [],
+ "person_text_problems: people-space-entry": [
+  [
+   2,
+   true,
+   "rule 2: answer 1 names nobody who acts — say who: I'll…, you…"
+  ]
+ ],
  "person_text_problems: people-will-gap": [],
  "person_text_problems: rule-order": [
   [
@@ -676,6 +693,7 @@
  ],
  "sentence_problems: say-no-gap": [],
  "sentence_problems: span-end": [],
+ "sentence_problems: span-one-line": [],
  "sentence_problems: span-one-word": [],
  "sentence_problems: span-possessive-count": [
   [
