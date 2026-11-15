@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** design, round 6 (2026-11-14). Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** the rounds ended at round 6, the cap, on 2026-11-14; waiting on Paul's answer. Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -139,9 +139,9 @@ this list is the review trail):
   the question, which makes the rest context). The detail block's context is read whole for
   a `decide` and an `act` (its `caveats`, `recommended` and `otherwise` text with its `context`), where the source
   named `context` and `recommended`'s reason, and its `act` read its `context` alone. The source's `decide` row
-  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The lead is the
-  bold run the text *opens* with, where SPEC's *The bold head* takes the first bold run anywhere: a bold word
-  mid-question (*Should I merge **#42**?*) must not become the question. A `decide`
+  said the line's `Context:` field, which names a gate, is never context; the SPEC text keeps that. The lead is
+  *The bold head*'s run only when the text opens with it: a bold word mid-question (*Should I merge **#42**?*)
+  must not become the question. A `decide`
   whose text has no lead: the source read its first sentence, which made rule 1's *end inside* unable to fire;
   here the text the writer gives `item_file()` is read whole. The title rule
   runs on `set --title` (v2.8), the retitle path the source said would come (*any retitle path added later*).
@@ -153,6 +153,10 @@ this list is the review trail):
   pattern the caller passes is the caller's to keep free of *P0*.
 - *the lines*: the source gives three examples; the shapes in the SPEC text are this plan's, and where an example
   disagrees with its own rule they follow the rule (rule 4 names the first three tokens).
+- *the lead is the whole question*: the source reads a `decide`'s and an `act`'s bold head as its sentence
+  (its table: *its bold head, else the line's first sentence*), and so does this design; what follows the bold
+  part, which the source left unread, is read here as context. The bold part is the board's headline, so it must
+  stand alone; reading lead and tail as one sentence was weighed and rejected.
 - *an `act`'s tail* is read as context (a rule-4 warning), where the source said the rest of its line is free.
 - *the actor bounds* add `/` and `-` (*us-east-1*, *I/O*, *my-app*, *agent-cadence* name no actor), where the
   source's let a word holding an actor before a `-` count.
@@ -164,7 +168,7 @@ question, and only rule 3 refuses one, in a title; the `’` fold; the word stri
 known false positives and gaps of the module's own patterns; the *One sentence* stops (*e.g, i.e, vs, etc, cf*, widened below)
 and its end rule for a question; `default` read as an answer,
 named *the default*, skipped when it equals an answer's label or whole line; rule 4 as one warning; the writer's refusal of an `act` with no bold opening (*an act line leads with its
-task in bold*), a writer's message, not a `PersonTextProblem`.
+task in bold*), a writer's message, not a `PersonTextProblem` (its tail is the departure above).
 
 **The fixtures are the grammar's judge** (round 3's view of the recurring topic): the SPEC prose describes the
 token grammar exactly enough to build from, and where prose and module disagree the fixtures decide, as SPEC's
@@ -348,8 +352,10 @@ note each (`ao td add`); on the build's merge, the builder tells agent-cadence's
 > item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
 > - **a `decide` item**, two calls. The item's text is the text the writer is given for it (`item_file()`'s
 >   `text`, collapsed and trimmed as `item_file()` does, before any line or file is written). Its **lead** is
->   `bold_head(text)` (*The bold head*) when the text opens with that run (`BOLD_RE.match`), and none otherwise;
->   its **tail** is the text after that run. A text with no lead has no tail. The lead is the board's headline,
+>   `bold_head(text, heading=True)` (*The bold head*, read whole as an item file's heading is) when
+>   `BOLD_RE.match(text)` succeeds and that is not `None` (a blank run gives none); its **tail** is the text after
+>   the matched run, trimmed. Otherwise it has no lead and no tail. A text of more than one line, or an empty one,
+>   is the writer's refusal before the check, as `item_file()`'s. The lead is the board's headline,
 >   so it must stand as the question by itself; reading the lead and tail as one sentence was weighed and
 >   rejected, since a person scanning headlines would meet *Merge the PR* with no question in it. First,
 >   `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True, people=, actors=,
@@ -440,7 +446,7 @@ the fixture kind, its runner function in `fixtures/run.py`, its cases; and the u
 fixtures' expected results come from this plan's SPEC text and its examples first, never from the module's output;
 a case where the build finds the prose wrong is named in the PR, with the SPEC fix beside it. The release number
 in the SPEC heading and *Versions* paragraph is the next unreleased minor when B1 merges (v3.2 if TD-109's
-release is v3.1). It is not held for TD-112 (D4). On its merge the builder tells agent-cadence's techlead which release carries it.
+release is v3.1). It is not held for TD-109's build, TD-112 (D4). On its merge the builder tells agent-cadence's techlead which release carries it.
 
 ## Not done
 
