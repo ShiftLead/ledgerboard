@@ -1,6 +1,6 @@
 # TD-115: a merge-gate verdict for a PR that only lifts a gate
 
-**Status:** Draft 1, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 2, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
 Rounds: not yet run (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
@@ -82,7 +82,8 @@ A new subject, one line: `<tool>: lift decision (<p>) on TD-n (session <name>)`,
 entry spells it and `<name>` the caller's session, else `n/a`. It is ShiftLead's subject today, word for word, so
 no consumer's existing PR or commit changes.
 
-- `lift_subject(tid, gate, tool, session=None)` writes it. It refuses a `tid` that is not a bare `TD-n`, a `gate`
+- `lift_subject(tid, gate, tool, session=None)` writes it, the id as the caller gives it (the entry's heading
+  spells it, `TD-12` or `TD-012`; condition 3 below finds either by number). It refuses a `tid` that is not a bare `TD-n`, a `gate`
   that is not `decision (<p>)` (an `until` or event lift has its own routes, and a host writes those), and a
   `tool` or `session` that is not a token of `[A-Za-z0-9_.@/-]+` (the Log's rule for who and a session).
 - `subject_kind()` names it `lift`. `edit_action()` and `subject_id()` stay None for it: they read board writes,
@@ -97,7 +98,8 @@ A lift of another repo's entry (`<repo>#TD-n`) has no subject here: its lift is 
 `lift_form(tree, tid, gate, repo)` returns `(case, items)` for the open entry `tid` carrying `gate` in `tree`'s
 ledger, read against the tree's own board (`load_board()`, as the verdicts read it): `case` one of `asked`,
 `decided`, `shared`, `none` by the order above, and `items` the covering `BoardItem`s that decide it (for
-`decided`, every item to close; for `shared` and `asked`, the items that matched; for `none`, empty). It refuses
+`decided`, every item to close; for `shared` and `asked`, the items that matched; for `none`, empty), in the board's item order
+(`load_board().items`). It refuses
 an entry the tree's ledger does not hold open, one not carrying `gate`, and a `gate` that is no decision. A v1
 ledger is refused; a tree with no board is `none`, as `covers()` reads it.
 
@@ -116,40 +118,45 @@ as two carve-outs (agent-cadence's `decide` and `lift`).
 
 `carve_out` is True only when every one of these holds; else `review` names the first that fails, in this order:
 
-1. **The board:** a v3 board at the base and the head (`ledger-lift-no-board`; a v2 one, `ledger-lift-board-v2`),
-   as `lift_pr_verdict()` reads them. The base board declares `People:` (`ledger-lift-no-people`).
+1. **The board:** a v3 board at the base and the head (`ledger-lift-no-board`; a v2 one at either,
+   `ledger-lift-board-v2`), as `lift_pr_verdict()` reads them. The base board declares `People:`
+   (`ledger-lift-no-people`).
 2. **The subject:** `lift_subject_parts(subject)` reads it, and the PR is one commit (`ledger-lift-subject`).
-3. **The files:** every path in `files` is the entry's open file `docs/ledger/TD-n.md` (the subject's `TD-n`)
-   or, for case `decided`, a board item path (directly in `BOARD_DIR`, or under `archive/<YYYY-MM>/`)
-   (`ledger-lift-files`). Of the paths whose text the trees change, the ledger's are exactly that one file
-   (`ledger-lift-files`).
-4. **The entry:** the base ledger is v2 and holds `TD-n` open, carrying the subject's gate, and its head file
-   is still open (`ledger-lift-entry`).
-5. **Who:** the subject's `<p>`, the gate's person and the new Log line's `by` are one name, compared
+3. **The entry:** the base ledger is v2 and holds the subject's `TD-n` open (found by number, as `entry_path()`
+   finds it: `TD-12` is `TD-012.md`), carrying the subject's gate, and the head holds that file open
+   (`ledger-lift-entry`). Every check after this one reads that entry, so `lift_form()` (condition 6) cannot
+   refuse inside the verdict.
+4. **The files:** every path in `files` is that entry's open file or a board item path (directly in
+   `BOARD_DIR`, or under its `archive/<YYYY-MM>/`), and of the paths whose text the trees change, the ledger's
+   are exactly that one file (`ledger-lift-files`). Which board paths may change is condition 7's, by the form.
+5. **The Log line:** the head entry's Log adds exactly one line to the base's, and it is a `gate lifted:` line
+   for the subject's gate with an `answer` (`log_line()`'s `via` `answer`, as `tripwire()` reads it)
+   (`ledger-lift-log`). Its `label`, `by` and date `T` are what conditions 6 to 8 read.
+6. **Who:** the subject's `<p>`, the gate's person and the line's `by` are one name, compared
    case-insensitively, and the base board lists it on `People:` (`ledger-lift-by`). `Answered by: any` admits
    no one else here: a lift by anyone but the gate's person takes review.
-6. **The form:** `lift_form(base_tree, TD-n, gate, repo)` is not `asked` (`ledger-lift-asked`: the item is the
+7. **The form:** `lift_form(base_tree, TD-n, gate, repo)` is not `asked` (`ledger-lift-asked`: the item is the
    person's question, and its answer is the decide lift).
-7. **The bytes:** the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for
-   byte, where `label` and `T` are the head's one new Log line's, and `S` is the form's suffix: none for
-   `decided`, `shared board item left open` for `shared`, `no board item` for `none` (`ledger-lift-bytes`). The
-   board's changes are none for `shared` and `none`; for `decided`, exactly each item `lift_form()` names, its
-   open file removed and `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)` byte
-   for byte; and each such item's base `Decided:` names the gate's person (`decided_by`, any case), so the close
-   rests on that person's own merged answer and on no one else's (`ledger-lift-board`).
-8. **The dates:** `T`, a UTC ledger date, lies within a day of `created_at` and not after the merge (else
-   `created_at + 1`), as `lift_pr_verdict()`'s (c) windows its `T`; each item's close date `C`, a board date
-   written by the board's local clock, lies from `created_at − 1` to the merge date (else `created_at`) `+ 1`, as
-   that verdict windows its `Decided:` date D, since the board's local day runs up to a day from UTC
-   (`ledger-lift-date`). `C` is not tied to `T`: the two writers each read their own clock.
-9. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–8 raises none by construction; the
+8. **The bytes:** the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for
+   byte, `S` the form's suffix: none for `decided`, `shared board item left open` for `shared`, `no board item`
+   for `none`; a `label` `lift_gate()` refuses is a mismatch too (`ledger-lift-bytes`). The board's changes are
+   none for `shared` and `none`; for `decided`, exactly each item `lift_form()` names, its open file removed and
+   `item_path(id, C)` added, `C` the head file's `Closed:` date, as `edit_item(base file, "done", why="lifted",
+   today=C)` byte for byte; and each such item's base `Decided:` names the gate's person (`decided_by`, any
+   case), so the close rests on that person's own merged answer and on no one else's (`ledger-lift-board`).
+9. **The dates:** `T`, a UTC ledger date, lies within a day of `created_at` and not after the merge (else
+   `created_at + 1`), as `lift_pr_verdict()`'s (c) windows its `T`; each `C`, a board date written by the
+   board's local clock, lies from `created_at − 1` to the merge date (else `created_at`) `+ 1`, as that verdict
+   windows its `Decided:` date D, since the board's local day runs up to a day from UTC (`ledger-lift-date`).
+   `C` is not tied to `T`: the two writers each read their own clock.
+10. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–9 raises none by construction; the
    condition keeps a future tripwire rule from being skipped by this carve-out.
 
 As for `lift_pr_verdict()`, (d) is the consumer's: a direct commit with this shape is refused by its own audit.
 
 ### D4. What stands in for the person's answer
 
-The verdict trusts exactly what `lift_pr_verdict()`'s carve-out trusts, no more:
+The verdict trusts what `lift_pr_verdict()`'s carve-out trusts:
 
 - **The shape is one writer's output.** Every byte the PR changes is recomputed from the base: one entry's lift,
   with the suffix the base board dictates (not one the PR chose), and in case `decided` the closes the lift
@@ -157,17 +164,29 @@ The verdict trusts exactly what `lift_pr_verdict()`'s carve-out trusts, no more:
 - **The answerer is the gate's person, on the board's `People:`.** This is stricter than the decide carve-out,
   which admits anyone listed under `Answered by: any`.
 - **The question existed, or was already answered.** In case `decided` the base board holds the gate's
-  person's own `Decided:` on each item closed (condition 7), merged before the press; the open, decided item is
+  person's own `Decided:` on each item closed (condition 8), merged before the press; the open, decided item is
   a work order the person answered (as the writers since v2.7 leave it, an answer that lifts or only waits
   closes its item, `closes()`; a v2.4–v2.6 writer or a hand edit could leave a lifting answer open, which
-  condition 7 closes all the same), and the press's lift supersedes it. In cases `none` and `shared` there is no open question for the lift
-  to bypass; in case `asked` there is one, and the lift takes review, since that item's answer is the way.
+  condition 8 closes all the same). In cases `none` and `shared` there is no open question for the lift to
+  bypass; in case `asked` there is one, and the lift takes review, since that item's answer is the way.
 
-A forger who can push can write this PR, but can write a decide PR just as well: the worst either does is lift
-one gate of an entry whose person is on the board. The Log line stays forgeable, as SPEC says, and the
-sweep's audit and review stay the backstop. Requiring more, such as a host log witnessing the press, would put
-the machine and its logs into the package, and a verdict that reads one machine's log is not the same on every
-machine.
+It is not the same reach as the decide carve-out, and two differences are accepted:
+
+- **Case `none` needs no question on the board.** Through the decide carve-out, a gate with no covering item
+  would first need an item added (agent-cadence's `board-append` carve-out) and then answered: two PRs. Here it
+  is one.
+- **Case `decided` supersedes the person's recorded work order** in one unreviewed PR, where the decide
+  carve-out refuses a re-answer (`lift-reanswer`). The person's own answer stays on the closed item; the lift
+  ends the order, which is what the press means (Paul's ruling, ShiftLead TD-1829, 2026-11-14: *lifts are
+  allowed by a button press*).
+
+Either way the worst a forged PR does is what a forged decide PR does: lift one gate of an entry whose person is
+on the board. **What is the backstop.** Nothing in the format re-reads such a lift once it merges: the sweep's
+audit reads only `; board <repo>` lifts, and review is what the carve-out skips. The record is the entry's
+`gate lifted` Log line, which the person's ledger shows, and the consumer's own audit of carve-out merges
+(agent-cadence's weekly read lists them) is the backstop outside the format. Requiring more, such as a host log
+witnessing the press, would put the machine and its logs into the package, and a verdict that reads one
+machine's log is not the same on every machine.
 
 ### D5. The release
 
@@ -212,7 +231,7 @@ commit that answers a gate's item is refused by its own audit.*:**
 > (the lift is the item's answer, the decide lift); `decided`, a decided item that lists no other gated entry
 > (the lift has no suffix, and closes every such item `— lifted`); `shared`, an item that lists another gated
 > entry (`; shared board item left open`); `none`, no item (`; no board item`). `items` are the items that
-> decided the case, every one to close for `decided`. It refuses an entry the ledger does not hold open or that
+> decided the case, every one to close for `decided`, in the board's item order. It refuses an entry the ledger does not hold open or that
 > does not carry `gate`, a gate that is no decision, and a v1 ledger; a tree with no board is `none`.
 >
 > `ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.2)
@@ -222,26 +241,30 @@ commit that answers a gate's item is refused by its own audit.*:**
 > - a v3 board at the base and the head (`ledger-lift-no-board`, `ledger-lift-board-v2`), whose base declares
 >   `People:` (`ledger-lift-no-people`);
 > - the subject is a lift (`lift_subject_parts()`), and the PR is one commit (`ledger-lift-subject`);
-> - every path in `files` is the subject's entry's open file or, for `decided`, a board item path, and the
->   ledger paths the trees change are that one file (`ledger-lift-files`);
-> - the base ledger is v2 and holds the entry open carrying the subject's gate, and the head holds it open
->   (`ledger-lift-entry`);
-> - the subject's person, the gate's person and the new `gate lifted` line's `by` are one name in any case,
->   which the base board lists on `People:`; `Answered by: any` admits no other (`ledger-lift-by`);
+> - the base ledger is v2 and holds the subject's entry open (by number, as `entry_path()` finds it) carrying
+>   the subject's gate, and the head holds it open (`ledger-lift-entry`);
+> - every path in `files` is that entry's open file or a board item path (directly in `BOARD_DIR`, or under its
+>   `archive/<YYYY-MM>/`), and the ledger paths the trees change are that one file (`ledger-lift-files`);
+> - the entry's Log gains exactly one line, a `gate lifted:` line for the gate with an `answer`
+>   (`ledger-lift-log`), whose `label`, `by` and date `T` the checks below read;
+> - the subject's person, the gate's person and that line's `by` are one name in any case, which the base
+>   board lists on `People:`; `Answered by: any` admits no other (`ledger-lift-by`);
 > - `lift_form()` of the base is not `asked` (`ledger-lift-asked`);
-> - the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for byte, `label`
->   and `T` the new Log line's and `S` the form's suffix (`ledger-lift-bytes`); the board is unchanged for
+> - the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for byte, `S` the
+>   form's suffix, a label `lift_gate()` refuses failing too (`ledger-lift-bytes`); the board is unchanged for
 >   `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
->   `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)` (`ledger-lift-board`);
-> - each item the form closes has a base `Decided:` by the gate's person (`ledger-lift-board`);
+>   `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)`, `C` the head file's
+>   `Closed:` date, each such item's base `Decided:` naming the gate's person (`ledger-lift-board`);
 > - `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and each `C` from
 >   `created_at − 1` to the merge date (else `created_at`) `+ 1`, the board's local day running up to a day
 >   from UTC (`ledger-lift-date`);
 > - `flags` is empty (`ledger-lift-flagged`).
 >
 > The carve-out trusts what `lift_pr_verdict()`'s does: a diff that is one writer's output from the base, for
-> one answer by the gate's person on `People:`. The Log line stays forgeable, and the sweep's audit and review
-> are its backstop. A direct commit of this shape is the consumer's to refuse, as for the decide lift.
+> one answer by the gate's person on `People:`. Unlike a decide lift it needs no question on the board, and in
+> `decided` it ends a work order the person answered. The Log line stays forgeable, and nothing in the format
+> re-reads the lift once it merges (the sweep's audit reads `; board <repo>` lifts alone): the consumer's own
+> audit is its backstop, and a direct commit of this shape is the consumer's to refuse, as for the decide lift.
 
 **In *Edits*, after the paragraph *The commit subject of a board write* (its last sentence, *`subject_kind()`
 names a subject `edit`, `append`, `archive` or (a rank write) `queue`.*, becomes *`subject_kind()` names a
@@ -291,17 +314,28 @@ every name is invented (AGENTS.md).
 - a `by` that is not the gate's person on an `Answered by: any` board → `ledger-lift-by`; the gate's person not
   on `People:` → `ledger-lift-by`; no `People:` → `ledger-lift-no-people`.
 - a second ledger file changed, and a non-ledger path → `ledger-lift-files`; a board path in `files` for a
-  `none` lift → `ledger-lift-files`.
+  `none` lift whose board is unchanged passes (`files` admits item paths; condition 8 judges what changed).
 - a `decide` subject, two commits, a subject naming another `TD-n` than the diff's → `ledger-lift-subject`,
-  `ledger-lift-files`.
-- an entry archived by the PR (both its paths in `files`) → `ledger-lift-files`; one not carrying the gate at
-  the base, and one whose open file the head drops while `files` names only that path → `ledger-lift-entry`.
+  `ledger-lift-entry` or `ledger-lift-files` (an open entry not carrying the gate is `ledger-lift-entry`; one
+  carrying it whose file is unchanged, `ledger-lift-files`).
+- an entry archived by the PR, one not carrying the gate at the base, and one whose open file the head drops
+  → `ledger-lift-entry` (the entry check runs before the files check, so an archive's second path is never
+  reached).
 - a `decided` item whose base `Decided:` names someone else (an `Answered by: any` board) → `ledger-lift-board`.
 - a `C` a day after the merge passes; a `T` a day after the merge → `ledger-lift-date`.
 - a Log date two days before `created_at`, and one after `merged_at` → `ledger-lift-date`.
 - a v2 board at the base → `ledger-lift-board-v2`; no board → `ledger-lift-no-board`.
 
-`lift_form`: each case above's base, plus a gate covered only through `Part of` (the parent's item with the
+- a `C` two days after the merge → `ledger-lift-date`.
+- a `decided` PR that also closes the shared item beside it → `ledger-lift-board`; a `shared` and a `none` PR
+  that change any board item → `ledger-lift-board`.
+- a v2 board at the head only → `ledger-lift-board-v2`.
+- the Log: no new line, two new lines, a `gate lifted` line for another gate, an `override:` lift, and a note
+  in place of the lift → `ledger-lift-log`; a waiting-only label (`lift_gate()` refuses it) →
+  `ledger-lift-bytes`.
+- a subject naming `TD-12` for the file `TD-012.md` passes.
+
+`lift_form`: the base of each case above that it accepts (its refusals are the unit tests'), plus a gate covered only through `Part of` (the parent's item with the
 entry in `Parts:`), and a `<repo>#TD-n` in `Parts:` that is not counted.
 
 The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
