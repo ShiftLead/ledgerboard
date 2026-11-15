@@ -4,9 +4,10 @@
 entry sections the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both
 consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: ended by the stop rule at round 2, 2026-11-15; Paul
 answered *One more round* (#361), and round 3 ran as TD-122 and ended 2026-11-15. Build-changing findings by the
-design reviews, rounds 1–3: 2, 0, 3; by the fact-checks: 6, 1, 3. Recurring topic: where the answer sections start
-and end (F23, F30, F33, F38, F41, F42), now one rule over the whole body. F39–F48, round 3's design-review fixes,
-were fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
+design reviews, rounds 1–3: 2, 0, 3; by the fact-checks: 6, 2, 3 (the closing ones among them: round 2's F30,
+round 3's F49). Recurring topic: where the answer sections start
+and end (F23, F30, F33, F38, F41, F42, F49), now one rule over the whole body. F39–F52, round 3's design-review
+and closing fixes, were not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
 record: [docs/reviews/TD-119.md](../reviews/TD-119.md)). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
@@ -97,11 +98,13 @@ nothing, which is the bug.
 
 `entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
-1. HTML comments are dropped (`COMMENT_RE`). A line outside a code fence that, its leading whitespace removed,
+1. HTML comments are dropped (`COMMENT_RE`), and the entry is split by `_entry_parts()` into its header block and
+   its body; an entry it refuses, and that has an `Answers` or `Lifts` lead in its text, is refused (`Refused`,
+   its reason). A line of the body (never the heading or the header block, where a field named `Answers` is a
+   repo's own) outside a code fence that, its leading whitespace removed,
    `LEAD_RE` matches with a lead named `Answers` or `Lifts` (D1's match) and that `_entry_sections()` does not
    read as a section's start is refused, *an Answers or Lifts lead that starts no section*. Otherwise, no such
-   section: `None`, whatever else the entry holds. Otherwise the entry is read by `_entry_parts()`, and an entry
-   it refuses is refused (`Refused`, its reason). Two sections of one name (`**Answers:**` twice, or
+   section: `None`, whatever else the entry holds. Two sections of one name (`**Answers:**` twice, or
    `**Lifts:**` twice): refused.
 2. A `**Lifts:**` with no `**Answers:**`: refused. An empty `**Answers:**` value: refused, *no answers*; an empty
    `**Lifts:**` value (nothing, or only bars): refused, *no lifts*. A blank line inside either section, outside a
@@ -132,7 +135,7 @@ entry whose `entry_answers()` returns answers, the `decide` it files carries the
 `lifts` from the reader, and a detail block whose `recommended` names what lifts: `Only <p> can say: <a> lifts the gate` for one
 lifting label, `Only <p> can say: <a>, <b> lift the gate` for more (the lifting labels, or `Go`, in the answers'
 order, each as written, joined by `, `); then, for each offered waiting-only answer (`Not yet` or `Keep waiting`,
-compared as step 6 compares `Go`), `, and <label> keeps it waiting, asked again in <reask_days> days`; then
+as `waiting_only()` reads them, so `Not yet.` is one), `, and <label> keeps it waiting, asked again in <reask_days> days`; then
 `, and the other answers leave it standing` when any answer neither lifts nor waits. So `Go | Not yet` gets
 today's string word for word (with a default, `item_file()` writes it after the default's label, `<label> — …`,
 as for every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
@@ -235,8 +238,8 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > `entry_answers(entry_text)` reads them: None when the entry has neither section; `{"answers", "default",
 > "lifts"}` when they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the
 > marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an
-> `Answers` or `Lifts` lead, outside a code fence, that starts no section (glued to the line before it, its
-> leading whitespace aside), an entry with either section that `_entry_parts()` refuses, two sections of one
+> `Answers` or `Lifts` lead in the body, outside a code fence, that starts no section (glued to the line before
+> it, its leading whitespace aside), an entry with either section that `_entry_parts()` refuses, two sections of one
 > name, a `**Lifts:**` with no `**Answers:**`, an empty `**Answers:**` or `**Lifts:**`, a blank line inside
 > either section, a line of the `**Answers:**` section after its first, outside a code fence, that reads as a
 > section lead (`LEAD_RE`: a lead glued to the answers, or a wrapped answer's line opening with a bold run; a bold
@@ -299,7 +302,7 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   entry whose section cannot be offered, refused.
 - **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
   result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
-  lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), two marks (refused), a
+  lead (None), a header `Answers` field over a body with no section (None, never refused), a mark on the second answer (`default` 1), two marks (refused), a
   form marked ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), an empty
   `**Lifts:**` and one of only bars (refused: no lifts), two `**Answers:**` sections (refused), `Go: <note> | No`
   with no `**Lifts:**` (refused: no answer lifts), `go | Not yet` (`go` lifts), `Lifts: Hold` for an offered
