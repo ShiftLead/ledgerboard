@@ -1,10 +1,13 @@
 # TD-119: the gate sweep offers the entry's own answers
 
-**Status:** Draft 2, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
+**Status:** Draft 3, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: two new
 entry sections the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both
-consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: **ended by the stop rule** at round 2, 2026-11-15 (build-changing findings by the design reviews, rounds
-1–2: 2, 0; by the fact-checks: 6, 1; the closing fact-check: 1, F30, which adds a reader rule). F23–F31 were
-fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
+consumers vendor; cap 6 rounds, cadence.md §4.8). Rounds: ended by the stop rule at round 2, 2026-11-15; Paul
+answered *One more round* (#361), and round 3 ran as TD-122 and ended 2026-11-15. Build-changing findings by the
+design reviews, rounds 1–3: 2, 0, 3; by the fact-checks: 6, 2, 3 (the closing ones among them: round 2's F30,
+round 3's F49). Recurring topic: where the answer sections start
+and end (F23, F30, F33, F38, F41, F42, F49), now one rule over the whole body. F39–F52, round 3's design-review
+and closing fixes, were not design-reviewed; Paul's answer is the board's decide item, *One more round* recommended (the
 record: [docs/reviews/TD-119.md](../reviews/TD-119.md)). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
@@ -62,18 +65,26 @@ An entry that waits on a person may carry two body sections:
 - `**Lifts:** a | b` — which of them lift the gate, each an answer's whole label (a form by its offered label,
   `Hold: <note>`, so its fills lift). With no `**Lifts:**` section, `Go` lifts, as on the board.
 
-Each section is found by its lead's name (`Answers`, `Lifts`, the colon optional, as every lead is matched); a
-lead starts a section only at a paragraph's start, so `**Lifts:**` on the line after the answers, with no blank
-line between, is part of the `**Answers:**` section (its last answer then reads `… **Lifts:** a`), which the reader
-refuses (D2 step 3), so the check names it. Its value is its text with its own lead removed and its words joined to one line, `\|` kept for
-`parse_answers_value()` to read; an empty value is an empty section, never the title. A
-second paragraph in an `**Answers:**` section joins the first, so a stray sentence after the answers becomes part
-of the last answer. A paragraph opening with a lead is refused (step 3); one of plain words is accepted, and the
-person reads it in the last answer, since nothing tells a stray sentence from a long consequence. Only the body sections are
-read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
-qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the Log;
-the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section, and no new command or
-flag is added.
+Each section is found by its lead's name (`Answers`, `Lifts`, the colon optional, inside the bold or after it, as
+every lead is matched); a lead starts a section only at a paragraph's start (`_entry_sections()`). Each section is
+one paragraph: its lead's paragraph, with no blank line inside it. Its value is the text after its lead's bold run,
+leading whitespace and one `:` removed, its lines joined to one line, `\|` kept for `parse_answers_value()` to
+read; an empty value is an empty section, refused, never the title. What the reader refuses, the check names (D4):
+- an `Answers` or `Lifts` lead that starts no section, a line written with no blank line before it, so glued to
+  whatever section is above it (the answers, the Ask, the Fix): a `**Lifts:**` glued to the answers would
+  otherwise be read as part of the last answer, and an `**Answers:**` glued to the Ask as part of the question;
+- any other line of the `**Answers:**` section that opens with a bold run, a lead glued to the answers or a
+  wrapped answer's line (`**Works** — …`): a wrapped answer starts no line with one, while a bold run inside a
+  line (`Not yet — **Note:** you wait`) is answer text;
+- a second paragraph in either section (a blank line inside it), so a stray sentence after the answers is never
+  read as part of the last answer.
+
+A paragraph opening with a bold run is a section of its own, so it ends the answers. Lines inside a code fence are
+never tested, and HTML comments are dropped first, as `_entry_texts()` drops them, so every caller reads the same
+text. Only the body sections are read: a header field named `Answers` or `Lifts` is a field like any other, read by
+nothing here. A qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body
+before the Log; the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section, and no
+new command or flag is added.
 
 **Options set aside.** *A header field* (`Answers:` in the header block): header values are the summary's
 metadata, one line each, and the format already keeps the Ask, what the person reads, in the body; ShiftLead
@@ -87,12 +98,22 @@ nothing, which is the bug.
 
 `entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
-1. The entry is read as `canonical()` reads it; an entry it refuses is refused (`Refused`, its reason). Neither
-   section: `None`. Two sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
-2. A `**Lifts:**` with no `**Answers:**`: refused. An empty `**Answers:**` value: refused, *no answers*.
-3. The answers are `parse_answers_value()`'s, each split by `split_answer()`: an answer holding a lead-shaped
-   bold run, `**<words>:**` (a `**Lifts:**` written with no blank line before it, joined to the answers), is
-   refused, *a section lead inside the answers*; more than one marked ` (default)` is refused; each is returned with its mark removed, as `<label>` or `<label> — <consequence>`, a bar in it a
+1. HTML comments are dropped (`COMMENT_RE`), and the entry is split by `_entry_parts()` into its header block and
+   its body; an entry it refuses, and that has an `Answers` or `Lifts` lead in its text, is refused (`Refused`,
+   its reason). A line of the body (never the heading or the header block, where a field named `Answers` is a
+   repo's own) outside a code fence that, its leading whitespace removed,
+   `LEAD_RE` matches with a lead named `Answers` or `Lifts` (D1's match) and that `_entry_sections()` does not
+   read as a section's start is refused, *an Answers or Lifts lead that starts no section*. Otherwise, no such
+   section: `None`, whatever else the entry holds. Two sections of one name (`**Answers:**` twice, or
+   `**Lifts:**` twice): refused.
+2. A `**Lifts:**` with no `**Answers:**`: refused. An empty `**Answers:**` value: refused, *no answers*; an empty
+   `**Lifts:**` value (nothing, or only bars): refused, *no lifts*. A blank line inside either section, outside a
+   code fence: refused, *a second paragraph in the section*.
+3. A line of the `**Answers:**` section, its lead's line apart, that `LEAD_RE` matches is refused, *a section
+   lead inside the answers*; the lines are tested before the words are joined, outside a code fence (the reader
+   tracks fences as `_entry_sections()` does, by `FENCE_RE`), and a bold run inside a line is answer text. The
+   answers are `parse_answers_value()`'s, each split by `split_answer()`; more than one marked ` (default)` is
+   refused; each is returned with its mark removed, as `<label>` or `<label> — <consequence>`, a bar in it a
    literal `|`; `default` is the marked one's index, else None.
 4. The lifts are `parse_answers_value()` of the `**Lifts:**` value, as written (literal bars), else None.
 5. `item_file("x", "2000-01-02", "2000-01-01", None, None, "<the entry's id> decision (p)", kind="decide",
@@ -113,8 +134,11 @@ The `decision (<p>)` bullet of *The gate sweep* keeps its rule for *when* it fil
 entry whose `entry_answers()` returns answers, the `decide` it files carries them: `answers`, `default` and
 `lifts` from the reader, and a detail block whose `recommended` names what lifts: `Only <p> can say: <a> lifts the gate` for one
 lifting label, `Only <p> can say: <a>, <b> lift the gate` for more (the lifting labels, or `Go`, in the answers'
-order, joined by `, `), followed by `, and the other answers leave it standing` when any answer does not lift (with a default, `item_file()` writes it after the default's label, `<label> — …`, as for
-every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
+order, each as written, joined by `, `); then, for each offered waiting-only answer (`Not yet` or `Keep waiting`,
+as `waiting_only()` reads them, so `Not yet.` is one), `, and <label> keeps it waiting, asked again in <reask_days> days`; then
+`, and the other answers leave it standing` when any answer neither lifts nor waits. So `Go | Not yet` gets
+today's string word for word (with a default, `item_file()` writes it after the default's label, `<label> — …`,
+as for every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
 reader refuses, it files `Go | Not yet` as today; for the refused case its detail context gains *; its own answers
 could not be offered (the ledger check names why)*. The sweep never raises for an entry's answers.
 
@@ -130,7 +154,7 @@ covered through its parent's item (`Parts:`) is asked by that item, whose answer
 sections are offered only when the sweep files for it. The refused case's reason is the check's alone; the item
 says only that the entry's answers could not be offered.
 
-An entry's answers need not include a waiting-only one: a set such as `Works — you saw it work | Not right: <what it printed> — a session files what is wrong` lets
+An entry's answers need not include a waiting-only one: a set such as `Works — you saw it work | Not right: <what it printed> — I'll file what you saw` lets
 the person lift or give a work order, never defer; an entry that wants deferral lists `Not yet` (or `Keep
 waiting`), which closes the item and writes `kept waiting` as today.
 
@@ -156,7 +180,8 @@ which *Text a person reads* allowed before v3.N, stays legal there. The flag com
 a decision to an entry whose sections cannot be offered is refused, naming why. As for every edit flag, the
 writer refuses only a flag whose kind, entry and reason are not already on the entry: one already there does not
 block an unrelated edit (a Log note, a Status), while an edit that changes its reason (one unusable section for
-another), or a `reopen` of an archived entry whose section is unusable, is refused.
+another), or a `reopen` of an archived entry, or a `renumber` of an entry, whose section is unusable, is refused (the flag
+names the entry, so either makes a new one).
 
 Since a `**Lifts:**` with no `**Answers:**` is refused, a writer adds `**Answers:**` first (or both in one
 whole-entry write): `edit --section Lifts` on a gated entry with no `**Answers:**` is refused.
@@ -173,16 +198,17 @@ package's writers run no check (TD-111 D3), so no fixture of this package covers
 ### D6. The release
 
 A minor release, **v3.3**: v3.2 (TD-111's check, with v3.1's `decision-missing`) was tagged on 2026-11-15
-(#359), so the next untagged minor is v3.3 and the build waits on no tag. If another build's v3.3 paragraph
-(TD-115's, say) is on main and untagged when this one merges, the two share one *Versions* paragraph, whose bold
-lead names every addition, this build's sentences after the others'; if v3.3 is already tagged, every `v3.N` this
-build writes becomes the next untagged minor.
+(#359), so the next untagged minor is v3.3 and the build waits on no tag. TD-115's build also writes v3.3;
+each writes its own *Versions* paragraph with its own bold lead, after the newest paragraph on main when it merges,
+as *Versions* already holds several paragraphs for one release (v2.4, v2.7, v3.0), so neither paragraph's claims
+are the other's. If v3.3 is already tagged when this build merges, every `v3.N` it writes becomes the next
+untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
 sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
 gated entry whose section is not usable gains a standing ℹ `answers-unusable`; as for every edit flag, an edit
 is refused only where it makes the fault (breaks the section, or adds a decision to an entry whose section is
-unusable), and one already there does not block an unrelated edit (the writer's gate matches a flag by its
+unusable, or a `reopen` or `renumber` of an entry whose section is unusable), and one already there does not block an unrelated edit (the writer's gate matches a flag by its
 kind, entry and reason). The repo's own section, which v3.2 left to the repo, is the format's on a gated entry. No parse, field, Log line, item key or
 canonical form changes.
 
@@ -206,13 +232,18 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > section `**Answers:**`, in the form of a board `decide`'s `Answers:` value (*The board*: each `<label>` or
 > `<label> — <consequence>`, one marked ` (default)` at most, forms among them), and which of them lift its gate
 > in a body section `**Lifts:**`, each an answer's whole label (a form by its offered label, `Hold: <note>`); with
-> no `**Lifts:**`, `Go` lifts. Each section's value is its text with its own lead removed, its words joined to
-> one line; a header field of either name, and a qualified lead (`**Answers (…):**`), are not these.
+> no `**Lifts:**`, `Go` lifts. Each section is one paragraph, and its value is the text after its lead's bold
+> run, leading whitespace and one `:` removed, its lines joined to one line, HTML comments dropped first; a header
+> field of either name, and a qualified lead (`**Answers (…):**`), are not these.
 > `entry_answers(entry_text)` reads them: None when the entry has neither section; `{"answers", "default",
 > "lifts"}` when they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the
 > marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an
-> entry `canonical()` refuses, two sections of one name, a `**Lifts:**` with no `**Answers:**`, an empty
-> `**Answers:**`, an answer holding a lead-shaped bold run (`**<words>:**`), two answers marked, answers `item_file()` refuses as a `decide`'s `answers`, `default` and
+> `Answers` or `Lifts` lead in the body, outside a code fence, that starts no section (glued to the line before
+> it, its leading whitespace aside), an entry with either section that `_entry_parts()` refuses, two sections of one
+> name, a `**Lifts:**` with no `**Answers:**`, an empty `**Answers:**` or `**Lifts:**`, a blank line inside
+> either section, a line of the `**Answers:**` section after its first, outside a code fence, that reads as a
+> section lead (`LEAD_RE`: a lead glued to the answers, or a wrapped answer's line opening with a bold run; a bold
+> run inside a line is answer text), two answers marked, answers `item_file()` refuses as a `decide`'s `answers`, `default` and
 > `lifts` (fewer than two among them), and answers of which none lifts. `check()` flags an open entry whose
 > `Blocked by` names a decision and which it refuses (`answers-unusable`; an error on an entry the edit changed — its whole text — ℹ on a standing ledger). The
 > gate sweep offers them (*The gate sweep*).
@@ -236,14 +267,15 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
 > `entry_answers()` refuses them (`check()` names that fault); a write of the entry's `**Answers:**` section
 > alone runs rule 2 over its answers with no sentence (`sentence=None`);
 
-**In *Versions*, a paragraph for the release:**
+**In *Versions*, a paragraph of its own for the release, after the newest:**
 
 > **v3.N gives an entry its own answers** (*The ledger*, *The gate sweep*): `**Answers:**` and `**Lifts:**`
 > sections, `entry_answers()` that reads them, and `check()`'s `answers-unusable`, which the ledger writer
 > refuses on an edit. The gate sweep's item for an uncovered decision offers the entry's answers where it has
 > usable ones, and `Go | Not yet` otherwise. No parse, field, Log line, item key or canonical form changes; an
 > entry that already holds an `**Answers:**` section is offered its own answers, and one whose section cannot be
-> offered is flagged ℹ when it waits on a person. *Text a person reads*' allowance of a repo's own
+> offered is flagged ℹ when it waits on a person; an edit is refused only where it makes the flag, a `reopen` or a
+> `renumber` of such an entry among them. *Text a person reads*' allowance of a repo's own
 > `**Answers:**` section is narrowed: on an entry with a decision gate, that section is now the format's.
 
 ## The fixtures
@@ -251,8 +283,8 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
 - **`fixtures/sweep/`**: a new key `answers` in `cases.json`, its own small ledger `sweep/answers/ledger.md` and a
   board `sweep/answers/board/` listing `People: pat`, so the existing runs' expected results do not move. Its
   entries, each `decision (pat)` and uncovered: one with no section (`Go | Not yet`, today's item); one with
-  `Answers: Works — a session archives the check | Not right: <what it printed> — a session files what is wrong`
-  and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` and no `**Lifts:**`
+  `Answers: Works — I'll archive the check | Not right: <what it printed> — I'll file what you saw`
+  and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` (each `…` a consequence naming who acts, `you` or `I'll`) and no `**Lifts:**`
   (`default` 0, `lifts` None); one whose `**Lifts:**` names a label not offered (refused: `Go | Not yet`, the
   detail context's added clause); one with no lifting answer (`One more round | Hold: <note>`, no `**Lifts:**`);
   one with `**Lifts:**` and no `**Answers:**`; one whose `**Lifts:**` names a form, `Hold: <note>`. The runner
@@ -260,18 +292,32 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   ledger text and its v3 board directory, read apart from the existing runs; it calls `sweep()` over them on one date, guarded by `hasattr(L,
   "entry_answers")` (reporting the key `missing` for an older module, as the sweep's own guard does); the expected
   items are written from this SPEC text, never from the module's output.
-- **`fixtures/ledger_edit/check/`**: `answers-unusable` as an error on an edited entry and ℹ on a standing one,
-  and a usable section that flags nothing; an unusable section on an entry with no decision, not flagged; an edit
-  adding a decision to such an entry, refused; a Log note on a gated entry whose section already cannot be
-  offered, not refused; `edit --section Lifts` with no `**Answers:**`, refused.
+- **`fixtures/ledger_edit/check/`**: the flag's levels: `answers-unusable` as an error on an edited entry and ℹ on
+  a standing one; a usable section that flags nothing; an unusable section on an entry with no decision, not
+  flagged.
+- **`fixtures/ledger_writer/<case>/`** (the writer's gate, which compares the flags before and after the edit;
+  each a `before/` and `after/` ledger, `cmd.json` and `expected.json`): an edit adding a decision to an entry
+  whose section cannot be offered, refused; a Log note on a gated entry whose section already cannot be offered,
+  not refused; `edit --section Lifts` with no `**Answers:**` on a gated entry, refused; a `renumber` of a gated
+  entry whose section cannot be offered, refused.
 - **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
   result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
-  lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), two marks (refused), a form marked
-  ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), two `**Answers:**` sections
-  (refused), `Go: <note> | No` with no `**Lifts:**` (refused: no answer lifts), `go | Not yet` (`go` lifts), `Lifts: Hold` for an offered `Hold: <note>` (refused: a form is listed by its whole label), a section
-  spanning two paragraphs (joined: the second paragraph's plain words end the last answer), `**Lifts:**` on the line after `**Answers:**` with no blank line
-  (one section, refused at step 3), and the same with `Go | Not yet` (refused at step 3, not accepted with `Not
-  yet **Lifts:** Go` as an answer).
+  lead (None), a header `Answers` field over a body with no section (None, never refused), a mark on the second answer (`default` 1), two marks (refused), a
+  form marked ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), an empty
+  `**Lifts:**` and one of only bars (refused: no lifts), two `**Answers:**` sections (refused), `Go: <note> | No`
+  with no `**Lifts:**` (refused: no answer lifts), `go | Not yet` (`go` lifts), `Lifts: Hold` for an offered
+  `Hold: <note>` (refused: a form is listed by its whole label), `**Answers**: Go | Not yet` with the colon after
+  the bold (read as `**Answers:**`), a section spanning two paragraphs (refused: a second paragraph), `**Lifts:**`
+  on the line after `**Answers:**` with no blank line (refused at step 1, a lead that starts no section), the same
+  with `Go | Not yet` (refused at step 1, not accepted with `Not yet **Lifts:** Go` as an answer), the same with
+  the glued `**Lifts:**` indented by a space (refused at step 1), `**Answers:**` on the line after `**Ask:**` with
+  no blank line (refused at step 1, not None), a glued `**Fix:**` after the answers (refused at step 3), an answer
+  wrapped so its second line opens with a bold run (refused at step 3), an `**Answers:**` lead inside an HTML
+  comment (ignored, None), and an answer with a bold run inside its line (`Not yet — **Note:** you wait`,
+  accepted, the run kept in the answer).
+- **The sweep's `recommended`**: in the `answers` key, an entry offering `Go | Not yet` from its own section gets
+  today's string word for word, and one offering `Works | Not yet | Not right: <what it printed>` names `Works`,
+  `Not yet` keeping it waiting, and the other answers leaving it standing.
 
 ## Builds
 
