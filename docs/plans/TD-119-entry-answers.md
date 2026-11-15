@@ -60,9 +60,13 @@ An entry that waits on a person may carry two body sections:
 - `**Lifts:** a | b` — which of them lift the gate, each an answer's whole label (a form by its offered label,
   `Hold: <note>`, so its fills lift). With no `**Lifts:**` section, `Go` lifts, as on the board.
 
-Each section is found by its lead's name (`Answers`, `Lifts`, the colon optional, as every lead is matched), and
-its value is its text with its own lead removed and its words joined to one line, `\|` kept for
-`parse_answers_value()` to read; an empty value is an empty section, never the title. Only the body sections are
+Each section is found by its lead's name (`Answers`, `Lifts`, the colon optional, as every lead is matched); a
+lead starts a section only at a paragraph's start, so `**Lifts:**` on the line after the answers, with no blank
+line between, is part of the `**Answers:**` section (its last answer then reads `… **Lifts:** a`, which the
+read-back refuses, so the check names it). Its value is its text with its own lead removed and its words joined to one line, `\|` kept for
+`parse_answers_value()` to read; an empty value is an empty section, never the title. A
+second paragraph in an `**Answers:**` section joins the first, so a stray sentence after the answers becomes part
+of the last answer: accepted, since the check refuses most such reads and the person sees the rest. Only the body sections are
 read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
 qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the Log;
 the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section, and no new command or
@@ -103,9 +107,9 @@ no person: the same text gives the same result for the sweep, `check()` and a co
 
 The `decision (<p>)` bullet of *The gate sweep* keeps its rule for *when* it files; it changes only *what*. For an
 entry whose `entry_answers()` returns answers, the `decide` it files carries them: `answers`, `default` and
-`lifts` from the reader, and a detail block whose `recommended` names what lifts — *Only <p> can say: <a>, <b>
-lift the gate* (the lifting labels, or `Go`, in the answers' order, joined by commas), *and the other answers
-leave it standing* (with a default, `item_file()` writes it after the default's label, `<label> — …`, as for
+`lifts` from the reader, and a detail block whose `recommended` names what lifts: `Only <p> can say: <a> lifts the gate` for one
+lifting label, `Only <p> can say: <a>, <b> lift the gate` for more (the lifting labels, or `Go`, in the answers'
+order, joined by `, `), followed by `, and the other answers leave it standing` when any answer does not lift (with a default, `item_file()` writes it after the default's label, `<label> — …`, as for
 every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
 reader refuses, it files `Go | Not yet` as today; for the refused case its detail context gains *; its own answers
 could not be offered (the ledger check names why)*. The sweep never raises for an entry's answers.
@@ -122,12 +126,16 @@ covered through its parent's item (`Parts:`) is asked by that item, whose answer
 sections are offered only when the sweep files for it. The refused case's reason is the check's alone; the item
 says only that the entry's answers could not be offered.
 
+An entry's answers need not include a waiting-only one: a set such as `Works | Not right: <what it printed>` lets
+the person lift or give a work order, never defer; an entry that wants deferral lists `Not yet` (or `Keep
+waiting`), which closes the item and writes `kept waiting` as today.
+
 **A work-order answer.** With `Go | Not yet`, every press closed the item. A work-order answer (*One more round*,
 *Hold: <note>*, *Not right: <what it printed>*) leaves it open and `decided`, as any work order on the board does,
 and it covers the gate, so the sweep asks nothing while the entry's session acts. That session closes the item
 when it has acted (`done`, as for any work order), and asks again itself where the work ends in a question (a
 design's next end-of-rounds item, a check run again): once closed, the item's answer is one that does not lift,
-dated within `reask_days`, so the sweep files no item of its own over the session's for that window. That window
+dated within `reask_days` of its `Decided:` date (not its close), so the sweep files no item of its own over the session's for that window. That window
 is accepted: the session that acted knows when to ask, and the sweep is the backstop for a gate nobody asks
 about.
 
@@ -150,18 +158,23 @@ whole-entry write): `edit --section Lifts` on a gated entry with no `**Answers:*
 
 ### D5. The answers are text a person reads
 
-*Text a person reads*' Ask bullet now names the format's section: a consumer's writer of an entry's Ask, or of
-its `**Answers:**` section, passes the entry's answers to the check (`entry_answers()`'s, else a repo's own
-field), so rule 2 (*each answer names who acts*) holds for them at the writer, as for any board answer. The sweep
-and the package's writers run no check (TD-111 D3).
+*Text a person reads*' Ask bullet now names the format's section. A consumer's writer of an entry's Ask passes
+the entry's answers to the check (`entry_answers()`'s; where it returns None, a repo's own field as before; where
+it raises, none, since `check()` names that fault); a consumer's writer of the `**Answers:**` section alone runs
+rule 2 over those answers with no sentence (`person_text_problems()` with `sentence=None`, which reads no rule
+1), so each answer names who acts at the writer, as any board answer does. The sweep and the
+package's writers run no check (TD-111 D3), so no fixture of this package covers this seam; it is the consumers'.
 
 ### D6. The release
 
-A minor release: the next unreleased minor when the build merges (v3.2 is TD-111's, built and untagged; TD-115's
-build waits for v3.1's tag and takes the next untagged minor too). If another build's paragraph for that minor is
-on main and untagged when this one merges, the two share one *Versions* paragraph, whose bold lead names every
-addition, this build's sentences after the others'; if that minor is tagged, every `v3.N` this build writes
-becomes the next untagged minor.
+A minor release, **v3.3**. Today only v3.0 is tagged; v3.1 (TD-109's `decision-missing`) and v3.2 (TD-111's
+check, TD-118) are on main, and `release.sh` stamps whatever main holds, so a v3.2 cut after this build merged
+would carry it under marks that say v3.3. The build therefore waits for v3.2's tag, as TD-118's entry does: its
+entry is `Blocked by: event (v3-2-tagged)` and carries its own `**Event (v3-2-tagged):**` section with TD-118's
+check, `check: ref-includes ShiftLead/ledgerboard@v3.2 f45380ed059ef239ed4a37536b410c907f783e90`. If another
+build's v3.3 paragraph (TD-115's, say) is on main and untagged when this one merges, the two share one *Versions*
+paragraph, whose bold lead names every addition, this build's sentences after the others'; if v3.3 is already
+tagged, every `v3.N` this build writes becomes the next untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
 sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
@@ -217,8 +230,9 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
 (`parse_answers_value()`);* becomes
 
 > An entry's answers (*An entry's own answers*, v3.N) are passed with it, `entry_answers()`'s `answers`, else a
-> repo's own `Answers` field, read as a board's `Answers:` value (`parse_answers_value()`); and a write of the
-> entry's `**Answers:**` section is checked as a write of its Ask;
+> repo's own `Answers` field, read as a board's `Answers:` value (`parse_answers_value()`), and none where
+> `entry_answers()` refuses them (`check()` names that fault); a write of the entry's `**Answers:**` section
+> alone runs rule 2 over its answers with no sentence (`sentence=None`);
 
 **In *Versions*, a paragraph for the release:**
 
@@ -241,7 +255,8 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   detail context's added clause); one with no lifting answer (`One more round | Hold: <note>`, no `**Lifts:**`);
   one with `**Lifts:**` and no `**Answers:**`; one whose `**Lifts:**` names a form, `Hold: <note>`. The runner
   (`sweep_cases()`, which today reads `sweep/`'s top-level `ledger.md` and `archive.md`) gains the key's own
-  ledger text and its v3 board directory, read apart from the existing runs; it calls `sweep()` over them on one date; the expected
+  ledger text and its v3 board directory, read apart from the existing runs; it calls `sweep()` over them on one date, guarded by `hasattr(L,
+  "entry_answers")` (reporting the key `missing` for an older module, as the sweep's own guard does); the expected
   items are written from this SPEC text, never from the module's output.
 - **`fixtures/ledger_edit/check/`**: `answers-unusable` as an error on an edited entry and ℹ on a standing one,
   and a usable section that flags nothing; an unusable section on an entry with no decision, not flagged; an edit
@@ -252,7 +267,9 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   lead (None), a header `Answers` field (None), a mark on the second answer (`default` 1), two marks (refused), a form marked
   ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), two `**Answers:**` sections
   (refused), `Go: <note> | No` with no `**Lifts:**` (refused: no answer lifts), `go | Not yet` (`go` lifts), `Lifts: Hold` for an offered `Hold: <note>` (refused: a form is listed by its whole label), a section
-  spanning two paragraphs (joined).
+  spanning two paragraphs (joined: the second paragraph's words end the last answer, read as such, or refused by
+  the read-back, as the case's words make it), `**Lifts:**` on the line after `**Answers:**` with no blank line
+  (one section, refused by the read-back).
 
 ## Builds
 
