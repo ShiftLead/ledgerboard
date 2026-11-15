@@ -29,8 +29,8 @@ machine's roster declares an `Ask` or `Answers` header field, and none writes a 
   `parse_answers_value()` and each by `split_answer()` into label, consequence and the ` (default)` mark; a form
   (`Hold: <note>`) is filled by the answer; `Lifts:` names which answers lift, each by its whole label (a form by its offered label, `Hold: <note>`,
   whose fills then lift), and an item with no `Lifts:` lifts on `Go` alone (`_lifting()`); the two waiting-only answers, `Keep waiting` and `Not yet`, never lift.
-  `item_file()` refuses, for a `decide`, fewer than two answers, two answers of one label, an answer with an empty
-  consequence (`a —`), a `Lifts:` that is empty, repeats a label, names a waiting-only answer or names a label not
+  `item_file()` refuses, for a `decide`, fewer than two answers, two answers of one label, an answer ending in a
+  bare `—` (`a —`, by its read-back rule), a `Lifts:` that is empty, repeats a label, names a waiting-only answer or names a label not
   offered, two forms with one head and a form as the default; it takes the default as an index (`default=`), and
   refuses any ` (default)` mark written in an answer (the mark is the writer's). It takes a literal `|` in an
   answer and escapes it.
@@ -87,8 +87,11 @@ nothing, which is the bug.
    is refused; each is returned with its mark removed, as `<label>` or `<label> — <consequence>`, a bar in it a
    literal `|`; `default` is the marked one's index, else None.
 4. The lifts are `parse_answers_value()` of the `**Lifts:**` value, as written (literal bars), else None.
-5. `item_file("x", None, "2000-01-01", None, None, "<the entry's id> decision (p)", kind="decide",
-   answers=…, default=…, lifts=…)` is called with them: what it refuses is refused, with its reason. Its rules
+5. `item_file("x", "2000-01-02", "2000-01-01", None, None, "<the entry's id> decision (p)", kind="decide",
+   answers=…, default=…, lifts=…, detail={"context": "x", "question": "x?", "recommended": "x"})` is called
+   with them (a Due and a detail block, since a `decide` needs both; the probe exists only for the answers',
+   default's and lifts' rules, and no entry id makes its context refused): what it refuses is refused, with its
+   reason. Its rules
    (*What is already settled*) are the authority; the list there is for the reader of this plan.
 6. No answer lifts — no `**Lifts:**` and no answer whose label is `Go` (compared as `_lifting()` compares):
    refused. (A `**Lifts:**` step 5 passes always names an offered answer.)
