@@ -2659,7 +2659,37 @@ def subject_kind(line: str) -> str | None:
         return "edit"
     if APPEND_SUBJECT_RE.match(line) or any(r.match(line) for r in LEGACY_APPEND_SUBJECT_RES):
         return "append"
+    if lift_subject_parts(line) is not None:  # v3.3
+        return "lift"
     return None
+
+
+def lift_subject(tid: str, gate: str, tool: str, session: str | None = None) -> str:
+    """The one-line commit subject of a ledger lift (v3.3, SPEC *The commit subject of a ledger lift*):
+    ``<tool>: lift decision (<p>) on TD-n (session <name>)``, the gate as ``_one_gate()`` spells it, the id as
+    given, ``session`` else ``n/a``. Refused: a ``tid`` that is no bare ``TD-n`` of 1 to 18 ASCII digits, a gate
+    that is no decision, and a ``tool`` or ``session`` that is no token of ``[A-Za-z0-9_.@/-]+``."""
+    if not isinstance(tid, str) or not LIFT_TID_RE.fullmatch(tid):
+        raise Refused(f"a lift's subject names a bare TD-n of 1 to 18 digits, not {tid!r}")
+    g = _one_gate(gate)
+    if not GATE_DECISION_RE.match(g):
+        raise Refused(f"a lift's subject names a decision (<person>) gate, not {gate!r}")
+    if not isinstance(tool, str) or not LOG_TOKEN_RE.fullmatch(tool):
+        raise Refused(f"the tool, {tool!r}, is a token of [A-Za-z0-9_.@/-]")
+    name = "n/a" if session is None else session
+    if not isinstance(name, str) or not LOG_TOKEN_RE.fullmatch(name):
+        raise Refused(f"the session, {session!r}, is a token of [A-Za-z0-9_.@/-]")
+    out = f"{tool}: lift {g} on {tid} (session {name})"
+    if lift_subject_parts(out) is None:
+        raise Refused(f"the subject would not read back as a lift: {out!r}")
+    return out
+
+
+def lift_subject_parts(line: str) -> dict | None:
+    """A ledger lift's commit subject read back (v3.3): ``{tool, gate, id, session}``, each part as written
+    (``n/a`` too), or None for any other line."""
+    m = LIFT_SUBJECT_RE.fullmatch(line) if isinstance(line, str) else None
+    return None if m is None else {k: m.group(k) for k in ("tool", "gate", "id", "session")}
 
 
 def edit_action(line: str) -> str | None:
@@ -5670,6 +5700,11 @@ LIFT_SUFFIX_RE = re.compile(rf"board (?P<repo>{REPO})|no board item|shared board
 EVIDENCE_PR_RE = re.compile(rf"(?P<repo>{REPO})#(?P<n>[0-9]{{1,18}})")
 EVIDENCE_AT_RE = re.compile(rf"(?P<repo>{REPO})@(?P<sha>[0-9a-f]{{7,40}})")
 LOG_TOKEN_RE = re.compile(LOG_TOKEN)
+# The commit subject of a ledger lift (v3.3, SPEC *Edits*): `<tool>: lift decision (<p>) on TD-n (session <name>)`,
+# matched whole; the id's digits ASCII and at most 18, the reader's cap.
+LIFT_SUBJECT_RE = re.compile(rf"(?P<tool>{LOG_TOKEN}): lift (?P<gate>decision \({PERSON}\)) on "
+                             rf"(?P<id>TD-[0-9]{{1,18}}) \(session (?P<session>{LOG_TOKEN})\)")
+LIFT_TID_RE = re.compile(r"TD-[0-9]{1,18}")
 
 
 def _host_log_evidence_ok(ev: str, source: str) -> bool:
@@ -7059,7 +7094,7 @@ def _tree_ledger_by_place(tree: Mapping[str, str]) -> tuple[dict[int, str], dict
 
 def _tree_board_path(tree: Mapping[str, str]) -> str:
     """Where a tree's board is read (v3.0, SPEC *The merge gate's verdicts*): ``BOARD_DIR`` when the tree holds a
-    file under it, else ``BOARD_V2_PATH``, the one rule the three verdicts share."""
+    file under it, else ``BOARD_V2_PATH``, the one rule the verdicts share."""
     pre = BOARD_DIR + "/"
     return BOARD_DIR if any(k.startswith(pre) for k in tree) else BOARD_V2_PATH
 
@@ -7424,6 +7459,191 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
         return review("lift-board-line", f"the decide writer refuses the answer: {e}")
     if h_rel != want_path or head_tree.get(pre + h_rel) != text:
         return review("lift-board-line", f"{pre + h_rel} at the head is not what the decide edit writes at {want_path}")
+    return {"carve_out": True, "flags": flags, "review": []}
+
+
+LIFT_FORM_SUFFIX = {"decided": None, "shared": "shared board item left open", "none": "no board item"}
+
+
+def lift_form(tree: Mapping[str, str], tid: str, gate: str, repo: str) -> tuple[str, list[BoardItem]]:
+    """The form a lift of open entry ``tid``'s ``gate`` takes (v3.3, SPEC *The merge gate's verdicts*): ``(case,
+    items)``, read against the tree's own board. Of the items covers() names covering the gate, the first case
+    that holds: ``asked``, an undecided item that lists no other gated entry; ``decided``, a decided one that lists
+    none (every such item, to close ``— lifted``); ``shared``, an item that lists another gated entry (a bare
+    ``TD-n`` among its Context entry and `Parts:`, open in the ledger, not ``tid``'s number, carrying the gate);
+    ``none``, no item. ``items`` in the board's item order. Refused: an entry the ledger does not hold open (its file
+    directly in the ledger's directory, its Status open), one not carrying ``gate``, a gate that is no decision, a
+    v1 ledger and a ``repo`` _check_repo() refuses. A tree with no board, or a board whose `People:` does not list
+    the gate's person, is ``none``."""
+    _check_repo(repo)
+    gate = _one_gate(gate)
+    if not GATE_DECISION_RE.match(gate):
+        raise Refused(f"a lift's form is read for a decision (<person>) gate, not {gate!r}")
+    if not isinstance(tid, str) or not LIFT_TID_RE.fullmatch(tid):
+        raise Refused(f"an entry is a bare TD-n, not {tid!r}")
+    if _tree_ls(tree)(LEDGER_DIR) is None:
+        raise Refused("a v1 ledger: the lift's form is read from a v2 ledger")
+    open_t, _, _ = _tree_ledger(tree)
+    num = _num(tid)
+    text = open_t.get(num)
+    if text is None:
+        raise Refused(f"the ledger holds no open {tid}")
+    if _carried(text, gate) is None:
+        raise Refused(f"{tid} does not carry {gate}")
+    board = _tree_board(tree, repo)
+    order = {_ident(it): i for i, it in enumerate(board[2].items)}
+    cov = [(it, s) for _, it, s in covers(text, gate, [board], repo) if s in COVERING]
+    cov.sort(key=lambda p: order.get(_ident(p[0]), len(order)))
+
+    def lists_other(it: BoardItem) -> bool:
+        ref, _g = _item_gate(it)
+        listed = [x for x in [ref, *it.parts] if x and "#" not in x and _num(x) != num]
+        return any(_carried(open_t.get(_num(x)), gate) is not None for x in listed)
+    other = {_ident(it): lists_other(it) for it, _ in cov}
+    asked = [it for it, s in cov if s == "open" and not other[_ident(it)]]
+    if asked:
+        return "asked", asked
+    decided = [it for it, s in cov if s == "decided" and not other[_ident(it)]]
+    if decided:
+        return "decided", decided
+    shared = [it for it, _ in cov if other[_ident(it)]]
+    if shared:
+        return "shared", shared
+    return "none", []
+
+
+def ledger_lift_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], files: Sequence[str],
+                        subject: str, commits: int, created_at: date | datetime | str,
+                        merged_at: date | datetime | str | None, repo: str) -> dict:
+    """The ledger lift's verdict (v3.3, SPEC *The merge gate's verdicts*): ``{carve_out, flags, review}`` for a PR
+    that lifts one entry's decision on the ledger, its arguments and ``flags`` as lift_pr_verdict()'s.
+    ``carve_out`` says the diff is exactly the writers' lift of one gate by its person, the shape the person's
+    press writes; otherwise ``review`` names the first condition that fails: a v3 board at the base and the head,
+    whose base declares `People:`; a lift subject and one commit; the subject's entry open at the base (carrying
+    its gate) and the head; the paths; one new `gate lifted … answer` Log line for the gate; its ``by`` the gate's
+    person, on `People:`; a form that is not ``asked``; the head entry lift_gate()'s bytes with the form's suffix,
+    and the board unchanged (``shared``, ``none``) or each item the form names closed ``— lifted`` by
+    edit_item(), its base `Decided:` the gate's person's; the dates; and no flag. A ``Refused`` from tripwire(),
+    which runs first, or from the dates and ``commits``, escapes; past them an unreadable text is a reason."""
+    flags = tripwire(base_tree, head_tree, subject, repo)
+    created = _verdict_day(created_at, "created_at")
+    merged = None if merged_at is None else _verdict_day(merged_at, "merged_at")
+    if merged is not None and merged < created:
+        raise Refused(f"merged_at {merged} is before created_at {created}")
+    if isinstance(commits, bool) or not isinstance(commits, int) or commits < 0:
+        raise Refused(f"commits is the PR's commit count, not {commits!r}")
+    one = timedelta(days=1)
+
+    def review(kind: str, text: str) -> dict:
+        return {"carve_out": False, "flags": flags, "review": [(kind, text)]}
+    # 1. The board.
+    b_board, h_board = _tree_load(base_tree), _tree_load(head_tree)
+    if b_board.form is None or h_board.form is None:
+        return review("ledger-lift-no-board", f"the PR has no board at {BOARD_DIR}/ or {BOARD_V2_PATH} at its base "
+                      "or head")
+    if b_board.form != "dir" or h_board.form != "dir":
+        return review("ledger-lift-board-v2", "the PR's board is a v2 board at its base or head: a v3 writer writes "
+                      "none")
+    people = board_people(b_board)
+    if people is None:
+        return review("ledger-lift-no-people", "the base board declares no People: line, so who may lift is "
+                      "unchecked")
+    # 2. The subject.
+    parts = lift_subject_parts(subject or "")
+    if parts is None:
+        return review("ledger-lift-subject", f"the commit's subject is not a ledger lift: {subject!r}")
+    if commits != 1:
+        return review("ledger-lift-subject", f"a lift PR is one commit, squash-merged; this has {commits}")
+    tid, gate = parts["id"], parts["gate"]
+    # 3. The entry.
+    ls, h_ls = _tree_ls(base_tree), _tree_ls(head_tree)
+    if ls(LEDGER_DIR) is None:
+        return review("ledger-lift-entry", "a v1 ledger's lift is not recomputed — it takes ordinary review")
+    num = _num(tid)
+    b_open, _, _ = _tree_ledger(base_tree)
+    h_open, _, _ = _tree_ledger(head_tree)
+    btext = b_open.get(num)
+    if btext is None or _carried(btext, gate) is None:
+        return review("ledger-lift-entry", f"the base ledger holds no open {tid} carrying {gate}")
+    path = entry_path(LEDGER_DIR, _entries(btext)[0]["id"], ls)
+    if path is None or "/" in path[len(LEDGER_DIR) + 1:] or base_tree.get(path) is None:
+        return review("ledger-lift-entry", f"{tid} is not one open file directly in {LEDGER_DIR}/ at the base")
+    htext = h_open.get(num)
+    if htext is None or entry_path(LEDGER_DIR, _entries(htext)[0]["id"], h_ls) != path or head_tree.get(path) is None:
+        return review("ledger-lift-entry", f"the head does not hold {path} open")
+    # 4. The files.
+    pre = BOARD_DIR + "/"
+    for f in sorted(set(files)):
+        if f != path and not (f.startswith(pre) and _board_file_place(f[len(pre):])):
+            return review("ledger-lift-files", f"the PR changes {f}, neither {path} nor an item file of the board")
+    changed = {p for p in {*base_tree, *head_tree} if base_tree.get(p) != head_tree.get(p)}
+    for p in sorted(changed):
+        if p != path and not p.startswith(pre):
+            return review("ledger-lift-files", f"the PR changes {p}, neither {path} nor under {pre}")
+    # 5. The Log line.
+    new = _new_log(btext, htext)
+    rec = new[0] if len(new) == 1 else None
+    if rec is None or rec["kind"] != "gate-lifted" or rec.get("via") != "answer" \
+            or _gate_key(rec["gate"]) != _gate_key(gate):
+        return review("ledger-lift-log", f"{tid}'s Log does not gain exactly one gate lifted: {gate} … answer line")
+    label, by = rec["label"], rec["by"]
+    try:
+        t = date.fromisoformat(rec["date"])
+    except ValueError:
+        return review("ledger-lift-log", f"the lift's Log date {rec['date']} is no day")
+    # 6. Who.
+    person = GATE_DECISION_RE.match(gate).group("who").strip()
+    if by.lower() != person.lower() or by.lower() not in {p.lower() for p in people}:
+        return review("ledger-lift-by", f"{by} lifts {gate}: only the gate's person, listed on the base board's "
+                      "People:, lifts it on the press")
+    # 7. The form.
+    case, items = lift_form(base_tree, tid, gate, repo)
+    if case == "asked":
+        return review("ledger-lift-asked", f"an open item on this repo's board asks {gate} for {tid} — its answer "
+                      "is the decide lift")
+    # 8. The bytes: the entry's, then the board's.
+    try:
+        want = lift_gate(base_tree[path], gate, by, answer=label, suffix=LIFT_FORM_SUFFIX[case], today=t)
+    except Refused as e:
+        return review("ledger-lift-bytes", f"lift_gate refuses the lift: {e}")
+    if head_tree[path] != want:
+        return review("ledger-lift-bytes", f"{path} is not what lift_gate writes for the {case} form, byte for byte")
+    board_changed = {p for p in changed if p.startswith(pre)}
+    want_board: set[str] = set()
+    closes_on: list[date] = []
+    for it in items if case == "decided" else []:
+        if (it.decided_by or "").lower() != person.lower():
+            return review("ledger-lift-board", f"the item {it.id}'s Decided: is not {person}'s answer")
+        heads = [p for p in head_tree if p.startswith(pre) and p.rsplit("/", 1)[-1] == f"{it.id}.md"]
+        if len(heads) != 1:
+            return review("ledger-lift-board", f"the head holds {len(heads)} files for the item {it.id}")
+        h_item = parse_item(head_tree[heads[0]], heads[0][len(pre):])
+        c = h_item.closed[0] if h_item is not None and h_item.closed is not None else None
+        if c is None:
+            return review("ledger-lift-board", f"{heads[0]} has no readable Closed:")
+        try:
+            want_path = pre + item_path(it.id, c.isoformat())
+            text = edit_item(base_tree[pre + it.path], "done", why="lifted", today=c)
+        except (Refused, ValueError) as e:
+            return review("ledger-lift-board", f"the done writer refuses the close of {it.id}: {e}")
+        if heads[0] != want_path or head_tree[heads[0]] != text:
+            return review("ledger-lift-board", f"{heads[0]} is not what the close writes at {want_path}")
+        want_board |= {pre + it.path, want_path}
+        closes_on.append(c)
+    if board_changed != want_board:
+        return review("ledger-lift-board", f"the board's changes {sorted(board_changed)} are not the {case} form's "
+                      f"{sorted(want_board)}")
+    # 9. The dates.
+    if not (created - one <= t <= min(created + one, merged or created + one)):
+        return review("ledger-lift-date", f"the Log date {t} is outside {created - one} .. "
+                      f"{min(created + one, merged or created + one)}")
+    for c in closes_on:
+        if not (created - one <= c <= (merged or created) + one):
+            return review("ledger-lift-date", f"the Closed: date {c} is outside {created - one} .. "
+                          f"{(merged or created) + one}")
+    # 10. No flag.
+    if flags:
+        return review("ledger-lift-flagged", "the tripwire flags the PR")
     return {"carve_out": True, "flags": flags, "review": []}
 
 

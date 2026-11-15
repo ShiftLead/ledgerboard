@@ -1082,7 +1082,7 @@ them (v3.0). `README.md` is the one file a stamp rewrites, so two stamps written
 there. Which stamps a consumer writes and
 what they mean are the consumer's.
 
-**The merge gate's verdicts** (v2.4) are three pure functions over a PR's **trees**, each a map from path to text
+**The merge gate's verdicts** (v2.4) are pure functions over a PR's **trees**, each a map from path to text
 read at the PR's base or head: the ledger at `docs/ledger/` (v2; a tree with no file under it holds a v1 ledger at
 `docs/technical_debt.md`), and this repo's board at `docs/user_attention/` (v3.0, `BOARD_DIR`), or, in a tree with
 no file under that directory, the v2 board at `docs/user_attention.md` and its archive at
@@ -1166,6 +1166,61 @@ closed) of that id (both `lift-board-diff`); then the checks from `lift-not-answ
 bytes (`lift-board-line`).
 
 (d), a PR only, is the consumer's: a direct commit that answers a gate's item is refused by its own audit.
+
+`lift_form(tree, tid, gate, repo)` (v3.3) returns `(case, items)` for open entry `tid` (found by number, and
+open as the tripwire reads the ledger: its file directly in `LEDGER_DIR`, its Status open) carrying `gate`, a
+`decision (<p>)`, read against the tree's own board: the form a lift of it takes. An item *lists another gated
+entry* when its Context entry or one of its `Parts:` ids is a bare `TD-n`, open in the tree's ledger (as the
+tripwire reads its open entries), not `tid`'s number, and carrying the same gate. Of the items `covers()` names covering the gate (states `open` and
+`decided`), the first case that holds is the form: `asked`, an undecided item that lists no other gated entry
+(the lift is the item's answer, the decide lift); `decided`, a decided item that lists no other gated entry
+(the lift has no suffix, and closes every such item `— lifted`); `shared`, an item that lists another gated
+entry (`; shared board item left open`); `none`, no item (`; no board item`). `items` are the items that
+decided the case, every one to close for `decided`, in the board's item order. It refuses an entry the ledger does not hold open or that
+does not carry `gate`, a gate that is no decision, a v1 ledger, and a `repo`
+`_check_repo()` refuses; a tree with no board, or a board whose `People:` does not list the gate's person, is
+`none`.
+
+`ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.3)
+returns `{carve_out, flags, review}` for a PR that lifts one entry's decision on the ledger, its arguments
+and its `flags` as `lift_pr_verdict()`'s. `carve_out` says the diff is exactly the writers' lift of one gate by its
+person, the shape the person's press writes; otherwise `review` names the first condition that fails, in this order:
+- a v3 board at the base and the head (`ledger-lift-no-board`, `ledger-lift-board-v2`), whose base declares
+  `People:` (`ledger-lift-no-people`);
+- the subject is a lift (`lift_subject_parts()`), and the PR is one commit (`ledger-lift-subject`);
+- the base ledger is v2 and holds the subject's entry open (by number; its file directly in `LEDGER_DIR` and
+  its Status open) carrying the subject's gate (the person in any case), and the head holds it open
+  (`ledger-lift-entry`);
+- every path in `files` is that entry's open file or a board path `lift-files` admits (a file directly in
+  `BOARD_DIR`, or under its `archive/<YYYY-MM>/`), and every path the trees change is that file or under `BOARD_DIR/`
+  (`ledger-lift-files`);
+- the entry's Log gains exactly one line (as the tripwire reads new lines), a `gate lifted:` line for the gate with an `answer`
+  (`ledger-lift-log`), whose `label`, `by` and date `T` the checks below read;
+- the subject's person, the gate's person and that line's `by` are one name in any case, which the base
+  board lists on `People:`; `Answered by: any` admits no other (`ledger-lift-by`);
+- `lift_form()` of the base is not `asked` (`ledger-lift-asked`);
+- the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for byte, `S` the
+  form's suffix, any refusal from `lift_gate()` failing too (`ledger-lift-bytes`); the board is unchanged for
+  `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
+  `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)`, `C` the head file's
+  readable `Closed:` date and one head file for each id, the board's changes being every changed tree path
+  under `BOARD_DIR/`, each such item's base `Decided:` naming the gate's person in any case
+  (`ledger-lift-board`); the entry's bytes are judged before the board's;
+- `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and each `C` from
+  `created_at − 1` to the merge date (else `created_at`) `+ 1`, the board's local day running up to a day
+  from UTC (`ledger-lift-date`);
+- `flags` is empty (`ledger-lift-flagged`).
+
+The carve-out trusts what `lift_pr_verdict()`'s does: a diff that is one writer's output from the base, for
+one answer by the gate's person on `People:`. Unlike a decide lift it needs no question on the board, in
+`shared` it takes one entry out of an open shared question, and in `decided` it ends a work order the person
+answered. Its suffix is read from this repo's board alone, so a `; board <repo>` lift takes review
+(`ledger-lift-bytes`). As for `lift_pr_verdict()`, a `Refused` from `tripwire()`, which runs first, or
+from the dates and `commits` escapes; past them a text the verdict cannot read is a reason: an item file the
+board reader skips, or a `Refused` or `ValueError` from `edit_item()` or `item_path()`, is `ledger-lift-board`, and any refusal
+from `lift_gate()` is `ledger-lift-bytes`. The Log line stays forgeable, and nothing in the format
+re-reads the lift once it merges (the sweep's audit reads `; board <repo>` lifts alone): the consumer's own
+audit is its backstop, and a direct commit of this shape is the consumer's to refuse, as for the decide lift.
 
 `uncovered_decisions(base_tree, head_tree, boards, repo)` returns `(refusals, flags)`. `boards` are other repos'
 boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
@@ -1612,7 +1667,16 @@ reply's words never appear. `subject_id(line)` reads the id back, or None. `edit
 reads the action back (v2.3). Subjects written before v3.0 still read: a v2 edit's and append's, with no id; those
 written before v1 by one consumer (`shiftlead: board|answer <head> (from <ref>)`, `shiftlead: board decide <ref>
 (person)`), as appends; and `<tool>: archive <n> closed items (session <name>)`, which no v3 writer writes.
-`subject_kind()` names a subject `edit`, `append`, `archive` or (a rank write) `queue`.
+`subject_kind()` names a subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v3.3) `lift`.
+
+**The commit subject of a ledger lift** (v3.3) is one line, `<tool>: lift decision (<p>) on TD-n (session
+<name>)`, for a commit that lifts one entry's decision and writes nothing else but the closes the lift owes
+(*The merge gate's verdicts*, `lift_form()`): `<p>` the gate's person as the entry spells it, `<name>` the
+caller's session, else `n/a`. `lift_subject(tid, gate, tool, session=None)` writes it, refusing a `tid` that is
+not a bare `TD-n`, a gate that is no decision, and a tool or session that is not a token of
+`[A-Za-z0-9_.@/-]+`; `lift_subject_parts(line)` reads it back as `{tool, gate, id, session}`, each part as
+written (`n/a` too), or None.
+`edit_action()` and `subject_id()` read board writes alone, and are None for it.
 
 ## The board writer (v2.3)
 
@@ -2322,9 +2386,15 @@ v3.1.
 `CODE_EXTS` and `ACTOR_WORDS`. It reads every file v3.0 wrote as v3.0 did, and no existing function's output
 changes; no writer of this package calls the check.
 
+**v3.3 adds the ledger lift's verdict** (*The merge gate's verdicts*, *Edits*): `ledger_lift_verdict()`, the
+carve-out for a PR that lifts one entry's decision on the ledger with no board answer, `lift_form()`, which
+names the form such a lift takes, and the ledger lift's commit subject, written by `lift_subject()` and read
+by `lift_subject_parts()`. No parse, field, Log line, item key or canonical form changes. One reading
+changes: `subject_kind()` names that subject `lift`, where earlier releases read None.
+
 ## Appendix: grammar
 
-The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; v3.0: the item file; later releases add the rest).
+The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; v3.0: the item file; v3.3: the ledger lift's commit subject; later releases add the rest).
 **The fixtures are the authority** (`fixtures/grammar/`): each production has at least one fixture the module
 accepts and one it refuses, and a test checks every fixture against these productions, so the two cannot drift.
 The notation is the W3C's EBNF (as in XML 1.0): `::=` defines, `|` separates choices, `?`, `*` and `+` follow
@@ -2571,6 +2641,7 @@ log-gate-added    ::= "gate added: " gate
 log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token '; answer "' char* '"' lift-suffix?
 lift-gate         ::= "decision (" person ")" | "event (" event-name ")"
 lift-suffix       ::= "; board " repo | "; no board item" | "; shared board item left open"
+lift-subject      ::= log-token ": lift decision (" person ") on TD-" digit+ " (session " log-token ")"
 log-lift-override ::= "gate lifted: decision (" person ") — by " log-token "; override: " nonspace char*
 log-lift-check    ::= "gate lifted: event (" event-name ") — by " log-token "; " [a-z0-9-]+ " passed; " nonspace+
 log-lift-date     ::= "gate lifted: until " date " — by " log-token "; date reached"
@@ -2596,3 +2667,11 @@ grammar one (*the canonical form*). Their cases are in `fixtures/status/`, `fixt
 `log-line` fixture is a writer's shape only: any other words after the date are a note, which the judge accepts
 and no production does, so the refusing side is a line `log_line()` reads as `malformed` (a writer's prefix out of
 its shape) or does not read (no `- `, a bad date). A quoted label or words run to the line's last `"`.
+
+`lift-subject` (v3.3) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
+matches the whole line, nothing after its `)` (no trailing newline); it reads the gate's person as `person`
+and the session as `log-token`; its digits are ASCII alone and at most 18 (`[0-9]{1,18}`, as a part's id reads,
+never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, the cap being the reader's, which
+`digit+` cannot say, and the id's number always fits the lookup by number); and `lift_subject()` writes the gate as
+`_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
+`_one_gate()` refuses (`decision (Ann )`, say) is refused.
