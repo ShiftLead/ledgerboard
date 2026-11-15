@@ -94,7 +94,9 @@ nothing, which is the bug.
 3. A line of the `**Answers:**` section, its lead's line apart, that `LEAD_RE` matches (it opens with a bold
    run: a `**Lifts:**`, or any lead, written with no blank line before it, so glued to the answers) is refused,
    *a section lead inside the answers*; the section's lines are tested before its words are joined, outside a
-   code fence, and a bold run inside a line (`Not yet — **Note:** you wait`) is answer text. The answers are
+   code fence (the reader tracks fences as `_entry_sections()` does, by `FENCE_RE`), and a bold run inside a line
+   (`Not yet — **Note:** you wait`) is answer text. An answer wrapped so that a later line opens with a bold run
+   (`**Works** — …`) is refused the same way: a wrapped answer starts no line with one. The answers are
    `parse_answers_value()`'s, each split by `split_answer()`; more than one marked ` (default)` is refused; each is returned with its mark removed, as `<label>` or `<label> — <consequence>`, a bar in it a
    literal `|`; `default` is the marked one's index, else None.
 4. The lifts are `parse_answers_value()` of the `**Lifts:**` value, as written (literal bars), else None.
@@ -216,8 +218,9 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > "lifts"}` when they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the
 > marked one's index or None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an
 > entry `canonical()` refuses, two sections of one name, a `**Lifts:**` with no `**Answers:**`, an empty
-> `**Answers:**`, a line of the `**Answers:**` section after its first that opens with a bold run (a lead glued to
-> the answers; a bold run inside a line is answer text), two answers marked, answers `item_file()` refuses as a `decide`'s `answers`, `default` and
+> `**Answers:**`, a line of the `**Answers:**` section after its first, outside a code fence, that reads as a
+> section lead (`LEAD_RE`: a lead glued to the answers, or a wrapped answer's line opening with a bold run; a bold
+> run inside a line is answer text), two answers marked, answers `item_file()` refuses as a `decide`'s `answers`, `default` and
 > `lifts` (fewer than two among them), and answers of which none lifts. `check()` flags an open entry whose
 > `Blocked by` names a decision and which it refuses (`answers-unusable`; an error on an entry the edit changed — its whole text — ℹ on a standing ledger). The
 > gate sweep offers them (*The gate sweep*).
@@ -257,7 +260,7 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   board `sweep/answers/board/` listing `People: pat`, so the existing runs' expected results do not move. Its
   entries, each `decision (pat)` and uncovered: one with no section (`Go | Not yet`, today's item); one with
   `Answers: Works — I'll archive the check | Not right: <what it printed> — I'll file what you saw`
-  and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` and no `**Lifts:**`
+  and `Lifts: Works`; one with `Go (default) — … | One more round — … | Hold: <note> — …` (each `…` a consequence naming who acts, `you` or `I'll`) and no `**Lifts:**`
   (`default` 0, `lifts` None); one whose `**Lifts:**` names a label not offered (refused: `Go | Not yet`, the
   detail context's added clause); one with no lifting answer (`One more round | Hold: <note>`, no `**Lifts:**`);
   one with `**Lifts:**` and no `**Answers:**`; one whose `**Lifts:**` names a form, `Hold: <note>`. The runner
