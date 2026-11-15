@@ -141,8 +141,9 @@ the ledger writer refuses an edit that makes one, as it refuses `ask-missing`. A
 not flagged, whatever its sections hold: nothing reads them, and a repo's own prose `**Answers:**` section,
 which *Text a person reads* allowed before v3.N, stays legal there. The flag comes with the gate: an edit that adds
 a decision to an entry whose sections cannot be offered is refused, naming why. As for every edit flag, the
-writer refuses only a fault the edit makes: a standing `answers-unusable` does not block an unrelated edit (a Log
-note, a Status).
+writer refuses only a flag whose kind, entry and reason are not already on the entry: one already there does not
+block an unrelated edit (a Log note, a Status), while an edit that changes its reason (one unusable section for
+another), or a `reopen` of an archived entry whose section is unusable, is refused.
 
 Since a `**Lifts:**` with no `**Answers:**` is refused, a writer adds `**Answers:**` first (or both in one
 whole-entry write): `edit --section Lifts` on a gated entry with no `**Answers:**` is refused.
@@ -166,8 +167,8 @@ becomes the next untagged minor.
 sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
 gated entry whose section is not usable gains a standing ℹ `answers-unusable`; as for every edit flag, an edit
 is refused only where it makes the fault (breaks the section, or adds a decision to an entry whose section is
-unusable), and a standing one does not block an unrelated edit (the writer's gate matches it to the standing
-flag). The repo's own section, which v3.2 left to the repo, is the format's on a gated entry. No parse, field, Log line, item key or
+unusable), and one already there does not block an unrelated edit (the writer's gate matches a flag by its
+kind, entry and reason). The repo's own section, which v3.2 left to the repo, is the format's on a gated entry. No parse, field, Log line, item key or
 canonical form changes.
 
 **The consumers.** Neither needs code: both pass the sweep's item through. On the build's merge the builder tells
