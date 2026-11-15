@@ -8,6 +8,23 @@ The format change itself was clean: no repo lost data. Nearly every problem was 
 planned but never filed. Old data could not be converted once the old tools were gone. Live code lagged behind
 what had merged.
 
+## Terms
+
+- **Consumer:** a repo that copies ledgerboard's package and uses its formats (agent-cadence and ShiftLead).
+- **Vendor, pin:** a consumer copies a tagged release into its own tree ("vendors" it). ledgerboard and ShiftLead
+  record which agent-cadence commit they run in `docs/cadence.toml` ("the pin"); a bump moves it.
+- **Split:** converting a v2 board (one Markdown file) into a v3 board (a directory, one file per item).
+- **Hold, lift:** an entry's `Blocked by` line holds it until something happens (a person's decision, a tag, a
+  date); lifting removes it. A decision hold is answered on the board, often Go (lift it) or Not yet (keep it).
+- **Gate sweep:** a routine pass that lifts holds whose condition is met and files a board question for any hold
+  that waits on a person with nothing asking them.
+- **The home:** ShiftLead's long-running service on the person's machine. It runs the gate sweep and the Queue
+  page where the person presses answers, from whatever ShiftLead version is live there, which can lag what has merged.
+- **Seats:** the sessions on a team: a grinder builds entries, a designer writes designs, a techlead reviews and
+  routes questions.
+- **Precheck:** the local merge gate (lint, tests, fixtures) recorded as a PR's status.
+- **`decision-missing`:** v3.2's ledger check that flags an entry asking the person something with no decision hold.
+
 ## Timeline
 
 | Date | What happened |
@@ -18,7 +35,7 @@ what had merged.
 | 2026-11-12 | Paul's Go on the v3.0 designs; the board design (TD-070) had run nine review rounds and was split into three parts |
 | 2026-11-13 | v2.8, the last v2 release, carrying the migrate rules every ledger had to pass before v3.0; agent-cadence the same day, ShiftLead on 11-14 |
 | 2026-11-13 to 11-14 | The five v3.0 builds, then the ledger removals |
-| 2026-11-14 | v3.0 tagged; Paul chose a one-day rollout. agent-cadence took it and split its board in one PR (TD-263, about 1h45m) |
+| 2026-11-14 | v3.0 tagged; Paul chose a one-day rollout. agent-cadence took it and split its board in one PR (TD-263, in under two hours) |
 | 2026-11-15 | ShiftLead took it and split its board (TD-1881, #3968), inside its window, after a one-time archive cleanup (#3989) |
 | 2026-11-15 | v3.2 released, carrying the changes planned as v3.1 and v3.2. ledgerboard's own board was found still on v2 (TD-120, open) |
 
@@ -45,7 +62,7 @@ what had merged.
 | Problem | What it cost | Cause | Fix |
 | --- | --- | --- | --- |
 | ledgerboard never moved its own board | Paul's presses on its items failed with a silent 400 and the items came back; each answer was relayed by hand | The plan's last step (pin bump plus own split in one PR) was written in the plan but never filed as an entry | TD-120, filed after the fact; the pin bump is Paul's, so a session he starts does it |
-| ShiftLead's old archive could not be converted | About 15 hours on TD-1881: five session restarts at the context bound, one PR closed unmerged, a new merge-check rule upstream, a wait on Paul's merge | 71 closed items had no closing date and 3 ids were duplicated. v3.0 had retired the tools that could fix them, and the merge check refused a hand edit | agent-cadence TD-277 (#229) allowed one mechanical cleanup, dated from git history or the line's own words, with inexact duplicates flagged |
+| ShiftLead's old archive could not be converted | Most of a day on TD-1881: several session restarts at the context bound, one PR closed unmerged, a new merge-check rule upstream, a wait on Paul's merge | 71 closed items had no closing date and 3 ids were duplicated. v3.0 had retired the tools that could fix them, and the merge check refused a hand edit | agent-cadence TD-277 (#229) allowed one mechanical cleanup, dated from git history or the line's own words, with inexact duplicates flagged |
 | Taking v3.0 alone broke 249 ShiftLead tests | The vendor and the split had to land in one PR, and a pin-only PR was closed unmerged | v3.0's writers refuse a v2 board, so the pin, the copy and the split cannot land apart | One PR for all three, as the plan's revised order says |
 | Each v2 vendor broke a consumer's tests or docs | One extra round per release, typically: 8 suites with old-form fixtures (v2.7), a crash and a newly allowed note (v2.8), a stale design section (v2.4) | Consumers' fixtures and docs restate the format | Fixed in each vendor PR; worth a pattern search before the vendor |
 | Live code lagged behind a merge | ShiftLead's gate sweep, still on pre-switch code, filed 11 of ShiftLead's own questions onto ledgerboard's board (#355) | Merging the switch and putting it live are separate steps, and the sweep ran in between | Closed with the board writer (#360) once the home was live on the new code |
@@ -86,7 +103,7 @@ what had merged.
 
 **Sessions**
 
-- A long cutover crosses context bounds. ShiftLead's switch ran across five session restarts; a half-done
+- A long cutover crosses context bounds. ShiftLead's switch ran across several session restarts; a half-done
   branch with a written plan (what is left, what to check) let each restart pick it up.
 - Usage limits killed sessions mid-work (2026-11-11). A wind-down finishes whole entries, so a restart can
   wait an hour or more.
