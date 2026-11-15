@@ -165,7 +165,8 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
 10. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–9 raises none by construction; the
    condition keeps a future tripwire rule from being skipped by this carve-out.
 
-The caller's own arguments are checked first, each a `Refused` raised as for `lift_pr_verdict()`: `repo` (as
+The caller's own arguments are checked first, each raising `Refused` (a deliberate reorder: `lift_pr_verdict()`
+runs `tripwire()` first, so there an unreadable ledger raises instead of returning a reason): `repo` (as
 `_check_repo()` reads it), `created_at` and `merged_at` (a date or an aware datetime, and `merged_at` not before
 `created_at`) and `commits` (a count). A text the verdict cannot read never escapes as `Refused`. The verdict
 then calls `tripwire()`, as `lift_pr_verdict()` does, and the tripwire reads the Log of every entry open at both ends; where it raises
@@ -233,9 +234,12 @@ machine's log is not the same on every machine.
 ### D5. The release
 
 A minor release, written **v3.2** throughout this plan: the number is the next minor after the last one stamped
-when the build merges (today v3.1, which TD-109's event pins to its own commit, so this build is never in it). TD-111's plan takes the same next-unreleased-minor rule (its F78: v3.2 if TD-109 releases v3.1). The
-rest is this plan's own: whichever of the two lands second takes the next number, or, where both land in one
-unreleased minor, shares its *Versions* paragraph, and the runner's guards name that number. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+when the build merges. Today the last stamped is v3.0; v3.1 (TD-109's `decision-missing`, TD-112's merge) is on
+main but unreleased, and TD-109's event only asks that the v3.1 tag include that merge. So the number is v3.2
+only if v3.1 is stamped before this build merges; otherwise the build lands in the unreleased v3.1, sharing its
+*Versions* paragraph. TD-111's plan takes the same next-minor rule (its F78), and whichever of the two lands in
+an unreleased minor shares that minor's paragraph. The SPEC text's `(v3.2)` marks and the runner's guards name
+the number by the same rule. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
