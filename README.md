@@ -2,8 +2,8 @@
 
 The ledger and board formats, defined once.
 
-A **ledger** (`docs/technical_debt.md`) holds a repo's deferred work as `TD-NNN` entries; a **board**
-(`docs/user_attention.md`) holds what is waiting on a person. This repo is their single definition:
+A **ledger** (`docs/ledger/`, one file per entry) holds a repo's deferred work as `TD-NNN` entries; a **board**
+(`docs/user_attention/`, one file per item) holds what is waiting on a person. This repo is their single definition:
 
 - `SPEC.md` — the formats, in prose.
 - `ledgerboard/` — one stdlib-only Python package, vendored whole. `__init__.py` is the module that parses,

@@ -26,7 +26,7 @@ This repo pins agent-cadence (`docs/cadence.toml`'s `[agent-cadence]`, TD-129): 
 `procedures/<name>.md`) prints; its scripts run as `agent-cadence run <script>`.
 
 The working rules are `docs/cadence.md` — worktrees (§1), the ledger `docs/ledger/`
-(§2), the attention board `docs/user_attention.md` (§3), and the review and merge loop (§4).
+(§2), the attention board `docs/user_attention/` (§3), and the review and merge loop (§4).
 Three procedures run on top of them, each a doc any agent follows (Claude Code also has each
 as a skill of the same name): `docs/procedures/stranded-work.md` (the periodic sweep, §3.11),
 `docs/procedures/cadence.md` (check a PR before merging, §4.9) and
@@ -81,4 +81,4 @@ code then runs in GitHub's sandbox, not on a machine), on a release tag and by h
 | Why three repos, and what is whose | the ADR above |
 | How work is done here | `cadence.md` in the pinned agent-cadence (`agent-cadence path cadence.md`; the pin is `docs/cadence.toml`'s `[agent-cadence]`, TD-129) |
 | Open work | `docs/ledger/` (one `TD-NNN.md` per entry; `agent-cadence run ledger.py --summary`) |
-| What waits on a person | `docs/user_attention.md` |
+| What waits on a person | `docs/user_attention/` |
