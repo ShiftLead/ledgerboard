@@ -4,8 +4,12 @@
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
 Rounds: **ended at the cap**, round 6, 2026-11-15 (build-changing findings by the design reviews, rounds 1–6: 4,
 1, 1, 2, 1, 1). Paul answered *One more round* (#349); round 7, past the cap, ran as TD-117 and ended 2026-11-15: its
-design review raised one build-changing finding (F76), applied. Paul answered *One more round* again (#365); round 8
-runs as TD-121, on round 7's fixes and on D5 moved to v3.3 (v3.2 was tagged, #359, so the build waits on no tag).
+design review raised one build-changing finding (F76), applied. Paul answered *One more round* again (#365); round 8 ran as TD-121
+and ended 2026-11-15: D5 moved to v3.3 (v3.2 was tagged, #359, so the build waits on no tag); its fact-check raised
+one build-changing finding (F82, the shared release paragraph), applied and read by round 8's design review, which
+raised nothing build-changing (F85–F90, minor, applied). Build-changing by the design reviews, rounds 1–8: 4, 1, 1,
+2, 1, 1, 1, 0. Recurring topics judged again in round 8: D4's trust argument sound, the release number a matter of
+the two v3.3 plans agreeing, unreadable text settled. Paul's answer is the board's decide item, *Go* recommended.
 The record: [docs/reviews/TD-115.md](../reviews/TD-115.md).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
