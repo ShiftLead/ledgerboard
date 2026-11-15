@@ -114,7 +114,9 @@ open), read against the tree's own board (`load_board()`, as the verdicts read i
 `decided`, every item to close; for `shared` and `asked`, the items that matched; for `none`, empty), in the board's item order
 (`load_board().items`). It checks `repo` as `_check_repo()` does, raising `Refused`, and refuses
 an entry the tree's ledger does not hold open, one not carrying `gate`, and a `gate` that is no decision. A v1
-ledger is refused; a tree with no board is `none`, as `covers()` reads it.
+ledger is refused; a tree with no board is `none`, as `covers()` reads it, and so is a gate whose person the
+board's `People:` does not list, since `covers()` counts no item for such a person (the verdict never reaches that
+case: condition 6 sends it to review as `ledger-lift-by` first).
 
 It is public so the press can call it, in place of its own copy of the rule, and the verdict and the press can
 never disagree about the suffix. ShiftLead is not required to adopt it: its rule and this one are the same
@@ -257,7 +259,8 @@ own) was tagged on 2026-11-15 (#359), so the next untagged minor is v3.3 and the
 build also writes v3.3; each writes its own *Versions* paragraph with its own bold lead, after the newest paragraph
 on main when it merges, as *Versions* already holds several paragraphs for one release (v2.4, v2.7, v3.0), so
 neither paragraph's claims are the other's. If v3.3 is already tagged when this build merges, every `v3.3` in this
-build's SPEC text, fixtures and runner becomes the next untagged minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+build's SPEC text, fixtures and runner becomes the next untagged minor. TD-119's own D6 says the same once its
+round 3 (TD-122) merges; the build is filed only after that. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.3. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
@@ -300,7 +303,8 @@ commit that answers a gate's item is refused by its own audit.*:**
 > entry (`; shared board item left open`); `none`, no item (`; no board item`). `items` are the items that
 > decided the case, every one to close for `decided`, in the board's item order. It refuses an entry the ledger does not hold open or that
 > does not carry `gate`, a gate that is no decision, a v1 ledger, and a `repo`
-> `_check_repo()` refuses; a tree with no board is `none`.
+> `_check_repo()` refuses; a tree with no board, or a board whose `People:` does not list the gate's person, is
+> `none`.
 >
 > `ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.3)
 > returns `{carve_out, flags, review}` for a PR that lifts one entry's decision on the ledger, its arguments
@@ -390,7 +394,8 @@ All under `fixtures/verdict/`: a new `ledger_lift` list in `cases.json` beside `
 (each case's `tid`, `gate` and expected `[case, item ids]`). The shared `verdict/base/` is
 left as it is, since every existing case reads it: each new case lays its own entries and items over it in
 `cases/<name>/base/` (the existing base has no `none` case of its own, its `decision (pat)` gates being covered);
-every name is invented (AGENTS.md).
+every name is invented (AGENTS.md), and unique across `verdict`, `tripwire`, `uncovered` and `ledger_lift`, since
+all four lay their overlays in the same `cases/` directory.
 
 `ledger_lift` (one case per condition and per form):
 - `none` passes: one ledger file, `; no board item`, nothing covering.
@@ -455,16 +460,19 @@ A `ledger_lift` case passes with a `decided` item whose `Decided:` spells the ga
 The subject's writer and reader are held by `fixtures/item/cases.json`'s subject block, beside its `subjects`,
 `subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
 `hasattr(L, "lift_subject")` guard to that block, reporting `lift_subjects` as `missing` for a module older than
-v3.3): the press's own subject read back; a
-`<repo>#TD-n`, an `until` gate, a session with a space and a 19-digit id refused by `lift_subject()`, and
-the 19-digit subject read None by `lift_subject_parts()` (the cap the prose states); and `subject_kind()`'s
-`lift`, with `edit_action()` and `subject_id()` None.
+v3.3). The key holds two lists: `writer`, each row `lift_subject()`'s arguments (`tid`, `gate`, `tool`,
+`session`) and in `expected.json` the subject it writes or `{"error": "Refused"}`; and `reader`, each a subject
+string and in `expected.json` `lift_subject_parts()`'s parts or None. They hold the press's own subject written
+and read back; a `<repo>#TD-n`, an `until` gate, a session with a space and a 19-digit id refused by the writer,
+and the 19-digit subject read None by the reader (the cap the prose states). The `lift` subject is also added to
+the existing `subject_kinds`, `edit_actions` and `subject_ids` lists, expected `lift`, None and None.
 
 The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
 `fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
 it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id, `decision (a b)` and `(session a b)` among its refused strings (the 19-digit id is not a
 grammar case: `digit+` cannot say the cap, so the production accepts it), the new start carrying all four itself
-(the test reads each start's own groups), and `fixtures/run.py`'s
+beside its own group, five groups (the test reads each start's own groups), and every string in each group a whole
+`lift-subject` that varies only that group's production, since `grammar_cases` judges each string from the start, and `fixtures/run.py`'s
 `grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
 production to that).
 
