@@ -50,7 +50,7 @@ People: paul
   - **Context:** shiftlead/shiftlead#TD-723 (Backfill TD-722: samscrape and contractmatch under one ContractMatch project) waits on decision (paul), and no board item asked for it.
   - **Question:** Once projects are headings over repos (TD-722), will you put samscrape and contractmatch under one ContractMatch project in `org.yml`?
   - **Recommended:** Only paul can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days.
-- [ ] decide 2026-11-15 (session `gate-sweep` on kmaster) — Will you give ShiftLead a Telegram bot and a Doppler config of its own (`shiftlead/prd`), so its notes stop going through samscrape's bot? Context: shiftlead/shiftlead#TD-673 decision (paul). Due: 2026-11-15. Answers: Go | Not yet.
+- [x] decide 2026-11-15 (session `gate-sweep` on kmaster) — Will you give ShiftLead a Telegram bot and a Doppler config of its own (`shiftlead/prd`), so its notes stop going through samscrape's bot? Context: shiftlead/shiftlead#TD-673 decision (paul). Due: 2026-11-15. Answers: Go | Not yet. Closed: 2026-11-15 — duplicate: filed here by ShiftLead's gate sweep while the home ran pre-v3.0 code, which read ShiftLead's split board as empty; the question stays on ShiftLead's own board.
   - **Context:** shiftlead/shiftlead#TD-673 (ShiftLead's Telegram notes go through samscrape's bot (`secrets: samscrape/prd`): give ShiftLead a bot and a Doppler config of its own) waits on decision (paul), and no board item asked for it.
   - **Question:** Will you give ShiftLead a Telegram bot and a Doppler config of its own (`shiftlead/prd`), so its notes stop going through samscrape's bot?
   - **Recommended:** Only paul can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days.
