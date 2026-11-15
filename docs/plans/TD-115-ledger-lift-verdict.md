@@ -126,7 +126,9 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
 2. **The subject:** `lift_subject_parts(subject)` reads it, and the PR is one commit (`ledger-lift-subject`).
 3. **The entry:** the base ledger is v2 and holds the subject's `TD-n` open (found by number, as `entry_path()`
    finds it: `TD-12` is `TD-012.md`), carrying the subject's gate, and the head holds that file open
-   (`ledger-lift-entry`). Every check after this one reads that entry, so `lift_form()` (condition 7) cannot
+   (`ledger-lift-entry`). *Open* is the verdicts' reading: the file `entry_path()` finds is not under
+   `LEDGER_DIR/archive/`, and `_tree_ledger()` counts the entry open by its Status; an archived Status at either
+   end is `ledger-lift-entry`. Every check after this one reads that entry, so `lift_form()` (condition 7) cannot
    refuse inside the verdict.
 4. **The files:** every path in `files` is that entry's open file or a board path `lift_pr_verdict()`'s
    `lift-files` admits (`_board_file_place()`: a file directly in `BOARD_DIR`, `README.md` among them, or one
@@ -192,7 +194,8 @@ by a button press*):
   ends the order, which is what the press means.
 - **Case `shared` takes one entry out of an open shared question** with no `Decided:`, leaving the item asking
   the others. The decide carve-out cannot, since a shared item's answer must not speak for the entries left
-  (v2.7); today only the reviewed `set` route writes it.
+  (v2.7); today only a caller that passes the suffix writes it (the ledger writer's `set` and `lift
+  --shared-item`), and each takes review.
 
 So the worst a forged PR does is lift one gate of an entry whose person is on the board, and in case `decided`
 also close that person's open work orders on the gate; a forged decide PR can do the first but not the close.
