@@ -34,7 +34,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from dataclasses import replace as _dc_replace
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import Any, NamedTuple
 
 logger = logging.getLogger("ledgerboard")
 
@@ -7459,6 +7459,339 @@ def _one_items_change(changed: list[str], base_tree: Mapping[str, str], head_tre
     if pre + o not in base_tree or pre + o in head_tree or pre + a in base_tree or pre + a not in head_tree:
         return None
     return o, a
+
+
+# ---------------------------------------------------------------------------------------------
+# Text a person reads (v3.2): one plain sentence, answers that say who acts, a title with no labels
+# ---------------------------------------------------------------------------------------------
+
+
+class PersonTextProblem(NamedTuple):
+    """One problem of text a person reads (SPEC *Text a person reads*): its rule (1 to 4), whether a writer
+    refuses the write for it (rules 1 to 3), and one line saying what failed and its cure."""
+
+    rule: int
+    refuse: bool
+    line: str
+
+
+SENTENCE_WORDS = 25
+CODE_EXTS = ("py", "md", "yml", "yaml", "toml", "json", "jsonl", "sh", "js", "ts", "html", "css",
+             "txt", "cfg", "ini", "lock", "log", "sql", "csv")
+# The plain-English actors (the I-forms are matched case-sensitively, apart: _pt_I_FORMS).
+ACTOR_WORDS = ("me", "my", "myself", "you", "you'll", "you're", "you've", "you'd", "your", "yourself",
+               "we", "we'll", "we're", "we've", "we'd", "us", "our", "nobody", "no one")
+_pt_I_FORMS = ("I", "I'll", "I'm", "I've", "I'd")
+_pt_ABBREVIATIONS = frozenset((
+    "e.g", "i.e", "vs", "etc", "cf", "mr", "mrs", "ms", "dr", "jr", "sr", "st", "no", "approx", "est", "a.m",
+    "p.m", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec"))
+_pt_SI, _pt_SO = "", ""  # a stand-in's bounds: private-use characters, no letter, digit or space
+_pt_STANDIN_RE = re.compile(f"{_pt_SI}(\\d+){_pt_SO}")
+_pt_CLOSERS = ")]}\"'*_"
+_pt_LEAD_STRIP = "([{\"'*_"
+_pt_TRAIL_STRIP = ".,;:!?" + _pt_CLOSERS
+_pt_FENCE_CLOSE_RE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})[ \t]*$")
+_pt_BACKTICKS_RE = re.compile(r"`+")
+_pt_LINK_TARGET_RE = re.compile(f"\\]\\([^)\\n{_pt_SI}]*\\)")
+_pt_URL_RE = re.compile(r"https?://\S*")
+_pt_STOP_RE = re.compile(r"[.?!](?=[" + re.escape(_pt_CLOSERS) + r"]*\s)")
+_pt_FILE_RE = re.compile(r"[\w.-]*\w\.(?:" + "|".join(CODE_EXTS) + r")(?::\d+)?", re.IGNORECASE)
+_pt_CALL_RE = re.compile(r"(?P<name>[A-Za-z_][\w.]*)\((?!e?s\))")
+_pt_SNAKE_RE = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)+")
+_pt_DOTTED_RE = re.compile(r"[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*){2,}", re.IGNORECASE)
+_pt_UPPER_RE = re.compile(r"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+")
+_pt_CAMEL_RE = re.compile(r"[a-z]+[A-Z]\w*")
+_pt_RANGE_RE = re.compile(r"\w\.\.\w")
+_pt_COMMIT_RE = re.compile(r"[0-9a-f]{7,40}")
+_pt_BACKSLASH_RE = re.compile(r"\w\\\w")
+_pt_TITLE_LABEL_RE = re.compile(r"(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+#TD-\d+|TD-\d+")
+_pt_BOUND_BEFORE, _pt_BOUND_AFTER = r"(?<![\w'/-])", r"(?![\w'/-]|\.\w)"
+
+
+@dataclass
+class _pt_Read:
+    """Text as the check reads it: the read text (stand-ins in place of spans and fences, link targets and
+    bare URLs dropped), each stand-in's spelling, and its words as ``(start, end, piece, word)`` — ``word``
+    the stripped word, or None for a piece holding a stand-in."""
+
+    text: str
+    spellings: list[str]
+    words: list[tuple[int, int, str, str | None]]
+
+
+def _pt_fold(text: str) -> str:
+    """The quotes folded; a CRLF or a lone CR read as a line break; and the stand-in's own characters, should the
+    text hold them, read as U+FFFD, so no caller's text is taken for a stand-in."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace(_pt_SI, "\ufffd").replace(_pt_SO, "\ufffd")
+    return text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+
+
+def _pt_fences(text: str, spellings: list[str]) -> str:
+    """``text`` with each fenced block replaced by a stand-in (SPEC *The text read*)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        m = FENCE_RE.match(lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        fence = m.group("fence")
+        j = i + 1
+        while j < len(lines):
+            c = _pt_FENCE_CLOSE_RE.match(lines[j])
+            if c and c.group("fence")[0] == fence[0] and len(c.group("fence")) >= len(fence):
+                break
+            j += 1
+        spellings.append("a code block")
+        out.append(f"{_pt_SI}{len(spellings) - 1}{_pt_SO}")
+        i = j + 1
+    return "\n".join(out)
+
+
+def _pt_spans(text: str, spellings: list[str]) -> str:
+    """``text`` with each code span replaced by a stand-in: a run of n backticks, text holding no run of
+    exactly n backticks and no blank line, then n backticks; a backtick with no partner is plain."""
+    out: list[str] = []
+    pos = 0
+    runs = list(_pt_BACKTICKS_RE.finditer(text))
+    k = 0
+    while k < len(runs):
+        opener = runs[k]
+        n = len(opener.group())
+        close = next((r for r in runs[k + 1:] if len(r.group()) == n), None)
+        if close is None or re.search(r"\n[ \t]*\n", text[opener.end():close.start()]):
+            k += 1
+            continue
+        out.append(text[pos:opener.start()])
+        spellings.append(text[opener.start():close.end()])
+        out.append(f"{_pt_SI}{len(spellings) - 1}{_pt_SO}")
+        pos = close.end()
+        k = runs.index(close) + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def _pt_drop_url(m: re.Match) -> str:
+    url = m.group()
+    kept = url.rstrip(".,;:!?" + _pt_CLOSERS)
+    return url[len(kept):]
+
+
+def _pt_read(text: str) -> _pt_Read:
+    spellings: list[str] = []
+    text = _pt_spans(_pt_fences(_pt_fold(text), spellings), spellings)
+    text = _pt_URL_RE.sub(_pt_drop_url, _pt_LINK_TARGET_RE.sub("]", text))
+    words: list[tuple[int, int, str, str | None]] = []
+    for m in re.finditer(r"\S+", text):
+        piece = m.group()
+        if _pt_SI in piece:
+            words.append((m.start(), m.end(), piece, None))
+            continue
+        word = piece.lstrip(_pt_LEAD_STRIP).rstrip(_pt_TRAIL_STRIP)
+        if word.endswith("'s"):
+            word = word[:-2]
+        if any(ch.isalnum() for ch in word):
+            words.append((m.start(), m.end(), piece, word))
+    return _pt_Read(text, spellings, words)
+
+
+def _pt_is_path(word: str) -> bool:
+    if word.startswith(("/", "~/", "./", "../")) or _pt_BACKSLASH_RE.search(word):
+        return True
+    parts = word.split("/")
+    if len(parts) >= 3:
+        return any(any(ch.isalpha() for ch in p) for p in parts)
+    return len(parts) == 2 and _pt_FILE_RE.fullmatch(parts[1]) is not None
+
+
+def _pt_word_token(piece: str, word: str) -> str | None:
+    """A word's code token, spelled as SPEC says, or None."""
+    for m in _pt_CALL_RE.finditer(piece):
+        return m.group("name") + "()"
+    if (_pt_is_path(word) or _pt_FILE_RE.fullmatch(word) or _pt_SNAKE_RE.fullmatch(word) or _pt_DOTTED_RE.fullmatch(word)
+            or _pt_UPPER_RE.fullmatch(word) or _pt_CAMEL_RE.fullmatch(word) or _pt_RANGE_RE.search(word)
+            or (_pt_COMMIT_RE.fullmatch(word) and any(c.isdigit() for c in word) and any(c.isalpha() for c in word))
+            or (word.startswith("--") and len(word) > 2 and word[2].isalpha())):
+        return word
+    return None
+
+
+def _pt_tokens(r: _pt_Read, label: Callable[[str], bool] | None = None) -> list[str]:
+    """The read text's code tokens (and, with ``label``, its labels), in place order, each distinct once."""
+    found: list[str] = []
+    for _, _, piece, word in r.words:
+        if word is None:
+            got = [r.spellings[int(i)] for i in _pt_STANDIN_RE.findall(piece)]
+        else:
+            tok = _pt_word_token(piece, word)
+            got = [tok] if tok is not None else ([word] if label is not None and label(word) else [])
+        found.extend(t for t in got if t not in found)
+    return found
+
+
+def code_tokens(text: str) -> list[str]:
+    """The code tokens of ``text`` (SPEC *Text a person reads*, *A code token*): in the order of their place in
+    the text, each distinct token once — a code span as written, a fenced block as ``a code block``, a call as
+    its name and ``()``, any other as the stripped word."""
+    return _pt_tokens(_pt_read(text))
+
+
+def _pt_list(items: Sequence[str]) -> str:
+    """``a``, ``a and b``, ``a, b and c``, and from four ``a, b, c and <k> more``."""
+    items = list(dict.fromkeys(items))
+    if len(items) > 3:
+        return f"{', '.join(items[:3])} and {len(items) - 3} more"
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _pt_sentence_parts(r: _pt_Read, question: bool, max_words: int) -> list[str]:
+    if not r.words:
+        return ["it is empty"]
+    parts = []
+    if len(r.words) > max_words:
+        parts.append(f"this has {len(r.words)} words")
+    last = r.words[-1][0]
+    for m in _pt_STOP_RE.finditer(r.text):
+        if m.start() >= last:
+            break
+        if m.group() == ".":
+            run_start = m.start()
+            while run_start and r.text[run_start - 1] == ".":
+                run_start -= 1
+            run_end = m.end()
+            while run_end < len(r.text) and r.text[run_end] == ".":
+                run_end += 1
+            if run_end - run_start >= 3:
+                continue
+            before = r.text[:m.start()].rsplit(None, 1)
+            if before and before[-1].lstrip(_pt_LEAD_STRIP).lower() in _pt_ABBREVIATIONS and \
+                    not r.text[:m.start()].endswith(tuple(" \t\n")):
+                continue
+        parts.append("this has a sentence end inside it (write it without the stop)")
+        break
+    if question:
+        end = r.text.rstrip().rstrip(_pt_CLOSERS + " \t\r\n")
+        if not end.endswith("?"):
+            parts.append("this does not end in ?")
+    return parts
+
+
+def _pt_rule1_line(parts: list[str], question: bool, max_words: int) -> str:
+    head = (f"rule 1: the question is one plain sentence of at most {max_words} words ending in ?" if question
+            else f"rule 1: the sentence is one plain sentence of at most {max_words} words")
+    return f"{head}: {'; '.join(parts)}"
+
+
+def sentence_problems(text: str, *, question: bool, max_words: int) -> list[PersonTextProblem]:
+    """Rule 1's sentence alone (SPEC *One sentence*): empty, more than ``max_words`` words, a sentence end inside,
+    and, for a ``question``, an end that is not ``?``; never its code. [] when it is one sentence."""
+    parts = _pt_sentence_parts(_pt_read(text), question, max_words)
+    return [PersonTextProblem(1, True, _pt_rule1_line(parts, question, max_words))] if parts else []
+
+
+def _pt_entries(name: str, values: Sequence[str] | None, *, trim: bool = False) -> list[str]:
+    """A caller's list, checked (SPEC *Text a person reads*): an empty entry or one holding a line break is a
+    ``ValueError``; with ``trim``, trimmed and its whitespace collapsed first (``actors``)."""
+    out = []
+    for v in values or ():
+        if not isinstance(v, str) or "\n" in v or "\r" in v:
+            raise ValueError(f"{name}: an entry holds a line break: {v!r}")
+        if trim:
+            v = " ".join(v.split())
+        if not v:
+            raise ValueError(f"{name}: an empty entry")
+        out.append(v)
+    return out
+
+
+def _pt_actor_re(actors: Sequence[str], people: Sequence[str]) -> re.Pattern:
+    alts = [f"(?-i:{'|'.join(re.escape(f) for f in sorted(_pt_I_FORMS, key=len, reverse=True))})"]
+    alts += [re.escape(w) for w in sorted(ACTOR_WORDS, key=len, reverse=True)]
+    alts += [re.escape(a) + r"(?:'s|s)?" for a in actors]
+    alts += [re.escape(p) + r"(?:'s)?" for p in people]
+    return re.compile(f"{_pt_BOUND_BEFORE}(?:{'|'.join(alts)}){_pt_BOUND_AFTER}", re.IGNORECASE)
+
+
+def _pt_names_actor(text: str, actor_re: re.Pattern) -> bool:
+    words = " ".join(w if w is not None else _pt_SI for _, _, _, w in _pt_read(text).words)
+    return actor_re.search(words) is not None
+
+
+def _pt_unmarked(answer: str) -> str:
+    label, sep, cons = answer.partition(CONSEQUENCE_SEP)
+    label = DEFAULT_MARK_RE.sub("", label.strip()) or label.strip()
+    if sep:
+        cons = DEFAULT_MARK_RE.sub("", cons.strip())
+        return f"{label}{sep}{cons}".strip()
+    return label
+
+
+def person_text_problems(sentence: str | None, answers: Sequence[str] = (), context: str | None = None, *,
+                         question: bool, people: Sequence[str] | None = (), actors: Sequence[str] = (),
+                         default: str | None = None) -> list[PersonTextProblem]:
+    """Rules 1, 2 and 4 of text a person reads (SPEC *Text a person reads*): ``sentence`` one plain sentence
+    with no code token (None reads no rule 1), each answer and ``default`` naming an actor, and ``context``'s
+    code tokens named in one warning. [] when the text passes; in rule order."""
+    acts = _pt_entries("actors", actors, trim=True)
+    names = _pt_entries("people", people)
+    problems: list[PersonTextProblem] = []
+    if sentence is not None:
+        r = _pt_read(sentence)
+        parts = _pt_sentence_parts(r, question, SENTENCE_WORDS)
+        tokens = _pt_tokens(r) if r.words else []
+        if tokens:
+            parts.append(f"the code token{'s' if len(tokens) > 1 else ''} {_pt_list(tokens)}")
+        if parts:
+            problems.append(PersonTextProblem(1, True, _pt_rule1_line(parts, question, SENTENCE_WORDS)))
+    actor_re = _pt_actor_re(acts, names)
+    cure = "say who: I'll…, you…" + (f", or {actors[0]}…" if acts else "")
+
+    def says_who(answer: str) -> bool:
+        label, cons, _ = split_answer(answer)
+        return _pt_names_actor(cons if is_form(label) else f"{label} {cons}", actor_re)
+
+    for i, answer in enumerate(answers, 1):
+        if not says_who(answer):
+            problems.append(PersonTextProblem(2, True, f"rule 2: answer {i} names nobody who acts — {cure}"))
+    if default is not None:
+        same = any(split_answer(default)[0] == split_answer(a)[0] or _pt_unmarked(default) == _pt_unmarked(a)
+                   for a in answers)
+        if not same and not says_who(default):
+            problems.append(PersonTextProblem(2, True, f"rule 2: the default names nobody who acts — {cure}"))
+    if context is not None:
+        tokens = code_tokens(context)
+        if tokens:
+            problems.append(PersonTextProblem(
+                4, False, f"rule 4: the person reads the context in plain words: {_pt_list(tokens)} go behind the link"))
+    return problems
+
+
+def title_problems(title: str, *, coined: Sequence[str] = (), labels: Sequence[str] = ()) -> list[PersonTextProblem]:
+    """Rule 3 (SPEC *Text a person reads*, *A label*): a title holds no code token and no label — the format's
+    ``TD-n`` and ``<repo>#TD-n``, a word matching one of the caller's ``labels`` patterns, or one of its
+    ``coined`` words. [] when it is plain words."""
+    words = _pt_entries("coined", coined)
+    for w in words:
+        if any(ch.isspace() for ch in w):
+            raise ValueError(f"coined: an entry holds whitespace: {w!r}")
+    pats = []
+    for p in _pt_entries("labels", labels):
+        try:
+            pats.append(re.compile(p))
+        except re.error as e:
+            raise ValueError(f"labels: not a regular expression: {p!r} ({e})") from None
+    coined_re = (re.compile(f"(?:{'|'.join(re.escape(w) for w in words)})(?:e?s)?", re.IGNORECASE)
+                 if words else None)
+
+    def is_label(word: str) -> bool:
+        return (_pt_TITLE_LABEL_RE.fullmatch(word) is not None or any(p.fullmatch(word) for p in pats)
+                or (coined_re is not None and coined_re.fullmatch(word) is not None))
+
+    found = _pt_tokens(_pt_read(title), is_label)
+    return [PersonTextProblem(3, True, f"rule 3: a title is plain words: {_pt_list(found)} belong in the body")] \
+        if found else []
 
 
 # ---------------------------------------------------------------------------------------------

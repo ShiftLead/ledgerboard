@@ -1842,6 +1842,178 @@ one would change), 2 usage, or the ledger or an id cannot be used as asked, 3 `n
 file restored). The board writer exits by the same table (*The board writer*), so a code means one thing whichever
 writer ran.
 
+## Text a person reads (v3.2)
+
+Text that waits on a person — a board item's question and its answers, an entry's Ask and Answers, a title — is
+held to four rules by one check, which a writer runs before it writes (`person_text_problems()`,
+`title_problems()`). The module reads only the text it is given: who may act in the caller's process (`actors`),
+its coined words (`coined`), its label patterns (`labels`) and the board's people (`people`) are the caller's.
+Each function returns a list of `PersonTextProblem(rule, refuse, line)`, empty when the text passes, in rule
+order; `refuse` is true for rules 1 to 3 and false for rule 4; `line` is one line saying what failed and its
+cure. An empty entry (after trimming, for `actors`), or one holding a line break (`\n` or `\r`), in `actors`, `people`, `coined` or `labels`, a `coined`
+entry holding whitespace, or a `labels` entry that is no regular expression, raises `ValueError`. `people` may
+be `None`, read as no names.
+
+1. **One plain sentence**: not empty, at most `SENTENCE_WORDS` (25) words, no sentence end inside it, ending in
+   `?` when it is a question (`sentence_problems(text, question=, max_words=)`, which reads these and nothing
+   else); and no code token (`code_tokens()`). `person_text_problems` reads both and gives at most one rule-1
+   problem; with `sentence` `None` it reads no rule 1.
+2. **Every answer says who acts**: each answer, and `default`, names an actor.
+3. **A title is plain words** (`title_problems(title, coined=, labels=)`): no code token and no label.
+4. **The context is plain words**: its code tokens are named in one warning; never refused, never capped.
+
+**The text read.** First, `’` and `‘` become `'`, and `“` and `”` become `"`. Then each fenced block — a fence as *Ledger entries and their edits*
+reads one: an opening line of three or more backticks or tildes, indented at most three spaces, then any info
+text, spaces included (after backticks, holding no backtick), as the module's fence line reads it; to a closing line of the same character at
+least as long, indented at most three spaces and holding nothing else; or, with no closing line, to the text's
+end — and each code span outside them — a run of n backticks,
+then text holding no run of exactly n backticks and no blank line, then n backticks — is found and replaced, in
+place, by a stand-in (a backtick with no partner is a plain character). A piece holding a stand-in is one word
+that no pattern, `ACTOR_WORDS`, `actors`, `people`, `coined` or `labels` entry reads, so *`foo`'s* is one word
+and *`a`/`b`* one word; each span or fence in it is a code token, spelled as the span is written or as `a code
+block`. Then, outside them, a markdown link's target (`](…)`, the `]` kept) and a bare
+URL are dropped; a bare URL is `https?://\S*` up to and not including a run of `. , ; : ! ? ) ] } " ' * _`
+that ends its piece, so *see https://x.io/guide?* keeps its `?`. The rest is read as whitespace-separated pieces; each is
+stripped of leading `( [ { " ' * _` and trailing `. , ; : ! ? ) ] } " ' * _`, then of an ending `'s`, and a piece holding no letter or
+digit after the strip (`—`, `-`, `&`, `/`, `~/`) is no word; a letter and a digit are Python's (`str.isalnum()`
+of a character), and a pattern's classes are as written. A pattern below matches the whole stripped word unless
+it says *holds*; each is case-sensitive unless it says otherwise. Rules 1, 2 and 3 read these words, so an actor
+or a label inside a span, a fence, a link's target or a URL is not read.
+
+**A code token** (`code_tokens(text)`: in the order of their place in the text, each distinct token once): a
+code span, spelled as written with its backticks; a fenced block, spelled `a code block`; and a word that is
+one of these, spelled as the stripped word unless it says otherwise —
+- a *path*: opens `/`, `~/`, `./` or `../`; or splits on `/` into three parts or more of which one holds a
+  letter, or into two whose last is a file name; or holds a `\` between two word characters;
+- a *file name*: `[\w.-]*\w\.(<ext>)(:\d+)?`, case ignored, `<ext>` one of `CODE_EXTS` (*foo.py:42* is one);
+- a *call*: a piece that, before the strip, holds `[A-Za-z_][\w.]*\(` whose `(` is not followed by `s)` or
+  `es)`, spelled as the name before the `(` and `()` (`one_sentence(x)` gives `one_sentence()`; `file(s)` is no
+  call);
+- a *snake_case name* `[a-z][a-z0-9]*(_[a-z0-9]+)+`; a *dotted name* `[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*){2,}`,
+  case ignored; an *upper-case name* `[A-Z][A-Z0-9]*(_[A-Z0-9]+)+`; a *camelCase name* `[a-z]+[A-Z]\w*`;
+- a *range*: holds `..` between two word characters;
+- a *commit*: 7 to 40 characters of `[0-9a-f]`, holding both a digit and a letter;
+- an *option*: opens `--` and a letter.
+
+A word that is more than one kind is one token. An id (`TD-1845`, `#3878`, `F12`) and a version (`v2.7.1`,
+whose parts open with digits) are no code token. Known false positives: *yes/no/maybe*, *he/she/they*, *A/B/C*,
+*US/EU/UK*, *and/or/else*, *Mon/Wed/Fri* (paths); *a(n)* (a call); *Node.js* (a file name); *docs.github.com*, *U.S.A*, *a.b.c* (dotted); *iPhone*, *iOS*, *macOS*
+(camelCase); a word written with `_` on purpose. Known gaps: a command written as words (*git rebase*), and a
+name whose `_`s the strip removes (`__init__` reads as *init*); a two-part path with no file name
+(*docs/plans*); a variable (`$HOME`), a short option (`-f`), a bare `{"a":1}` and a file with no extension
+(*Makefile*); a path with a line number and no file name (*src/lib:42*), a file name with more than one line number or a
+range (*foo.py:42:7*, *foo.py:42-50*), a dotfile (*.gitignore*), an extension outside
+`CODE_EXTS` (*Foo.java*), a two-part member (*UserService.getName*), a PascalCase name
+(*NullPointerException*), a host and port (*localhost:8080*), an assignment (*DEBUG=1*), an address
+(*dev@example.com*) and a two-part host (*example.com*, where *www.example.com* is dotted).
+
+**One sentence** (rule 1). The sentence is empty when it holds no word; an empty sentence fails with that
+alone, its length and end unread. It has more than `max_words` words when
+its words, a span or fence counting as one, number more. It has a sentence end inside it when a `.`, `?` or `!`,
+then any of `) ] } " ' * _`, then a space or a line break, stands before its last word, but not a `.` ending a word
+that is, case ignored, an abbreviation — *e.g*, *i.e*, *vs*, *etc*, *cf*, *mr*, *mrs*, *ms*, *dr*, *jr*, *sr*,
+*st*, *no*, *approx*, *est*, *a.m*, *p.m*, or a month's (*jan*, *feb*, *mar*, *apr*, *jun*, *jul*, *aug*, *sep*,
+*sept*, *oct*, *nov*, *dec*) — and not an ellipsis (`...` or `…`) (so *Say (really?) what you think?* has one inside).
+Its end is the read text's last character that is not whitespace or one of `) ] } " ' * _` (*_Is it ok?_*
+ends in `?`): a question's must be
+`?` (*Should I run `make test`?* and *Should I "ship it?"* end in `?`); a statement's end is not read. Known false positive: another abbreviation or an id followed by a stop and a
+space (*U.S. law*, *Ph.D. thesis*, *TD-909. Which*), which the line's part names: *write it without the stop*.
+Known gap: *no* is an abbreviation (*No. 5*), so *Say no. Then what?* passes.
+
+**An actor** (rule 2): a match, over the read words joined by single spaces, in the bounds `(?<![\w'/-])` before and `(?![\w'/-]|\.\w)` after (so *us-east-1*, *I/O* and *my-app*
+name no actor), of an I-form (*I,
+I'll, I'm, I've, I'd*, case-sensitive); of a word of `ACTOR_WORDS` (case ignored); of an entry of `actors`, a
+word or a phrase taken as literal text, trimmed and its whitespace collapsed to single spaces (an entry empty after that is a
+`ValueError`), its last word optionally followed by `'s` or `s` (case ignored); or of a
+name in `people`, literal, optionally followed by `'s` (case ignored, as SPEC compares a person's name, so a person named *Will* makes *it will be built* name an
+actor: a known gap). An answer is read through
+`split_answer()`: its label and its consequence, the ` (default)` mark dropped; an answer whose label is a form
+(`is_form()`: `Hold: <note>`, `Not right: <what>`, `Other:`) is read by its consequence alone, and any other by its label
+and consequence. `default` is read as an answer is, and skipped when its label, after `split_answer()`, equals an
+answer's label, or its text with the mark dropped equals an answer's with the mark dropped. Known gaps: the check sees words, not meaning (*you will not hear of it
+again* passes), *US* (*the US market*) reads as *us*, and *me/you* or *you-or-me* names no
+actor (the bounds); a caller's `actors` bring their own (a noun *lead*
+matches *lead* in *take the lead*).
+
+**A label** (rule 3): a word matching `(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+#TD-\d+|TD-\d+` (the format's
+`<repo>#TD-n` and `TD-n`), a word matching any of `labels` (each compiled
+on its own by Python's `re`, case-sensitive unless the pattern says otherwise, and `fullmatch`ed against the
+stripped word, its `'s` already gone, so *TD-5's* is a label), or a word of `coined` (each entry one word,
+refused with `ValueError` if it holds whitespace), case ignored, with `s` or `es` after it or not.
+
+**The lines**, one per problem, rule 1's first, then rule 2's in the answers' order with the default last, then
+rule 4's (`title_problems` gives rule 3's alone). A `<list>` names each distinct item once, up to three, in the order found: `a`,
+`a and b`, `a, b and c`, and from four `a, b, c and <k> more`. `<i>` counts the answers from 1.
+- rule 1: `rule 1: the question is one plain sentence of at most <n> words ending in ?: <parts>` for a question,
+  `rule 1: the sentence is one plain sentence of at most <n> words: <parts>` for a statement; `<parts>` every
+  failure, in this order, joined with `; `: `it is empty`, `this has <m> words`, `this has a sentence end inside
+  it (write it without the stop)`, `this does not end in ?`, and `the code token <list>` (`the code tokens
+  <list>` for two or more). `sentence_problems` writes the same line without the code part. Example: *rule 1:
+  the question is one plain sentence of at most 25 words ending in ?: this has 26 words; this does not end in ?;
+  the code tokens profiles.yml and one_sentence()*.
+- rule 2: `rule 2: answer <i> names nobody who acts — say who: I'll…, you…`, then `, or <a>…` when `actors` is
+  not empty (`<a>` its first entry as given); `the default` in place of `answer <i>`. Example: *rule 2: answer 1
+  names nobody who acts — say who: I'll…, you…, or session…*.
+- rule 3: `rule 3: a title is plain words: <list> belong in the body`, the code tokens and labels in their
+  order in the title. Example: *rule 3: a title is plain words: TD-078, B4 and profiles.yml belong in the body*.
+- rule 4: `rule 4: the person reads the context in plain words: <list> go behind the link`. Example: *rule 4:
+  the person reads the context in plain words: grammar.py, one_sentence(), profiles.yml and 2 more go behind
+  the link*.
+
+**The fixtures decide** (`fixtures/person_text/`), as everywhere in this text: where this prose and the module
+disagree on a word, the fixtures say which is right, and a false positive or gap found later is a fixture case
+first.
+
+**Which writes a writer checks.** The rules reach text a writer writes for a person, never the writers' `plan_*`
+functions or the module's edits (`item_file()`, `edit_entry()`), which sweeps and migrations also call, and never
+a file already written. A writer refuses the write when any problem's `refuse` is true, naming every problem,
+and writes with rule 4's line shown. `people` is the board's `People:` (`board_people()`) for a board
+item (`None`, a board with no such line, reads as no names), and the caller's for a ledger entry. It runs:
+- **a `decide` item**, two calls. The item's text is the text the writer is given for it (`item_file()`'s
+  `text`, collapsed and trimmed as `item_file()` does, before any line or file is written). Its **lead** is
+  `bold_head(text, heading=True)` (*The bold head*, read whole as an item file's heading is) when
+  `BOLD_RE.match(text)` succeeds and that is not `None` (a blank run gives none); its **tail** is the text after
+  the matched run, trimmed. Otherwise it has no lead and no tail, and a text with no lead whose first bold run
+  is not blank (`bold_head(text, heading=True)` is not `None`) is the writer's refusal, with the line *a bold run
+  that does not open the text becomes the board's headline: open the text with it, or write it plain* (a
+  writer's refusal, not a `PersonTextProblem`), since the board would show that run as the headline. A text of more than one line, or an empty one,
+  is the writer's refusal before the check, as `item_file()`'s. Each of these writer's refusals (the bold-run line,
+  and an `act`'s lead line below) comes before the check and stands alone: the writer gives that line and runs
+  neither call, so the session rewrites the text's shape first. The lead is the board's headline,
+  so it must stand as the question by itself; reading the lead and tail as one sentence was weighed and
+  rejected, since a person scanning headlines would meet *Merge the PR* with no question in it. First,
+  `person_text_problems(<lead, else the whole text>, <its answers>, <context>, question=True, people=, actors=,
+  default=)`, the context being the tail, then the detail block's parts `context`, `caveats` and `recommended`
+  and its `otherwise` text, as the writer is given them (the `recommended` before the writer adds the default's
+  label and ` — `), joined by blank lines in that order; never the item's `Context:` field, which names a gate.
+  A text with no lead and no non-blank first bold run (a blank first run reads as none, *The bold head*) is read whole, so a second sentence there is refused and belongs in the detail block; a
+  lead is the whole question, so *\*\*Merge the PR\*\* now?* is refused (its lead has no `?`). Second, the
+  detail block's `question`, `person_text_problems(<question>, question=True, people=, actors=)` with the same
+  `people` and `actors`. The writer lists the first call's problems, then the second's, each line after the
+  name of the text it came from (`item: `, or `item (the bold part): ` when a lead was split off; `detail question: `; a rule-4 line after
+  `context: `), so a session
+  sees which to rewrite.
+- **an `act` item**: as a `decide`'s first call with no answers and `question=False`, its lead the sentence and its tail context. An
+  `act` whose text opens with no lead is refused by the writer, with the line *an act item leads with its task in
+  bold* (a writer's refusal, not a `PersonTextProblem`; for an `act` this line is the one given, not the
+  `decide`'s bold-run line). Example: *Reply to \*\*Dana\*\* about the budget* has
+  no lead and is refused; *Should I merge \*\*#42\*\*?*, a `decide`, has no lead and is refused for its bold
+  run, and *Should I merge #42?* is read whole. An `act`'s detail `question`, where it has one, is read by the
+  `decide`'s second call (`question=True`, the same `people` and `actors`), its lines after `detail question: `.
+- **a `look`, `watch` or `fyi` item, or one with no kind**: not checked (the source checks a `decide` and an
+  `act` alone).
+
+  A detail block part whose value is a list is read as its first string and its nested bullets' strings, one per
+  line.
+- **an entry's Ask**, on any write of it (`new`, `edit --section Ask`, and `set --ask` where the writer has it):
+  the Ask's text after its `**Ask:**` lead, its first paragraph the sentence (it ends at the first blank line outside a fence; a blank line inside a fence ends
+  no paragraph), `question=True`, and its later
+  paragraphs the context. An Ask carries no answers in this format; a ledger that keeps its own `Answers`
+  (a repo's own field or section) passes them, read as a board's `Answers:` value (`parse_answers_value()`);
+- **an entry's title**, on `new` and `set --title`: `title_problems()`; never on `renumber`, `archive` or
+  `reopen`, which carry a title already written.
+This package's own command lines do not run it: the writer that holds the caller's vocabulary does.
+
 ## Versions
 
 A ledger or board may declare its major version on a preamble line, `Ledgerboard: 1`; none means 1 for a ledger,
@@ -2144,6 +2316,11 @@ with `set --ask`; and `edit_entry()` raises `Refused` for such an Ask. A ledger 
 `reopen` of that entry, whose flag is then new; `check()` given a base names it an error once any write changes
 the entry's text (a `note`, `fmt`, a relink). So a consumer gates each such entry or removes its Ask when it takes
 v3.1.
+
+**v3.2 adds the check of text a person reads** (*Text a person reads*): `person_text_problems()`,
+`title_problems()`, `sentence_problems()`, `code_tokens()`, `PersonTextProblem`, `SENTENCE_WORDS`,
+`CODE_EXTS` and `ACTOR_WORDS`. It reads every file v3.0 wrote as v3.0 did, and no existing function's output
+changes; no writer of this package calls the check.
 
 ## Appendix: grammar
 
