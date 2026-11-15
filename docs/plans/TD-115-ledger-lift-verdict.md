@@ -164,7 +164,7 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
 
 A text the verdict cannot read never escapes as `Refused`. The verdict calls `tripwire()` first, as
 `lift_pr_verdict()` does, and the tripwire reads the Log of every entry open at both ends; where it raises
-`Refused` (an entry anywhere in the ledger with two Log sections, say), the verdict returns at once with
+`Refused` (an entry open at both ends with two Log sections, say; one open at one end only is not read), the verdict returns at once with
 `flags` `[]` and `review` `ledger-lift-unreadable`, naming the refusal's words. Past that, an item file the
 board reader skips (`parse_item()` gives None, so `load_board()` leaves it out) or `edit_item()` refuses is
 `ledger-lift-board`, and `lift_gate()`'s refusals are `ledger-lift-bytes` (condition 8). `lift_pr_verdict()`
@@ -228,9 +228,9 @@ machine's log is not the same on every machine.
 ### D5. The release
 
 A minor release, written **v3.2** throughout this plan: the number is the next unreleased minor when the build
-merges (TD-111's plan, its F78, takes the same rule and also expects v3.2; whichever lands second takes the next
-number, or, where both land in one unreleased minor, shares its *Versions* paragraph, and the runner's guards
-name that number). It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+merges. TD-111's plan takes the same next-unreleased-minor rule (its F78: v3.2 if TD-109 releases v3.1). The
+rest is this plan's own: whichever of the two lands second takes the next number, or, where both land in one
+unreleased minor, shares its *Versions* paragraph, and the runner's guards name that number. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
@@ -343,7 +343,8 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 
 > `lift-subject` (v3.2) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
 > matches the whole line, nothing after its `)` (no trailing newline), and `lift_subject()` writes the gate as
-> `_one_gate()` spells a decision, whatever spacing it is given.
+> `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
+> `_one_gate()` refuses (`decision (Ann )`, say) is refused.
 
 **And the appendix's first sentence** gains *v3.2: the ledger lift's commit subject;* before *later releases add
 the rest*.
@@ -389,8 +390,9 @@ every name is invented (AGENTS.md).
 - the Log: no new line, two new lines, a `gate lifted` line for another gate, an `override:` lift, and a note
   in place of the lift → `ledger-lift-log`; a waiting-only label (`lift_gate()` refuses it) →
   `ledger-lift-bytes`.
-- a head entry with two Log sections, and an unrelated base entry with two → `ledger-lift-unreadable`, flags
-  `[]`.
+- a head entry with two Log sections, and an unrelated entry open at both ends with two → `ledger-lift-unreadable`,
+  flags `[]`.
+- `lift_subject()` given `decision (Ann )` refuses (a unit test); given `Decision(Ann)` writes `decision (Ann)`.
 - a subject naming `TD-12` for the file `TD-012.md` passes.
 
 - a v1 ledger → `ledger-lift-entry`; a changed `README.md` in `files` → `ledger-lift-board`; a dropped old
