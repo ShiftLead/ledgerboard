@@ -1,11 +1,13 @@
 # TD-115: a merge-gate verdict for a PR that only lifts a gate
 
-**Status:** Draft 6, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 7, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
-Rounds: **ended at the cap**, round 6, 2026-11-15 (its design review raised one build-changing finding, F64;
-trend of build-changing findings by the design reviews, rounds 1–6: 4, 1, 1, 2, 1, 1; by the fact-checks: 3, 0,
-0, 1, 1, 1, closing 0). Recurring topics: D4's trust argument, the release number, unreadable text (settled by
-F58). Paul answered *One more round* (#349); round 7, past the cap, runs as TD-117 (the record:
+Rounds: **ended at the cap**, round 6, 2026-11-15 (build-changing findings by the design reviews, rounds 1–6: 4,
+1, 1, 2, 1, 1). Paul answered *One more round* (#349); round 7, past the cap, ran as TD-117 and ended 2026-11-15: its
+design review raised one build-changing finding (F76, a grammar fixture the build's own test would fail on),
+applied; fact-checks 0 build-changing, closing 0. Recurring topics: D4's trust argument, the release number,
+unreadable text (settled by F58), each judged again in round 7. F76–F81 were fact-checked, not design-reviewed;
+Paul's answer is the board's decide item, *One more round* recommended (the record:
 [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
@@ -259,9 +261,11 @@ waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)` and carries
 (v3-1-tagged):**` section (a gate's section is its own entry's, `event-section`), with the same check TD-109's
 carries, `check: ref-includes ShiftLead/ledgerboard@v3.1 ce8b7687e9b47783c3f0639431eea8541f443a5e` (TD-112's
 merge), which passes once the tag exists. TD-111's build may also
-write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it: this build adds its
-sentences (the quoted paragraph's, from *adds the ledger lift's verdict* on) to that one paragraph, after TD-111's,
-and writes no second v3.2 paragraph; if v3.2 is
+write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it in one paragraph, and
+the build writes no second v3.2 paragraph: its bold lead names both additions (**v3.2 adds the check of text a
+person reads and the ledger lift's verdict**, each with its sections), this build's sentences follow TD-111's, and
+TD-111's *no existing function's output changes* reads *no existing function's output changes but
+`subject_kind()`'s, below*, so the joined paragraph does not contradict its own *One reading changes*; if v3.2 is
 already tagged then, every `v3.2` in this build's SPEC text, fixtures and runner becomes the next untagged
 minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
