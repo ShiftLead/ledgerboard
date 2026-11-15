@@ -2,7 +2,11 @@
 
 **Status:** Draft 6, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
-Rounds: ended at the cap, round 6, 2026-11-15 (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
+Rounds: **ended at the cap**, round 6, 2026-11-15 (its design review raised one build-changing finding, F64;
+trend of build-changing findings by the design reviews, rounds 1–6: 4, 1, 1, 2, 1, 1; by the fact-checks: 3, 0,
+0, 1, 1, 1, closing 0). Recurring topics: D4's trust argument, the release number, unreadable text (settled by
+F58). F63–F72 were fact-checked, not design-reviewed; Paul's answer is the board's decide item, *One more round*
+recommended (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
@@ -295,7 +299,8 @@ commit that answers a gate's item is refused by its own audit.*:**
 > (the lift has no suffix, and closes every such item `— lifted`); `shared`, an item that lists another gated
 > entry (`; shared board item left open`); `none`, no item (`; no board item`). `items` are the items that
 > decided the case, every one to close for `decided`, in the board's item order. It refuses an entry the ledger does not hold open or that
-> does not carry `gate`, a gate that is no decision, and a v1 ledger; a tree with no board is `none`.
+> does not carry `gate`, a gate that is no decision, a v1 ledger, and a `repo`
+> `_check_repo()` refuses; a tree with no board is `none`.
 >
 > `ledger_lift_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.2)
 > returns `{carve_out, flags, review}` for a PR that lifts one entry's decision on the ledger, its arguments
