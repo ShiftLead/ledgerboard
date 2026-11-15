@@ -264,7 +264,7 @@ build also writes v3.3; each writes its own *Versions* paragraph with its own bo
 on main when it merges, as *Versions* already holds several paragraphs for one release (v2.4, v2.7, v3.0), so
 neither paragraph's claims are the other's. If v3.3 is already tagged when this build merges, every `v3.3` in this
 build's SPEC text, fixtures and runner becomes the next untagged minor. TD-119's own D6 says the same once its
-round 3 (TD-122) merges; the build is filed only after that. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+round 3 (TD-122) merges; the build is filed only after that, a filing order rather than a gate. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.3. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
@@ -465,7 +465,7 @@ The subject's writer and reader are held by `fixtures/item/cases.json`'s subject
 `subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
 `hasattr(L, "lift_subject")` guard to that block, reporting `lift_subjects` as `missing` for a module older than
 v3.3). The key holds two lists: `writer`, each row `lift_subject()`'s arguments (`tid`, `gate`, `tool`,
-`session`) and in `expected.json` the subject it writes or `{"error": "Refused"}`; and `reader`, each a subject
+`session`) and in `expected.json` the runner's `_refused()` form, `{"ok": <the subject>}` or `{"refused": <the message>}`; and `reader`, each a subject
 string and in `expected.json` `lift_subject_parts()`'s parts or None. They hold the press's own subject written
 and read back; a `<repo>#TD-n`, an `until` gate, a session with a space and a 19-digit id refused by the writer,
 and the 19-digit subject read None by the reader (the cap the prose states). The `lift` subject is also added to
@@ -485,7 +485,7 @@ and `lift_form()`'s refusals, a bad `repo` among them.
 
 ## What a build does
 
-One build, waiting on no tag (D5): the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
+One build, waiting on no tag and filed only once TD-122 has merged (D5, a filing order, not a gate): the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
 `lift_subject_parts()` and the `lift` kind in `ledgerboard/__init__.py`, the fixtures and the runner's
 `ledger_lift` and `lift_form` lists, and the unit tests, in one PR. The release (v3.3) is Paul's; agent-cadence
 then wires carve-out `lift` (its TD-262) on its vendor PR, and its techlead is told which release carries it.
