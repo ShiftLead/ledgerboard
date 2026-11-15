@@ -98,6 +98,10 @@ no consumer's existing PR or commit changes.
 - `lift_subject_parts(line)` reads it back as `{"tool", "gate", "id", "session"}`, each part as written (`"n/a"`
   for a session written so, the id spelled as given), or None for any other line.
 
+A session written with backticks, as some board subjects write it (`` (session `lb-designer`) ``), is not a
+`log-token`: `lift_subject()` refuses it and `lift_subject_parts()` reads None, so the PR goes to review at
+`ledger-lift-subject`. That is deliberate (the Log's rule; the press writes `n/a`), not a gap a host should work around.
+
 A lift of another repo's entry (`<repo>#TD-n`) has no subject here: its lift is a PR in that repo (ShiftLead's
 §4.4), whose own subject names its own `TD-n`.
 
@@ -211,7 +215,8 @@ by a button press*):
   is one.
 - **Case `decided` supersedes the person's recorded work order** in one unreviewed PR, where the decide
   carve-out refuses a re-answer (`lift-reanswer`). The person's own answer stays on the closed item; the lift
-  ends the order, which is what the press means.
+  ends the order, which is what the press means. That answer need not have been a lifting one: an answer that
+  neither lifts nor only waits is a work order `closes()` leaves open, and the lift ends it all the same.
 - **Case `shared` takes one entry out of an open shared question** with no `Decided:`, leaving the item asking
   the others. The decide carve-out cannot, since a shared item's answer must not speak for the entries left
   (v2.7); today only a caller that passes the suffix writes it (the ledger writer's `set` and `lift
@@ -254,7 +259,9 @@ waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)` and carries
 (v3-1-tagged):**` section (a gate's section is its own entry's, `event-section`), with the same check TD-109's
 carries, `check: ref-includes ShiftLead/ledgerboard@v3.1 ce8b7687e9b47783c3f0639431eea8541f443a5e` (TD-112's
 merge), which passes once the tag exists. TD-111's build may also
-write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it; if v3.2 is
+write v3.2. If its v3.2 paragraph is on main but untagged when this build merges, the two share it: this build adds its
+sentences (the quoted paragraph's, from *adds the ledger lift's verdict* on) to that one paragraph, after TD-111's,
+and writes no second v3.2 paragraph; if v3.2 is
 already tagged then, every `v3.2` in this build's SPEC text, fixtures and runner becomes the next untagged
 minor. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
@@ -374,9 +381,10 @@ subject `edit`, `append`, `archive`, (a rank write) `queue` or (a ledger lift, v
 **Under that block, in prose (what a production cannot say):**
 
 > `lift-subject` (v3.2) is a ledger lift's commit subject, judged by `lift_subject_parts()` not None. The reader
-> matches the whole line, nothing after its `)` (no trailing newline), and its digits are ASCII alone and at most 18 (`[0-9]{1,18}`, as a part's id reads,
-> never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, and the id's number always fits the
-> lookup by number), and `lift_subject()` writes the gate as
+> matches the whole line, nothing after its `)` (no trailing newline); it reads the gate's person as `person`
+> and the session as `log-token`; its digits are ASCII alone and at most 18 (`[0-9]{1,18}`, as a part's id reads,
+> never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, the cap being the reader's, which
+> `digit+` cannot say, and the id's number always fits the lookup by number); and `lift_subject()` writes the gate as
 > `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
 > `_one_gate()` refuses (`decision (Ann )`, say) is refused.
 
@@ -456,12 +464,14 @@ The subject's writer and reader are held by `fixtures/item/cases.json`'s subject
 `subject_kinds`, `edit_actions` and `subject_ids`, in a new `lift_subjects` key (the build adds a
 `hasattr(L, "lift_subject")` guard to that block, reporting `lift_subjects` as `missing` for a module older than
 v3.2): the press's own subject read back; a
-`<repo>#TD-n`, an `until` gate and a session with a space refused by `lift_subject()`; and `subject_kind()`'s
+`<repo>#TD-n`, an `until` gate, a session with a space and a 19-digit id refused by `lift_subject()`, and
+the 19-digit subject read None by `lift_subject_parts()` (the cap the prose states); and `subject_kind()`'s
 `lift`, with `edit_action()` and `subject_id()` None.
 
 The grammar appendix's new `lift-subject` production is a start (no other production reaches it), so
 `fixtures/grammar/cases.json` gains a `lift-subject` start with strings each way for it and for the productions
-it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id and a 19-digit id among its refused strings, the new start carrying all four itself
+it reaches (`log-token`, `person`, `person-part`, `digit`), a Unicode-digit id, `decision (a b)` and `(session a b)` among its refused strings (the 19-digit id is not a
+grammar case: `digit+` cannot say the cap, so the production accepts it), the new start carrying all four itself
 (the test reads each start's own groups), and `fixtures/run.py`'s
 `grammar_cases` a judge for it, `lift_subject_parts()` not None (`tests/test_grammar.py` holds every start and
 production to that).
