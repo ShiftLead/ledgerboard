@@ -1,8 +1,8 @@
 # TD-115: a merge-gate verdict for a PR that only lifts a gate
 
-**Status:** Draft 4, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 5, 2026-11-15 (session lb-designer). Class: **wide** (a vendored, published format: a new
 verdict, a new commit-subject kind and its writer, which both consumers vendor; cap 6 rounds, cadence.md §4.8).
-Rounds: running, round 3 of 6 (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
+Rounds: running, round 5 of 6 (the record: [docs/reviews/TD-115.md](../reviews/TD-115.md)).
 
 **Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
@@ -145,7 +145,7 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
    for the subject's gate with an `answer` (`log_line()`'s `via` `answer`, as `tripwire()` reads it)
    (`ledger-lift-log`). Its `label`, `by` and date `T` are what conditions 6 to 9 read.
 6. **Who:** the subject's `<p>`, the gate's person and the line's `by` are one name, compared
-   case-insensitively, and the base board lists it on `People:` (`ledger-lift-by`). `Answered by: any` admits
+   case-insensitively (the first two already agree by condition 3), and the base board lists it on `People:` (`ledger-lift-by`). `Answered by: any` admits
    no one else here: a lift by anyone but the gate's person takes review.
 7. **The form:** `lift_form(base_tree, TD-n, gate, repo)` is not `asked` (`ledger-lift-asked`: the item is the
    person's question, and its answer is the decide lift).
@@ -157,6 +157,9 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
    `item_path(id, C)` added, `C` the head file's `Closed:` date, as `edit_item(base file, "done", why="lifted",
    today=C)` byte for byte; and each such item's base `Decided:` names the gate's person (`decided_by`, any
    case), so the close rests on that person's own merged answer and on no one else's (`ledger-lift-board`).
+   `C` is the head file's `Closed:` date, passed to `item_path()` as `C.isoformat()`; a head file for the id
+   with no readable `Closed:`, or more than one head file for the id, is `ledger-lift-board`. The entry's bytes
+   are judged before the board's, so a PR failing both is `ledger-lift-bytes`.
 9. **The dates:** `T`, a UTC ledger date, lies within a day of `created_at` and not after the merge (else
    `created_at + 1`), as `lift_pr_verdict()`'s (c) windows its `T`; each `C`, a board date written by the
    board's local clock, lies from `created_at − 1` to the merge date (else `created_at`) `+ 1`, as that verdict
@@ -165,16 +168,14 @@ as two carve-outs (agent-cadence's `decide-lift` and `lift`).
 10. **No flag:** `flags` is empty (`ledger-lift-flagged`). A PR that passes 1–9 raises none by construction; the
    condition keeps a future tripwire rule from being skipped by this carve-out.
 
-The caller's own arguments are checked first, each raising `Refused` (a deliberate reorder: `lift_pr_verdict()`
-runs `tripwire()` first, so there an unreadable ledger raises instead of returning a reason): `repo` (as
-`_check_repo()` reads it), `created_at` and `merged_at` (a date or an aware datetime, and `merged_at` not before
-`created_at`) and `commits` (a count). A text the verdict cannot read never escapes as `Refused`. The verdict
-then calls `tripwire()`, as `lift_pr_verdict()` does, and the tripwire reads the Log of every entry open at both ends; where it raises
-`Refused` (an entry open at both ends with two Log sections, say; one open at one end only is not read), the verdict returns at once with
-`flags` `[]` and `review` `ledger-lift-unreadable`, naming the refusal's words. Past that, an item file the
-board reader skips (`parse_item()` gives None, so `load_board()` leaves it out) or `edit_item()` refuses is
-`ledger-lift-board`, and `lift_gate()`'s refusals are `ledger-lift-bytes` (condition 8). `lift_pr_verdict()`
-lets the same tripwire `Refused` escape today; that is its own fix, outside this design.
+**What raises, and what is a reason.** The verdict starts as `lift_pr_verdict()` does: `tripwire()` first (which
+checks `repo` and reads the Log of every entry open at both ends), then `created_at`, `merged_at` (not before
+`created_at`) and `commits`. A `Refused` from any of these escapes, as it does from `lift_pr_verdict()`: an entry
+open at both ends with two Log sections makes the tripwire, and so both verdicts, raise for any PR, and the
+consumer meets it whichever verdict it calls, since the tripwire runs on every PR. Past them, what the verdict
+reads is a reason, never a refusal: an item file the board reader skips (`parse_item()` gives None, so
+`load_board()` leaves it out), or a `Refused` or `ValueError` from `edit_item()` or `item_path()`, is
+`ledger-lift-board`; `lift_gate()`'s refusals are `ledger-lift-bytes` (condition 8).
 
 As for `lift_pr_verdict()`, (d) is the consumer's: a direct commit with this shape is refused by its own audit.
 
@@ -218,6 +219,12 @@ lands, then fails the consumer's review row, as a lift-only PR does today; Shift
 press. Both are kept: the carve-out rests on the gate's person's own answer and on a board that names its
 people.
 
+**Who would forge it.** The forger that matters is a session writing the press's exact bytes to unblock its own
+entry: it merges with no person involved. The PR's author cannot tell the two apart, since every session pushes
+as the person's one account, so no author check is made. What catches it is the consumer's audit: agent-cadence
+lists a carve-out's merges apart as tool merges in its weekly read (its cadence.md §4.2), and its TD-262 wiring
+should list `lift` merges so too, which its techlead is told.
+
 So the worst a forged PR does is lift one gate of an entry whose person is on the board, and in case `decided`
 also close that person's open work orders on the gate; a forged decide PR can do the first but not the close.
 
@@ -233,13 +240,12 @@ machine's log is not the same on every machine.
 
 ### D5. The release
 
-A minor release, written **v3.2** throughout this plan: the number is the next minor after the last one stamped
-when the build merges. Today the last stamped is v3.0; v3.1 (TD-109's `decision-missing`, TD-112's merge) is on
-main but unreleased, and TD-109's event only asks that the v3.1 tag include that merge. So the number is v3.2
-only if v3.1 is stamped before this build merges; otherwise the build lands in the unreleased v3.1, sharing its
-*Versions* paragraph. TD-111's plan takes the same next-minor rule (its F78), and whichever of the two lands in
-an unreleased minor shares that minor's paragraph. The SPEC text's `(v3.2)` marks and the runner's guards name
-the number by the same rule. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
+A minor release, **v3.2**: the next minor after the newest *Versions* paragraph on main, v3.1's. v3.1 (TD-109's
+`decision-missing`) is on main but not yet tagged (the last stamped is v3.0), and `release.sh` stamps whatever
+main holds, so a v3.1 cut after this build merged would carry it under marks that say v3.2. The build therefore
+waits for v3.1's tag: its entry is `Blocked by: event (v3-1-tagged)`, the event TD-109 already carries (its
+check, `ref-includes ShiftLead/ledgerboard@v3.1 <TD-112's merge>`, passes once the tag exists). Should TD-111's
+build reach v3.2 first, the two share v3.2's *Versions* paragraph. It is one new verdict, one new helper, one new subject kind and its writer and reader. No
 parse, field, Log line, item key or canonical form changes. One reading changes: `subject_kind()` returns `lift`
 for a subject that read None before, so a consumer that branched on None for it reads `lift` once it vendors
 v3.2. Neither consumer's code reads that subject's kind today; agent-cadence's TD-262 wires the verdict as its
@@ -272,8 +278,8 @@ names none by count again.
 **In *The merge gate's verdicts*, after the paragraph that ends *(d), a PR only, is the consumer's: a direct
 commit that answers a gate's item is refused by its own audit.*:**
 
-> `lift_form(tree, tid, gate, repo)` (v3.2) returns `(case, items)` for open entry `tid` (found by number, as
-> `entry_path()` finds it) carrying `gate`, a
+> `lift_form(tree, tid, gate, repo)` (v3.2) returns `(case, items)` for open entry `tid` (found by number, and
+> open as the tripwire reads the ledger: its file directly in `LEDGER_DIR`, its Status open) carrying `gate`, a
 > `decision (<p>)`, read against the tree's own board: the form a lift of it takes. An item *lists another gated
 > entry* when its Context entry or one of its `Parts:` ids is a bare `TD-n`, open in the tree's ledger (as the
 > tripwire reads its open entries), not `tid`'s number, and carrying the same gate. Of the items `covers()` names covering the gate (states `open` and
@@ -306,7 +312,8 @@ commit that answers a gate's item is refused by its own audit.*:**
 >   form's suffix, any refusal from `lift_gate()` failing too (`ledger-lift-bytes`); the board is unchanged for
 >   `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
 >   `item_path(id, C)` added as `edit_item(base file, "done", why="lifted", today=C)`, `C` the head file's
->   `Closed:` date, each such item's base `Decided:` naming the gate's person (`ledger-lift-board`);
+>   readable `Closed:` date, each such item's base `Decided:` naming the gate's person in any case
+>   (`ledger-lift-board`); the entry's bytes are judged before the board's;
 > - `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and each `C` from
 >   `created_at − 1` to the merge date (else `created_at`) `+ 1`, the board's local day running up to a day
 >   from UTC (`ledger-lift-date`);
@@ -316,10 +323,10 @@ commit that answers a gate's item is refused by its own audit.*:**
 > one answer by the gate's person on `People:`. Unlike a decide lift it needs no question on the board, in
 > `shared` it takes one entry out of an open shared question, and in `decided` it ends a work order the person
 > answered. Its suffix is read from this repo's board alone, so a `; board <repo>` lift takes review
-> (`ledger-lift-bytes`). The caller's own arguments (`repo`, the dates, `commits`) are checked first,
-> each raising `Refused`. A text the verdict cannot read is then a reason, never a refusal: a `Refused` from
-> `tripwire()`, which runs next, returns `ledger-lift-unreadable` with no flags; an item file the board reader
-> skips or `edit_item()` refuses is `ledger-lift-board`; any refusal from `lift_gate()` is `ledger-lift-bytes`. The Log line stays forgeable, and nothing in the format
+> (`ledger-lift-bytes`). As for `lift_pr_verdict()`, a `Refused` from `tripwire()`, which runs first, or
+> from the dates and `commits` escapes; past them a text the verdict cannot read is a reason: an item file the
+> board reader skips, or a refusal from `edit_item()` or `item_path()`, is `ledger-lift-board`, and any refusal
+> from `lift_gate()` is `ledger-lift-bytes`. The Log line stays forgeable, and nothing in the format
 > re-reads the lift once it merges (the sweep's audit reads `; board <repo>` lifts alone): the consumer's own
 > audit is its backstop, and a direct commit of this shape is the consumer's to refuse, as for the decide lift.
 
@@ -407,12 +414,15 @@ every name is invented (AGENTS.md).
 - the Log: no new line, two new lines, a `gate lifted` line for another gate, an `override:` lift, and a note
   in place of the lift → `ledger-lift-log`; a waiting-only label (`lift_gate()` refuses it) →
   `ledger-lift-bytes`.
-- a head entry with two Log sections, and an unrelated entry open at both ends with two → `ledger-lift-unreadable`,
-  flags `[]`.
+- a head entry with two Log sections raises `Refused` (a unit test, as for `lift_pr_verdict()`).
+- a `none` lift written with no suffix that also changes an item → `ledger-lift-bytes` (the entry's bytes are
+  judged before the board's).
+- a `decided` close whose head file has no readable `Closed:`, and an id with two head files →
+  `ledger-lift-board`.
+- a subject spelling the person `paul` for an entry's `decision (Paul)` passes.
 - `lift_subject()` given `decision (Ann )` refuses (a unit test); given `Decision(Ann)` writes `decision (Ann)`.
 - a subject naming `TD-12` for the file `TD-012.md` passes.
-
-- a v1 ledger → `ledger-lift-entry`; a changed `README.md` in `files` → `ledger-lift-board`; a dropped old
+- a v1 ledger → `ledger-lift-entry`; a `README.md` the trees change (and `files` names) → `ledger-lift-board`; a dropped old
   Log line beside the lift → `ledger-lift-bytes`; a `; board other/repo` lift → `ledger-lift-bytes`.
 - `ledger-lift-flagged` is unreachable by construction, so no fixture holds it; a unit test patches
   `tripwire()` to return a flag and expects it.
@@ -443,7 +453,7 @@ and `lift_form()`'s refusals.
 
 ## What a build does
 
-One build: the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
+One build, `Blocked by: event (v3-1-tagged)` (D5): the SPEC text above, `lift_form()`, `ledger_lift_verdict()`, `lift_subject()`,
 `lift_subject_parts()` and the `lift` kind in `ledgerboard/__init__.py`, the fixtures and the runner's
 `ledger_lift` and `lift_form` lists, and the unit tests, in one PR. The release (v3.2) is Paul's; agent-cadence
 then wires carve-out `lift` (its TD-262) on its vendor PR, and its techlead is told which release carries it.
