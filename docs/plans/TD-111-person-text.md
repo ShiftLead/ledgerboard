@@ -1,6 +1,6 @@
 # TD-111: a shared check for text a person reads
 
-**Status:** the rounds ended at round 6, the cap, on 2026-11-14; waiting on Paul's answer. Entry: [TD-111](../ledger/TD-111.md). Rounds:
+**Status:** the rounds ended at round 6, the cap, on 2026-11-14; Paul answered One more round (#338), and round 7 runs as [TD-113](../ledger/TD-113.md). Entry: [TD-111](../ledger/TD-111.md). Rounds:
 [docs/reviews/TD-111.md](../reviews/TD-111.md). In plain words: [docs/synopses/TD-111.md](../synopses/TD-111.md).
 
 The text that waits on a person (a board item's question and answers, an entry's Ask, a title) is written by
@@ -155,7 +155,7 @@ this list is the review trail):
   disagrees with its own rule they follow the rule (rule 4 names the first three tokens).
 - *the lead is the whole question*: the source reads a `decide`'s and an `act`'s bold head as its sentence
   (its table: *its bold head, else the line's first sentence*), and so does this design; what follows the bold
-  part, which the source left unread, is read here as context. The bold part is the board's headline, so it must
+  part, which the source left unread for a `decide` (an `act`'s is the next bullet), is read here as context. The bold part is the board's headline, so it must
   stand alone; reading lead and tail as one sentence was weighed and rejected.
 - *an `act`'s tail* is read as context (a rule-4 warning), where the source said the rest of its line is free.
 - *the actor bounds* add `/` and `-` (*us-east-1*, *I/O*, *my-app*, *agent-cadence* name no actor), where the
@@ -203,7 +203,7 @@ refuses right answers whenever they are forgotten.
 
 A minor, the next after v3.0 that is cut once B1 merges. It adds eight names to the module (four functions, the
 class and three constants) and changes no output of any existing function. It is not held for TD-109's build
-(TD-112): the SPEC text names the Ask writes by what they do, and `set --ask` where a writer has it.
+(TD-112, merged and not yet released): the SPEC text names the Ask writes by what they do, and `set --ask` where a writer has it.
 
 The order is AGENTS.md's: this repo's PR, then the release (Paul's), then agent-cadence's vendor PR, then
 ShiftLead's sync PR. Both have entries: agent-cadence's TD-268 (its writers call the check; an event gate on
@@ -446,7 +446,7 @@ the fixture kind, its runner function in `fixtures/run.py`, its cases; and the u
 fixtures' expected results come from this plan's SPEC text and its examples first, never from the module's output;
 a case where the build finds the prose wrong is named in the PR, with the SPEC fix beside it. The release number
 in the SPEC heading and *Versions* paragraph is the next unreleased minor when B1 merges (v3.2 if TD-109's
-release is v3.1). It is not held for TD-109's build, TD-112 (D4). On its merge the builder tells agent-cadence's techlead which release carries it.
+release is v3.1). It is not held for TD-109's build (TD-112, merged and not yet released as v3.1; D4). On its merge the builder tells agent-cadence's techlead which release carries it.
 
 ## Not done
 
