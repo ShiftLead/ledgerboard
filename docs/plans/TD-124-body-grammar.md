@@ -1,9 +1,9 @@
 # TD-124: the entry body grammar — strict section edges, one-line data
 
-**Status:** Draft 5 (rounds 1–3 applied), 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
+**Status:** Draft 6 (rounds 1–4 applied), 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
 section, what the check flags, a writer that rewrites every ledger; both consumers vendor it; cap 6 rounds,
-cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 5 applies rounds 1
-to 3. Rounds: round 4 next. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
+cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 6 applies rounds 1
+to 4. Rounds: round 5 next. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
 words: [docs/synopses/TD-124.md](../synopses/TD-124.md).
 
 **Entry:** [TD-124](../ledger/TD-124.md), from Paul's conversation of 2026-11-15, after his hold on TD-119.
@@ -83,7 +83,15 @@ flagged by nothing: those are emphasis by their place, and a list of bold labels
 
 Every flag here reads the raw body, as the writers' `_entry_sections()` reads it (`edit`, `archive`, the lifts),
 not the comment-dropped text: a line that holds only a comment is text, so a lead right after it is glued, since
-`edit --section` of the section above would swallow it. Lines inside an HTML comment are never a lead or a fault.
+`edit --section` of the section above would swallow it. **Comments, exactly:** the spans are `COMMENT_RE`'s
+matches over the raw body; a line is *inside* a comment when its start lies after a span's start and before its
+end (a line that begins with `<!--` is a comment-only line, text; the `-->` line is inside). A lead on a line
+inside a comment is a section to `_entry_sections()` and stays one: it is never flagged and never transformed, and
+the guard's list keeps it. Fence lines inside a comment open and close fences as `_entry_sections()` tracks them,
+so `fence-open` agrees with what the writers swallow. In an Ask's section, comment-only lines and lines inside a
+comment are not text past its line, and the Ask's value has its comments dropped (`**Ask:** <!-- c -->` is
+empty). `check()` gets each entry's raw text by the same cut as `_entry_texts()` (headings outside comments, the
+first of an id wins) and reads it with `_entry_parts()`; one it refuses is not read for the four kinds.
 `migrate-body` reads the same raw body, so a comment-only line before a lead gains the blank line after it. The
 indented or quoted Ask has its own message (remove the indent or the quote), and leads match case-insensitively
 by `field_key`, so `**ask:**` is an Ask.
@@ -148,14 +156,17 @@ whole-text scoping (which would raise every standing flag on a touched entry, an
 `old` had j, the first j are ℹ and the rest errors. A flag's text always carries its ordinal (*the 1st `**Done when**`*,
 *the 2nd …*), so faults 1..k are a prefix of any larger set: a write that lowers a count makes no new text, and the
 writer's `_same()` and gate agree with `check()`. Where `old`'s entry has `fence-open`, its other three kinds in
-the new text are all standing for that edit (closing the fence uncovers them; that cure is never refused). Where
+the new text after that fence's opening line are standing for that edit (closing the fence uncovers them; that
+cure is never refused), a stated exception to the invariant below; a fault before the fence counts as usual. The
+lead's name in a flag's text is its key (`field_key`), so respelling `**Done when**` as `**done when**` changes no
+text. Where
 the entry is absent from `old`'s open entries (a new entry, a `reopen`), its faults count from 0; where `old`'s
 entry is one `_entry_parts()` refuses, its faults are standing. With
 `old=None` the four are ℹ, as on a standing ledger. One `field-lines` flag per Ask section, whatever runs past it;
 an edit inside a faulty section that keeps its count (a third paragraph added to a standing Ask) is allowed.
 
 **Invariant (new against old).** A fault is new exactly when its key's count on the entry is higher than in `old`;
-`check()`, `--check --base` and the writer's gate count the same keys on the same comment-dropped texts. So between a vendor PR and its migrate PR, a Log note, a lift
+`check()`, `--check --base` and the writer's gate count the same keys on the same raw texts, read as D2 says. So between a vendor PR and its migrate PR, a Log note, a lift
 or any edit of an unmigrated entry passes `--check --base`, and only a new fault fails it.
 
 - `lead-form`: a paragraph that opens with a bold run that is not a strict lead (no colon, the colon after the
@@ -191,7 +202,7 @@ refuses (`_entry_parts()` alone; `check()` calls no `canonical()`) is not read f
    `**Context:**` lead after it. A lead's rewrite keeps every section's text and order; a glued lead's and an Ask's
    each make one new section boundary, on purpose: the glued line becomes the section its writer meant (in the 19
    archived cases a `**Resolved:**` leaves the Fix), and the sweep's item text for an Ask of several paragraphs
-   becomes its first paragraph. **Order:** on the comment-dropped text, leads are respelled first, then sections
+   becomes its first paragraph. **Order:** on the raw body (D2), leads are respelled first, then sections
    split at glued leads, then the Ask split, and the guard's expected list is built in the same order (so a lead
    glued under an Ask is its own section, never joined into the Ask line). An indented or quoted `**Ask:**`
    (`glued-lead`) is refused and kept, for a person to fix: stripping an indent or a quote is not a rewrite this
@@ -208,15 +219,18 @@ refuses (`_entry_parts()` alone; `check()` calls no `canonical()`) is not read f
    refuses (reported, as `fmt` reports). A label's respelling: the bold text's leading and trailing whitespace trimmed,
    one trailing `.` or `:` dropped, then `:` added inside the bold, and the text after the bold run less its one
    leading `:` (`**Why?**` → `**Why?:**`, `**Done when**: x` → `**Done when:** x`); a label with no name left
-   (`**:**`) is refused. An Ask's first paragraph is joined to one line by its lines' whitespace collapsed to
-   single spaces; an Ask whose first paragraph holds a comment or a code span is refused, so nothing inside one is
-   collapsed. The rest of the Ask goes under a `**Context:**` lead written alone on its line, then a blank line,
-   then the rest byte for byte; the guard's expected text for Context is that rest as written. The guard and the
+   (`**:**`) is refused. An Ask's first paragraph of more than one line is joined to one line by its lines' whitespace
+   collapsed to single spaces; refused instead when it must be joined and holds a comment or a code span, or a line
+   after its first that is not plain text (opening with `>`, `|`, a list marker, four spaces or a fence), or a line
+   ending in `\` or two spaces (a hard break). An entry with two Ask sections is refused. The rest of the Ask goes under a `**Context:**` lead written alone on its line, then a blank line,
+   then the rest byte for byte; the guard's expected text for Context is that rest as written, leading and trailing blank lines stripped on both
+   sides of the comparison. The guard and the
    rewrite read the same raw body (D2), and an entry with a comment inside a region to be rewritten (a label's bold
    run) is refused. Only an entry with at least one declared transform is written or counted as changed; it is
    written in `canonical()` form, which also normalises its header order, line endings and trailing blank lines, as
-   expected; any other non-canonical entry is `fmt`'s, *already migrated* here. A respelling is refused when its
-   new key is any other section's key in the entry, or a key the package reads (`why`, `fix`, `done when`,
+   expected; any other non-canonical entry is `fmt`'s, *already migrated* here. A respelling that keeps its key is never
+   refused. One that changes it (a dropped `.`, trimmed whitespace) is refused when its new key is another
+   section's key in the entry, or a key the package reads (`why`, `fix`, `done when`,
    `related`, `ask`, `answers`, `lifts`, `context`, `location`, `log`, `resolved`, an `event (…)`, `title`, a
    header name in `HEADER_NAMES`, or a name the ledger's `Fields:` declares). A glued-lead split may raise another
    kind on its own (a glued `**Log:**` becoming a section, `log-not-last`; an `**Ask:**`, `ask-missing`); that
@@ -292,7 +306,8 @@ paragraph that opens in bold narrows to one that opens with a strict lead.
 
 **In *Ledger entries and their edits*, after *The Log (v2.4)* paragraph**, a new paragraph:
 
-> **The body's shape** (v3.N). `check()` flags, on the text it reads (HTML comments dropped), ℹ on a standing
+> **The body's shape** (v3.N). `check()` flags, on each entry's raw body (D2's comment rule: a line inside a
+> comment is never a lead or a fault, a comment-only line is text), ℹ on a standing
 > ledger and, with `old`, an error only beyond the count `old` has of its key (entry, kind and lead's name; entry and
 > kind for `fence-open`), each flag carrying its ordinal (*the 1st*), on the raw body as the writers read it (a
 > comment-only line is text), ℹ with no `old`, and standing all where `old`'s entry has `fence-open`: `lead-form`, a
@@ -326,7 +341,10 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 >   entry is refused and kept, as is one with `fence-open` and an Ask whose first paragraph holds a list or a
 >   fence, an Ask whose lead's line is empty, or one `_entry_parts()` or `canonical()` refuses; the rest are
 >   written as one write. The guard compares (section key, text after the lead) with the v3.N reading under the
->   declared rewrites alone, on the raw body as the writers read it, lines inside an HTML comment never a lead;
+>   declared rewrites alone, on the raw body as the writers read it, a lead inside an HTML comment left as it is;
+>   a respelling that changes a lead's key to another section's key, a name this format reads or a header name is
+>   refused, as is a comment inside a label's bold run, an Ask that must be joined and holds a comment, a code span
+>   or a line that is not plain text, and an entry with two Asks;
 >   the Context lead is written alone on its line, a blank line, then the rest byte for byte; only an entry with a
 >   declared rewrite is written or counted, in `canonical()` form. A label's respelling
 >   trims leading and trailing whitespace and one trailing `.` or `:` from the bold text, adds `:` inside it, and
@@ -367,7 +385,10 @@ not an error, when the entry's text changed; an edit adding a second `**Done whe
 standing (an error, *the 2nd*); two errors against `base`, then one fixed (not refused); a fence closed by
 hand uncovering a glued lead (not refused); an Ask whose lead's line is empty refused; an Ask holding a code span
 refused; a respelling to `**Why:**` beside a Why refused; a clean but non-canonical entry left alone; the Context
-layout in `after/`.
+layout in `after/`; a lead inside a multi-line comment (not flagged, kept); a comment opening mid-line over a lead;
+a fence marker inside a comment; an Ask with a comment-only line below (clean); a comment-only line before a lead
+through `migrate-body` (the blank line added); a respelling whose key would clash refused; a new entry and a
+`renumber` against an absent `old`.
 
 ## Builds
 
