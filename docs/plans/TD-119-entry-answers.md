@@ -70,25 +70,38 @@ Each is found by its lead's name (`Answers`, `Lifts`, the colon optional, inside
 lead is matched), as a section `_entry_sections()` reads, and is one line: the section's text, HTML comments
 dropped first, is its lead's line and nothing else. Its value is that line after its lead's bold run, leading
 whitespace and one `:` removed and trailing whitespace stripped, `\|` kept for `parse_answers_value()` to read; an
-empty value is refused, never the title. Two refusals keep the read exact, and the check names each (D4):
+empty value is refused, never the title. Three refusals keep the read exact, and the check names each (D4):
 
 - **The field runs past its line**: any further line in its section, glued below it (a wrapped answer, a
   `**Fix:**` with no blank line before it, a code fence) or a later paragraph before the next lead (a stray
   sentence). So nothing after the line is ever read as part of the last answer or the last lift, and nothing is
-  dropped silently. A bold run inside the line (`Not yet — **Note:** you wait`) is answer text.
+  dropped silently. A bold run inside the line (`Not yet — **Note:** you wait`) is answer text, except one named
+  `Answers` or `Lifts`.
+- **A field inside the line**: a bold run named `Answers` or `Lifts` (D1's match, `**Lifts:**` or `**Answers**:`)
+  anywhere in either value, so a `**Lifts:**` typed on the answers' own line is never read as the last answer's
+  words while the lifts are lost.
 - **The lead starts no section**: a line of the body whose text, leading whitespace aside, opens with an
   `Answers` or `Lifts` lead but that `_entry_sections()` does not read as a section's start, because it is glued
   to the line above (the Ask, the Fix, the other field) or indented. So an `**Answers:**` glued to the Ask is not
   read as part of the question while the sweep offers `Go | Not yet`.
 
 This is the whole boundary rule here: the field is a line, so where it ends needs no rule; where it starts is
-`_entry_sections()`'s, which TD-124 makes strict for every section. When TD-124 lands, the second refusal is its
-general flag for a glued lead, and this reader keeps only the first. Lines inside a code fence are never tested
+`_entry_sections()`'s, which TD-124 makes strict for every section. When TD-124 lands, the last refusal is its
+general flag for a glued lead, and this reader keeps the other two. Lines inside a code fence are never tested
 (the fence as `_entry_sections()` tracks it: `FENCE_RE`, its open and close rules); an indented code block is not a
 fence, so an `Answers` or `Lifts` lead quoted in one is refused as a lead that starts no section, and is quoted in
-a fence instead. HTML comments are dropped first, as `_entry_texts()` drops them, so every caller reads the same
+a fence instead. A fence that never closes (one opened by a run and never closed by a bare run of its own
+character, at least as long, such as a `~~~` "closed" by a backtick run) guards nothing for this test: where the body
+ends inside an open fence, the lines after its opening line are tested too, so a real field swallowed by a stray
+fence is refused, never read as None. HTML comments are dropped first, as `_entry_texts()` drops them, so every caller reads the same
 text; a line that held only a comment is then a blank line, so a comment between a lead and the line above it
-leaves the lead starting a section. Only the
+leaves the lead starting a section. What opens with no lead of these names is prose, read by nothing here and
+refused by nothing: a list item or a quote (`- **Answers:** …`, `> **Answers:** …`), text before the lead on its
+line, a singular `**Answer:**` or `**Lift:**`, and a line inside the header block (a header field). An entry so
+written gets `Go | Not yet`, as today; TD-124's general flag for lead-like lines is where they are caught. The
+reader drops comments and the writer's `edit --section` does not, so a lead behind a comment on its own line
+(`<!-- x -->**Answers:** a | b`) is a section to the reader and none to the writer, which then appends a second
+`**Answers:**`, and the edit is refused as two sections: a refusal, not a misread. Only the
 body is read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
 qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the
 Log; the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section (the file one
@@ -108,18 +121,22 @@ nothing, which is the bug.
 
 `entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
-1. HTML comments are dropped (`COMMENT_RE`), and the entry is split by `_entry_parts()` into its header block and
-   its body; an entry it refuses, and that has a line (in the comment-dropped text) that `LEAD_RE` matches, its
-   leading whitespace removed, with a lead named `Answers` or `Lifts`, is refused (`Refused`, its reason). A line of the body (never the heading or the header block, where a field named `Answers` is a
-   repo's own) outside a code fence that, its leading whitespace removed, `LEAD_RE` matches with a lead named
-   `Answers` or `Lifts` (D1's match) and that `_entry_sections()` does not read as a section's start is refused,
-   *an Answers or Lifts lead that starts no section*. Otherwise, no such section: `None`, whatever else the entry
-   holds. The line-by-line scan tracks fences by `FENCE_RE` with `_entry_sections()`'s open and close rules. Two sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
+1. HTML comments are dropped (`COMMENT_RE`). If `_entry_parts()` refuses the entry, the reader scans every line of
+   that text: a line that, its leading whitespace removed, `LEAD_RE` matches with a lead named `Answers` or
+   `Lifts`, outside a fence, makes it refused (`Refused`, the parts' reason); with no such line, `None`. If the
+   entry parses, the reader scans its body alone (never the heading or the header block, where a field named
+   `Answers` is a repo's own): a line, outside a fence, that, its leading whitespace removed, `LEAD_RE` matches with
+   a lead named `Answers` or `Lifts` (D1's match) and that `_entry_sections()` does not read as a section's start is
+   refused, *an Answers or Lifts lead that starts no section*. The scan tracks fences by `FENCE_RE` with
+   `_entry_sections()`'s open and close rules, and where the text ends inside an open fence, it tests the lines
+   after that fence's opening line too (D1). Otherwise, no such section: `None`, whatever else the entry holds. Two
+   sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
 2. A section whose text (`_entry_sections()`'s, its trailing blank lines trimmed) is more than its lead's line:
    refused, *the field runs past its line*. A `**Lifts:**` with no `**Answers:**`: refused. An empty
    `**Answers:**` value: refused, *no answers*; an empty `**Lifts:**` value (nothing, or only bars): refused, *no
-   lifts*.
-3. The answers are `parse_answers_value()`'s of the `**Answers:**` value, each split by `split_answer()`; a bold
+   lifts*. A value holding a bold run that `LEAD_RE` would match, at any position, with a lead named `Answers` or
+   `Lifts`: refused, *a field inside the line*.
+3. The answers are `parse_answers_value()`'s of the `**Answers:**` value, each split by `split_answer()`; any other bold
    run in the line is answer text. More than one marked ` (default)` is refused; each is returned with its mark
    removed, as `<label>` or `<label> — <consequence>`, a bar in it a literal `|`; `default` is the marked one's
    index, else None.
@@ -246,7 +263,8 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > `entry_answers(entry_text)` reads them: None when the entry has neither; `{"answers", "default", "lifts"}` when
 > they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the marked one's index or
 > None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an `Answers` or `Lifts` lead in
-> the body, outside a code fence, that starts no section (glued to the line before it, or indented), an entry with
+> the body, outside a code fence that closes, that starts no section (glued to the line before it, or indented),
+> a bold run named `Answers` or `Lifts` inside either field's line, an entry with
 > either field that `_entry_parts()` refuses, two of one name, a field whose section runs past its line (a line
 > glued below it, or a later paragraph before the next lead), a `**Lifts:**` with no `**Answers:**`, an empty
 > `**Answers:**` or `**Lifts:**`, two answers marked, answers `item_file()` refuses as a `decide`'s `answers`,
@@ -318,7 +336,10 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   after the answers (accepted: comments are dropped first), a comment then text on the line after the answers
   (refused: the text left runs past the line), an `**Answers:**` after the Ask with only a comment line between
   (accepted: that line reads blank), a `**Fix:**` after the answers with only a comment line between (accepted),
-  an `**Answers:**` lead in a 4-space indented block (refused at step 1), `**Lifts:**` on the line after `**Answers:**` with no
+  an `**Answers:**` lead in a 4-space indented block (refused at step 1), a real `**Answers:**` after a backtick
+  fence never closed (refused at step 1), the same after a `~~~` fence "closed" by backticks (refused at step 1),
+  `**Answers:** Go | Not yet **Lifts:** Go` on one line (refused: a field inside the line), a list item
+  `- **Answers:** Go | Not yet` (None: prose), a singular `**Answer:**` (None: prose), `**Lifts:**` on the line after `**Answers:**` with no
   blank line (refused at step 1, a lead that starts no section), the same with the glued `**Lifts:**` indented by
   a space (refused at step 1), `**Answers:**` on the line after `**Ask:**` with no blank line (refused at step 1,
   not None), a glued `**Fix:**` after the answers (refused at step 2), an `**Answers:**` lead inside an HTML comment
@@ -344,4 +365,7 @@ techlead which release carries it.
 - **No writer flags**: `edit --section Answers|Lifts` writes the fields; `new` and `set` gain nothing.
 - **No section-edge rule**: where any section starts is TD-124's design (strict edges, one-line data fields, a
   check over every body); this design reads its two fields by today's `_entry_sections()` and refuses only what
-  D1 names. TD-124's build folds the glued-lead refusal into its own flag.
+  D1 names. TD-124's build folds the glued-lead refusal into its own flag, and is where list-item, quoted and
+  mid-line lead-like text is caught. TD-124 may also retire the colon-optional and colon-after-bold lead forms
+  (`**Answers**:`); this design reads them as every lead is read today, and its fixtures for them are ones
+  TD-124's migration may rewrite.
