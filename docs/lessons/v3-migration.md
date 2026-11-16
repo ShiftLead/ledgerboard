@@ -37,7 +37,9 @@ what had merged.
 | 2026-11-13 to 11-14 | The five v3.0 builds, then the ledger removals |
 | 2026-11-14 | v3.0 tagged; Paul chose a one-day rollout. agent-cadence took it and split its board in one PR (TD-263, in under two hours) |
 | 2026-11-15 | ShiftLead took it and split its board (TD-1881, #3968), inside its window, after a one-time archive cleanup (#3989) |
-| 2026-11-15 | v3.2 released, carrying the changes planned as v3.1 and v3.2. ledgerboard's own board was found still on v2 (TD-120, open) |
+| 2026-11-15 | v3.2 released, carrying the changes planned as v3.1 and v3.2. ledgerboard's own board was found still on v2 (TD-120) |
+| 2026-11-15 to 11-16 | ledgerboard's own board split (TD-120). Four more repos found never moved (pneuma-ops, guardians-devenv, contractmatch, samscrape): they pin agent-cadence's tools but vendor nothing, so the plan never listed them. Each was moved in two PRs, first to the last v2.8 ledger forms (pin to the commit before agent-cadence's v3.0 vendor, then `ledger.py migrate --release 2.8`), then to v3 with the board split, with a pre-split cleanup where old closes had no date |
+| 2026-11-16 | Every repo on the roster runs v3; a test press landed on three of the moved boards. agent-cadence took v3.2 (TD-268, TD-272); ShiftLead already vendored it |
 
 ## What went well
 
@@ -72,6 +74,9 @@ what had merged.
 | A planned version number was skipped | v3.1 was never tagged; entries waited on a tag that would never exist | Two release-numbered builds merged before a tag was cut | Released as v3.2; the waits re-pointed (#358) |
 | A release wasn't tagged when a consumer needed it | agent-cadence TD-221 waited on a v2.6 tag | The build was on ledgerboard's main, untagged | A hold on the tag |
 | A rebase during review | One extra ask (v2.7 in ShiftLead) | The new head had no precheck status | Precheck the new head before asking again |
+| Repos that only use agent-cadence's tools were never planned | Four repos kept a v2 board after the rollout "ended", so the person's presses on their items failed, and one repo's signup writer (an outside writer of another repo's board) had to change before that board could split | The plan listed the repos that vendor the package, not every repo that runs on it | Moved by hand, two PRs a repo; the outside writer changed first, then the split, then its deploy |
+| Old ledgers had shapes no converter expected | Fields packed on one line (`**A:** x · **B:** y`), wrapped fields, body text set under a header with no blank line, bold notes before the fields, free-text Waits. `migrate` read several of these silently wrong; a script written to fix them first folded body text into fields, and once lost an entry's body | A converter checks forms it knows; a shape it does not know can pass as a field | An independent review with scripted checks (each file's words before and after, no field holding body text) caught each case before merge. Fixed in the script and redone from main |
+| The split moved some text without a warning | An item's update, due date and context ended up in the README in one repo; a host written as a phrase was cut to its first word | `split_board()` keeps only the item line and its indented continuation, and reads a host as one word | TD-128, TD-129 |
 | Paul's Hold note was cut at 297 characters | The designer guessed the rest | A silent length cap | Sent to ShiftLead to keep notes whole or refuse visibly |
 
 ## Lessons about how the work was run
@@ -117,6 +122,8 @@ Before the release:
 - [ ] Run the new converter, dry, on every repo's real board and ledger, the format repo's own included, and fix
       what it refuses while the old tools still exist.
 - [ ] Check each board lists its people and reads clean under the new reader.
+- [ ] List every repo that runs on the format, not only those that vendor it: every repo pinning agent-cadence, and every outside writer of a board (a service writing another repo's board through an API).
+- [ ] Before a converter runs, scan each ledger for shapes it does not know (packed fields, wrapped fields, body under the header, notes before the fields) and fix them in their own commit, checked word for word.
 - [ ] Search every consumer for each removed name, fixtures and docs included, and judge each hit.
 - [ ] Tie every waiting hold to the release tag or the shipped build.
 - [ ] Paul picks the rollout window and the order: the format repo, agent-cadence, ShiftLead, then the format
@@ -127,6 +134,7 @@ During the cutover:
 - [ ] Before each consumer's switch merges, pause the gate sweep, or confirm the home is live on the new code.
 - [ ] Land each consumer's pin, vendored copy and split in one PR.
 - [ ] Run each consumer's readers before and after its switch, and record that they match.
+- [ ] After a scripted conversion, check every changed file mechanically: the same words before and after, no field holding body text, and nothing a split leaves behind in the README.
 - [ ] Tag each release as soon as its build merges.
 - [ ] Press one answer on each repo's board after its switch and check it lands.
 
@@ -135,12 +143,12 @@ After:
 - [ ] Close any duplicates the old code filed, with the board writer.
 - [ ] Confirm every entry in the plan is archived, then add what was learned here.
 
-## Open follow-ups (2026-11-15)
+## Open follow-ups (2026-11-16)
 
 | Follow-up | Where | Who acts |
 | --- | --- | --- |
-| Move ledgerboard's own board to v3 and bump its pin, in one PR | ledgerboard TD-120 | Paul, or a session he starts; Paul merges |
-| Take v3.2 (the no-hold flag and the plain-text check) | agent-cadence, then ShiftLead | Each repo's techlead files its vendor entry |
+| The split's two gaps: a host written as a phrase cut to its first word, and text below an item moved without a warning | ledgerboard TD-128, TD-129 | A grinder; TD-129's attach-or-warn choice may need a design |
+| The pre-split cleanup row cannot date a line ending in a bold sentence, and does not check the date floor | agent-cadence | Its techlead, sent 2026-11-16 |
 | The sweep offers an entry's own answers | ledgerboard TD-119 | In review; Paul decides |
 | The merge rule for Lift the hold changes | ledgerboard TD-115 | In review; no Go before ShiftLead's TD-1829 |
 | Keep a person's note whole, or refuse it visibly | ShiftLead | ShiftLead's techlead |
