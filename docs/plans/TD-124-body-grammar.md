@@ -149,8 +149,8 @@ whole-text scoping (which would raise every standing flag on a touched entry, an
 *the 2nd …*), so faults 1..k are a prefix of any larger set: a write that lowers a count makes no new text, and the
 writer's `_same()` and gate agree with `check()`. Where `old`'s entry has `fence-open`, its other three kinds in
 the new text are all standing for that edit (closing the fence uncovers them; that cure is never refused). Where
-`old`'s entry is one `_entry_parts()` refuses, or absent from `old`'s open entries but present in its archive
-(a `reopen`), all its faults count from 0, except for an unreadable `old`, where they are standing. With
+the entry is absent from `old`'s open entries (a new entry, a `reopen`), its faults count from 0; where `old`'s
+entry is one `_entry_parts()` refuses, its faults are standing. With
 `old=None` the four are ℹ, as on a standing ledger. One `field-lines` flag per Ask section, whatever runs past it;
 an edit inside a faulty section that keeps its count (a third paragraph added to a standing Ask) is allowed.
 
