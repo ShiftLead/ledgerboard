@@ -83,8 +83,12 @@ empty value is refused, never the title. Two refusals keep the read exact, and t
 
 This is the whole boundary rule here: the field is a line, so where it ends needs no rule; where it starts is
 `_entry_sections()`'s, which TD-124 makes strict for every section. When TD-124 lands, the second refusal is its
-general flag for a glued lead, and this reader keeps only the first. Lines inside a code fence are never tested,
-and HTML comments are dropped first, as `_entry_texts()` drops them, so every caller reads the same text. Only the
+general flag for a glued lead, and this reader keeps only the first. Lines inside a code fence are never tested
+(the fence as `_entry_sections()` tracks it: `FENCE_RE`, its open and close rules); an indented code block is not a
+fence, so an `Answers` or `Lifts` lead quoted in one is refused as a lead that starts no section, and is quoted in
+a fence instead. HTML comments are dropped first, as `_entry_texts()` drops them, so every caller reads the same
+text; a line that held only a comment is then a blank line, so a comment between a lead and the line above it
+leaves the lead starting a section. Only the
 body is read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
 qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the
 Log; the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section (the file one
@@ -105,12 +109,12 @@ nothing, which is the bug.
 `entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
 1. HTML comments are dropped (`COMMENT_RE`), and the entry is split by `_entry_parts()` into its header block and
-   its body; an entry it refuses, and that has an `Answers` or `Lifts` lead in its text, is refused (`Refused`,
-   its reason). A line of the body (never the heading or the header block, where a field named `Answers` is a
+   its body; an entry it refuses, and that has a line (in the comment-dropped text) that `LEAD_RE` matches, its
+   leading whitespace removed, with a lead named `Answers` or `Lifts`, is refused (`Refused`, its reason). A line of the body (never the heading or the header block, where a field named `Answers` is a
    repo's own) outside a code fence that, its leading whitespace removed, `LEAD_RE` matches with a lead named
    `Answers` or `Lifts` (D1's match) and that `_entry_sections()` does not read as a section's start is refused,
    *an Answers or Lifts lead that starts no section*. Otherwise, no such section: `None`, whatever else the entry
-   holds. Two sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
+   holds. The line-by-line scan tracks fences by `FENCE_RE` with `_entry_sections()`'s open and close rules. Two sections of one name (`**Answers:**` twice, or `**Lifts:**` twice): refused.
 2. A section whose text (`_entry_sections()`'s, its trailing blank lines trimmed) is more than its lead's line:
    refused, *the field runs past its line*. A `**Lifts:**` with no `**Answers:**`: refused. An empty
    `**Answers:**` value: refused, *no answers*; an empty `**Lifts:**` value (nothing, or only bars): refused, *no
@@ -311,7 +315,10 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   `Hold: <note>` (refused: a form is listed by its whole label), `**Answers**: Go | Not yet` with the colon after
   the bold (read as `**Answers:**`), answers wrapped onto a second plain line (refused: the field runs past its line, not joined), a stray paragraph
   after the answers before the next lead (refused: the field runs past its line), an HTML comment on the line
-  after the answers (accepted: comments are dropped first), `**Lifts:**` on the line after `**Answers:**` with no
+  after the answers (accepted: comments are dropped first), a comment then text on the line after the answers
+  (refused: the text left runs past the line), an `**Answers:**` after the Ask with only a comment line between
+  (accepted: that line reads blank), a `**Fix:**` after the answers with only a comment line between (accepted),
+  an `**Answers:**` lead in a 4-space indented block (refused at step 1), `**Lifts:**` on the line after `**Answers:**` with no
   blank line (refused at step 1, a lead that starts no section), the same with the glued `**Lifts:**` indented by
   a space (refused at step 1), `**Answers:**` on the line after `**Ask:**` with no blank line (refused at step 1,
   not None), a glued `**Fix:**` after the answers (refused at step 2), an `**Answers:**` lead inside an HTML comment
