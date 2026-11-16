@@ -6,9 +6,10 @@ vendor; cap 6 rounds, cadence.md §4.8). Rounds 1–3 ran 2026-11-15 (round 3 as
 #361). Their recurring topic was where the multi-paragraph answer sections start and end (F23, F30, F33, F38, F41,
 F42, F49); Paul answered round 3's end-of-rounds item *Hold: Make Answers and Lifts each a single line, as your
 fallback says; the boundary rule has been patched three rounds running.* Draft 4 is that revision, run as TD-125
-with round 4: each of `**Answers:**` and `**Lifts:**` is one line, and the section-edge rule itself is TD-124's,
-not patched here. The record: [docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words:
-[docs/synopses/TD-119.md](../synopses/TD-119.md).
+with round 4 (2026-11-16): each of `**Answers:**` and `**Lifts:**` is one line, and the section-edge rule itself is
+TD-124's, not patched here. Build-changing findings by the design reviews, rounds 1–4: 2, 0, 3, 2 (round 4's F56,
+an unclosed fence, and F57, a field inside the line, both applied and read by no design review). The record:
+[docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
 ShiftLead ran onto this repo's board in PR #355.
