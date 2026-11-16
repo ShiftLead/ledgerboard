@@ -1,10 +1,10 @@
 # TD-124: the entry body grammar — strict section edges, one-line data
 
-**Status:** Draft 1, 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
+**Status:** Draft 2, 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
 section, what the check flags, a writer that rewrites every ledger; both consumers vendor it; cap 6 rounds,
-cadence.md §4.8). Rounds: not started; one choice waits on Paul first (D7, *a two-step release or one major*).
-The record: [docs/reviews/TD-124.md](../reviews/TD-124.md), once a round runs. In plain words:
-[docs/synopses/TD-124.md](../synopses/TD-124.md).
+cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 2 writes the SPEC text
+for step 1 exactly. Rounds: round 1 next. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
+words: [docs/synopses/TD-124.md](../synopses/TD-124.md).
 
 **Entry:** [TD-124](../ledger/TD-124.md), from Paul's conversation of 2026-11-15, after his hold on TD-119.
 
@@ -80,9 +80,10 @@ its section, glued below it or a later paragraph before the next lead, is a faul
 The value is the line after the lead's bold run, whitespace trimmed. The format's data fields:
 
 - `**Ask:**` — the question, one sentence (*Text a person reads*). What v3.2 kept in the Ask's later paragraphs
-  moves to a prose section `**Context:**` (D5), which the sweep's item and a consumer's writer read as the
-  detail's context.
-- `**Answers:**` and `**Lifts:**` — TD-119's, already one line in its Draft 4.
+  moves to a prose section `**Context:**` (D5) after it. The sweep's item text is the Ask's line, as today's
+  joined Ask is; what the item's detail carries from `**Context:**` is not this design (*Not done*).
+- `**Answers:**` and `**Lifts:**` — TD-119's, one line in its Draft 4; data fields here once its build lands
+  (whichever of the two builds merges second names them in the other's list).
 - `**Resolved:**` — an archived entry's date, PR and pointer, which `archive` already writes on one line.
 - `**Design PR:**` — the design's PR list, which `ledger.py edit --section "Design PR"` already writes on one line.
 
@@ -123,7 +124,7 @@ shared reader, so the reasons agree.
 
 ### D7. The release: a minor that flags and migrates, then a major that reads strictly
 
-**Recommended, and Paul's to choose (an ask: a major version).** Two releases:
+**Paul's choice, 2026-11-16: two steps.** Two releases:
 
 1. **v3.N (minor).** The reader reads as today; `check()` gains D6's four kinds; the ledger writer refuses an edit
    that makes one; and `ledger.py migrate-body` rewrites a ledger, open and archived entries alike, so it flags
@@ -136,7 +137,7 @@ shared reader, so the reasons agree.
 2. **v4.0 (major), once agent-cadence's and ShiftLead's ledgers check clean.** The reader reads D1 and D3 alone: a
    non-strict lead is prose, a data field is its line. Nothing in a migrated ledger reads differently.
 
-The other way, **one v4.0** that reads strictly at once, makes every unmigrated consumer ledger read differently
+The way not taken, **one v4.0** that reads strictly at once, makes every unmigrated consumer ledger read differently
 on the day it vendors (44 open ShiftLead `Done when` sections joining their Fix), and needs the migrate run in the
 same vendor PR. The two-step costs one release more and lets each repo migrate in a PR of its own, checked by the
 same `check()` before the reading changes.
@@ -152,21 +153,85 @@ line already). The Log keeps its grammar, a strict lead `**Log:**` then dated li
 
 ## The SPEC text
 
-Draft 1 gives the change in outline; the exact text is written once D7 is chosen, before round 1.
+Step 1, v3.N, the next untagged minor when B1 merges (v3.3 if untagged then, as TD-115's and TD-119's builds
+share it), adds or changes these, word for word. Step 2's text (v4.0) is written by B3, from D1 and D3: the lead
+bullet's *(v3.N: read as a lead until v4.0)* clause goes, and *Retired words* gains the two lead forms.
 
-- *The entry* (SPEC, *Ledger entries and their edits*): the lead bullet's *the colon optional* and its example
-  `**Done when**` become D1's rule; a new bullet for data fields (D3) and the JSON block (D4).
-- *The ledger*: `check()`'s kinds gain D6's four.
-- *Text a person reads*: the Ask bullet's *its later paragraphs the context* becomes the `**Context:**` section.
-- *The ledger writer*: `migrate-body`.
-- *Versions*: a paragraph for v3.N, and later one for v4.0.
+**In *Ledger entries and their edits*, *The entry*, the body bullet** becomes:
+
+> - **The body** is everything after the header block. It is cut into **sections**. A section's **lead** is a bold
+>   run whose text ends in a colon, `**Name:**`, opening a line at its first column that starts a paragraph; a
+>   paragraph opens the body or follows a blank line. The section runs through every following paragraph up to
+>   the next lead, so a Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a
+>   line of three or more backticks or tildes (indented at most three spaces), and closes on a bare line of the
+>   same character at least as long. (v3.N: a paragraph opening with a bold run with no colon, `**Done when**`,
+>   or with the colon after it, `**Done when**:`, is still read as a lead until v4.0, and `check()` flags it,
+>   `lead-form`.)
+>   - A lead's name is its bold text less the colon, matched by `field_key`: `Done when:` and `done when:` are one
+>     name.
+
+(its sub-bullets on qualified leads, a body lead named like a field and the unnamed section kept.)
+
+**After that bullet, a new one:**
+
+> - **Data fields** (v3.N). A section the tools read a value from is a **data field**: its lead's line alone,
+>   `**Name:** value`, the value the line after the lead's bold run, whitespace trimmed. They are `Ask`,
+>   `Resolved` and `Design PR`. Anything after the lead's line in a data field's section (a line glued below it,
+>   or a later paragraph before the next lead) is a fault, `field-lines`. A value one line cannot hold is a
+>   **JSON field**: its lead's line with nothing after the lead, a blank line, then one code fence whose info
+>   string is `json` holding one JSON value, and nothing else before the next lead; no field of this format is
+>   one yet. An Event section (*Events*) keeps its own two-line grammar. Every other section is prose, read only
+>   as text.
+
+**In *The ledger*, after the `log-not-last` paragraph's `check()` notes** (*The Log*), a new paragraph:
+
+> **The body's shape** (v3.N). `check()` flags, an error on an entry the edit changed (its whole text) and ℹ on a
+> standing ledger: `lead-form`, a lead with no colon or with the colon after the bold, naming the strict spelling;
+> `glued-lead`, a line at its first column, outside a fence and the header block, that opens with `**Name:**` but
+> starts no paragraph, so opens no section; `fence-open`, a fence the body never closes; and `field-lines`, a data
+> field that runs past its line, an `Ask` among them (its later paragraphs belong in a `**Context:**` section after
+> it). A bold run anywhere else, inside a line, in a list item or after leading spaces, is prose and flagged by
+> nothing. The ledger writer refuses an edit that makes one new (*The ledger writer*); `migrate-body` cures every
+> one but `fence-open`, which a person fixes.
+
+**In *Text a person reads*, the Ask bullet:** *the Ask's text after its `**Ask:**` lead, its first paragraph the
+sentence (…), `question=True`, and its later paragraphs the context.* becomes
+
+> the Ask's line after its `**Ask:**` lead, the sentence, `question=True`, and the entry's `**Context:**`
+> section, where it has one, the context (v3.N: an Ask is a data field, *The entry*);
+
+**In *The ledger writer*, after `fmt`'s bullet**, a new one:
+
+> - **`migrate-body`** (v3.N) — every entry of the ledger and its archive rewritten so `check()` flags no
+>   `lead-form`, `glued-lead` or `field-lines`, keeping each section's text and order as v3.N reads them: a lead
+>   with no colon gains one inside the bold (`**Done when** x` → `**Done when:** x`; a label ending in `.` or `:`
+>   outside the bold loses it for the colon), a glued lead gains a blank line above it, and an `Ask` of more than
+>   one line keeps its first paragraph joined to one line and moves the rest, as written, under a
+>   `**Context:**` lead after it (an entry that already has a `Context` section is refused). An entry with
+>   `fence-open`, or whose rewrite would not read back with the same sections, is refused and kept; the rest are
+>   written as one write. Its commit subject is `ledger: migrate-body v3.N (<n> entries)`, which the tripwire
+>   exempts as it exempts `migrate`'s (*The merge gate's verdicts*), and `subject_kind()` names `migrate`.
+
+**In *Versions*, a paragraph of its own after the newest:**
+
+> **v3.N makes the body's edges strict, in two steps** (*The entry*, *The ledger*, *Text a person reads*, *The
+> ledger writer*): a lead is `**Name:**`; `Ask`, `Resolved` and `Design PR` are data fields, one line; a JSON
+> field is defined; `check()` flags `lead-form`, `glued-lead`, `fence-open` and `field-lines`, and the writer
+> refuses an edit that makes one; `migrate-body` rewrites a ledger so it flags none. The reading does not change:
+> a colon-less lead is still a lead and an Ask's later paragraphs are still read, until v4.0, which reads the
+> strict form alone once every consumer's ledger checks clean. An Ask's context moves to a `**Context:**`
+> section. No item key, canonical form or Log line changes.
 
 ## The fixtures
 
-Outline, written exactly with the SPEC text: `fixtures/ledger_edit/check/` cases for each of D6's kinds, flagged
-and clean (a list item's bold label and a mid-line bold run not flagged); `fixtures/ledger_writer/` cases for
-`migrate-body` (each rewrite, the read-back equal, an unclosed fence refused) and for the writer refusing an edit
-that makes each kind; all invented, never copied from a ledger above.
+All invented. `fixtures/ledger_edit/check/`: one case per kind, flagged and clean — `**Done when** x` and
+`**Done when**: x` (`lead-form`), a `**Fix:**` glued under the Why (`glued-lead`), an unclosed backtick fence and a
+`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and a `**Resolved:**` with a line below
+(`field-lines`); clean: `- **Note:** x` in a Fix, `a **b:** c` mid-line, `  **Fix:**` indented, a fenced
+`**Ask:**`, a one-line Ask with a `**Context:**` after it. `fixtures/ledger_writer/`: `migrate-body` over a ledger
+holding each curable kind (its `after/` the rewrite; the sections read the same before and after), an entry with
+`fence-open` refused and kept, an Ask with a `Context` already refused; and the writer refusing an edit that makes
+each kind new, while a Log note on an entry already flagged is written.
 
 ## Builds
 
@@ -178,4 +243,6 @@ in B1's Fix.
 ## Not done
 
 - **No closed set of section names** (D1): the colon marks a lead.
+- **The sweep's detail from `**Context:**`**: the item's text is the Ask's line; carrying the Context into the
+  item's detail is a change of its own.
 - **The board** (D8).
