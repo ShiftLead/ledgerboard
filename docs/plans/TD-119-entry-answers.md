@@ -1,14 +1,16 @@
 # TD-119: the gate sweep offers the entry's own answers
 
-**Status:** Draft 4, 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: two new
+**Status:** Draft 5, 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: two new
 entry fields the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both consumers
 vendor; cap 6 rounds, cadence.md §4.8). Rounds 1–3 ran 2026-11-15 (round 3 as TD-122, Paul's *One more round*,
 #361). Their recurring topic was where the multi-paragraph answer sections start and end (F23, F30, F33, F38, F41,
 F42, F49); Paul answered round 3's end-of-rounds item *Hold: Make Answers and Lifts each a single line, as your
 fallback says; the boundary rule has been patched three rounds running.* Draft 4 is that revision, run as TD-125
 with round 4 (2026-11-16): each of `**Answers:**` and `**Lifts:**` is one line, and the section-edge rule itself is
-TD-124's, not patched here. Build-changing findings by the design reviews, rounds 1–4: 2, 0, 3, 2 (round 4's F56,
-an unclosed fence, and F57, a field inside the line, both applied and read by no design review). The record:
+TD-124's, not patched here. Paul bought round 5 (TD-127, 2026-11-16); Draft 5 is its fixes. Build-changing
+findings by the design reviews, rounds 1–5: 2, 0, 3, 2, 2 (round 5's F72, which keeps all three of D1's refusals
+this reader's beside TD-124's flag, and F73, an overlapping scan for a field inside the line, both applied and read
+by no design review). The record:
 [docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
@@ -68,9 +70,10 @@ alone:
   `Hold: <note>`, so its fills lift), on the lead's line. With no `**Lifts:**`, `Go` lifts, as on the board.
 
 Each is found by its lead's name (`Answers`, `Lifts`, the colon optional, inside the bold or after it, as every
-lead is matched), as a section `_entry_sections()` reads, and is one line: the section's text, HTML comments
+lead is matched: `_section_key()`'s match, case-insensitive with whitespace folded, so `**LIFTS:**` is one), as a section `_entry_sections()` reads, and is one line: the section's text, HTML comments
 dropped first, is its lead's line and nothing else. Its value is that line after its lead's bold run, leading
-whitespace and one `:` removed and trailing whitespace stripped, `\|` kept for `parse_answers_value()` to read; an
+whitespace removed, then one `:` only where the bold run held none (`**Answers**: a`), and trailing whitespace
+stripped, `\|` kept for `parse_answers_value()` to read; an
 empty value is refused, never the title. Three refusals keep the read exact, and the check names each (D4):
 
 - **The field runs past its line**: any further line in its section, glued below it (a wrapped answer, a
@@ -79,8 +82,9 @@ empty value is refused, never the title. Three refusals keep the read exact, and
   dropped silently. A bold run inside the line (`Not yet — **Note:** you wait`) is answer text, except one named
   `Answers` or `Lifts`.
 - **A field inside the line**: a bold run named `Answers` or `Lifts` (D1's match, `**Lifts:**` or `**Answers**:`)
-  anywhere in either value (found by an unanchored search for `LEAD_RE`'s pattern without its `^`, each run's
-  lead then tested by D1's name match), so a `**Lifts:**` typed on the answers' own line is never read as the last answer's
+  anywhere in either value (found by an overlapping scan: a bold run is tried at every `**` in the value, as
+  `re.finditer(r"(?=\*\*(?P<lead>[^*\n]+?)\*\*)", value)` does, each run's lead then tested by D1's name match, so a
+  stray `**` earlier in the line never pairs with the field's own opening `**` and hides it), so a `**Lifts:**` typed on the answers' own line is never read as the last answer's
   words while the lifts are lost.
 - **The lead starts no section**: a line of the body whose text, leading whitespace aside, opens with an
   `Answers` or `Lifts` lead but that `_entry_sections()` does not read as a section's start, because it is glued
@@ -88,8 +92,9 @@ empty value is refused, never the title. Three refusals keep the read exact, and
   read as part of the question while the sweep offers `Go | Not yet`.
 
 This is the whole boundary rule here: the field is a line, so where it ends needs no rule; where it starts is
-`_entry_sections()`'s, which TD-124 makes strict for every section. When TD-124 lands, the last refusal is its
-general flag for a glued lead, and this reader keeps the other two. Lines inside a code fence are never tested
+`_entry_sections()`'s, which TD-124 makes strict for every section. This reader keeps all three refusals after
+TD-124 lands (TD-124 D6: TD-119's refusals stay its own); TD-124's `glued-lead` flag also fires on the strict
+column-0 case, while the glued, indented and colon-less forms are refused here alone. Lines inside a code fence are never tested
 (the fence as `_entry_sections()` tracks it: `FENCE_RE`, its open and close rules); an indented code block is not a
 fence, so an `Answers` or `Lifts` lead quoted in one is refused as a lead that starts no section, and is quoted in
 a fence instead. A fence that never closes (one opened by a run and never closed by a bare run of its own
@@ -104,7 +109,9 @@ written gets `Go | Not yet`, as today; TD-124 leaves them prose too (its flag ca
 reader drops comments and the writer's `edit --section` does not, so a lead behind a comment on its own line
 (`<!-- x -->**Answers:** a | b`) is a section to the reader and none to the writer, which then appends a second
 `**Answers:**`; on a gated entry the edit is refused as two sections (D4), a refusal, not a misread, and on an
-ungated one it is written and nothing reads either. Only the
+ungated one it is written and nothing reads either. Two more shapes read clean here and are flagged by TD-124 on
+the raw body: a comment line holding a bare fence marker (TD-124's `fence-open`) and a comment-only line glued
+above a lead (its `glued-lead`); the writer's `edit --section` reads them as the raw text does. Only the
 body is read: a header field named `Answers` or `Lifts` is a field like any other, read by nothing here. A
 qualified lead (`**Answers (…):**`) is its own section, never these. They sit anywhere in the body before the
 Log; the writer's `edit TD-n --section Answers --from FILE` writes them as it writes any section (the file one
@@ -137,8 +144,8 @@ nothing, which is the bug.
 2. A section whose text (`_entry_sections()`'s, its trailing blank lines trimmed) is more than its lead's line:
    refused, *the field runs past its line*. A `**Lifts:**` with no `**Answers:**`: refused. An empty
    `**Answers:**` value: refused, *no answers*; an empty `**Lifts:**` value (nothing, or only bars): refused, *no
-   lifts*. A value holding, anywhere, a bold run whose lead is named `Answers` or `Lifts` (an unanchored search for
-   `LEAD_RE`'s pattern without its `^`, each run's lead tested by D1's name match): refused, *a field inside the
+   lifts*. A value holding, anywhere, a bold run whose lead is named `Answers` or `Lifts` (D1's overlapping scan, a run tried at every `**`, each
+   run's lead tested by D1's name match): refused, *a field inside the
    line*.
 3. The answers are `parse_answers_value()`'s of the `**Answers:**` value, each split by `split_answer()`; any other bold
    run in the line is answer text. More than one marked ` (default)` is refused; each is returned with its mark
@@ -262,13 +269,14 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > `<label>` or `<label> — <consequence>`, one marked ` (default)` at most, forms among them), and which of them
 > lift its gate in a one-line body field `**Lifts:**`, each an answer's whole label (a form by its offered label,
 > `Hold: <note>`); with no `**Lifts:**`, `Go` lifts. Each is a body section that is its lead's line alone, HTML
-> comments dropped first; its value is the line after its lead's bold run, leading whitespace and one `:` removed.
+> comments dropped first, its lead's name matched as every lead's is (case aside, whitespace folded); its value
+> is the line after its lead's bold run, leading whitespace removed, then one `:` where the bold run held none.
 > A header field of either name, and a qualified lead (`**Answers (…):**`), are not these.
 > `entry_answers(entry_text)` reads them: None when the entry has neither; `{"answers", "default", "lifts"}` when
 > they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the marked one's index or
 > None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an `Answers` or `Lifts` lead in
 > the body, outside a code fence that closes, that starts no section (glued to the line before it, or indented),
-> a bold run named `Answers` or `Lifts` inside either field's line, an entry with
+> a bold run named `Answers` or `Lifts` inside either field's line (a run tried at every `**`), an entry with
 > either field that `_entry_parts()` refuses, two of one name, a field whose section runs past its line (a line
 > glued below it, or a later paragraph before the next lead), a `**Lifts:**` with no `**Answers:**`, an empty
 > `**Answers:**` or `**Lifts:**`, two answers marked, answers `item_file()` refuses as a `decide`'s `answers`,
@@ -342,7 +350,10 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   (accepted: that line reads blank), a `**Fix:**` after the answers with only a comment line between (accepted),
   an `**Answers:**` lead in a 4-space indented block (refused at step 1), a real `**Answers:**` after a backtick
   fence never closed (refused at step 1), the same after a `~~~` fence "closed" by backticks (refused at step 1),
-  `**Answers:** Go | Not yet **Lifts:** Go` on one line (refused: a field inside the line), a list item
+  `**Answers:** Go | Not yet **Lifts:** Go` on one line (refused: a field inside the line), the same with a stray
+  `**` earlier in the answers, `**Answers:** A — x ** | B — y **Lifts:** A` (refused: the overlapping scan finds
+  the field), an unclosed fence after a clean `**Answers:**` and in a later section (accepted: the field is read
+  before it), an unclosed fence with no lead after it (None), `**LIFTS:**` in capitals (read as `**Lifts:**`), a list item
   `- **Answers:** Go | Not yet` (None: prose), a quoted `> **Answers:** Go | Not yet` (None: prose), `Answers here:
   **Answers:** Go | Not yet` with text before the lead (None: prose), a singular `**Answer:**` (None: prose), `**Lifts:**` on the line after `**Answers:**` with no
   blank line (refused at step 1, a lead that starts no section), the same with the glued `**Lifts:**` indented by
@@ -358,7 +369,10 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
 
 One build, **B1**: `entry_answers()`, the sweep's use of it, `check()`'s `answers-unusable` in `EDIT_ERRORS` and `TEXT_KINDS`,
 the SPEC text above, the fixtures and unit tests (the reader's refusals by reason; the sweep never raising on
-an entry's answers), in one PR; the release number as D6 says. On its merge the builder tells agent-cadence's
+an entry's answers), in one PR; the release number as D6 says. If TD-124's B1 has merged, B1 builds `entry_answers()` over its
+line-reading helper; if not, TD-124's B1 moves it there (TD-124 D6 and *Builds*); either way D1's three refusals
+stay. `fixtures/run.py`'s `ledger_edit` check runner lists the `check()` kinds it compares; B1 adds
+`answers-unusable` to that list and a runner for the `entry_answers` block. On its merge the builder tells agent-cadence's
 techlead which release carries it.
 
 ## Not done
@@ -370,7 +384,8 @@ techlead which release carries it.
 - **No writer flags**: `edit --section Answers|Lifts` writes the fields; `new` and `set` gain nothing.
 - **No section-edge rule**: where any section starts is TD-124's design (strict edges, one-line data fields, a
   check over every body); this design reads its two fields by today's `_entry_sections()` and refuses only what
-  D1 names. TD-124's build folds the glued-lead refusal into its own flag, and is where list-item, quoted and
-  mid-line lead-like text is caught. TD-124 may also retire the colon-optional and colon-after-bold lead forms
+  D1 names. D1's three refusals stay this reader's after TD-124 lands; TD-124's build shares its line-reading
+  helper with `entry_answers()` (whichever merges second), and is where list-item, quoted and mid-line lead-like
+  text is caught. TD-124 may also retire the colon-optional and colon-after-bold lead forms
   (`**Answers**:`); this design reads them as every lead is read today, and its fixtures for them are ones
   TD-124's migration may rewrite.
