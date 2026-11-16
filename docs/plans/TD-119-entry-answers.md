@@ -100,7 +100,7 @@ text; a line that held only a comment is then a blank line, so a comment between
 leaves the lead starting a section. What opens with no lead of these names is prose, read by nothing here and
 refused by nothing: a list item or a quote (`- **Answers:** …`, `> **Answers:** …`), text before the lead on its
 line, a singular `**Answer:**` or `**Lift:**`, and a line inside the header block (a header field). An entry so
-written gets `Go | Not yet`, as today; TD-124's general flag for lead-like lines is where they are caught. The
+written gets `Go | Not yet`, as today; TD-124 leaves them prose too (its flag catches only an indented or quoted Ask). The
 reader drops comments and the writer's `edit --section` does not, so a lead behind a comment on its own line
 (`<!-- x -->**Answers:** a | b`) is a section to the reader and none to the writer, which then appends a second
 `**Answers:**`; on a gated entry the edit is refused as two sections (D4), a refusal, not a misread, and on an
