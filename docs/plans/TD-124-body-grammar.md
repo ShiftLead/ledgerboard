@@ -43,7 +43,7 @@ Counted on 2026-11-16 from each repo's `origin/main` (open entries / archived):
 The glued count is the same on the raw body (D2) as on the comment-dropped text. Nearly every colon-less lead is `**Done when** <text>`; the rest are prose labels that today open a section
 nobody reads (`**Fix, in order — each step is usable on its own.**`, `**Which candidate fired (2026-09-11).**`).
 The glued lines are archived ones, mostly a `**Resolved:**` written under the Fix with no blank line. The only
-multi-paragraph Asks are this repo's (TD-119's and TD-115's, written to v3.2's *sentence then context*).
+multi-paragraph Asks are this repo's (open TD-119's and TD-115's, archived TD-111's; written to v3.2's *sentence then context*).
 
 ## The design
 
@@ -320,13 +320,13 @@ paragraph that opens in bold narrows to one that opens with a strict lead.
 > colon after the bold, no name, or a name opening with whitespace; read as a lead until v4.0), its message naming
 > the strict spelling and rewording; `glued-lead`, a line at its first column, outside a fence and the header
 > block, that opens with `**Name:**` but starts no paragraph (a comment-only line above it is text), and an `Ask`
-> lead after up to three spaces or after `> `; `fence-open`, a fence the body never closes (fence lines inside a
+> lead after up to three spaces or after a `>` prefix (any spaces after it, nested or not); `fence-open`, a fence the body never closes (fence lines inside a
 > comment count, as the writers read them); and `field-lines`, an `Ask` with text past its line (comment-only and
 > in-comment lines aside) or with no value once comments are dropped. A lead on a line inside a comment is never
 > flagged. A bold run anywhere else is prose. Faults are counted per key (entry, kind, and the lead's `field_key`;
 > entry and kind for `fence-open`), each flag's text carrying its ordinal (*the 1st*) and no line: with no `old`
 > all are ℹ; with `old`, the count `old` has of a key is ℹ and the rest errors, an entry absent from `old` counting
-> from 0, one `old` cannot read all ℹ, and where `old` has `fence-open`, the faults after its opening line ℹ. The
+> from 0, one `old` cannot read all ℹ, and where `old` has `fence-open`, its other three kinds ℹ. The
 > archive is not read. The ledger writer refuses an edit that makes one new; `migrate-body` cures or refuses each.
 
 **In *Text a person reads*, the Ask bullet:** *the Ask's text after its `**Ask:**` lead, its first paragraph the
@@ -350,7 +350,9 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 >   written as one write. The guard compares (section key, text after the lead) with the v3.N reading under the
 >   declared rewrites alone, on the raw body as the writers read it, a lead inside an HTML comment left as it is;
 >   a respelling that changes a lead's key to another section's key, a name this format reads or a header name is
->   refused, as is a comment inside a label's bold run, an Ask that must be joined and holds a comment, a code span
+>   refused (an Ask's first paragraph ending only at a blank line outside comment spans; every refusal only on an
+>   entry with a fault or a declared transform, a clean entry being already migrated), as is a comment inside a
+>   label's bold run, an Ask that must be joined and holds a comment, a code span
 >   or a line that is not plain text, and an entry with two Asks;
 >   the Context lead is written alone on its line, a blank line, then the rest byte for byte; only an entry with a
 >   declared rewrite is written or counted, in `canonical()` form. A label's respelling
@@ -375,7 +377,7 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 
 All invented. `fixtures/ledger_edit/check/`: one case per kind, flagged and clean — `**Done when** x` and
 `**Done when**: x` (`lead-form`), a `**Fix:**` glued under the Why (`glued-lead`), an unclosed backtick fence and a
-`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) and `> **Ask:**` (`glued-lead`), a four-space `    **Ask:**`
+`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) `> **Ask:**`, `>**Ask:**` and `> > **Ask:**` (`glued-lead`), a four-space `    **Ask:**`
 (clean: an indented code block's line), a lead glued after a fence's closing line
 (`glued-lead`), `**Why**` at a paragraph's start (`lead-form`); a lead right after a comment-only line (`glued-lead`, raw reading); clean: `- **Note:** x` in a Fix, `a **b:** c` mid-line, `  **Fix:**` indented, a fenced
 `**Ask:**`, a one-line Ask with a `**Context:**` after it. `fixtures/ledger_writer/`: `migrate-body` over a ledger
