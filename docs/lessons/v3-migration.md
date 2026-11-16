@@ -38,8 +38,8 @@ what had merged.
 | 2026-11-14 | v3.0 tagged; Paul chose a one-day rollout. agent-cadence took it and split its board in one PR (TD-263, in under two hours) |
 | 2026-11-15 | ShiftLead took it and split its board (TD-1881, #3968), inside its window, after a one-time archive cleanup (#3989) |
 | 2026-11-15 | v3.2 released, carrying the changes planned as v3.1 and v3.2. ledgerboard's own board was found still on v2 (TD-120) |
-| 2026-11-15 to 11-16 | ledgerboard's own board split (TD-120). Four more repos found never moved: they pin agent-cadence's tools but vendor nothing, so the plan never listed them. Each was moved in two PRs (the last v2.8 forms, then the v3 split), with a pre-split cleanup where old closes had no date |
-| 2026-11-16 | Every repo on this machine reads and writes v3; a press landed on each moved board. agent-cadence took v3.2 |
+| 2026-11-15 to 11-16 | ledgerboard's own board split (TD-120). Four more repos found never moved (pneuma-ops, guardians-devenv, contractmatch, samscrape): they pin agent-cadence's tools but vendor nothing, so the plan never listed them. Each was moved in two PRs, first to the last v2.8 ledger forms (pin to the commit before agent-cadence's v3.0 vendor, then `ledger.py migrate --release 2.8`), then to v3 with the board split, with a pre-split cleanup where old closes had no date |
+| 2026-11-16 | Every repo on the roster runs v3; a test press landed on three of the moved boards. agent-cadence took v3.2 (TD-268, TD-272); ShiftLead already vendored it |
 
 ## What went well
 
@@ -76,7 +76,7 @@ what had merged.
 | A rebase during review | One extra ask (v2.7 in ShiftLead) | The new head had no precheck status | Precheck the new head before asking again |
 | Repos that only use agent-cadence's tools were never planned | Four repos kept a v2 board after the rollout "ended", so the person's presses on their items failed, and one repo's signup writer (an outside writer of another repo's board) had to change before that board could split | The plan listed the repos that vendor the package, not every repo that runs on it | Moved by hand, two PRs a repo; the outside writer changed first, then the split, then its deploy |
 | Old ledgers had shapes no converter expected | Fields packed on one line (`**A:** x · **B:** y`), wrapped fields, body text set under a header with no blank line, bold notes before the fields, free-text Waits. `migrate` read several of these silently wrong; a script written to fix them first folded body text into fields, and once lost an entry's body | A converter checks forms it knows; a shape it does not know can pass as a field | An independent review with scripted checks (each file's words before and after, no field holding body text) caught each case before merge. Fixed in the script and redone from main |
-| The split moved some text without a warning | An item's update, due date and context ended up in the README in one repo; a session name was cut at an apostrophe | `split_board()` keeps only the item line and its indented continuation | TD-128, TD-129 |
+| The split moved some text without a warning | An item's update, due date and context ended up in the README in one repo; a host written as a phrase was cut to its first word | `split_board()` keeps only the item line and its indented continuation, and reads a host as one word | TD-128, TD-129 |
 | Paul's Hold note was cut at 297 characters | The designer guessed the rest | A silent length cap | Sent to ShiftLead to keep notes whole or refuse visibly |
 
 ## Lessons about how the work was run
