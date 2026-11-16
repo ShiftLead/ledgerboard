@@ -2,8 +2,8 @@
 
 **Status:** Draft 3 (round 1 applied), 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
 section, what the check flags, a writer that rewrites every ledger; both consumers vendor it; cap 6 rounds,
-cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 2 writes the SPEC text
-for step 1 exactly. Rounds: round 1 next. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
+cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 3 applies round 1
+and round 2's fact-check. Rounds: round 2's design review next. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
 words: [docs/synopses/TD-124.md](../synopses/TD-124.md).
 
 **Entry:** [TD-124](../ledger/TD-124.md), from Paul's conversation of 2026-11-15, after his hold on TD-119.
@@ -75,8 +75,9 @@ A line at column 0, outside a fence and outside the header block, that opens wit
 does not start a paragraph (glued to the line above) is a **glued lead**, flagged by `check()` (`glued-lead`, D6).
 It is never read as a section and never silently as prose the tools act on. Its message names both cures: a blank
 line above it (it becomes the section its writer meant, which `migrate-body` does), or rewording so the line does not
-open with a lead (it stays prose). A data field's lead (D3) is also a glued lead where it opens a line after up to
-three spaces or after `> `, since an indented or quoted Ask would otherwise be silently unread. A bold run
+open with a lead (it stays prose). An `**Ask:**` lead is also a glued lead where it opens a line after up to
+three spaces or after `> `, since an indented or quoted Ask would otherwise be silently unread (TD-119 keeps its own
+refusal for `Answers` and `Lifts`). A bold run
 anywhere else (inside a line, in a list item `- **Note:** …`, another name after leading spaces) is prose and
 flagged by nothing: those are emphasis by their place, and a list of bold labels is common prose.
 
@@ -132,11 +133,12 @@ starts and ends (D1) and never read inside except as text to show or carry.
 
 ### D6. What `check()` flags
 
-Four new kinds, ℹ on a standing ledger and an error only where an edit makes one new: with `old`, `check()`
-raises one as an error only when its text (entry, kind, lead's name) is not among `old`'s flags, the comparison the
-ledger writer's gate makes. So between a vendor PR and its migrate PR, a Log note, a lift or any edit of an
-unmigrated entry passes `--check --base`, and only a new fault fails it. The four join `EDIT_ERRORS`; they are
-not `TEXT_KINDS`, whose whole-text scoping would raise a standing flag on any touch.
+Four new kinds, ℹ on a standing ledger and an error only where an edit makes one new. This is new logic in
+`check()`, neither `EDIT_ERRORS`' header scoping (which would leave a body edit's new fault ℹ) nor `TEXT_KINDS`'
+whole-text scoping (which would raise every standing flag on a touched entry, and `--check --base` has no
+`_same()` to hide it): with `old`, `check()` computes the four kinds on `old`'s texts too, and a flag whose (entry,
+kind, lead's name) is among them is ℹ, else an error. So between a vendor PR and its migrate PR, a Log note, a lift
+or any edit of an unmigrated entry passes `--check --base`, and only a new fault fails it.
 
 - `lead-form`: a paragraph that opens with a bold run that is not a strict lead (no colon, the colon after the
   bold, or no name) — a lead until v4.0, flagged for good after it. Its message names the strict spelling.
@@ -145,13 +147,13 @@ not `TEXT_KINDS`, whose whole-text scoping would raise a standing flag on any to
 - `field-lines`: an `Ask` whose section runs past its lead's line (the v3.2 form's later paragraphs, which
   `migrate-body` moves to `**Context:**`, or a line glued below), or whose value is empty.
 
-TD-119's own refusals of a glued or indented `Answers` or `Lifts` and of a field running past its line fold into
-these: whichever of B1 and TD-119's build merges second has `entry_answers()` use this design's field reader and
-adds `Answers` and `Lifts` to the data fields, so the reasons agree.
+TD-119's own refusals stay its own, on its two gated names: whichever of B1 and TD-119's build merges second has
+`entry_answers()` share this design's line-reading helper (a field's lead, its line, what runs past it), so the
+reasons agree; `Answers` and `Lifts` never join `field-lines` (D3).
 
 `check()` reads the open entries alone, as today, so the archive's leads are never flagged; `migrate-body` (D7)
 rewrites the archive too, and step 2's gate reads it. A `reopen` of an unmigrated archived entry makes its flags
-new and is refused; the cure is `migrate-body` first. Each flag's text names the entry and the kind and the lead's
+new and is refused, and so is a `renumber` of an unmigrated entry (its flags' id changes); the cure is `migrate-body` first. Each flag's text names the entry and the kind and the lead's
 name, never a line number, so the writer's match of a standing flag survives an unrelated edit.
 
 ### D7. The release: a minor that flags and migrates, then a major that reads strictly
@@ -172,16 +174,21 @@ name, never a line number, so the writer's match of a standing flag survives an 
    to that list, or the entry is refused and kept. Also refused and kept: an entry with `fence-open`, an Ask whose
    first paragraph holds a list or a fence, an Ask whose lead's line is empty, an entry that already has a
    `Context` section beside an Ask of several paragraphs, and an entry `_entry_parts()` or `canonical()`
-   refuses (reported, as `fmt` reports). A label's respelling: the bold text's trailing whitespace trimmed, one
-   trailing `.` or `:` dropped, then `:` added inside the bold (`**Why?**` → `**Why?:**`). `migrate-body` is
+   refuses (reported, as `fmt` reports). A label's respelling: the bold text's leading and trailing whitespace trimmed,
+   one trailing `.` or `:` dropped, then `:` added inside the bold, and the text after the bold run less its one
+   leading `:` (`**Why?**` → `**Why?:**`, `**Done when**: x` → `**Done when:** x`); a label with no name left
+   (`**:**`) is refused. An Ask's first paragraph is joined to one line by its lines' whitespace collapsed to
+   single spaces. The guard reads the comment-dropped text, as `check()` does; the rewrite edits the raw text at
+   the places that reading names. A glued `**Resolved:**` that becomes its own section is then what
+   `_fallback_day` reads for an undated Status, as its writer meant. `migrate-body` is
    idempotent: a second run changes nothing. A colon-less label ending in `.` loses the dot, so its section key changes; no reader
    reads such a label. The caller names the commit, as for every ledger write; no subject is the format's and no
    carve-out is added, since `migrate-body` touches no Log and its PR is reviewed like any other. It takes optional
    ids, so a large ledger may migrate in several PRs; the gate below reads the whole ledger.
 2. **v4.0 (major), once every consumer's ledger is migrated:** `check()` raises none of the four, and
-   `migrate-body --plan` would rewrite no entry and refuses none, open or archived (its JSON
-   `{"rewritten": [<id>…], "refused": [{"id", "why"}…]}`, exit 1 when either is not empty). B3's precheck runs that
-   gate over each consumer's ledger. A ledger's `Ledgerboard: 2` declares its directory form, not this reading,
+   `migrate-body --check` would rewrite no entry and refuses none, open or archived (its exit 1 when it
+   would change or refuses any, as `fmt`'s; `--plan` prints the changes as every write's plan does, `refused` as
+   `{path, why}`). B3's precheck runs that gate over each consumer's ledger. A ledger's `Ledgerboard: 2` declares its directory form, not this reading,
    and stays: a migrated ledger reads the same under v3.N and v4.0. The reader reads D1 and D3 alone: a
    non-strict lead is prose, a data field is its line. Nothing in a migrated ledger reads differently.
 
@@ -203,7 +210,7 @@ line already). The Log keeps its grammar, a strict lead `**Log:**` then dated li
 
 Step 1, v3.N, the next untagged minor when B1 merges (v3.3 if untagged then, as TD-115's and TD-119's builds
 share it), adds or changes these, word for word. Step 2's text (v4.0) is written by B3, from D1 and D3: the lead
-bullet's v3.N clause goes, *Retired words* gains the two lead forms, `ask-missing` reads the Ask section (today
+bullet's v3.N clause goes (the two old forms stay `lead-form`, never *Retired words*), `ask-missing` reads the Ask section (today
 `ASK_RE` matches an `**Ask:**` at any line's start, glued or fenced), and `entry_text()`'s refusal of a section
 paragraph that opens in bold narrows to one that opens with a strict lead.
 
@@ -239,12 +246,13 @@ paragraph that opens in bold narrows to one that opens with a strict lead.
 > paragraph that opens with a bold run that is not a lead (no colon, the colon after the bold, or no name; read as
 > a lead until v4.0), naming the strict spelling;
 > `glued-lead`, a line at its first column, outside a fence and the header block, that opens with `**Name:**` but
-> starts no paragraph, so opens no section, and an `Ask` lead after up to three spaces or after `> `; `fence-open`, a fence the body never closes; and `field-lines`, a data
-> field that runs past its line, an `Ask` among them (its later paragraphs belong in a `**Context:**` section after
-> it). `check()` reads the open entries alone, so the archive's are not flagged; each flag names the entry, the
+> starts no paragraph, so opens no section, and an `Ask` lead after up to three spaces or after `> `; `fence-open`, a fence the body never closes; and
+> `field-lines`, an `Ask` that runs past its line or has no value (its later paragraphs belong in a `**Context:**`
+> section after it). `check()` reads the open entries alone, so the archive's are not flagged; each flag names the entry, the
 > kind and the lead's name, never a line. A bold run anywhere else, inside a line, in a list item or after leading spaces, is prose and flagged by
-> nothing. The ledger writer refuses an edit that makes one new (*The ledger writer*); `migrate-body` cures every
-> one but `fence-open`, which a person fixes.
+> nothing. With `old`, `check()` reads the four kinds on `old`'s texts too, and a flag `old` has is ℹ. The
+> ledger writer refuses an edit that makes one new (*The ledger writer*); `migrate-body` cures or refuses each,
+> and what it refuses (`fence-open` among them) a person fixes.
 
 **In *Text a person reads*, the Ask bullet:** *the Ask's text after its `**Ask:**` lead, its first paragraph the
 sentence (…), `question=True`, and its later paragraphs the context.* becomes
@@ -265,10 +273,11 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 >   entry is refused and kept, as is one with `fence-open` and an Ask whose first paragraph holds a list or a
 >   fence, an Ask whose lead's line is empty, or one `_entry_parts()` or `canonical()` refuses; the rest are
 >   written as one write. The guard compares (section key, text after the lead) with the v3.N reading under the
->   declared rewrites alone. A label's respelling trims trailing whitespace and one trailing `.` or `:` from the
->   bold text, then adds `:` inside it. A second run changes nothing. Optional ids limit it to those entries.
->   `--plan` writes nothing and prints `{"rewritten": [<id>…], "refused": [{"id", "why"}…]}`, exiting 1 when
->   either is not empty.
+>   declared rewrites alone, on the comment-dropped text; the rewrite edits the raw text. A label's respelling
+>   trims leading and trailing whitespace and one trailing `.` or `:` from the bold text, adds `:` inside it, and
+>   drops one `:` after it; a label with no name is refused. A second run changes nothing. Optional ids limit it to
+>   those entries. `--plan` prints the plan as every write does; `refused` lists `{path, why}`; exit 1 when it
+>   refuses any, or with `--check` when it would change any, as `fmt`.
 
 **In *Versions*, a paragraph of its own after the newest:**
 
@@ -284,12 +293,14 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 
 All invented. `fixtures/ledger_edit/check/`: one case per kind, flagged and clean — `**Done when** x` and
 `**Done when**: x` (`lead-form`), a `**Fix:**` glued under the Why (`glued-lead`), an unclosed backtick fence and a
-`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `  **Ask:**` (`glued-lead`), a lead glued after a fence's closing line
+`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) and `> **Ask:**` (`glued-lead`), a four-space `    **Ask:**`
+(clean: an indented code block's line), a lead glued after a fence's closing line
 (`glued-lead`), `**Why**` at a paragraph's start (`lead-form`); clean: a lead after a comment-only line, `- **Note:** x` in a Fix, `a **b:** c` mid-line, `  **Fix:**` indented, a fenced
 `**Ask:**`, a one-line Ask with a `**Context:**` after it. `fixtures/ledger_writer/`: `migrate-body` over a ledger
 holding each curable kind (its `after/` the rewrite; the sections read the same before and after), a glued
 `**Resolved:**` becoming its own section, an entry with `fence-open` refused and kept, an Ask with a `Context`
-already refused, an Ask whose first paragraph holds a list refused; `--plan` writing nothing and listing `rewritten` and `refused`; a
+already refused, an Ask whose first paragraph holds a list refused; `--plan` writing nothing; `--check` exiting 1 on an unmigrated ledger and 0 on a migrated one;
+`** Why:**` respelled; `**:**` refused; a
 second run changing nothing; `**Why?**` and `**Done when.**` respelled; a wrapped first Ask paragraph joined; an
 archived entry rewritten; a qualified lead left alone; `reopen` of an unmigrated archived entry refused; and the writer refusing an edit that makes
 each kind new, while a Log note on an entry already flagged is written; `check(old)` raising a standing flag as ℹ,
