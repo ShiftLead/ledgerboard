@@ -147,7 +147,7 @@ After:
 
 | Follow-up | Where | Who acts |
 | --- | --- | --- |
-| The split's two gaps: an apostrophe in a session head, and text below an item moved without a warning | ledgerboard TD-128, TD-129 | A grinder; TD-129's attach-or-warn choice may need a design |
+| The split's two gaps: a host written as a phrase cut to its first word, and text below an item moved without a warning | ledgerboard TD-128, TD-129 | A grinder; TD-129's attach-or-warn choice may need a design |
 | The pre-split cleanup row cannot date a line ending in a bold sentence, and does not check the date floor | agent-cadence | Its techlead, sent 2026-11-16 |
 | The sweep offers an entry's own answers | ledgerboard TD-119 | In review; Paul decides |
 | The merge rule for Lift the hold changes | ledgerboard TD-115 | In review; no Go before ShiftLead's TD-1829 |
