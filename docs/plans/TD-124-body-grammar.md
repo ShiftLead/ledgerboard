@@ -267,7 +267,7 @@ refuses (`_entry_parts()` alone; `check()` calls no `canonical()`) is not read f
    `{path, why}`). B3 is blocked by one `pr-merged <repo>#<n>` event per consumer migrate PR; its builder then runs
    `migrate-body --check` on each consumer's `origin/main` ledger, read through refs, and records the result in
    B3's PR. This package runs nothing of a consumer's. A ledger's `Ledgerboard: 2` declares its directory form, not this reading,
-   and stays: a migrated ledger reads the same under v3.N and v4.0. The reader reads D1 and D3 alone: a
+   and stays: a migrated ledger reads the same under v3.N and v4.0, bar a non-strict lead inside a comment (below). The reader reads D1 and D3 alone: a
    non-strict lead is prose, a data field is its line. Nothing in a migrated ledger reads differently, except a
    non-strict lead on a line inside a comment, which D2 leaves unflagged and unrewritten: a section under v3.N,
    prose under v4.0, and hidden text either way.
@@ -387,7 +387,7 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 
 All invented. `fixtures/ledger_edit/check/`: one case per kind, flagged and clean — `**Done when** x` and
 `**Done when**: x` (`lead-form`), a `**Fix:**` glued under the Why (`glued-lead`), an unclosed backtick fence and a
-`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) `> **Ask:**`, `>**Ask:**` and `> > **Ask:**` (`glued-lead`), a four-space `    **Ask:**`
+`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) `> **Ask:**`, `>**Ask:**` and `> > **Ask:**`, `  > **Ask:**` and `>     **Ask:**` (`glued-lead`), a tab-indented Ask (clean), a four-space `    **Ask:**`
 (clean: an indented code block's line), a lead glued after a fence's closing line
 (`glued-lead`), `**Why**` at a paragraph's start (`lead-form`); a lead right after a comment-only line (`glued-lead`, raw reading); clean: `- **Note:** x` in a Fix, `a **b:** c` mid-line, `  **Fix:**` indented, a fenced
 `**Ask:**`, a one-line Ask with a `**Context:**` after it. `fixtures/ledger_writer/`: `migrate-body` over a ledger
@@ -403,7 +403,7 @@ each kind new, while a Log note on an entry already flagged is written; `check(o
 not an error, when the entry's text changed; an edit adding a second `**Done when** y` to an entry with one
 standing (an error, *the 2nd*); two errors against `base`, then one fixed (not refused); a fence closed by
 hand uncovering a glued lead (not refused); an Ask whose lead's line is empty refused; a wrapped first Ask paragraph
-holding a code span refused; a one-line Ask holding a code span, with a Context, written clean; a respelling to `**Why:**` beside a Why refused; a clean but non-canonical entry left alone; the Context
+holding a code span refused; a one-line Ask holding a code span, with a Context, left unchanged (clean); a respelling to `**Why:**` beside a Why refused; a clean but non-canonical entry left alone; the Context
 layout in `after/`; a lead inside a multi-line comment (not flagged, kept); a comment opening mid-line over a lead;
 a fence marker inside a comment; an Ask whose first paragraph holds a comment with a blank line in it (the Context
 lead placed after the comment, never in it); an Ask with a comment-only line below and a `**Fix:**` glued under it (the Ask clean and untouched, the Fix
