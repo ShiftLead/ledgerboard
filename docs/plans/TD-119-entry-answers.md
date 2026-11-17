@@ -390,7 +390,7 @@ techlead which release carries it.
 - **No section-edge rule**: where any section starts is TD-124's design (strict edges, one-line data fields, a
   check over every body); this design reads its two fields by today's `_entry_sections()` and refuses only what
   D1 names. D1's three refusals stay this reader's after TD-124 lands; TD-124's build shares its line-reading
-  helper with `entry_answers()` (whichever merges second), and is where list-item, quoted and mid-line lead-like
-  text is caught. TD-124 may also retire the colon-optional and colon-after-bold lead forms
+  helper with `entry_answers()` (whichever merges second); list-item, quoted and mid-line lead-like text stays
+  prose under TD-124 too, read and refused by nothing (D1). TD-124 may also retire the colon-optional and colon-after-bold lead forms
   (`**Answers**:`); this design reads them as every lead is read today, and its fixtures for them are ones
   TD-124's migration may rewrite. TD-124's v4.0 (TD-135) does retire them: after it, step 1's scan still matches the old spellings by `LEAD_RE` as v3.N reads it, so `**Answers**: Go | Not yet` is refused (*an Answers or Lifts lead that starts no section*), never read as prose with `Go | Not yet` offered silently; that fixture is one the v4.0 build flips from read to refused, and TD-135's builder keeps the scan.
