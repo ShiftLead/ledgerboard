@@ -4,7 +4,7 @@
 section, what the check flags, a writer that rewrites every ledger; both consumers vendor it; cap 6 rounds,
 cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 8 applies rounds 1
 to 6; the rounds ended at the cap, round 6's review judging it worth building as it stands. Paul bought round 7
-(TD-126); Draft 9 applies it. Its review found nothing build-changing, so the rounds end by the stop rule. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
+(TD-126); Draft 9 applies it. Its review found nothing build-changing, so the rounds end by the stop rule. Paul said Go on 2026-11-16 (#401); the builds are TD-133 (B1), TD-134 (B2), TD-135 (B3) and TD-136 (B4). The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
 words: [docs/synopses/TD-124.md](../synopses/TD-124.md).
 
 **Entry:** [TD-124](../ledger/TD-124.md), from Paul's conversation of 2026-11-15, after his hold on TD-119.
