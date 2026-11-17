@@ -482,17 +482,28 @@ tell an entry it would have written from one it would not. A reader reads either
 - **The header block** is the lines after the heading's blank lines, up to the next blank line, as
   above. A writer needs every line there to be one `**Name:** value` field and each name to appear
   once, so an entry with a body has at least one field: its first paragraph is its header block.
-- **The body** is everything after the header block. It is cut into **sections**. A section's
-  **lead** is the bold run that opens its first paragraph (`**Why:**`, `**Done when**`); a paragraph
-  opens the body or follows a blank line. The section runs through every following paragraph up to
-  the next paragraph that opens with a bold run, so a Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a line of
-  three or more backticks or tildes (indented at most three spaces), and closes on a bare line of the
-  same character at least as long.
-  - Leads match by `field_key` with the colon optional: `Done when` and `Done when:` are one name.
+- **The body** is everything after the header block. It is cut into **sections**. A section's **lead** is a bold
+  run `**Name:**` (a name of one or more characters other than `*`, not starting with whitespace, its trailing
+  whitespace trimmed, then the colon), opening a line at its first column that starts a paragraph; a
+  paragraph opens the body or follows a blank line. The section runs through every following paragraph up to
+  the next lead, so a Fix keeps its bullets. A paragraph inside a code fence opens no section: a fence opens on a
+  line of three or more backticks or tildes (indented at most three spaces), and closes on a bare line of the
+  same character at least as long. (v3.3: a paragraph opening with a bold run with no colon, `**Done when**`,
+  or with the colon after it, `**Done when**:`, is still read as a lead until v4.0, and `check()` flags it,
+  `lead-form`.)
+  - A lead's name is its bold text less the colon, matched by `field_key`: `Done when:` and `done when:` are one
+    name.
   - A qualified lead (`**Fix (to design):**`, a dated `**Note (…):**`) is its own section, matched
     only by its whole text.
   - A body lead named like a field (`**Location:**` in the body) is a body section, never a field.
   - Text before the first lead is an unnamed section, kept as written.
+- **Data fields** (v3.3). A section the tools read a value from is a **data field**: its lead's line alone,
+  `**Name:** value`, the value the line after the lead's bold run, whitespace trimmed. The format's are
+  `Ask`; where *An entry's own answers* is in this SPEC, `Answers` and `Lifts` too, as that section reads them
+  (on a gated entry, flagged there, never `field-lines`). Anything after the lead's line in a data field's section (a line glued below it,
+  or a later paragraph before the next lead), or an empty value, is a fault, `field-lines`. `Context` is a
+  reserved prose name, read as the Ask's context (*Text a person reads*). An Event section (*Events*) keeps its own two-line grammar. Every other section is prose, read only
+  as text.
 
 **Canonical form** (`canonical(text)`): line endings normalised to `\n` first, then
 - the heading (its title stripped);
@@ -590,6 +601,21 @@ them. An entry `canonical()` refuses is not read for it. `check()` reads the Log
     date to give it: nothing is lifted. `note` leaves such a Status as it is; `archive` and `reopen`,
     which replace it, first copy it whole into one `was: <value>` line, dated by the fallbacks, else
     today.
+
+**The body's shape** (v3.3). `check()` flags four kinds on each open entry's raw body, cut at `## ` headings
+outside HTML comments: `lead-form`, a paragraph that opens with a bold run that is not a lead (no colon, the
+colon after the bold, no name, or a name opening with whitespace; read as a lead until v4.0), its message naming
+the strict spelling and rewording; `glued-lead`, a line at its first column, outside a fence and the header
+block, that opens with `**Name:**` but starts no paragraph (a comment-only line above it is text), and an `Ask`
+lead after up to three spaces or after a `>` prefix (up to three spaces before each `>`, any spaces or tabs after
+it, nested or not; a tab-indented Ask is not flagged); `fence-open`, a fence the body never closes (fence lines inside a
+comment count, as the writers read them); and `field-lines`, an `Ask` with text past its line (comment-only and
+in-comment lines aside) or with no value once comments are dropped. A lead on a line inside a comment is never
+flagged. A bold run anywhere else is prose. Faults are counted per key (entry, kind, and the lead's `field_key`;
+entry and kind for `fence-open`), each flag's text carrying its ordinal (*the 1st*) and no line: with no `old`
+all are ℹ; with `old`, the count `old` has of a key is ℹ and the rest errors, an entry absent from `old` counting
+from 0, one `old` cannot read all ℹ, and where `old` has `fence-open`, its other three kinds ℹ. The
+archive is not read. The ledger writer refuses an edit that makes one new; `migrate-body` cures or refuses each.
 
 **The archived entry.** An entry archived as done has the Status `Resolved YYYY-MM-DD` (its why in
 the Log's `archived:` line, v2.4; `Resolved YYYY-MM-DD: why` before), and
@@ -1812,7 +1838,7 @@ A note never changes the exit code.
 
 `ledger.py`, beside the module and `board.py` in the `ledgerboard/` package, is the ledger writer over files:
 an importable library (`Ledger.open(path)`, then `plan_new`, `plan_edit`, `plan_archive`, `plan_reopen`,
-`plan_renumber`, `plan_lift`, `plan_split`, `plan_relink`, `plan_fmt`, each returning a `Plan`, and
+`plan_renumber`, `plan_lift`, `plan_split`, `plan_relink`, `plan_fmt`, `plan_migrate_body` (v3.3), each returning a `Plan`, and
 `apply(plan)`) and a command line (`python3 -m ledgerboard.ledger …`, a consumer's wrapper being the
 command people run). It reads the files it is given, applies the module's edit, and writes the files back; it
 never runs git, the network or anything of a consumer's. A report reads a v1 file or a v2 directory (*The
@@ -1832,7 +1858,8 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   repo's own (not `--field Location=…`, from v2.7: `--location`)), `--take` (the counter take's
   nonce, written as `Id take`), and `--why` (required), `--ask` (v3.1), `--fix` and `--done-when`, each from a
   file or `-` for stdin, at most one of them `-`, written in that order; an empty `--ask` is refused, and in a
-  ledger whose `Fields:` declares `Ask` so is any `--ask` (the Ask is then `--field 'Ask=…'`). With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
+  ledger whose `Fields:` declares `Ask` so is any `--ask` (the Ask is then `--field 'Ask=…'`). From v3.3 it also
+  takes `--context FILE|-`, only with `--ask`, written as the `**Context:**` section right after the Ask. With `--by`, `--session` and `--words` (and optionally `--while`), all three or none, it writes the
   Log's `filed by` line and a `gate added` line per gate it is filed with;
 - **`set`, `note`, `edit`** — one edit of an open entry, or for `note` (v2.8) of an archived one too
   (`edit_entry()`): `set TD-n` takes `new`'s field flags (an
@@ -1845,7 +1872,10 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   `--ask` is the one-write way it comes to wait on a person (a ledger that declares `Ask` uses `--field 'Ask=…'`
   beside the gate instead). `--ask` is refused when the `Blocked by` the write leaves names no decision, when
   its words are empty, with nothing else to set, on an entry holding a header `Ask`, and in a ledger whose
-  `Fields:` declares `Ask` (there the Ask is that field, set beside the gate). `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
+  `Fields:` declares `Ask` (there the Ask is that field, set beside the gate). From v3.3 `set` also takes
+  `--context FILE|-` (`plan_edit(…, context=)`), the entry's `**Context:**` section, written after the Ask in
+  the same write, and refused when empty or when the entry has no Ask; `edit --section Context` adds a missing
+  one right after the Ask, where the entry has one. `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
   one, or (v3.1) the `Ask` of an entry with no decision; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
   Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*The
@@ -1893,6 +1923,31 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   link that named no file before names none after. `--why` is required and not empty;
 - **`fmt [TD-n …]`** — each entry named, else every entry open and archived, in canonical form (`canonical()`);
   an entry it refuses is reported with why and left alone. `--check` lists what would change and writes nothing.
+- **`migrate-body`** (v3.3) — every entry of the ledger and its archive rewritten so `check()` flags no
+  `lead-form`, `glued-lead` or `field-lines`, keeping each section's text and order as v3.3 reads them: a lead
+  with no colon gains one inside the bold (`**Done when** x` → `**Done when:** x`; a label's trailing `.` or `:` inside the
+  bold, and one `:` after it, give way to the colon), a glued lead gains a blank line above it, and an `Ask` of more than
+  one line keeps its first paragraph joined to one line and moves the rest, as written, under a
+  `**Context:**` lead after it (an entry that already has a `Context` section is refused). A glued lead's and
+  an Ask's rewrite each add one section boundary, on purpose; every other section reads back the same, or the
+  entry is refused and kept, as is one with `fence-open` and an Ask whose first paragraph holds a list or a
+  fence, an Ask whose lead's line is empty, or one `_entry_parts()` or `canonical()` refuses; the rest are
+  written as one write. The guard compares (section key, text after the lead) with the v3.3 reading under the
+  declared rewrites alone, on the raw body as the writers read it, a lead inside an HTML comment left as it is;
+  a respelling that changes a lead's key to another section's key, a name this format reads or a header name is
+  refused (an Ask's first paragraph ending only at a blank line outside comment spans; every refusal only on an
+  entry with a fault or a declared transform, a clean entry being already migrated, except an entry
+  `_entry_parts()` refuses, which is always refused), as is a comment inside a
+  label's bold run, an Ask that must be joined and holds a comment, a code span
+  or a line that is not plain text, and an entry with two Asks;
+  the Context lead is written alone on its line, a blank line, then the rest byte for byte; only an entry with a
+  declared rewrite is written or counted, in `canonical()` form. A label's respelling
+  trims leading and trailing whitespace and one trailing `.` or `:` from the bold text, adds `:` inside it, and
+  drops one `:` after it; a label with no name is refused. A second run changes nothing. Optional ids limit it to
+  those entries. Leads are respelled first, then glued leads split, then the Ask; an indented or quoted Ask is refused, as is
+  a respelling to a name this format reads that the label was not; the result is `canonical()`'s, and no
+  `gate()` runs. `--plan` prints the plan as every write does; `refused` lists `{path, why}`; exit 1 when it
+  refuses any, or with `--check` when it would change any, as `fmt`.
 
 **A write is refused** when the ledger after it has a `check()` error the ledger before it does not, both checked
 against one `old`: the ledger text of `--base`, else of the ledger as it stands. So a fault already there never
@@ -2078,9 +2133,10 @@ item (`None`, a board with no such line, reads as no names), and the caller's fo
   A detail block part whose value is a list is read as its first string and its nested bullets' strings, one per
   line.
 - **an entry's Ask**, on any write of it (`new`, `edit --section Ask`, and `set --ask` where the writer has it):
-  the Ask's text after its `**Ask:**` lead, its first paragraph the sentence (it ends at the first blank line outside a fence; a blank line inside a fence ends
-  no paragraph), `question=True`, and its later
-  paragraphs the context. An Ask carries no answers in this format; a ledger that keeps its own `Answers`
+  the Ask's line after its `**Ask:**` lead, the sentence, `question=True`, and the entry's `**Context:**`
+  section, where it has one, the context (v3.3: an Ask is a data field, *The entry*; until v4.0 an Ask's first
+  paragraph is still the sentence, joined, and its later paragraphs still its context, flagged `field-lines`; an
+  entry with both a `**Context:**` section and later Ask paragraphs has the `**Context:**` section as its context). An Ask carries no answers in this format; a ledger that keeps its own `Answers`
   (a repo's own field or section) passes them, read as a board's `Answers:` value (`parse_answers_value()`);
 - **an entry's title**, on `new` and `set --title`: `title_problems()`; never on `renumber`, `archive` or
   `reopen`, which carry a title already written.
@@ -2404,6 +2460,14 @@ earlier releases carried with no note, and names a host's run-on, the words a he
 host's first word, as `host kept to its first word; not carried: <run-on>` apart from the rest of the head's
 text, which earlier releases named whole as `head text not carried`; what `split_board()` writes is
 unchanged.
+
+**v3.3 makes the body's edges strict, in two steps** (*The entry*, *The ledger*, *Text a person reads*, *The
+ledger writer*): a lead is `**Name:**`; `Ask` is a data field, one line; `check()` flags `lead-form`, `glued-lead`, `fence-open` and `field-lines`, and the writer
+refuses an edit that makes one; `migrate-body` rewrites a ledger so it flags none. The reading does not change:
+a colon-less lead is still a lead and an Ask's later paragraphs are still read, until v4.0, which reads the
+strict form alone once every consumer's ledger is migrated. `migrate-body` changes what is read only where it
+adds a boundary: a glued lead becomes its own section, and an Ask of several paragraphs is read as its first. An Ask's context moves to a `**Context:**`
+section. No item key, canonical form or Log line changes.
 
 ## Appendix: grammar
 
