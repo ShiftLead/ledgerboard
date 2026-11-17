@@ -12,7 +12,7 @@ raised nothing build-changing (F85–F90, minor, applied). Build-changing by the
 the two v3.3 plans agreeing, unreadable text settled. Paul's answer is the board's decide item, *Go* recommended.
 The record: [docs/reviews/TD-115.md](../reviews/TD-115.md).
 
-**Entry:** [TD-115](../ledger/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
+**Entry:** [TD-115](../ledger/archive/TD-115.md). Asked for by agent-cadence's grinder (its TD-262, 2026-11-15).
 
 ## The problem
 
