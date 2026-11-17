@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 11 (rounds 1–8 applied, rounds 7 and 8 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–8: 7, 8, 2, 2, 2, 2, 1, 2; recurring topic the ledger-only lift after a delegated answer, which rounds 7 and 8 found holding on every case they tried; round 8's two build-changing findings fix which refusal or reason a fixture sees (where the writer runs the delegation test, and where the verdict's recompute takes its scope), not the mechanism; closing fact-check (R13) pending), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 11 (rounds 1–8 applied, rounds 7 and 8 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–8: 7, 8, 2, 2, 2, 2, 1, 2; recurring topic the ledger-only lift after a delegated answer, which rounds 7 and 8 found holding on every case they tried; round 8's two build-changing findings fix which refusal or reason a fixture sees (where the writer runs the delegation test, and where the verdict's recompute takes its scope), not the mechanism; closing fact-check (R13) raised 1 build-changing and 5 minor, applied: the SPEC verdict sentence and two D-section sentences left naming `lift-board-line` where the ledger recompute now meets a rescope first; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -108,7 +108,8 @@ out; the person's own answers still work. There is no wildcard scope; a board wi
 **Spelling.** The writer writes the delegate as the grant spells it, the person as `People:` spells it (as
 `who_answered()` does today) and the scope as the item's `Scope` spells it. `lift_pr_verdict()` resolves the head's
 delegate to the base grant's spelling and its person to `People:`'s before it recomputes, so a head spelling
-`Director` against a grant's `director` differs from the recompute (`lift-board-line`).
+`Director` against a grant's `director` differs from the recompute (`lift-ledger` when the Log line spells it so,
+the ledger being recomputed first; `lift-board-line` when only `Decided` does).
 
 `delegates_changed(base, head)` (new, pure) returns whether the first `Delegates:` line's grants differ between
 two boards, for a consumer's person-paths gate to test exactly (D4): each board's grants read as a set of
@@ -145,8 +146,8 @@ when **all** hold:
    **one** gate, the decide lift's shape. Any other gated Context (two entries, two gates, a gate with no entry) is
    refused (`delegate_problem()`'s rule 5 message): the writer writes it board-only, so the gate it answers would
    stay carried with no ledger half and nothing in the delegate's name to lift it. A Context that names no gate is
-   a gateless item whatever entries it names (a Context naming no gate passes rule 5; one with `Parts:` or
-   `Lifts:` and not exactly one entry already meets the existing `context` fault): it carries nothing and owes no lift, so rule 5 does not apply. Of rule 5's cases,
+   a gateless item whatever entries it names (a Context naming no gate passes rule 5; one with `Parts:`, which
+   needs a gate, or with `Lifts:` and not exactly one entry already meets the existing `context` fault): it carries nothing and owes no lift, so rule 5 does not apply. Of rule 5's cases,
    `item_file_problem()` and `item_file()` already refuse a gated `decide` naming other than one entry; only two
    gates is new at the item level.
 
@@ -157,7 +158,7 @@ for a kind of decision, not for some of its answers.
 `item_file_problem()` also faults a delegated `Decided` whose scope differs from the item's `Scope`, one on an
 item with no `Scope`, one whose delegate equals its person, one on an item whose Context names a gate on
 another repo's entry (rule 4), and one on an item whose gated Context is not one entry and one gate (rule 5), as
-every item fault is judged; these four read the item's text alone (rules 2 and 3 need the board's preamble and
+every item fault is judged; these five read the item's text alone (rules 2 and 3 need the board's preamble and
 are the writer's and the verdict's).
 
 **Re-asks.** The package carries no `Scope` onto a later item: an item the sweep files (`Go | Not yet`, or the
@@ -178,7 +179,8 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
   (<scope>)`; `rule 3: <person> may not answer this item`; `rule 4: the Context names a gate on another repo's
   entry`; `rule 5: the gated Context is not one entry and one gate`, each `<…>` as the answer writes it, `<scope>` the
   item's `Scope`. It tests rule 1 only as
-  *the item has a `Scope`*: the answer's scope equalling it is the recompute's (`lift-board-line`) and
+  *the item has a `Scope`*: the answer's scope equalling it is the recompute's (`lift-ledger` when the Log line carries another scope,
+  `lift-board-line` when only `Decided` does) and
   `item_file_problem()`'s. `plan_edit()`
   calls it immediately after `who_answered()` resolves the person and before `edit_item()` and
   `_decide_ledger()` (whose `_may_answer()` and `decide_lift()` refusals would otherwise come first), so its
@@ -196,7 +198,7 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
   `decide_lift()` applies the same refusals to the `kept waiting` line it writes itself. `ledger.py`'s `set` lift route gains `--delegate` and `--scope`, passed through to `lift_gate()` with no
   item check (its PR is reviewed, below). They are taken only with `--by` and `--answer` on a lift: with an
   override, a reassign, or a `Blocked by` that drops no decision they are `Unusable` (`_gate_route()`), and so is
-  one without the other.
+  one without the other (a check the build adds).
 - **`lift_pr_verdict()`** (a board answer's lift on this repo's entry) recomputes the answer with
   `edit_item(..., by=, delegate=)` and `decide_lift(..., delegate=, scope=)`, so a delegated answer reproduces
   byte for byte. Its order: right after its `by` and date checks, before the ledger recompute, it requires
@@ -339,8 +341,9 @@ add a `Scope`); ShiftLead's vendor PR, then the director seat writes delegated a
 > undelegated answer is judged, a gate on this repo's entry), tested right after the answerer and date checks;
 > else `lift-delegate-uncovered`, its text `delegate_problem()`'s message. A gated Context that is not one entry and
 > one gate never reaches that test: it is `lift-no-gate`, as for any answer, so rule 5 is the writer's and
-> `item_file_problem()`'s. A PR that also changes the item's
-> `Scope` is `lift-board-line`, one that also changes `README.md` `lift-board-diff`, as for any lift PR.
+> `item_file_problem()`'s. A PR that also rescopes the item and answers in the new scope is `lift-ledger` (the
+> recompute takes the scope from the base item), one that changes only the item's `Scope` is `lift-board-line`,
+> and one that also changes `README.md` is `lift-board-diff`, as for any lift PR.
 > A delegated answer is written only with its ledger half, in the same PR (the decide lift). `ledger_lift_verdict()`
 > carves out no delegation: a delegated Log line (judged once the one new `gate lifted … answer` line is found,
 > before its date is read), or any open covering
@@ -398,7 +401,8 @@ written on a board whose standing `Delegates:` line is faulty), `add_scope`. `fi
 edit introduces (error) against one standing (ℹ); `delegates_changed` false on reordered grants and whitespace.
 `fixtures/lift/`: `lift_gate` refusing a delegate on the override, check and date shapes, the `board <repo>`
 suffix, one equal to `by`, and a delegate without a scope; the delegated Log lines written; `ledger.py set`
-refusing `--delegate` on an override and a reassign, and `--scope` without `--delegate` (`Unusable`). `fixtures/verdict/`: a delegated answer covered at base; a lift PR that also adds the grant
+refusing `--delegate` on an override and a reassign (`Unusable`, `_gate_route()`'s), and `--scope` without
+`--delegate` (`Unusable`, the check the build adds). `fixtures/verdict/`: a delegated answer covered at base; a lift PR that also adds the grant
 (`lift-board-diff`); one that changes only the item's `Scope`, its Log line and `Decided` in the base scope (`lift-board-line`); one
 that changes the item's `Scope` and answers in the new scope (`lift-ledger`); one under no grant
 (`lift-delegate-uncovered`); one on another repo's entry (`lift-delegate-uncovered`); a ledger lift over a delegated item,
