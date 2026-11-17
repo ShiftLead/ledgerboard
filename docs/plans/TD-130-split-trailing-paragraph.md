@@ -4,7 +4,7 @@
 format, code or fixture change; cap 4 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-130.md](../reviews/TD-130.md). In plain words: [docs/synopses/TD-130.md](../synopses/TD-130.md).
 
-**Entry:** [TD-130](../ledger/TD-130.md), the question TD-129's build (#391) left open on purpose.
+**Entry:** [TD-130](../ledger/archive/TD-130.md), the question TD-129's build (#391) left open on purpose.
 
 ## The problem
 
