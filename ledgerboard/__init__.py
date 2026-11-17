@@ -7146,7 +7146,10 @@ def _entry_context(text: str) -> str:
         return ""
     lead, words = sections[at[0]]
     m = LEAD_RE.match(words)
-    return " ".join((words[m.end():] if m else words).split())
+    rest = words[m.end():] if m else words
+    if m and not m.group("lead").rstrip().endswith(":") and rest.lstrip().startswith(":"):
+        rest = rest.lstrip()[1:]  # `**Context**: x`, as the Ask's one reading drops it
+    return " ".join(rest.split())
 
 
 def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", title: str = "", extra: str = "",
