@@ -1290,6 +1290,22 @@
       "kind": "decide",
       "lifts": null,
       "text": "Go, or hold with a note?"
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-283 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "The release date is known a week ahead, and the banner is read by every visitor.",
+       "question": "Should the banner show the release date?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 0 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the banner show the release date?"
      }
     ],
     "github.com/acme/beta": [
@@ -1845,6 +1861,22 @@
       "kind": "decide",
       "lifts": null,
       "text": "An answer dated in the future"
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-283 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "The release date is known a week ahead, and the banner is read by every visitor.",
+       "question": "Should the banner show the release date?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the banner show the release date?"
      }
     ],
     "github.com/acme/beta": [
@@ -2447,6 +2479,22 @@
       "kind": "decide",
       "lifts": null,
       "text": "An answer dated in the future"
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-283 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "The release date is known a week ahead, and the banner is read by every visitor.",
+       "question": "Should the banner show the release date?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the banner show the release date?"
      }
     ],
     "github.com/acme/beta": [

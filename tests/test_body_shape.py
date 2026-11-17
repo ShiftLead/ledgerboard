@@ -22,6 +22,14 @@ def kinds(text: str) -> list[tuple[str, str]]:
     return [(k, key) for k, key, _ in L.body_problems(text)]
 
 
+class EntryContext(unittest.TestCase):
+    def test_read_and_fallbacks(self):
+        self.assertEqual(L._entry_context(entry("**Why:** a.\n\n**Ask:** Go?\n\n**Context:** one\ntwo.")), "one two.")
+        self.assertEqual(L._entry_context(entry("**Why:** a.\n\n**Ask:** Go?\n\n**Context**: because.")), "because.")
+        self.assertEqual(L._entry_context(entry("**Why:** a.\n\n**Ask:** Go?")), "")
+        self.assertEqual(L._entry_context("## TD-001: X\n\nnot a field\n"), "")
+
+
 class Ordinal(unittest.TestCase):
     def test_spelling(self):
         self.assertEqual([L._ordinal(n) for n in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111)],

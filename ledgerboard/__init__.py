@@ -7134,10 +7134,29 @@ def _sweep_text(cond: str, tid: str, gate: str, extra: str = "") -> str:
                      f"for {tid}."}[cond]
 
 
+def _entry_context(text: str) -> str:
+    """The entry's ``**Context:**`` section as one line (v3.3, the Ask's context): its words after the lead, its
+    whitespace collapsed; ``""`` when it has none or its body cannot be read."""
+    try:
+        sections = _entry_sections(_entry_parts(text)[2])
+    except Refused:
+        return ""
+    at = _keyed(sections, "context")
+    if not at:
+        return ""
+    lead, words = sections[at[0]]
+    m = LEAD_RE.match(words)
+    rest = words[m.end():] if m else words
+    if m and not m.group("lead").rstrip().endswith(":") and rest.lstrip().startswith(":"):
+        rest = rest.lstrip()[1:]  # `**Context**: x`, as the Ask's one reading drops it
+    return " ".join(rest.split())
+
+
 def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", title: str = "", extra: str = "",
-                reask_days: int = SWEEP_REASK_DAYS) -> dict:
+                reask_days: int = SWEEP_REASK_DAYS, context: str = "") -> dict:
     """One item the sweep files, as ``item_file()``'s arguments (the host adds today, its Due:, session and
-    host): {text, context, kind, answers, default, detail, lifts}."""
+    host): {text, context, kind, answers, default, detail, lifts}. A decision's item takes the entry's
+    ``**Context:**`` (``context``, v3.3) as its detail block's context, where the entry has one."""
     kind = SWEEP_KINDS[cond]
     ctx = f"{ref} {gate}" + (" board " + extra if cond == "audit" else "")
     out: dict = {"text": ask if cond == "uncovered" else _sweep_text(cond, tid, gate, extra), "context": ctx,
@@ -7145,7 +7164,7 @@ def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", titl
     if cond == "uncovered":
         name = gate[gate.index("(") + 1: -1]
         out.update(answers=list(SWEEP_DECISION_ANSWERS), detail={
-            "context": f"{tid} ({title}) waits on {gate}, and no board item asked for it",
+            "context": context or f"{tid} ({title}) waits on {gate}, and no board item asked for it",
             "question": ask,
             "recommended": f"Only {name} can say: Go lifts the gate, and Not yet keeps it waiting, asked again "
                            f"in {reask_days} days"})
@@ -7308,6 +7327,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                 ref = tid if pick is own else f"{repo.lower()}#{tid}"
                 add(_board_name(pick), num, gate, "uncovered", _sweep_item(
                     "uncovered", tid, ref, gate, ask=_entry_ask(raws.get(num, text), e["title"]), title=e["title"],
+                    context=_entry_context(text),
                     reask_days=reask_days))
                 continue
             name = gate[len("event ("): -1]
