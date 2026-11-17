@@ -1525,7 +1525,9 @@ item only when it is added.
   note), on the board and then on the archive, is carried, in order, to the end of `README.md` after one blank line, with each `## ` heading after the
   first item that stands above a carried line; a heading with no carried line under it is dropped. A relative link
   in a carried line gains `../` by the rule above, the file having moved too. Nothing is
-  lost, and `split_board_notes()` lists what may describe the v2 board.
+  lost, and `split_board_notes()` lists each carried line, since no item holds it (a paragraph a session set
+  below an item after a blank line, which the v2 reader never read as that item's, among them), and what may
+  describe the v2 board.
 - It refuses a board that declares a major above 2 (`Ledgerboard: 3`, a stub's, among them); an item with no date, or a date that is no day of the
   calendar; a closed line with no readable
   `Closed:` date (no month to file it under: date it first); two open lines, or two closed lines, of one id; two
@@ -1546,7 +1548,10 @@ item only when it is added.
 - `split_board_notes(files, board, archive="")`, over `split_board()`'s files and the v2 texts they were split
   from, lists as `(path, line number, line, why)`, for the caller to warn about, nothing rewritten: the lines of
   that `README.md` which may still describe the v2 board (a line naming `user_attention.md`,
-  `user_attention_archive.md`, `Needs the user` or `In-flight`, and a `Format:` line), then each shape the split
+  `user_attention_archive.md`, `Needs the user` or `In-flight`, and a `Format:` line), then each non-blank line
+  carried to that `README.md` from below the first item (a `## ` heading carried with it among them), at its line
+  there, `why` `carried from the board's line <n>, below an item: no item holds it` (`the archive's` for one
+  carried from the archive, `<n>` its line in that text), then each shape the split
   carried that `board_dir_problems()` names, at its field's line (the first header line of that field's name),
   then each item whose v2 line's head group held more than its session and host, at its `Session` line (with
   none, its heading), `why` `head text not carried: <text>`: the group's text less the session and the host,
@@ -2390,7 +2395,9 @@ changes; no writer of this package calls the check.
 carve-out for a PR that lifts one entry's decision on the ledger with no board answer, `lift_form()`, which
 names the form such a lift takes, and the ledger lift's commit subject, written by `lift_subject()` and read
 by `lift_subject_parts()`. No parse, field, Log line, item key or canonical form changes. One reading
-changes: `subject_kind()` names that subject `lift`, where earlier releases read None.
+changes: `subject_kind()` names that subject `lift`, where earlier releases read None. `split_board_notes()`
+also lists each line a split carries to `README.md` from below the first item, which no item holds and which
+earlier releases carried with no note; what `split_board()` writes is unchanged.
 
 ## Appendix: grammar
 
