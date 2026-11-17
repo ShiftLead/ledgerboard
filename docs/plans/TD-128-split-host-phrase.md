@@ -4,7 +4,7 @@
 SPEC sentence; no file format, reader or consumer changes; cap 4 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-128.md](../reviews/TD-128.md). In plain words: [docs/synopses/TD-128.md](../synopses/TD-128.md).
 
-**Entry:** [TD-128](../ledger/TD-128.md), filed from the v3 moves of 2026-11-16 and handed to design by the grinder
+**Entry:** [TD-128](../ledger/archive/TD-128.md), filed from the v3 moves of 2026-11-16 and handed to design by the grinder
 (2026-11-17), whose probe showed the entry's Fix would change the item file's grammar.
 
 ## The problem
