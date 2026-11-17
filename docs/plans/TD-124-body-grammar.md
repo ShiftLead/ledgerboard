@@ -1,9 +1,10 @@
 # TD-124: the entry body grammar — strict section edges, one-line data
 
-**Status:** Draft 8 (rounds 1–6 applied), 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
+**Status:** Draft 9 (rounds 1–7 applied), 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: what opens a
 section, what the check flags, a writer that rewrites every ledger; both consumers vendor it; cap 6 rounds,
 cadence.md §4.8). Paul chose the two-step release on 2026-11-16 (D7; m-e1c7c9a8ed70). Draft 8 applies rounds 1
-to 6; the rounds ended at the cap, round 6's review judging it worth building as it stands. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
+to 6; the rounds ended at the cap, round 6's review judging it worth building as it stands. Paul bought round 7
+(TD-126); Draft 9 applies it. Its review found nothing build-changing, so the rounds end by the stop rule. The record: [docs/reviews/TD-124.md](../reviews/TD-124.md). In plain
 words: [docs/synopses/TD-124.md](../synopses/TD-124.md).
 
 **Entry:** [TD-124](../ledger/TD-124.md), from Paul's conversation of 2026-11-15, after his hold on TD-119.
@@ -28,22 +29,23 @@ tool fails), so prose must stay free and readable.
 
 ## What the ledgers hold today
 
-Counted on 2026-11-16 from each repo's `origin/main` (open entries / archived):
+Counted on 2026-11-16 from each repo's `origin/main` (open entries / archived; this repo's open column recounted
+at `dc63dc8`, its round entries TD-126 and TD-127 among them):
 
 | | ledgerboard | agent-cadence | ShiftLead |
 |---|---|---|---|
-| entries | 5 / 109 | 15 / 79 | 85 / 1611 |
-| strict leads (`**Name:**`) | 27 / 591 | 89 / 401 | 497 / 9182 |
+| entries | 9 / 109 | 15 / 79 | 85 / 1611 |
+| strict leads (`**Name:**`) | 47 / 591 | 89 / 401 | 497 / 9182 |
 | leads with no colon | 0 / 3 | 5 / 19 | 44 / 707 |
 | leads with the colon after the bold | 0 / 0 | 0 / 0 | 0 / 0 |
 | a lead-like line glued to the line above | 0 / 0 | 0 / 0 | 0 / 19 |
-| Asks of more than one line | 2 / 1 | 0 / 0 | 0 / 0 |
+| Asks of more than one line | 3 / 1 | 0 / 0 | 0 / 0 |
 | unclosed fences | 0 / 0 | 0 / 0 | 0 / 0 |
 
 The glued count is the same on the raw body (D2) as on the comment-dropped text. Nearly every colon-less lead is `**Done when** <text>`; the rest are prose labels that today open a section
 nobody reads (`**Fix, in order — each step is usable on its own.**`, `**Which candidate fired (2026-09-11).**`).
 The glued lines are archived ones, mostly a `**Resolved:**` written under the Fix with no blank line. The only
-multi-paragraph Asks are this repo's (open TD-119's and TD-115's, archived TD-111's; written to v3.2's *sentence then context*).
+multi-paragraph Asks are this repo's (open TD-115's, TD-119's and TD-124's own, archived TD-111's; written to v3.2's *sentence then context*).
 
 ## The design
 
@@ -76,8 +78,10 @@ does not start a paragraph (glued to the line above) is a **glued lead**, flagge
 It is never read as a section and never silently as prose the tools act on. Its message names both cures: a blank
 line above it (it becomes the section its writer meant, which `migrate-body` does), or rewording so the line does not
 open with a lead (it stays prose). An `**Ask:**` lead is also a glued lead where it opens a line after up to
-three spaces or after `> `, since an indented or quoted Ask would otherwise be silently unread (a quote is a `>` prefix, any spaces after
-it, nested or not; a list item `- **Ask:**` stays prose, a stated cost) (TD-119 keeps its own
+three spaces or after `> `, since an indented or quoted Ask would otherwise be silently unread (exactly, the line
+matches `^(?: {1,3}|(?: {0,3}>[ \t]*)+)\*\*Ask` with the lead then matched by `field_key`: a quote is a `>` prefix,
+any spaces or tabs after it, nested or not, so `  > **Ask:**` and `>     **Ask:**` are flagged; a tab-indented Ask is
+not, a stated cost; a list item `- **Ask:**` stays prose, a stated cost) (TD-119 keeps its own
 refusal for `Answers` and `Lifts`). A bold run
 anywhere else (inside a line, in a list item `- **Note:** …`, another name after leading spaces) is prose and
 flagged by nothing: those are emphasis by their place, and a list of bold labels is common prose.
@@ -111,7 +115,7 @@ The value is the line after the lead's bold run, whitespace trimmed. The format'
 
 - `**Ask:**` — the question, one sentence (*Text a person reads*). What v3.2 kept in the Ask's later paragraphs
   moves to a prose section `**Context:**` (D5) after it. The sweep's item text is the Ask's line, as today's
-  joined Ask was for every Ask but this repo's two of several paragraphs; what the item's detail carries from `**Context:**` is not this design (*Not done*).
+  joined Ask was for every Ask but this repo's three of several paragraphs; what the item's detail carries from `**Context:**` is not this design (*Not done*).
 - `**Answers:**` and `**Lifts:**` — TD-119's, one line in its Draft 4, and data fields only as TD-119 has them:
   on an entry whose `Blocked by` names a decision, flagged by TD-119's own `answers-unusable` through this design's
   field reader, never by `field-lines`; on an ungated entry a repo's own prose `**Answers:**` stays legal. Whichever
@@ -183,7 +187,7 @@ or any edit of an unmigrated entry passes `--check --base`, and only a new fault
 TD-119's own refusals stay its own, on its two gated names: whichever of B1 and TD-119's build merges second has
 `entry_answers()` share this design's line-reading helper (a field's lead, its line, what runs past it), so the
 reasons agree; `Answers` and `Lifts` never join `field-lines` (D3). Until v4.0 the helper reads a lead as
-`_entry_sections()` does, non-strict forms included, and a value after one `:` dropped, as TD-119's D1 reads it.
+`_entry_sections()` does, non-strict forms included, and a value after one `:` dropped only where the bold run held none, as TD-119's D1 reads it.
 The difference is deliberate: a quoted `> **Ask:**` is this design's `glued-lead`, while a quoted `**Answers:**`
 stays prose as TD-119 says, since an unread Answers offers `Go | Not yet`, today's item, and an unread Ask hides
 the question.
@@ -238,7 +242,8 @@ refuses (`_entry_parts()` alone; `check()` calls no `canonical()`) is not read f
    run) is refused. Only an entry with at least one declared transform is written or counted as changed; it is
    written in `canonical()` form, which also normalises its header order, line endings and trailing blank lines, as
    expected; any other non-canonical entry is `fmt`'s, *already migrated* here. A respelling that keeps its key is never
-   refused. One that changes it (a dropped `.`; trimmed whitespace never changes a key) is refused when its new key is another
+   refused for its key (an entry left with two Ask sections, `**Ask**` beside `**Ask:**`, is still refused as two
+   Asks). One that changes it (a dropped `.`; trimmed whitespace never changes a key) is refused when its new key is another
    section's key in the entry, or a key the package reads (`why`, `fix`, `done when`,
    `related`, `ask`, `answers`, `lifts`, `context`, `location`, `log`, `resolved`, an `event (…)`, `title`, a
    header name in `HEADER_NAMES`, or a name the ledger's `Fields:` declares). A glued-lead split may raise another
@@ -262,8 +267,10 @@ refuses (`_entry_parts()` alone; `check()` calls no `canonical()`) is not read f
    `{path, why}`). B3 is blocked by one `pr-merged <repo>#<n>` event per consumer migrate PR; its builder then runs
    `migrate-body --check` on each consumer's `origin/main` ledger, read through refs, and records the result in
    B3's PR. This package runs nothing of a consumer's. A ledger's `Ledgerboard: 2` declares its directory form, not this reading,
-   and stays: a migrated ledger reads the same under v3.N and v4.0. The reader reads D1 and D3 alone: a
-   non-strict lead is prose, a data field is its line. Nothing in a migrated ledger reads differently.
+   and stays: a migrated ledger reads the same under v3.N and v4.0, bar a non-strict lead inside a comment (below). The reader reads D1 and D3 alone: a
+   non-strict lead is prose, a data field is its line. Nothing in a migrated ledger reads differently, except a
+   non-strict lead on a line inside a comment, which D2 leaves unflagged and unrewritten: a section under v3.N,
+   prose under v4.0, and hidden text either way.
 
 The way not taken, **one v4.0** that reads strictly at once, makes every unmigrated consumer ledger read differently
 on the day it vendors (44 open ShiftLead `Done when` sections joining their Fix), and needs the migrate run in the
@@ -320,7 +327,8 @@ paragraph that opens in bold narrows to one that opens with a strict lead.
 > colon after the bold, no name, or a name opening with whitespace; read as a lead until v4.0), its message naming
 > the strict spelling and rewording; `glued-lead`, a line at its first column, outside a fence and the header
 > block, that opens with `**Name:**` but starts no paragraph (a comment-only line above it is text), and an `Ask`
-> lead after up to three spaces or after a `>` prefix (any spaces after it, nested or not); `fence-open`, a fence the body never closes (fence lines inside a
+> lead after up to three spaces or after a `>` prefix (up to three spaces before each `>`, any spaces or tabs after
+> it, nested or not; a tab-indented Ask is not flagged); `fence-open`, a fence the body never closes (fence lines inside a
 > comment count, as the writers read them); and `field-lines`, an `Ask` with text past its line (comment-only and
 > in-comment lines aside) or with no value once comments are dropped. A lead on a line inside a comment is never
 > flagged. A bold run anywhere else is prose. Faults are counted per key (entry, kind, and the lead's `field_key`;
@@ -333,8 +341,9 @@ paragraph that opens in bold narrows to one that opens with a strict lead.
 sentence (…), `question=True`, and its later paragraphs the context.* becomes
 
 > the Ask's line after its `**Ask:**` lead, the sentence, `question=True`, and the entry's `**Context:**`
-> section, where it has one, the context (v3.N: an Ask is a data field, *The entry*; until v4.0 an Ask's later
-> paragraphs are still read as its context, and flagged, `field-lines`);
+> section, where it has one, the context (v3.N: an Ask is a data field, *The entry*; until v4.0 an Ask's first
+> paragraph is still the sentence, joined, and its later paragraphs still its context, flagged `field-lines`; an
+> entry with both a `**Context:**` section and later Ask paragraphs has the `**Context:**` section as its context);
 
 **In *The ledger writer*, after `fmt`'s bullet**, a new one:
 
@@ -351,7 +360,8 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 >   declared rewrites alone, on the raw body as the writers read it, a lead inside an HTML comment left as it is;
 >   a respelling that changes a lead's key to another section's key, a name this format reads or a header name is
 >   refused (an Ask's first paragraph ending only at a blank line outside comment spans; every refusal only on an
->   entry with a fault or a declared transform, a clean entry being already migrated), as is a comment inside a
+>   entry with a fault or a declared transform, a clean entry being already migrated, except an entry
+>   `_entry_parts()` refuses, which is always refused), as is a comment inside a
 >   label's bold run, an Ask that must be joined and holds a comment, a code span
 >   or a line that is not plain text, and an entry with two Asks;
 >   the Context lead is written alone on its line, a blank line, then the rest byte for byte; only an entry with a
@@ -377,7 +387,7 @@ sentence (…), `question=True`, and its later paragraphs the context.* becomes
 
 All invented. `fixtures/ledger_edit/check/`: one case per kind, flagged and clean — `**Done when** x` and
 `**Done when**: x` (`lead-form`), a `**Fix:**` glued under the Why (`glued-lead`), an unclosed backtick fence and a
-`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) `> **Ask:**`, `>**Ask:**` and `> > **Ask:**` (`glued-lead`), a four-space `    **Ask:**`
+`~~~` "closed" by backticks (`fence-open`), an Ask with a second paragraph and an Ask with a line glued below (`field-lines`), an indented `   **Ask:**` (three spaces) `> **Ask:**`, `>**Ask:**` and `> > **Ask:**`, `  > **Ask:**` and `>     **Ask:**` (`glued-lead`), a tab-indented Ask (clean), a four-space `    **Ask:**`
 (clean: an indented code block's line), a lead glued after a fence's closing line
 (`glued-lead`), `**Why**` at a paragraph's start (`lead-form`); a lead right after a comment-only line (`glued-lead`, raw reading); clean: `- **Note:** x` in a Fix, `a **b:** c` mid-line, `  **Fix:**` indented, a fenced
 `**Ask:**`, a one-line Ask with a `**Context:**` after it. `fixtures/ledger_writer/`: `migrate-body` over a ledger
@@ -392,8 +402,8 @@ archived entry rewritten; a qualified lead left alone; `reopen` of an unmigrated
 each kind new, while a Log note on an entry already flagged is written; `check(old)` raising a standing flag as ℹ,
 not an error, when the entry's text changed; an edit adding a second `**Done when** y` to an entry with one
 standing (an error, *the 2nd*); two errors against `base`, then one fixed (not refused); a fence closed by
-hand uncovering a glued lead (not refused); an Ask whose lead's line is empty refused; an Ask holding a code span
-refused; a respelling to `**Why:**` beside a Why refused; a clean but non-canonical entry left alone; the Context
+hand uncovering a glued lead (not refused); an Ask whose lead's line is empty refused; a wrapped first Ask paragraph
+holding a code span refused; a one-line Ask holding a code span, with a Context, left unchanged (clean); a respelling to `**Why:**` beside a Why refused; a clean but non-canonical entry left alone; the Context
 layout in `after/`; a lead inside a multi-line comment (not flagged, kept); a comment opening mid-line over a lead;
 a fence marker inside a comment; an Ask whose first paragraph holds a comment with a blank line in it (the Context
 lead placed after the comment, never in it); an Ask with a comment-only line below and a `**Fix:**` glued under it (the Ask clean and untouched, the Fix
@@ -407,11 +417,12 @@ Filed on Paul's go, after the rounds: **B1** v3.N (D1–D6's check, the writer's
 text, the fixtures); **B2** this repo's migrate PR; **B3** v4.0's strict reader, blocked by one `pr-merged`
 event per consumer migrate PR, its builder recording D7's gate on each (D7). B1, or TD-119's build if it merges second, also
 moves `entry_answers()` onto the field reader (D3). B1 regenerates the existing fixtures' expected `check()`
-output, which gains `lead-form` ℹ where they hold `**Done when** …`. B1 also has `_entry_ask` drop comments from the Ask it joins (the
-sweep's item text), its one-line reading coming with B3; and gives `new` and `set` a `--context FILE` that writes the
+output, which gains `lead-form` ℹ where they hold `**Done when** …`. B1 also has `_entry_ask` (the sweep's item text) read the Ask by
+the one helper `check()` uses, comment spans over the raw body clipped to the Ask's lines, never by dropping comments
+from the section text (an Ask `Go? <!-- a`, a blank line, `**Context:** x -->` is `Go?`), its one-line reading coming with B3; and gives `new` and `set` a `--context FILE` that writes the
 `**Context:**` section right after the Ask (and B1 has `edit --section Context` add it after the Ask, where
 the entry has one; `_section_place` would put it after the Why). **B4** the sweep's item
-carries the entry's `**Context:**` as its detail context (this repo's two multi-paragraph Asks lose their context on the item from their migrate until
+carries the entry's `**Context:**` as its detail context (this repo's three multi-paragraph Asks lose their context on the item from their migrate until
 B4). On the go, the designer files with each consumer's question seat (`ao td add`): its vendor PR of v3.N; its
 own writers of an Ask, which accept several paragraphs today and must write one line and a `**Context:**`; and its
 `migrate-body` PR, which B3 waits on. Each consumer's migrate is an entry in its own ledger, named
