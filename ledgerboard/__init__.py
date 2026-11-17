@@ -7772,7 +7772,7 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
     ref, gate = _item_gate(b_item)
     if h_item.decided is None:
         return review("lift-not-answered", "the changed item gains no Decided:")
-    if gate is None or b_item.kind != "decide":
+    if ref is None or gate is None or b_item.kind != "decide":
         return review("lift-no-gate", "the answered item is not a decide whose Context names one entry and one gate")
     if b_item.decided is not None:
         return review("lift-reanswer", "the item was answered already — a re-answer takes ordinary review")
