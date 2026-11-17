@@ -30,6 +30,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from dataclasses import replace as _dc_replace
@@ -828,7 +829,10 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     error, scoped by the entry's whole text): ``misplaced_names()`` of each open entry, the ledger's ``Fields:`` names
     its declared ones. From v3.1, ``decision-missing`` (``_decision_missing()``): an open entry with an Ask whose
     Blocked by names no decision and whose Log does not show it answered (``_ask_answered()``), scoped by the
-    entry's whole text, an error on a rewritten one. ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
+    entry's whole text, an error on a rewritten one. From v3.3, the body's shape (``_body_records()``, SPEC *The body's
+    shape*): ``lead-form``, ``glued-lead``, ``fence-open`` and ``field-lines`` on each open entry's raw body, counted
+    per key against ``old``'s, its own scoping — a fault ``old`` has of a key is ℹ and standing, the rest errors.
+    ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
                               today=today)["flag_recs"]]
@@ -861,8 +865,9 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
                              "text": f"ℹ {tid}: {gate} was reassigned {n} times — is the decision stuck?",
                              "standing": False})
     statuses = _status_records(ledger, archive) + _retired_records(ledger, archive)
+    body = _body_records(ledger, old)  # v3.3: the body's shape, counted per key against old, its own scoping
     if old is None:
-        return recs + statuses
+        return recs + body + statuses
     before = {e["id"]: e["fields"] for e in entries(old)}
     changed = {e["id"] for e in entries(ledger) if before.get(e["id"]) != e["fields"]}
     rewritten = {t for t, x in texts.items() if old_texts.get(t) != x}  # a Log flag's scope: the whole entry
@@ -875,7 +880,7 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         elif r["kind"] in EDIT_ERRORS:
             r["level"] = "error"
         r["text"] = ("⚠" if r["level"] == "error" else "ℹ") + r["text"][1:]
-    return recs + _left_with_open_parts(old, ledger) + statuses
+    return recs + body + _left_with_open_parts(old, ledger) + statuses
 
 
 def _status_records(ledger: str, archive: str) -> list[dict]:
@@ -4528,6 +4533,336 @@ def _entry_sections(body: str) -> list[tuple[str | None, str]]:
     return found
 
 
+# The body's shape (v3.3, SPEC *The entry*, *The body's shape*): a strict lead, `**Name:**`; the prefix before an
+# `**Ask:**` that hides it (up to three spaces, or a `>` quote, nested or not); a list item's or a code span's mark.
+STRICT_LEAD_RE = re.compile(r"^\*\*(?P<name>[^*\s][^*\n]*?)[ \t]*:\*\*")
+ASK_PREFIX_RE = re.compile(r"^(?: {1,3}|(?: {0,3}>[ \t]*)+)(?=\*\*)")
+LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)")
+BODY_KINDS = ("lead-form", "glued-lead", "fence-open", "field-lines")  # check()'s four flags on the body (v3.3)
+# The section names this format reads, which a respelling may not make a label into (migrate-body, v3.3).
+READ_SECTION_KEYS = frozenset({"why", "fix", "done when", "related", "ask", "answers", "lifts", "context", "location",
+                               "log", "resolved", "title"})
+
+
+def _body_lines(body: str) -> list[dict]:
+    """Each line of a raw body as the body's shape reads it (v3.3, SPEC *The body's shape*): its text, its offset,
+    ``blank`` (whitespace only), ``hidden`` (its start lies inside an HTML comment: after a span's start and before
+    its end), its words outside the comment spans (``outside``), and its kind — ``blank``, ``text`` (words outside the
+    spans), ``inside`` (hidden, no words outside) or ``comment`` (a comment-only line: a span clipped to it and only
+    whitespace outside them), which is text to the glued rule, never to the Ask's."""
+    spans = [m.span() for m in COMMENT_RE.finditer(body)]
+    out, at = [], 0
+    for line in body.split("\n"):
+        a, b = at, at + len(line)
+        cut = sorted((max(s, a) - a, min(e, b) - a) for s, e in spans if s < b and e > a)
+        outside, k = [], 0
+        for s, e in cut:
+            if s > k:
+                outside.append(line[k:s])
+            k = max(k, e)
+        outside.append(line[k:])
+        words = "".join(outside)
+        hidden = any(s < a < e for s, e in spans)
+        kind = "blank" if not line.strip() else "text" if words.strip() else "inside" if hidden else "comment"
+        out.append({"line": line, "at": a, "blank": not line.strip(), "hidden": hidden, "outside": words,
+                    "kind": kind, "spans": bool(cut)})
+        at = b + 1
+    return out
+
+
+def _fence_step(fence: str, line: str) -> str:
+    """The open fence after ``line`` (``_entry_sections()``'s rule): a fence line opens one, and a bare run of its
+    own character at least as long closes it."""
+    f = FENCE_RE.match(line)
+    if f and not fence:
+        return f.group("fence")
+    if f and fence and f.group("fence")[0] == fence[0] and len(f.group("fence")) >= len(fence) \
+            and not f.group("info").strip():
+        return ""
+    return fence
+
+
+def _section_spans(lines: Sequence[str]) -> list[tuple[str | None, int, int]]:
+    """The body's sections as ``_entry_sections()`` cuts them, by line: (the lead as written, or None; the first
+    line; one past the last, trailing blank lines trimmed). The unnamed section is left out when it is empty."""
+    starts: list[tuple[str | None, int]] = []
+    fence, prev_blank = "", True
+    for i, line in enumerate(lines):
+        m = LEAD_RE.match(line) if prev_blank and not fence else None
+        if m or not starts:
+            starts.append((m.group("lead") if m else None, i))
+        fence = _fence_step(fence, line)
+        prev_blank = not line.strip()
+    out = []
+    for k, (lead, a) in enumerate(starts):
+        b = starts[k + 1][1] if k + 1 < len(starts) else len(lines)
+        while b > a and not lines[b - 1].strip():
+            b -= 1
+        if lead is not None or b > a:
+            out.append((lead, a, b))
+    return out
+
+
+def _ask_reading(rows: Sequence[dict], a: int, b: int) -> dict:
+    """The one reading of an Ask section, lines ``a`` to ``b`` of a raw body's ``_body_lines()`` (v3.3): ``value``,
+    the lead's line after its bold run, comments dropped, whitespace trimmed (one ``:`` dropped where the bold run
+    held none); ``past``, the text lines after the lead's line (comment-only and in-comment lines, and blank ones,
+    aside); ``para_end``, the line after its first paragraph (the first blank line outside a comment, else ``b``);
+    ``para``, the text lines of its first paragraph, the lead's among them; and ``words``, every text line's words
+    outside the comments, in order."""
+    lead = rows[a]
+    m = LEAD_RE.match(lead["line"])
+    head = lead["outside"]
+    if m and head.startswith(m.group(0)):
+        head = head[m.end():]
+        if not m.group("lead").rstrip().endswith(":") and head.lstrip().startswith(":"):
+            head = head.lstrip()[1:]
+    value = head.strip()
+    past = [i for i in range(a + 1, b) if rows[i]["kind"] == "text"]
+    end = next((i for i in range(a + 1, b) if rows[i]["blank"] and not rows[i]["hidden"]), b)
+    para = [a] + [i for i in range(a + 1, end) if rows[i]["kind"] == "text"]
+    words = [value] + [rows[i]["outside"].strip() for i in past]
+    return {"value": value, "past": past, "para_end": end, "para": para, "words": [w for w in words if w]}
+
+
+def _body_faults(body: str) -> list[tuple[str, str, str, int]]:
+    """The body's shape faults (v3.3, SPEC *The body's shape*), in line order: (kind, key, how, line) — ``lead-form``
+    (how ``form``), ``glued-lead`` (``glued``, or ``hidden`` for an indented or quoted Ask), ``fence-open``
+    (``open``, key ``""``) and ``field-lines`` (``lines``, or ``empty``), read on the raw body as the writers read it."""
+    rows = _body_lines(body)
+    out: list[tuple[str, str, str, int]] = []
+    fence, prev_blank = "", True
+    for i, r in enumerate(rows):
+        line = r["line"]
+        if not fence and not r["hidden"]:
+            lead, strict = LEAD_RE.match(line), STRICT_LEAD_RE.match(line)
+            q = ASK_PREFIX_RE.match(line)
+            hid = STRICT_LEAD_RE.match(line[q.end():]) if q else None
+            if prev_blank and lead and not strict:
+                out.append(("lead-form", _section_key(lead.group("lead")), "form", i))
+            elif not prev_blank and strict:
+                out.append(("glued-lead", field_key(strict.group("name")), "glued", i))
+            elif hid and field_key(hid.group("name")) == "ask":
+                out.append(("glued-lead", "ask", "hidden", i))
+        fence = _fence_step(fence, line)
+        prev_blank = r["blank"]
+    if fence:
+        out.append(("fence-open", "", "open", len(rows)))
+    for lead, a, b in _section_spans([r["line"] for r in rows]):
+        if lead is not None and _section_key(lead) == "ask":
+            got = _ask_reading(rows, a, b)
+            if not got["value"] or got["past"]:
+                out.append(("field-lines", "ask", "empty" if not got["value"] else "lines", a))
+    return sorted(out, key=lambda f: (f[3], BODY_KINDS.index(f[0])))
+
+
+def body_problems(text: str) -> list[tuple[str, str, str]] | None:
+    """One entry's body-shape faults (v3.3, SPEC *The body's shape*), the raw text as the writers read it:
+    [(kind, key, sentence)], each sentence naming the entry, the kind, the lead's key and its ordinal among the
+    faults of that kind and key, never a line; None for an entry ``_entry_parts()`` refuses, which is not read."""
+    try:
+        m, _, body = _entry_parts(text)
+    except Refused:
+        return None
+    tid, seen, out = m.group(1), Counter(), []
+    for kind, key, how, _ in _body_faults(body):
+        seen[(kind, key)] += 1
+        nth = _ordinal(seen[(kind, key)])
+        lead = f"`**{key}:**`" if key else "nameless"
+        why = {
+            "form": f"the {nth} {f'`**{key}**`' if key else 'nameless'} lead is not a strict `**Name:**` (lead-form): "
+                    f"write it `**{key or 'Name'}:**` to keep it a section, or reword the paragraph to open with words; "
+                    "it is read as a lead until v4.0 (ledger.py migrate-body respells it)",
+            "glued": f"the {nth} {lead} lead is glued to the line above, so it opens no section (glued-lead): add a "
+                     "blank line above it to make it the section its writer meant (migrate-body does), or reword the "
+                     "line so it does not open with a lead",
+            "hidden": f"the {nth} {lead} lead is indented or quoted, so it opens no section and the Ask is never read "
+                      "(glued-lead): remove the indent or the quote",
+            "open": f"the {nth} code fence opens and never closes (fence-open), so no lead after it is read: close it",
+            "lines": f"the {nth} {lead} section runs past its lead's line (field-lines): an Ask is one line, "
+                     "`**Ask:** <the question>` — move the rest under a `**Context:**` section after it (migrate-body "
+                     "does)",
+            "empty": f"the {nth} {lead} section has no question on its lead's line (field-lines): write the question "
+                     "there, one line",
+        }[how]
+        out.append((kind, key, f"{tid}: {why}"))
+    return out
+
+
+def _ordinal(n: int) -> str:
+    """``1st``, ``2nd``, ``3rd``, ``4th``, …, ``11th``, ``21st``."""
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def _raw_entry_texts(text: str) -> dict[str, str]:
+    """Each entry's raw text (its heading to the next ``## `` heading outside an HTML comment, comments kept), by
+    id, the first of an id winning, as ``_entry_texts()`` keeps."""
+    out: dict[str, str] = {}
+    for tid, part in _sections(text or ""):
+        if tid is not None:
+            out.setdefault(tid, part)
+    return out
+
+
+def _body_records(ledger: str, old: str | None) -> list[dict]:
+    """``check()``'s four body-shape flags (v3.3, SPEC *The body's shape*) over the open entries' raw texts, counted
+    per key (entry, kind, the lead's key): with no ``old`` each is ℹ; with it, the first j of a key are ℹ and
+    standing where ``old``'s entry had j, the rest errors — an entry absent from ``old`` counting from 0, one
+    ``old`` cannot read all ℹ, and where ``old``'s entry has ``fence-open``, its other three kinds ℹ."""
+    olds = _raw_entry_texts(old) if old is not None else {}
+    out = []
+    for tid, text in _raw_entry_texts(ledger).items():
+        found = body_problems(text)
+        if not found:
+            continue
+        had: Counter | None = Counter()
+        fenced = False
+        if old is not None and tid in olds:
+            was = body_problems(olds[tid])
+            if was is None:
+                had = None
+            else:
+                had.update((k, key) for k, key, _ in was)
+                fenced = any(k == "fence-open" for k, _, _ in was)
+        seen = Counter()
+        for kind, key, why in found:
+            seen[(kind, key)] += 1
+            if old is None:
+                level, standing = "info", False
+            elif had is None or (fenced and kind != "fence-open") or seen[(kind, key)] <= had[(kind, key)]:
+                level, standing = "info", True
+            else:
+                level, standing = "error", False
+            out.append({"level": level, "id": tid, "field": key or "body", "kind": kind, "standing": standing,
+                        "text": f"{'⚠' if level == 'error' else 'ℹ'} {why}"})
+    return out
+
+
+def _respelled(bold: str) -> str:
+    """A label's strict spelling (v3.3, migrate-body): the bold text's whitespace trimmed, one trailing ``.`` or
+    ``:`` dropped; the name alone, or ``""`` when none is left."""
+    name = bold.strip()
+    if name.endswith((".", ":")):
+        name = name[:-1]
+    return name.rstrip()
+
+
+def migrate_body(text: str, declared_fields=()) -> str:
+    """One entry rewritten so ``check()`` flags none of the body's four kinds (v3.3, SPEC *The ledger writer*,
+    ``migrate-body``), in ``canonical()`` form; ``text`` itself when it needs no declared rewrite (already
+    migrated). The rewrites, in order on the raw body: each non-strict lead respelled ``**Name:**``, a blank line
+    above each glued lead, then a multi-line Ask's first paragraph joined to one line and the rest moved, byte for
+    byte, under a ``**Context:**`` lead after it. Raises Refused for an entry ``_entry_parts()`` refuses, and on an
+    entry with a fault for: ``fence-open``; an indented or quoted Ask; a label with no name, or one whose respelling
+    changes its key to another section's, a name this format reads or a header name (``declared_fields``: the
+    ledger's ``Fields:``); a comment inside a label's bold run; two Asks; an Ask whose lead's line is empty, whose
+    first paragraph holds a list or a fence, or that must be joined and holds a comment, a code span, a line that is
+    not plain text or a hard break; a Context beside an Ask with more to move; and a rewrite that would not read
+    back to the v3.3 reading under the declared rewrites alone."""
+    m, header, body = _entry_parts(text)
+    faults = _body_faults(body)
+    if not faults:
+        return text
+    tid = m.group(1)
+    if any(k == "fence-open" for k, *_ in faults):
+        raise Refused(f"{tid}: a code fence never closes (fence-open), so its sections cannot be read — close it by "
+                      "hand, then run again")
+    if any(how == "hidden" for _, _, how, _ in faults):
+        raise Refused(f"{tid}: an indented or quoted **Ask:** is not a rewrite this writer guesses — remove the indent "
+                      "or the quote by hand")
+    rows = _body_lines(body)
+    lines = [r["line"] for r in rows]
+    spans = _section_spans(lines)
+    keys = {i: (_section_key(lead) if lead is not None else None) for lead, i, _ in spans}
+    reads = READ_SECTION_KEYS | set(HEADER_NAMES) | _declared_keys(declared_fields)
+    expected: list[list] = []  # [key, text after the lead's bold run] per section, the declared rewrites applied
+    glued = {i: k for kind, k, how, i in faults if kind == "glued-lead"}
+    formed = {i for kind, _, _, i in faults if kind == "lead-form"}
+    for lead, a, b in spans:
+        cuts = [a, *sorted(i for i in glued if a < i < b), b]
+        for x, y in zip(cuts, cuts[1:]):
+            first = LEAD_RE.match(lines[x]) if (x == a and lead is not None) or x in glued else None
+            key = keys[a] if x == a else glued[x]
+            after = "\n".join([lines[x][first.end():] if first else lines[x], *lines[x + 1:y]])
+            if x in formed:
+                bold = first.group("lead")
+                if any(s < rows[x]["at"] + first.end() and e > rows[x]["at"]
+                       for s, e in (c.span() for c in COMMENT_RE.finditer(body))):
+                    raise Refused(f"{tid}: a comment inside the label {lines[x][:first.end()]!r} — fix it by hand")
+                name = _respelled(bold)
+                if not name:
+                    raise Refused(f"{tid}: the label {lines[x][:first.end()]!r} has no name to respell — reword it by "
+                                  "hand")
+                new = field_key(name)
+                if new != key and (new in reads or new.startswith("event (") or
+                                   new in {v for i, v in keys.items() if i != a and v is not None}):
+                    raise Refused(f"{tid}: respelling {lines[x][:first.end()]!r} as **{name}:** would make it "
+                                  f"{'another section of the entry' if new not in reads else 'a section this format reads'}"
+                                  " — reword it by hand")
+                after = after[1:] if after.startswith(":") else after
+                tail = lines[x][first.end():]
+                lines[x] = f"**{name}:**{tail[1:] if tail.startswith(':') else tail}"
+                key = new
+            expected.append([key, after.strip()])
+    for i in sorted(glued, reverse=True):
+        lines.insert(i, "")
+    rows = _body_lines("\n".join(lines))
+    asks = [(a, b) for lead, a, b in _section_spans(lines) if lead is not None and _section_key(lead) == "ask"]
+    if len(asks) > 1:
+        raise Refused(f"{tid}: the body has {len(asks)} Ask sections — keep one, by hand")
+    if asks:
+        a, b = asks[0]
+        got = _ask_reading(rows, a, b)
+        if not got["value"]:
+            raise Refused(f"{tid}: its Ask's lead line holds no question — write it there, by hand")
+        if got["past"]:
+            end = got["para_end"]
+            if any(LIST_ITEM_RE.match(lines[i]) or FENCE_RE.match(lines[i]) for i in range(a + 1, end)):
+                raise Refused(f"{tid}: its Ask's first paragraph holds a list or a fence — make it one sentence, by hand")
+            joined = None
+            if len(got["para"]) > 1:
+                para = range(a, end)
+                if any(rows[i]["spans"] or rows[i]["hidden"] for i in para) or \
+                        any("`" in lines[i] for i in para):
+                    raise Refused(f"{tid}: its Ask's first paragraph runs over lines and holds a comment or a code "
+                                  "span — join it by hand")
+                if any(re.match(r"^(?: {4}|[ \t]*[>|])", lines[i]) or LIST_ITEM_RE.match(lines[i])
+                       or FENCE_RE.match(lines[i]) for i in got["para"][1:]) or \
+                        any(lines[i].endswith(("\\", "  ")) for i in got["para"][:-1]):
+                    raise Refused(f"{tid}: its Ask's first paragraph holds a line that is not plain text — join it by "
+                                  "hand")
+                joined = " ".join(" ".join(lines[i] for i in got["para"]).split())
+            rest = lines[end:b]
+            while rest and not rest[0].strip():
+                rest = rest[1:]
+            more = any(r["kind"] == "text" for r in rows[end:b])
+            if more and any(lead is not None and _section_key(lead) == "context"
+                            for lead, _, _ in _section_spans(lines)):
+                raise Refused(f"{tid}: it has a Context section beside an Ask of several paragraphs — merge them by hand")
+            head = [joined] if joined is not None else lines[a:end]
+            block = [*head, *(["", "**Context:**", "", *rest] if more else ["", *rest] if rest else [])]
+            lines[a:b] = block
+            at = next(n for n, e in enumerate(expected) if e[0] == "ask")
+            ask_words = " ".join(lines[a].split()) if joined is not None else "\n".join(head)
+            m_ = LEAD_RE.match(ask_words)
+            expected[at][1] = (ask_words[m_.end():] if m_ else ask_words).strip()
+            if more:
+                expected.insert(at + 1, ["context", "\n".join(rest).strip()])
+            elif rest:
+                expected[at][1] = (expected[at][1] + "\n\n" + "\n".join(rest)).strip()
+    new_body = "\n".join(lines)
+    actual = []
+    for lead, a, b in _section_spans(lines):
+        first = LEAD_RE.match(lines[a]) if lead is not None else None
+        after = "\n".join([lines[a][first.end():] if first else lines[a], *lines[a + 1:b]])
+        actual.append([_section_key(lead) if lead is not None else None, after.strip()])
+    if actual != expected or _body_faults(new_body):
+        raise Refused(f"{tid}: the rewrite would not read back its sections under the declared rewrites alone — "
+                      "fix it by hand")
+    return canonical(_render(tid, m.group(3), header, new_body))
+
+
 def _section_key(lead: str) -> str:
     """A section's name for matching: its lead's ``field_key`` with a trailing colon dropped, so
     ``Done when`` and ``Done when:`` are one name; a qualified lead (``Fix (to design):``) keeps its
@@ -5455,7 +5790,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
             if at:
                 sections[at[0]] = (sections[at[0]][0], f"**{sections[at[0]][0]}** {said}")
             else:
-                pos = _section_place(sections)
+                asks = _keyed(sections, "ask") if key == "context" else []  # v3.3: the Ask's context follows it
+                pos = asks[0] + 1 if asks else _section_place(sections)
                 sections.insert(pos, (f"{name}:", f"**{name}:** {said}"))
             after = parse_event_section(sections[at[0] if at else pos][1])
             carried = parse_gates(_value(header, "blocked by"))["events"]
@@ -6650,15 +6986,19 @@ def covers(entry_text: str, gate: str, boards: Sequence[Sequence], repo: str) ->
 
 
 def _entry_ask(text: str, title: str) -> str:
-    """The entry's Ask as one line: its ``**Ask:**`` section's words, else its title."""
+    """The entry's Ask as one line: its ``**Ask:**`` section's words, else its title. From v3.3 the section is read
+    on the raw text by ``_ask_reading()``, the one helper ``check()`` uses: each text line's words outside the comment
+    spans over the raw body, clipped to the Ask's lines, joined (``Go? <!-- a``, a blank line, ``**Context:** x -->``
+    is ``Go?``)."""
     try:
-        sections = _entry_sections(_entry_parts(text)[2])
+        body = _entry_parts(text)[2]
     except Refused:
-        sections = []
-    at = _keyed(sections, "ask")
+        return title
+    rows = _body_lines(body)
+    at = [(a, b) for lead, a, b in _section_spans([r["line"] for r in rows])
+          if lead is not None and _section_key(lead) == "ask"]
     if at:
-        words = " ".join(sections[at[0]][1].split())
-        words = words[len("**Ask:**"):].strip() if words.startswith("**Ask:**") else words
+        words = " ".join(" ".join(_ask_reading(rows, *at[0])["words"]).split())
         if words:
             return words
     return title
@@ -6853,12 +7193,15 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     own_name = _board_name(own)
     texts: dict[int, str] = {}
     open_texts: dict[int, str] = {}
+    raws: dict[int, str] = {}  # v3.3: each entry's raw text, which its Ask is read from
     for t in entries:
+        raw = _raw_entry_texts(str(t or ""))
         for tid, body in _entry_texts(str(t or "")).items():
             n = _num(tid)
             if n in open_texts:
                 continue  # the ledger's open copy is read over an archived one
             texts[n] = body
+            raws[n] = raw.get(tid, body)
             e = _entries(body)[0]
             if first_word(e["fields"].get("status")) not in ARCHIVED_WORDS:
                 open_texts[n] = body
@@ -6963,7 +7306,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                     continue
                 ref = tid if pick is own else f"{repo.lower()}#{tid}"
                 add(_board_name(pick), num, gate, "uncovered", _sweep_item(
-                    "uncovered", tid, ref, gate, ask=_entry_ask(text, e["title"]), title=e["title"],
+                    "uncovered", tid, ref, gate, ask=_entry_ask(raws.get(num, text), e["title"]), title=e["title"],
                     reask_days=reask_days))
                 continue
             name = gate[len("event ("): -1]
