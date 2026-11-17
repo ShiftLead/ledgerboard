@@ -852,7 +852,8 @@ def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
                                                    "log-not-last", "log-line", "event-undated", "status",  # status: v2.7
                                                    "misplaced-name",  # v2.8
                                                    "decision-missing",  # v3.1
-                                                   "lead-form", "glued-lead", "fence-open", "field-lines")  # v3.3
+                                                   "lead-form", "glued-lead", "fence-open", "field-lines",  # v3.3
+                                                   "answers-unusable")  # v3.3
                                   or r["kind"] == "retired"]  # v3.0: every retired kind
                       for c in spec["check"]},
             "entry_text": {c["name"]: _refused(lambda c=c: L.entry_text(
@@ -1017,6 +1018,8 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
                 "board_dir_problems": [list(x) for x in L.board_dir_problems(c["dir"], dict_ls(files), files.get)]}
     return {
         **out,
+        **({"answers": answers_case(L, spec["answers"], files)} if "answers" in spec else {}),
+        **({"entry_answers": entry_answers_cases(L, spec["entry_answers"])} if "entry_answers" in spec else {}),
         "runs": runs,
         "rerun": run(first, boards_of(rerun_boards, after)),
         "covers": [[[b, it.id, state] for b, it, state in L.covers(entry[t], g, boards, spec["repo"])]
@@ -1027,6 +1030,35 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
         "sets": {c["name"]: sets(c) for c in spec.get("sets", [])},
         **({"split": split(spec["split"])} if "split" in spec else {}),
     }
+
+
+def answers_case(L, c: dict, files: dict[str, str]) -> dict:
+    """An entry's own answers on the sweep (v3.3): ``sweep()`` over ``c``'s own ledger and its one v3 board
+    directory, read apart from the other runs, on one date."""
+    if not hasattr(L, "entry_answers"):
+        return {"missing": "the module has no entry_answers — older than v3.3"}
+    board = L.load_board(c["board"], dict_ls(files), files.get)
+    got = L.sweep([files[c["ledger"]], ""], [(c["url"], c["basename"], board)], {}, c["today_utc"], c["today_local"],
+                  repo=c["repo"])
+    return {"to_file": got["to_file"], "to_close": got["to_close"], "lifts": got["lifts"]}
+
+
+ENTRY_ANSWERS_HEAD = ("## TD-5: An invented entry\n\n**Priority:** Medium\n**Status:** Open\n"
+                      "**Blocked by:** decision (pat)\n\n**Ask:** Does the widget work?\n\n")
+
+
+def entry_answers_cases(L, cases: list[dict]) -> dict:
+    """``entry_answers()`` (v3.3) of each case's entry: its ``text``, else ``ENTRY_ANSWERS_HEAD`` then its ``body``;
+    its result, or ``{"error": "Refused"}``."""
+    if not hasattr(L, "entry_answers"):
+        return {"missing": "the module has no entry_answers — older than v3.3"}
+    out = {}
+    for c in cases:
+        try:
+            out[c["name"]] = {"ok": L.entry_answers(c["text"] if "text" in c else ENTRY_ANSWERS_HEAD + c["body"])}
+        except L.Refused:
+            out[c["name"]] = {"error": "Refused"}
+    return out
 
 
 def _parts_entry(tid: str, e) -> object:

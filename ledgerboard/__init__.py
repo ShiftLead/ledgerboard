@@ -70,7 +70,7 @@ WORD_RE = re.compile(r"[^\s,;]+")
 PRIORITIES = ("high", "medium", "low")
 EDIT_ERRORS = ("pickable-disagrees", "undeclared-field", "cycle", "legacy-part", "priority", "ask-missing",
                "decision-missing", "gate-repeated", "blocker-superseded", "blocker-dropped",
-               "blocker-unknown-status")  # information on a standing ledger, an error in a new edit
+               "blocker-unknown-status", "answers-unusable")  # information on a standing ledger, an error in a new edit
 
 # A resolver answers one ``<repo>#TD-NNN`` item: ``(state, why)`` or a mapping carrying at least
 # ``state`` and ``why`` (any other keys ride along into the entry's ``cross_repo``). ``state`` is
@@ -832,6 +832,8 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
     entry's whole text, an error on a rewritten one. From v3.3, the body's shape (``_body_records()``, SPEC *The body's
     shape*): ``lead-form``, ``glued-lead``, ``fence-open`` and ``field-lines`` on each open entry's raw body, counted
     per key against ``old``'s, its own scoping — a fault ``old`` has of a key is ℹ and standing, the rest errors.
+    Also from v3.3, ``answers-unusable``: an open entry whose Blocked by names a decision and whose own answers
+    ``entry_answers()`` refuses, scoped by the entry's whole text, an error on a rewritten one.
     ``today`` is ``pickable()``'s (v2.4): the UTC date, required."""
     recs = [dict(r, standing=False)
             for r in pickable(ledger, archive, resolve, undeclared=True, rank_text=rank_text,
@@ -855,6 +857,14 @@ def check(ledger: str, archive: str, old: str | None = None, resolve: Resolve | 
         if why:
             recs.append({"level": "info", "id": tid, "field": "blocked by", "kind": "decision-missing",
                          "text": f"ℹ {tid}: {why}", "standing": False})
+        if e and parse_gates(e[0]["blocked_raw"])["decisions"] \
+                and first_word(e[0]["fields"].get("status")) not in ARCHIVED_WORDS:
+            try:  # v3.3: an entry's own answers the gate sweep cannot offer
+                entry_answers(text)
+            except Refused as unusable:
+                recs.append({"level": "info", "id": tid, "field": "answers", "kind": "answers-unusable",
+                             "text": f"ℹ {tid}: the gate sweep cannot offer its own answers (answers-unusable): "
+                                     f"{unusable}{ANSWERS_UNUSABLE_TAIL}", "standing": False})
         for gate in (gate_items(parse_gates(e[0]["blocked_raw"])) if e else []):
             try:  # an entry _entry_parts() refuses (a field below its header block) has its ℹ already
                 n = reassigns(text, gate) if gate.startswith("decision") else 0
@@ -927,7 +937,7 @@ def _retired_records(ledger: str, archive: str) -> list[dict]:
 LOG_KINDS = ("log-not-last", "log-line")  # check()'s flags on an entry's Log (v2.4)
 EVENT_KINDS = ("event-section", "event-check", "event-ungated", "event-undated")  # check()'s flags on an entry's events (v2.4; event-undated v2.5)
 TEXT_KINDS = LOG_KINDS + EVENT_KINDS + ("ask-missing", "decision-missing", "gate-reassigned-often",
-                                       "misplaced-name")  # flags that read the body: scoped by the entry's whole text
+                                       "misplaced-name", "answers-unusable")  # flags that read the body: scoped by the entry's whole text
 
 
 def _entry_texts(text: str) -> dict[str, str]:
@@ -7152,22 +7162,150 @@ def _entry_context(text: str) -> str:
     return " ".join(rest.split())
 
 
+# An entry's own answers (v3.3, SPEC *The ledger*, *An entry's own answers*): the one-line `**Answers:**` and
+# `**Lifts:**` body fields the gate sweep offers, read by entry_answers() alone.
+ANSWER_FIELDS = ("answers", "lifts")  # the two leads' names, as _section_key() reads them
+BOLD_AT_RE = re.compile(r"(?=\*\*(?P<lead>[^*\n]+?)\*\*)")  # a bold run tried at every `**` (overlapping)
+ANSWERS_UNUSABLE_TAIL = " (the first fault found)"
+
+
+def _answer_lead(line: str) -> str | None:
+    """``answers`` or ``lifts`` where ``line``, its leading whitespace removed, opens with a lead of that name."""
+    m = LEAD_RE.match(line.lstrip())
+    k = _section_key(m.group("lead")) if m else None
+    return k if k in ANSWER_FIELDS else None
+
+
+def _stray_answer_lead(lines: Sequence[str], starts: set[int]) -> int | None:
+    """The first line, outside a fence, that opens with an `Answers` or `Lifts` lead and is not in ``starts`` (the
+    lines that open a section); where the text ends inside an open fence, the lines after its opening line are
+    tested too."""
+    fence, opened, hits = "", None, []
+    for i, line in enumerate(lines):
+        if not fence and i not in starts and _answer_lead(line):
+            hits.append(i)
+        was = fence
+        fence = _fence_step(fence, line)
+        if fence and not was:
+            opened = i
+    if fence and opened is not None:
+        hits += [i for i in range(opened + 1, len(lines)) if i not in starts and _answer_lead(lines[i])]
+    return min(hits) if hits else None
+
+
+def _answer_value(line: str) -> str:
+    """A one-line field's value: the line after its lead's bold run, leading whitespace removed, then one `:` where
+    the bold run held none, then trimmed."""
+    m = LEAD_RE.match(line)
+    rest = line[m.end():].lstrip()
+    if not m.group("lead").rstrip().endswith(":") and rest.startswith(":"):
+        rest = rest[1:]
+    return rest.strip()
+
+
+def entry_answers(entry_text: str) -> dict | None:
+    """One entry's own answers (v3.3, SPEC *An entry's own answers*): None when its body holds neither an
+    ``**Answers:**`` nor a ``**Lifts:**`` field; ``{"answers", "default", "lifts"}`` when they can be offered as a
+    board ``decide``'s (each answer with its ``(default)`` mark removed and a literal ``|``; the marked one's index or
+    None; the ``**Lifts:**`` labels or None). Raises Refused, naming the first fault found, for answers the gate
+    sweep cannot offer. HTML comments are dropped first; it reads no board and no person."""
+    text = COMMENT_RE.sub("", str(entry_text)).replace("\r\n", "\n").replace("\r", "\n")
+    try:
+        m, _, body = _entry_parts(text)
+    except Refused as e:
+        lines = text.split("\n")
+        i = 1
+        while i < len(lines) and not lines[i].strip():
+            i += 1
+        while i < len(lines) and lines[i].strip():
+            i += 1
+        if _stray_answer_lead(lines[i:], set()) is not None:
+            raise Refused(str(e)) from None
+        return None
+    tid = m.group(1)
+    lines = body.split("\n")
+    spans = _section_spans(lines)
+    if _stray_answer_lead(lines, {a for lead, a, _ in spans if lead is not None}) is not None:
+        raise Refused("an Answers or Lifts lead that starts no section (glued to the line above it, or indented)")
+    found = {k: [(a, b) for lead, a, b in spans if lead is not None and _section_key(lead) == k] for k in ANSWER_FIELDS}
+    if not found["answers"] and not found["lifts"]:
+        return None
+    for k in ANSWER_FIELDS:
+        if len(found[k]) > 1:
+            raise Refused(f"two **{k.capitalize()}:** sections")
+    for k in ANSWER_FIELDS:
+        if found[k] and found[k][0][1] - found[k][0][0] > 1:
+            raise Refused(f"the **{k.capitalize()}:** field runs past its line (it is one line)")
+    if not found["answers"]:
+        raise Refused("a **Lifts:** with no **Answers:**")
+    values = {k: _answer_value(lines[found[k][0][0]]) if found[k] else None for k in ANSWER_FIELDS}
+    if not parse_answers_value(values["answers"]):
+        raise Refused("no answers")
+    if values["lifts"] is not None and not parse_answers_value(values["lifts"]):
+        raise Refused("no lifts")
+    for k in ANSWER_FIELDS:
+        for r in BOLD_AT_RE.finditer(values[k] or ""):
+            if _section_key(r.group("lead")) in ANSWER_FIELDS:
+                raise Refused(f"a field inside the line: **{r.group('lead')}** in the **{k.capitalize()}:** line")
+    answers, default, labels = [], None, []
+    for k, raw in enumerate(parse_answers_value(values["answers"])):
+        label, cons, marked = split_answer(raw)
+        if marked and default is not None:
+            raise Refused("two answers marked (default)")
+        if marked:
+            default = k
+        bare = not cons and raw.rstrip().endswith(CONSEQUENCE_SEP.rstrip())  # `a —`, for item_file() to refuse
+        answers.append(f"{label}{CONSEQUENCE_SEP}{cons}" if cons else f"{label} —" if bare else label)
+        labels.append(label)
+    lifts = parse_answers_value(values["lifts"]) if values["lifts"] is not None else None
+    try:
+        item_file("x", "2000-01-02", "2000-01-01", None, None, f"{tid} decision (p)", kind="decide",
+                  answers=answers, default=default, lifts=lifts,
+                  detail={"context": "x", "question": "x?", "recommended": "x"})
+    except Refused as e:
+        raise Refused(f"as a decide's answers they are refused: {e}") from None
+    folded = [" ".join(x.split()).casefold() for x in labels]
+    for k, f in enumerate(folded):
+        if f in folded[:k]:
+            raise Refused(f"two answers with one label: {labels[folded.index(f)]!r} and {labels[k]!r}")
+    if lifts is None and "go" not in folded:
+        raise Refused(f"no answer lifts (labels read: {', '.join(labels)})")
+    return {"answers": answers, "default": default, "lifts": lifts}
+
+
+def _lifting_labels(got: Mapping) -> list[str]:
+    """The labels of ``entry_answers()``'s answers that lift, in the answers' order, each as written."""
+    want = {" ".join(x.split()).casefold() for x in (got["lifts"] or ["Go"])}
+    return [lbl for lbl in (split_answer(a)[0] for a in got["answers"]) if " ".join(lbl.split()).casefold() in want]
+
+
 def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", title: str = "", extra: str = "",
-                reask_days: int = SWEEP_REASK_DAYS, context: str = "") -> dict:
+                reask_days: int = SWEEP_REASK_DAYS, context: str = "", own: Mapping | None = None,
+                unusable: bool = False) -> dict:
     """One item the sweep files, as ``item_file()``'s arguments (the host adds today, its Due:, session and
     host): {text, context, kind, answers, default, detail, lifts}. A decision's item takes the entry's
-    ``**Context:**`` (``context``, v3.3) as its detail block's context, where the entry has one."""
+    ``**Context:**`` (``context``, v3.3) as its detail block's context, where the entry has one, and (v3.3) the
+    entry's own answers (``own``, ``entry_answers()``'s), else `Go | Not yet`; ``unusable`` (the entry's answers
+    refused) adds a clause to its context."""
     kind = SWEEP_KINDS[cond]
     ctx = f"{ref} {gate}" + (" board " + extra if cond == "audit" else "")
     out: dict = {"text": ask if cond == "uncovered" else _sweep_text(cond, tid, gate, extra), "context": ctx,
                  "kind": kind, "answers": None, "default": None, "detail": None, "lifts": None}
     if cond == "uncovered":
         name = gate[gate.index("(") + 1: -1]
-        out.update(answers=list(SWEEP_DECISION_ANSWERS), detail={
-            "context": context or f"{tid} ({title}) waits on {gate}, and no board item asked for it",
-            "question": ask,
-            "recommended": f"Only {name} can say: Go lifts the gate, and Not yet keeps it waiting, asked again "
-                           f"in {reask_days} days"})
+        got = own or {"answers": list(SWEEP_DECISION_ANSWERS), "default": None, "lifts": None}
+        labels = [split_answer(a)[0] for a in got["answers"]]
+        up = _lifting_labels(got)
+        said = f"Only {name} can say: {', '.join(up)} {'lifts' if len(up) == 1 else 'lift'} the gate"
+        said += "".join(f", and {lbl} keeps it waiting, asked again in {reask_days} days"
+                        for lbl in labels if waiting_only(lbl))
+        if any(lbl not in up and not waiting_only(lbl) for lbl in labels):
+            said += ", and the other answers leave it standing"
+        why = context or f"{tid} ({title}) waits on {gate}, and no board item asked for it"
+        if unusable:
+            why += "; its own answers could not be offered (the ledger check names why)"
+        out.update(answers=list(got["answers"]), default=got["default"], lifts=got["lifts"] and list(got["lifts"]),
+                   detail={"context": why, "question": ask, "recommended": said})
     elif cond == "impossible":
         out.update(answers=list(SWEEP_IMPOSSIBLE_ANSWERS), lifts=list(SWEEP_EVENT_LIFTS), detail={
             "context": f"The check for {gate} on {tid} says it can no longer happen",
@@ -7325,10 +7463,13 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                         add(own_name, num, gate, "no-board", _sweep_item("no-board", tid, tid, gate))
                     continue
                 ref = tid if pick is own else f"{repo.lower()}#{tid}"
+                try:  # v3.3: the entry's own answers; the sweep never raises for them
+                    mine, unusable = entry_answers(raws.get(num, text)), False
+                except Refused:
+                    mine, unusable = None, True
                 add(_board_name(pick), num, gate, "uncovered", _sweep_item(
                     "uncovered", tid, ref, gate, ask=_entry_ask(raws.get(num, text), e["title"]), title=e["title"],
-                    context=_entry_context(text),
-                    reask_days=reask_days))
+                    context=_entry_context(text), reask_days=reask_days, own=mine, unusable=unusable))
                 continue
             name = gate[len("event ("): -1]
             got, evidence = _outcome(results, tid, name)

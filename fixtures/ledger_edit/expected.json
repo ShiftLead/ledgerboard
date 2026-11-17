@@ -2065,6 +2065,58 @@
     "standing": true,
     "text": "ℹ TD-829: the 1st nameless lead is not a strict `**Name:**` (lead-form): write it `**Name:**` to keep it a section, or reword the paragraph to open with words; it is read as a lead until v4.0 (ledger.py migrate-body respells it)"
    }
+  ],
+  "answers_unusable_against_old": [
+   {
+    "level": "info",
+    "id": "TD-801",
+    "field": "answers",
+    "kind": "answers-unusable",
+    "text": "ℹ TD-801: the gate sweep cannot offer its own answers (answers-unusable): as a decide's answers they are refused: a decide offers two or more answers (the first fault found)",
+    "standing": true
+   },
+   {
+    "level": "error",
+    "id": "TD-802",
+    "field": "answers",
+    "kind": "answers-unusable",
+    "text": "⚠ TD-802: the gate sweep cannot offer its own answers (answers-unusable): an Answers or Lifts lead that starts no section (glued to the line above it, or indented) (the first fault found)",
+    "standing": false
+   },
+   {
+    "level": "error",
+    "id": "TD-802",
+    "field": "lifts",
+    "kind": "glued-lead",
+    "standing": false,
+    "text": "⚠ TD-802: the 1st `**lifts:**` lead is glued to the line above, so it opens no section (glued-lead): add a blank line above it to make it the section its writer meant (migrate-body does), or reword the line so it does not open with a lead"
+   }
+  ],
+  "answers_unusable_no_old": [
+   {
+    "level": "info",
+    "id": "TD-801",
+    "field": "answers",
+    "kind": "answers-unusable",
+    "text": "ℹ TD-801: the gate sweep cannot offer its own answers (answers-unusable): as a decide's answers they are refused: a decide offers two or more answers (the first fault found)",
+    "standing": false
+   },
+   {
+    "level": "info",
+    "id": "TD-802",
+    "field": "answers",
+    "kind": "answers-unusable",
+    "text": "ℹ TD-802: the gate sweep cannot offer its own answers (answers-unusable): an Answers or Lifts lead that starts no section (glued to the line above it, or indented) (the first fault found)",
+    "standing": false
+   },
+   {
+    "level": "info",
+    "id": "TD-802",
+    "field": "lifts",
+    "kind": "glued-lead",
+    "standing": false,
+    "text": "ℹ TD-802: the 1st `**lifts:**` lead is glued to the line above, so it opens no section (glued-lead): add a blank line above it to make it the section its writer meant (migrate-body does), or reword the line so it does not open with a lead"
+   }
   ]
  },
  "edit_entry": {

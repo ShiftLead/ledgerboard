@@ -73,6 +73,29 @@ events), and the words lower-case; the reader reads the gates' words in any case
 one `until`, and differently named events; more is flagged (`gate-repeated`; an error on an entry the
 edit changed, ℹ on a standing ledger). A `Waits` field is never read as a gate.
 
+**An entry's own answers** (v3.3). An entry that waits on a person may name the answers it offers in a
+one-line body field `**Answers:**`, in the form of a board `decide`'s `Answers:` value (*The board*: each
+`<label>` or `<label> — <consequence>`, one marked ` (default)` at most, forms among them), and which of them
+lift its gate in a one-line body field `**Lifts:**`, each an answer's whole label (a form by its offered label,
+`Hold: <note>`); with no `**Lifts:**`, `Go` lifts. Each is a body section that is its lead's line alone, HTML
+comments dropped first, its lead's name matched as every lead's is (case aside, whitespace folded); its value
+is the line after its lead's bold run, leading whitespace removed, then one `:` where the bold run held none.
+A header field of either name, and a qualified lead (`**Answers (…):**`), are not these.
+`entry_answers(entry_text)` reads them: None when the entry has neither; `{"answers", "default", "lifts"}` when
+they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the marked one's index or
+None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an `Answers` or `Lifts` lead in
+the body, outside a code fence that closes, that starts no section (glued to the line before it, or indented),
+a bold run named `Answers` or `Lifts` inside either field's line (a run tried at every `**`), two answers whose
+labels are equal with case and whitespace folded, an entry with
+either field that `_entry_parts()` refuses, two of one name, a field whose section runs past its line (a line
+glued below it, or a later paragraph before the next lead), a `**Lifts:**` with no `**Answers:**`, an empty
+`**Answers:**` or `**Lifts:**`, two answers marked, answers `item_file()` refuses as a `decide`'s `answers`,
+`default` and `lifts` (fewer than two among them), and answers of which none lifts (its reason naming the labels
+read). It names the first fault found. `check()` flags an open entry
+whose `Blocked by` names a decision and which it refuses (`answers-unusable`, its text ending *(the first fault
+found)*; an error on an entry the edit
+changed — its whole text — ℹ on a standing ledger). The gate sweep offers them (*The gate sweep*).
+
 **Pickable is derived, never written:** `pickable(…, *, today)` takes `today`, the UTC date, always.
 An entry is pickable when it has no `Blocked by`, or every entry it names is archived and it has
 no `decision`, no `event` and no `until` after today — and no open entry is `Part of` it (below).
@@ -1046,7 +1069,9 @@ and the archive's texts; an entry is open unless its Status is an archived one, 
 a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per gate of an open entry:
 - **`decision (<p>)`**, not covered and with no `kept waiting` Log line for it newer than `reask_days`, and no item
   `covers()` finds answered without a lift within `reask_days`, and not held by an answer owing a lift (below): a `decide` whose text is the entry's Ask (else its
-  title), `Answers: Go | Not yet.`, on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
+  title), its answers the entry's own (*An entry's own answers*: `entry_answers()`'s `answers`, `default` and `lifts`),
+  else `Answers: Go | Not yet.` (v3.3: also when the entry's answers are refused, its detail context then saying
+  so), on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
   listing board with the lowest pick key (`origin_key`, bytewise; boards with no readable origin after, by lowercased
   basename). Its Context is `TD-n decision (<p>)`, written `<repo>#TD-n …` on another repo's board. From v3.3 its
   detail block's context is the entry's `**Context:**` section (*The entry*, *Data fields*), its whitespace collapsed
@@ -1084,6 +1109,7 @@ v2 line, words a Context or a reply holds are none of them). It is filed only wh
 identity is open on any board read, none was answered within `reask_days` with a label that does not lift (dated by
 its `Decided:`, not its `Closed:`), and the entry's Log has no `kept waiting` line for the gate within it. An item
 closed with the why `lifted`, or closed with no answer, opens no window. One whose lift never happened owes it, and is the `decision (<p>)` bullet's (above).
+An item the sweep filed is never rewritten: an entry that gains answers keeps the item already open.
 
 **The close rule.** Of the open items about this repo's entries on any board read, the sweep closes (by id):
 - never one decided with a work order (an answer that neither lifts nor only waits); nor one whose Context entry is
@@ -2138,8 +2164,10 @@ item (`None`, a board with no such line, reads as no names), and the caller's fo
   the Ask's line after its `**Ask:**` lead, the sentence, `question=True`, and the entry's `**Context:**`
   section, where it has one, the context (v3.3: an Ask is a data field, *The entry*; until v4.0 an Ask's first
   paragraph is still the sentence, joined, and its later paragraphs still its context, flagged `field-lines`; an
-  entry with both a `**Context:**` section and later Ask paragraphs has the `**Context:**` section as its context). An Ask carries no answers in this format; a ledger that keeps its own `Answers`
-  (a repo's own field or section) passes them, read as a board's `Answers:` value (`parse_answers_value()`);
+  entry with both a `**Context:**` section and later Ask paragraphs has the `**Context:**` section as its context). An entry's answers (*An entry's own answers*, v3.3) are passed with it, `entry_answers()`'s `answers`, else a
+  repo's own `Answers` field, read as a board's `Answers:` value (`parse_answers_value()`), and none where
+  `entry_answers()` refuses them (`check()` names that fault); a write of the entry's `**Answers:**` section
+  alone runs rule 2 over its answers with no sentence (`sentence=None`);
 - **an entry's title**, on `new` and `set --title`: `title_problems()`; never on `renumber`, `archive` or
   `reopen`, which carry a title already written.
 This package's own command lines do not run it: the writer that holds the caller's vocabulary does.
@@ -2474,6 +2502,15 @@ section. No item key, canonical form or Log line changes.
 **v3.3's sweep carries an entry's Context** (*The gate sweep*): the `decide` it files for a `decision (<p>)` takes
 the entry's `**Context:**` section, on one line, as its detail block's context, where the entry has one; an entry
 with none gives the item the context earlier releases wrote.
+
+**v3.3 gives an entry its own answers** (*The ledger*, *The gate sweep*): `**Answers:**` and `**Lifts:**`
+one-line fields, `entry_answers()` that reads them, and `check()`'s `answers-unusable`, which the ledger writer
+refuses on an edit. The gate sweep's item for an uncovered decision offers the entry's answers where it has
+usable ones, and `Go | Not yet` otherwise. No parse, field, Log line, item key or canonical form changes; an
+entry that already holds an `**Answers:**` section is offered its own answers, and one whose section cannot be
+offered is flagged ℹ when it waits on a person; an edit is refused only where it makes the flag, a `reopen` or a
+`renumber` of such an entry among them. *Text a person reads*' allowance of a repo's own
+`**Answers:**` section is narrowed: on an entry with a decision gate, it is now the format's one-line field.
 
 ## Appendix: grammar
 
