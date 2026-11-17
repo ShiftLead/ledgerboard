@@ -47,12 +47,15 @@ the rest left. That rest is cut in two:
 - **The host's run-on**: what follows the host's match directly, one closing backtick dropped, up to the first `,`
   or `;` (or the group's end), whitespace collapsed and trimmed. It is non-empty only when the host was followed by
   a space and more words before any separator (`on Pat's laptop, main` → `laptop`; `on `pats` laptop` → `laptop`).
-- **The rest**: the group's text after that separator, less the session wherever it stood, collapsed and trimmed
-  of `,`, `;` and spaces, as today's whole extra is.
+- **The rest**: the group less the session, less the host's match with its one closing backtick, and less the
+  run-on, then collapsed and trimmed of `,`, `;` and spaces, as today's whole extra is. Text before the host stays
+  in it (`session s-7 branch z on host-c, pr 2` → `branch z , pr 2`, collapsed; no run-on).
 
 `split_board_notes()` then gives, for an item whose head has a host and a non-empty run-on, the note `host kept to
 its first word; not carried: <run-on>` at its `Session` line, and, where the rest is non-empty, `head text not
-carried: <rest>` after it at the same line. An item with no run-on gets today's one note, unchanged. A head with no
+carried: <rest>` after it at the same line. An item with no run-on gets today's one note, unchanged but for a backticked host: today's host match takes the
+opening backtick alone, so `` on `host-a` `` leaves a stray `` ` `` that today's note names (`` head text not carried:
+` ``); with the closing backtick dropped, that host gives no note, and `` on `host-a`, x `` gives `x`. A head with no
 host (`session s-1 foo, bar`) is read as today: its text past the session is the rest, and no host note is given.
 
 The note says *kept to its first word* and *not carried*, never *the host was*: the reader cannot tell a host
@@ -78,11 +81,12 @@ more than its session and host, at its `Session` line (with none, its heading), 
 > none, its heading): where the host's match is followed, after one closing backtick, by a space and words before
 > the group's first `,` or `;` (its end, with none), `why` `host kept to its first word; not carried: <run-on>`,
 > those words collapsed (v3.N); then, where text remains after that separator, `why` `head text not carried:
-> <text>`: the group's text less the session, the host and its run-on, which no file holds.
+> <text>`: the group's text less the session, the host's match with its closing backtick, and its run-on,
+> which no file holds; text before the host stays in it.
 
 **In the item's heading paragraph**, the parenthetical *(a head's text after its session and host, which no v2
 reader reads, is not carried, and `split_board_notes()` names it)* becomes *(a head's text after its session and
-host, which no v2 reader reads, is not carried, and `split_board_notes()` names it, a host's run-on apart)*.
+host, which no v2 reader reads, is not carried, and `split_board_notes()` names it, and a host's run-on as `host kept to its first word`)*.
 
 ## The fixtures
 
@@ -90,8 +94,10 @@ host, which no v2 reader reads, is not carried, and `split_board_notes()` names 
 name invented: an open line `(session s-3 on Pat's laptop, main)` (Session `s-3 on Pat's`; notes `host kept to its
 first word; not carried: laptop` then `head text not carried: main`, both at its Session line); a closed line
 `(session s-4 on pats work laptop)` (one note, `not carried: work laptop`); a line `(session s-5 on `pats` laptop;
-pr 9)` (backticked host: `laptop`, then `pr 9`); and a line `(session s-6, branch y)` with no host (today's one
-note, `branch y`). `head_extra/` and `fixtures/board/split_notes.json` keep their expected notes unchanged: each of
+pr 9)` (backticked host, its closing backtick dropped: `laptop`, then `pr 9`); a line `(session s-6, branch y)` with no host (today's one
+note, `branch y`); a line `(session s-7 branch z on host-c, pr 2)` with text before the host (no run-on; `head text
+not carried: branch z , pr 2`, collapsed as today); and a line `` (session s-8 on `host-d`) `` (no note, the closing
+backtick dropped). `head_extra/` and `fixtures/board/split_notes.json` keep their expected notes unchanged: each of
 their hosts is followed by a `,`.
 
 ## Builds
@@ -105,4 +111,7 @@ release.
 
 - **No host repair.** The split never guesses a machine name from a phrase; the session that runs it may edit the
   Session by hand.
-- **No change to v2 reading.** `HEAD_HOST_RE`, `item_head()` and `_split_check()` read as today.
+- **No change to v2 reading.** `HEAD_HOST_RE`, `item_head()` and `_split_check()` read as today. The host is
+  `HEAD_HOST_RE`'s match, which takes the word after any ` on ` in the group (`session s-1 based on main branch`
+  reads `main` as the host and `branch` as its run-on); that misfire is the v2 reader's, not fixed here, and the
+  note's *not carried* stays true of it.
