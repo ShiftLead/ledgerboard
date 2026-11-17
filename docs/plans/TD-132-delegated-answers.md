@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 13 (rounds 1–10 applied, rounds 7–10 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–10: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–10 found holding on every case they tried; round 10's one build-changing finding is that the delegation test and the recompute's scope apply only to a delegated answer, so the person's own answer on an item with a `Scope` is judged as today, not the mechanism; its five minor findings state the Log keys, the SPEC text for the writers and the lift, the sweep's exact strings, an empty `Delegates:` line and a delegate's free-text answer; closing fact-check pending), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 13 (rounds 1–10 applied, rounds 7–10 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–10: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–10 found holding on every case they tried; round 10's one build-changing finding is that the delegation test and the recompute's scope apply only to a delegated answer, so the person's own answer on an item with a `Scope` is judged as today, not the mechanism; its five minor findings state the Log keys, the SPEC text for the writers and the lift, the sweep's exact strings, an empty `Delegates:` line and a delegate's free-text answer; closing fact-check (R17) raised 2 minor, applied, none build-changing; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -214,7 +214,8 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
   action but `decide` is `--delegate is a decide's`, and with `--board-only` `--delegate writes its own ledger half,
   never --board-only` (the CLI meets the first as `TAKES`'s refusal, `--delegate` being a `decide`'s alone, and
   `--scope` an `add`'s alone); `add --decided` with a delegate is `TAKES`'s refusal too, `add` taking no
-  `--delegate`. The CLI
+  `--delegate`. `--scope` with `--decided` is refused in `add`'s own order (exit 1), beside `--doer` with
+  `--decided`: an item raised already answered carries no scope. The CLI
   (`python3 -m ledgerboard.board decide --by pat --delegate director`, `add --scope merge-line`; `TAKES`,
   `NEEDS_OPT` and the parser gain both). It writes the D1 form and refuses a delegated answer D3 does not cover,
   naming which rule fails. `item_file(..., scope=)` and its read-back gain the field.
@@ -398,7 +399,7 @@ bullets) gains: "With `--delegate <name>` (v3.4), a delegated answer: refused, b
 rule that fails, before the item edit and the ledger half. The answer is then written in the delegated form,
 its ledger half by the decide lift in the delegated Log form. `add --decided` takes no `--delegate`."
 
-**In *The ledger writer*, the `set` bullet:** after the lift's flags, "With `--delegate <name> --scope <name>`
+**In *The ledger writer*, the *`set` route's gates* bullet:** after `--shared-item`, "With `--delegate <name> --scope <name>`
 (v3.4), the lift's Log line names the delegation (`lift_gate(delegate=, scope=)`); both or neither, only with
 `--by` and an explicit `--answer` on a lift, else a usage error. The writer reads no board: such a `set` is
 reviewed."
@@ -478,7 +479,7 @@ ref beside a second ref: rule 4), `decide_delegated_work_order` (open, a delegat
 written on a board whose standing `Delegates:` line is faulty), `decide_own_answer_scoped` (the person's own
 answer on an item with a `Scope`, written and lifted as today, its `Decided` and Log line undelegated),
 `decide_delegated_free_text` (a delegate's answer outside `Answers` on a decision gate: written as said, the gate
-kept waiting with a delegated `kept waiting` line), `add_scope`, `add_scope_on_act` and `add_scope_no_name` (both refused). `fixtures/board/` also: a bad grant an
+kept waiting with a delegated `kept waiting` line), `add_scope`, `add_scope_on_act`, `add_scope_no_name` and `add_scope_decided` (the last three refused, `add_scope_decided` with exit 1 in `add`'s order, beside `--doer` with `--decided`). `fixtures/board/` also: a bad grant an
 edit introduces (error) against one standing (ℹ); a `Delegates:` line with an empty value and one of only `;`
 (`board_delegates` `[]`, the `lists no grant` fault, `delegation_covers` false); `delegates_changed` false on reordered grants and whitespace.
 `fixtures/lift/`: `lift_gate` refusing a delegate on the override, check and date shapes, the `board <repo>`
