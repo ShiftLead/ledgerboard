@@ -4023,7 +4023,7 @@ def _head_extra(line: str) -> tuple[str, str]:
     if h:
         end = h.end() + (inner[h.end():h.end() + 1] == "`")
         tail = inner[end:]
-        cut = next((i for i, c in enumerate(tail) if c in ",;"), len(tail))
+        cut = next((i for i, c in enumerate(tail) if c in ",;"), len(tail)) if tail[:1].isspace() else 0
         run_on = _collapsed(tail[:cut])
         inner = inner[:h.start()] + tail[cut:]
     return run_on, _collapsed(inner).strip(",; ")

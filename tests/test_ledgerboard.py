@@ -1418,6 +1418,13 @@ class SplitBoard(unittest.TestCase):  # v3.0 (TD-108, TD-098's B5): split_board(
         self.assertEqual(files, L.split_board(board.replace("\r\n", "\n")))
         self.assertFalse(any("\r" in t for t in files.values()))
 
+    def test_a_host_run_on_needs_a_space(self):  # v3.3 (TD-131): words glued to a backticked host are the rest
+        board = "# B\n\n- [ ] act 2026-01-05 (session s-1 on `host-a`x, y) — Ship it. Context: TD-1. Due: 2026-01-20.\n"
+        whys = [n[3] for n in L.split_board_notes(L.split_board(board), board)]
+        self.assertIn("head text not carried: x, y", whys)
+        self.assertFalse(any(w.startswith("host kept") for w in whys))
+        self.assertEqual(L._head_extra("- [ ] act 2026-01-05 (session s-1 on `h` a  b; c) — T."), ("a b", "c"))
+
     def test_the_stub(self):
         self.assertEqual(L.board_stub("Needs the user", "user_attention"),
                          "# Needs the user\n\nLedgerboard: 3\n\nThis board is the directory "
