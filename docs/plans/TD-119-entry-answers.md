@@ -12,7 +12,7 @@ this reader's beside TD-124's flag, and F73, an overlapping scan for a field ins
 and applied, then read by round 6. Paul bought round 6, the last the cap allows (TD-137, 2026-11-16); its review (R19) read F72–F80, judged the design worth building as it stands and raised nothing build-changing, so the rounds end by the stop rule at the cap; Draft 6 is its nine minor fixes (F81–F89) and the closing fact-check's seven (F90–F96, none changing what is built). Build-changing by the design reviews, rounds 1–6: 2, 0, 3, 2, 2, 0. The record:
 [docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
-**Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
+**Entry:** [TD-119](../ledger/archive/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
 ShiftLead ran onto this repo's board in PR #355.
 
 ## The problem
