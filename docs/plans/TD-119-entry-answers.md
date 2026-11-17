@@ -1,6 +1,6 @@
 # TD-119: the gate sweep offers the entry's own answers
 
-**Status:** Draft 5, 2026-11-16 (session lb-designer). Class: **wide** (a vendored, published format: two new
+**Status:** Draft 6, 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: two new
 entry fields the gate sweep reads, a new reader, a new `check()` flag the writer refuses on, which both consumers
 vendor; cap 6 rounds, cadence.md §4.8). Rounds 1–3 ran 2026-11-15 (round 3 as TD-122, Paul's *One more round*,
 #361). Their recurring topic was where the multi-paragraph answer sections start and end (F23, F30, F33, F38, F41,
@@ -10,7 +10,7 @@ with round 4 (2026-11-16): each of `**Answers:**` and `**Lifts:**` is one line, 
 TD-124's, not patched here. Paul bought round 5 (TD-127, 2026-11-16); Draft 5 is its fixes. Build-changing
 findings by the design reviews, rounds 1–5: 2, 0, 3, 2, 2 (round 5's F72, which keeps all three of D1's refusals
 this reader's beside TD-124's flag, and F73, an overlapping scan for a field inside the line, both applied and read
-by no design review). The record:
+by no design review). Paul bought round 6, the last the cap allows (TD-137, 2026-11-16); its review (R19) read F72–F80, judged the design worth building as it stands and raised nothing build-changing, so the rounds end by the stop rule at the cap; Draft 6 is its nine minor fixes (F81–F89). Build-changing by the design reviews, rounds 1–6: 2, 0, 3, 2, 2, 0. The record:
 [docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
@@ -27,8 +27,8 @@ printed>*. Both items offered Go | Not yet, so the person could not press the an
 
 The sweep cannot know an entry's answers today because the format gives them no home: SPEC *Text a person reads*
 says *An Ask carries no answers in this format; a ledger that keeps its own `Answers` (a repo's own field or
-section) passes them*. ShiftLead already keeps one such section, on its TD-1845 (`**Answers:** Go (default) — the
-grinders build it | One more round — … | Hold: <note> — …`), in the board's `Answers:` form. No ledger on this
+section) passes them*. ShiftLead kept one such section, on its TD-1845 (`**Answers:** Go (default) — the
+grinders build it | One more round — … | Hold: <note> — …`), in the board's `Answers:` form; that entry was archived on 2026-11-16, and no open entry on this machine's roster holds an `**Answers:**` or `**Lifts:**` lead today. No ledger on this
 machine's roster declares an `Ask` or `Answers` header field, and none writes a `**Lifts:**` section.
 
 ## What is already settled
@@ -133,7 +133,7 @@ nothing, which is the bug.
 `entry_answers(entry_text)` (v3.N) reads one entry's two sections, in this order:
 
 1. HTML comments are dropped (`COMMENT_RE`). If `_entry_parts()` refuses the entry, the reader scans that text's
-   lines after its heading and header block (its first blank line), as far as they can be told apart: a line that, its leading whitespace removed, `LEAD_RE` matches with a lead named `Answers` or
+   lines after its heading and header block (up to the first blank line after the header paragraph, `_entry_parts()` skipping blank lines before it), as far as they can be told apart: a line that, its leading whitespace removed, `LEAD_RE` matches with a lead named `Answers` or
    `Lifts`, outside a fence (the open-fence rule below applying here too), makes it refused (`Refused`, the parts' reason); with no such line, `None`. If the
    entry parses, the reader scans its body alone (never the heading or the header block, where a field named
    `Answers` is a repo's own): a line, outside a fence, that, its leading whitespace removed, `LEAD_RE` matches with
@@ -159,8 +159,8 @@ nothing, which is the bug.
    default's and lifts' rules, and no entry id makes its context refused): what it refuses is refused, with its
    reason. Its rules
    (*What is already settled*) are the authority; the list there is for the reader of this plan.
-6. No answer lifts — no `**Lifts:**` and no answer whose label, whitespace-folded and compared
-   case-insensitively, is `Go` (a form `Go: <note>` is not): refused. (A `**Lifts:**` step 5 passes always names an offered answer.)
+6. Two answers whose labels are equal after whitespace folding and case folding (`Go | go`): refused, *two answers with one label*, as the Lifts match folds case. No answer lifts — no `**Lifts:**` and no answer whose label, whitespace-folded and compared
+   case-insensitively, is `Go` (a form `Go: <note>` is not): refused, *no answer lifts (labels read: <each label, as read>)*, so a bold label (`**Go** — build it`, read as `**Go**`) shows why. (A `**Lifts:**` step 5 passes always names an offered answer.)
 
 Otherwise it returns `{"answers": [...], "default": <int or None>, "lifts": [...] or None}`. It reads no board and
 no person: the same text gives the same result for the sweep, `check()` and a consumer's writer.
@@ -173,7 +173,7 @@ entry whose `entry_answers()` returns answers, the `decide` it files carries the
 lifting label, `Only <p> can say: <a>, <b> lift the gate` for more (the lifting labels, or `Go`, in the answers'
 order, each as written, joined by `, `); then, for each offered waiting-only answer (`Not yet` or `Keep waiting`,
 as `waiting_only()` reads them, so `Not yet.` is one), `, and <label> keeps it waiting, asked again in <reask_days> days`; then
-`, and the other answers leave it standing` when any answer neither lifts nor waits. So `Go | Not yet` gets
+`, and the other answers leave it standing` when any answer neither lifts nor waits. Every label is printed exactly as the answer writes it (`go` stays `go`, `Not yet.` keeps its period); two waiting-only answers each add their own clause, in the answers' order. The fixtures take this string from this paragraph (the SPEC states no `recommended` string, today's or this one). So `Go | Not yet` gets
 today's string word for word (with a default, `item_file()` writes it after the default's label, `<label> — …`,
 as for every item). For an entry with no answers (the reader returns `None`), and for one whose answers the
 reader refuses, it files `Go | Not yet` as today; for the refused case its detail context gains *; its own answers
@@ -220,6 +220,8 @@ block an unrelated edit (a Log note, a Status), while an edit that changes its r
 another), or a `reopen` of an archived entry, or a `renumber` of an entry, whose section is unusable, is refused (the flag
 names the entry, so either makes a new one).
 
+The reason names the first fault in the reader's order. On an entry with two faults, fixing the named one first exposes the other under a new reason, which the writer refuses; the cure is to fix both in one whole-entry write, or the unnamed one first. The flag's text ends *(the first fault found)* so the person knows another may follow.
+
 Since a `**Lifts:**` with no `**Answers:**` is refused, a writer adds `**Answers:**` first (or both in one
 whole-entry write): `edit --section Lifts` on a gated entry with no `**Answers:**` is refused.
 
@@ -236,13 +238,13 @@ package's writers run no check (TD-111 D3), so no fixture of this package covers
 
 A minor release, **v3.3**: v3.2 (TD-111's check, with v3.1's `decision-missing`) was tagged on 2026-11-15
 (#359), so the next untagged minor is v3.3 and the build waits on no tag. TD-115's build (TD-123, #376) wrote v3.3's first
-*Versions* paragraph, and v3.3 is not tagged yet; each writes its own paragraph with its own bold lead, this one after the newest on main when it merges,
+*Versions* paragraph, and v3.3 is not tagged yet; TD-124's B1 (TD-133) also targets the next untagged minor, so three builds may share it; each writes its own paragraph with its own bold lead, this one after the newest on main when it merges,
 as *Versions* already holds several paragraphs for one release (v2.4, v2.7, v3.0), so neither paragraph's claims
 are the other's. If v3.3 is already tagged when this build merges, every `v3.N` it writes becomes the next
 untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
-sweep's next item instead of `Go | Not yet` (ShiftLead's TD-1845 today, whose answers are usable: `Go` lifts). A
+sweep's next item instead of `Go | Not yet` (as ShiftLead's TD-1845 would have, its answers usable: `Go` lifts; it is archived, so the build changes no entry on the roster today, and TD-1879 and TD-1404 gain sections later). A
 gated entry whose section is not usable gains a standing ℹ `answers-unusable`; as for every edit flag, an edit
 is refused only where it makes the fault (breaks the section, or adds a decision to an entry whose section is
 unusable, or a `reopen` or `renumber` of an entry whose section is unusable), and one already there does not block an unrelated edit (the writer's gate matches a flag by its
@@ -291,7 +293,7 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > else `Answers: Go | Not yet.` (v3.N: also when the entry's answers are refused, its detail context then saying
 > so), …
 
-and the paragraph after the bullets gains, as its last sentence:
+and the paragraph after the bullets, *One filing rule* (which ends *is the `decision (<p>)` bullet's (above).*), gains, as its last sentence:
 
 > An item the sweep filed is never rewritten: an entry that gains answers keeps the item already open.
 
@@ -339,7 +341,7 @@ own `Answers` (a repo's own field or section) passes them, read as a board's `An
   entry whose section cannot be offered, refused.
 - **`entry_answers()`**: a block in `fixtures/sweep/cases.json` (`entry_answers`), each an entry text and its
   result or `{"error": "Refused"}`: the cases above, a `\|` inside an answer, a qualified `**Answers (old):**`
-  lead (None), a header `Answers` field over a body with no section (None, never refused), a mark on the second answer (`default` 1), two marks (refused), a
+  lead (None), a header `Answers` field over a body with no section (None, never refused), a mark on the second answer (`default` 1), two marks (refused), `Go | go` (refused, two answers with one label), `**Go** — build it | **Not yet**` (refused, no answer lifts, its reason naming the labels read), a
   form marked ` (default)` (refused), one answer (refused), an empty `**Answers:**` (refused), an empty
   `**Lifts:**` and one of only bars (refused: no lifts), two `**Answers:**` sections (refused), `Go: <note> | No`
   with no `**Lifts:**` (refused: no answer lifts), `go | Not yet` (`go` lifts), `Lifts: Hold` for an offered
@@ -372,7 +374,7 @@ One build, **B1**: `entry_answers()`, the sweep's use of it, `check()`'s `answer
 the SPEC text above, the fixtures and unit tests (the reader's refusals by reason; the sweep never raising on
 an entry's answers), in one PR; the release number as D6 says. If TD-124's B1 has merged, B1 builds `entry_answers()` over its
 line-reading helper; if not, TD-124's B1 moves it there (TD-124 D6 and *Builds*); either way D1's three refusals
-stay. `fixtures/run.py`'s `ledger_edit` check runner lists the `check()` kinds it compares; B1 adds
+stay, and the moved reader reads comment-dropped text (D1, step 1), so a shape F77 names (an `**Answers:**` after a comment-only line, a comment-only line holding a bare fence marker) reads as it does here, never as TD-124's raw reading would; the `entry_answers` fixtures pass unchanged whichever build merges second, and TD-133's builder is told so with this plan's link. `fixtures/run.py`'s `ledger_edit` check runner lists the `check()` kinds it compares; B1 adds
 `answers-unusable` to that list and a runner for the `entry_answers` block. On its merge the builder tells agent-cadence's
 techlead which release carries it.
 
@@ -389,4 +391,4 @@ techlead which release carries it.
   helper with `entry_answers()` (whichever merges second), and is where list-item, quoted and mid-line lead-like
   text is caught. TD-124 may also retire the colon-optional and colon-after-bold lead forms
   (`**Answers**:`); this design reads them as every lead is read today, and its fixtures for them are ones
-  TD-124's migration may rewrite.
+  TD-124's migration may rewrite. TD-124's v4.0 (TD-135) does retire them: after it, step 1's scan still matches the old spellings by `LEAD_RE` as v3.N reads it, so `**Answers**: Go | Not yet` is refused (*an Answers or Lifts lead that starts no section*), never read as prose with `Go | Not yet` offered silently; that fixture is one the v4.0 build flips from read to refused, and TD-135's builder keeps the scan.
