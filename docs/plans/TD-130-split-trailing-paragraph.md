@@ -1,6 +1,6 @@
 # TD-130: a board split keeps a paragraph below an item where the v2 reader read it
 
-**Status:** Draft 1, 2026-11-17 (session lb-designer). Class: **in-repo** (a decision not to change the split; no
+**Status:** Draft 2 (round 1 applied), 2026-11-17 (session lb-designer). Class: **in-repo** (a decision not to change the split; no
 format, code or fixture change; cap 4 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-130.md](../reviews/TD-130.md). In plain words: [docs/synopses/TD-130.md](../synopses/TD-130.md).
 
@@ -34,16 +34,19 @@ The question is whether the split should attach it to the item's detail block in
 and `split_board_notes()` keeps naming each such line. No code, SPEC text or fixture changes.
 
 The session that runs the split reads the notes in its PR. Where a carried paragraph is an item's update, it moves
-it by hand into that item's file (its body, or a Log reply, or a field the update changed, such as `**Due:**`),
+it by hand into that item's file (as a `- ` bullet in its body's one part, with no blank line, or as a Log reply,
+or into a field the update changed, such as `**Due:**`),
 and the PR shows the move; where it is a note about the board, it leaves it in the README.
 
-**Why not attach.** The v2 detail block ends at a blank line, and every v2 reader and writer (`board_edit.py`,
-ShiftLead's) read the paragraph as no item's; attaching it would make the split the one reader that reads it
-otherwise, and its read-back check would need an exception for exactly the text it most needs to check. The shapes
+**Why not attach.** The v2 detail block ends at a blank line, and this package's v2 reader and writers read the paragraph as no
+item's (the consumers' tools are not read here; the SPEC definition binds them); attaching it would make the split the one reader that reads it
+otherwise, and its read-back check would need an exception for exactly the text it most needs to check. Nor could it attach exactly: an item file's
+body is bullets in one part with no blank line inside it (`item_file_problem()`), and the paragraph is neither a
+bullet nor joined to the block, so attaching it as written would need a change to the v3 item format. The shapes
 cannot be told apart: an indented paragraph after a blank line is sometimes an item's update and sometimes a note
 about the section or the next item, and a rule that guesses (an indent, a bold `Update` label, a date) is format
 the package keeps forever for a one-time move. And an attached update that says `Due: 2026-03-09` beside a header
-`**Due:** 2026-03-02` is two dues in one file, which a session must reconcile by hand anyway; the warning makes it
+`**Due:** 2026-03-02` reads as two dates, though only the header's is the field, which a session must reconcile by hand anyway; the warning makes it
 do so where it can see both.
 
 **Options set aside.** *Attach every indented paragraph after a blank line up to the next item or heading*: reads
