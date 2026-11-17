@@ -999,6 +999,16 @@
    "flags": [],
    "review": []
   },
+  "an item whose Context names two entries and one gate": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "lift-no-gate",
+     "the answered item is not a decide whose Context names one entry and one gate"
+    ]
+   ]
+  },
   "another repo's entry, on the board alone": {
    "carve_out": true,
    "flags": [],
