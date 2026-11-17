@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 14 (rounds 1–11 applied, rounds 7–11 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–11: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–11 found holding on every case they tried; round 11's one build-changing finding is that SPEC's grammar appendix gains the delegated form of its two Log productions, with their grammar fixtures, not the mechanism; its two minor findings are the writer's read-back when the person re-answers a delegate's open work order, and the verdict's clause (b) naming the delegated form; closing fact-check pending), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 14 (rounds 1–11 applied, rounds 7–11 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–11: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–11 found holding on every case they tried; round 11's one build-changing finding is that SPEC's grammar appendix gains the delegated form of its two Log productions, with their grammar fixtures, not the mechanism; its two minor findings are the writer's read-back when the person re-answers a delegate's open work order, and the verdict's clause (b) naming the delegated form; closing fact-check (R19) raised 2 minor, applied, none build-changing; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -63,7 +63,7 @@ director for pat (merge-line); answer "Not yet"`. The optional ` for <person> (<
 the `by` group, to two of `LOG_SHAPES`' patterns only: the `gate-lifted` answer shape and the `kept-waiting` shape
 (in place: no shape added or reordered, so the `gate-lifted` shapes' `via` index is unchanged). The regex's
 existing `by` group keeps the name written after `by`; new named groups `person` and `scope` hold the `for` name and
-the scope. After the match `log_line()` sets `delegate` to the `by` group and `by` to `person` when `person` matched;
+the scope, each `LOG_TOKEN`, as the `by` group is, so the grammar's `log-token` is the reader's class. After the match `log_line()` sets `delegate` to the `by` group and `by` to `person` when `person` matched;
 else `by` stays and `delegate` and `scope` are None; the `person` key is dropped from the result. `log_line()` (and `log_lines()`)
 return `by` as the **person** (the `for` name when present, else the `by` name, so `tripwire` and
 `ledger_lift_verdict`, which read `rec["by"]`, compare the person as today) and `delegate` and `scope` beside it.
@@ -515,7 +515,7 @@ alone: the verdict meets it as `lift-no-gate`; the verdict's rule 1 on an item w
 owner board each a case of its own), and the verdict cases
 an own-repo `#` ref (`lift-delegate-uncovered`, rule 4) and a `#` ref beside a second ref (`lift-no-gate`).
 `fixtures/board_writer/` also: a delegated lifting answer writing its ledger half in the delegated Log form. `fixtures/grammar/`: `decided-field`
-delegated, `delegates-line`, `scope-field`, and a delegated `log-line` of each of the two shapes (`gate lifted … answer`, `kept waiting`), accepted. `fixtures/run.py` gains runners for `board_delegates`,
+delegated, `delegates-line`, `scope-field`, and a delegated `log-line` of each of the two shapes (`gate lifted … answer`, `kept waiting`), each with an accepted case and a refused one (` for <person>` with no `(<scope>)`). `fixtures/run.py` gains runners for `board_delegates`,
 `delegates_problems`, `delegation_covers`, `delegates_changed` and `parse_decided_delegation`.
 
 ## Builds
