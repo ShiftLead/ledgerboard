@@ -7,10 +7,9 @@ vendor; cap 6 rounds, cadence.md §4.8). Rounds 1–3 ran 2026-11-15 (round 3 as
 F42, F49); Paul answered round 3's end-of-rounds item *Hold: Make Answers and Lifts each a single line, as your
 fallback says; the boundary rule has been patched three rounds running.* Draft 4 is that revision, run as TD-125
 with round 4 (2026-11-16): each of `**Answers:**` and `**Lifts:**` is one line, and the section-edge rule itself is
-TD-124's, not patched here. Paul bought round 5 (TD-127, 2026-11-16); Draft 5 is its fixes. Build-changing
-findings by the design reviews, rounds 1–5: 2, 0, 3, 2, 2 (round 5's F72, which keeps all three of D1's refusals
-this reader's beside TD-124's flag, and F73, an overlapping scan for a field inside the line, both applied and read
-by no design review). Paul bought round 6, the last the cap allows (TD-137, 2026-11-16); its review (R19) read F72–F80, judged the design worth building as it stands and raised nothing build-changing, so the rounds end by the stop rule at the cap; Draft 6 is its nine minor fixes (F81–F89). Build-changing by the design reviews, rounds 1–6: 2, 0, 3, 2, 2, 0. The record:
+TD-124's, not patched here. Paul bought round 5 (TD-127, 2026-11-16); Draft 5 is its fixes. Round 5's F72, which keeps all three of D1's refusals
+this reader's beside TD-124's flag, and F73, an overlapping scan for a field inside the line, were build-changing
+and applied, then read by round 6. Paul bought round 6, the last the cap allows (TD-137, 2026-11-16); its review (R19) read F72–F80, judged the design worth building as it stands and raised nothing build-changing, so the rounds end by the stop rule at the cap; Draft 6 is its nine minor fixes (F81–F89) and the closing fact-check's seven (F90–F96, none changing what is built). Build-changing by the design reviews, rounds 1–6: 2, 0, 3, 2, 2, 0. The record:
 [docs/reviews/TD-119.md](../reviews/TD-119.md). In plain words: [docs/synopses/TD-119.md](../synopses/TD-119.md).
 
 **Entry:** [TD-119](../ledger/TD-119.md). Asked for by ShiftLead's techlead (m-988ff211d5bb), from the gate sweep
@@ -69,7 +68,7 @@ alone:
 - `**Lifts:** a | b` — which of them lift the gate, each an answer's whole label (a form by its offered label,
   `Hold: <note>`, so its fills lift), on the lead's line. With no `**Lifts:**`, `Go` lifts, as on the board.
 
-Each is found by its lead's name (`Answers`, `Lifts`, the colon optional, inside the bold or after it, as every
+Each is found by its lead's name (`Answers`, `Lifts`, the colon optional, inside the bold or after it (read so until TD-124's v4.0; see *Not done*), as every
 lead is matched: `_section_key()`'s match, case-insensitive with whitespace folded, so `**LIFTS:**` is one), as a section `_entry_sections()` reads, and is one line: the section's text, HTML comments
 dropped first, is its lead's line and nothing else. Its value is that line after its lead's bold run, leading
 whitespace removed, then one `:` only where the bold run held none (`**Answers**: a`), and trailing whitespace
@@ -244,7 +243,7 @@ are the other's. If v3.3 is already tagged when this build merges, every `v3.N` 
 untagged minor.
 
 **What reads differently.** An entry that already carries an `**Answers:**` section gets its own answers on the
-sweep's next item instead of `Go | Not yet` (as ShiftLead's TD-1845 would have, its answers usable: `Go` lifts; it is archived, so the build changes no entry on the roster today, and TD-1879 and TD-1404 gain sections later). A
+sweep's next item instead of `Go | Not yet` (as ShiftLead's TD-1845 would have, its answers usable: `Go` lifts; it is archived, so the build changes no entry on the roster today, and ShiftLead's TD-1404, still open, may gain sections later; TD-1879 is archived too). A
 gated entry whose section is not usable gains a standing ℹ `answers-unusable`; as for every edit flag, an edit
 is refused only where it makes the fault (breaks the section, or adds a decision to an entry whose section is
 unusable, or a `reopen` or `renumber` of an entry whose section is unusable), and one already there does not block an unrelated edit (the writer's gate matches a flag by its
@@ -253,8 +252,8 @@ canonical form changes.
 
 **The consumers.** Neither needs code: both pass the sweep's item through. On the build's merge the builder tells
 agent-cadence's techlead which release carries it; on Paul's go the designer sends ShiftLead's question seat one
-note (`ao td add --repo shiftlead`): once the release is vendored, TD-1879 and TD-1404 (and any entry whose Ask
-names its own answers) can carry `**Answers:**` and `**Lifts:**` sections. The two items #355 filed for them on this
+note (`ao td add --repo shiftlead`): once the release is vendored, TD-1404 (TD-1879 being archived, 2026-11-16) and any entry whose Ask
+names its own answers can carry `**Answers:**` and `**Lifts:**` sections. The two items #355 filed for them on this
 repo's board, with `Go | Not yet`, stay as filed, since an open item is never rewritten, and nothing here
 touches them: Paul may answer them as they stand. To re-ask one with its entry's own answers, ShiftLead's session,
 once its sections land, closes it unanswered by a PR in this repo (`board_edit.py done --why "re-asked with the
@@ -279,12 +278,15 @@ The build adds these, word for word, `v3.N` the release D6 names.
 > they can be offered (each answer with its ` (default)` mark removed and a literal `|`, the marked one's index or
 > None, the `**Lifts:**` labels or None); and it raises `Refused`, naming why, for an `Answers` or `Lifts` lead in
 > the body, outside a code fence that closes, that starts no section (glued to the line before it, or indented),
-> a bold run named `Answers` or `Lifts` inside either field's line (a run tried at every `**`), an entry with
+> a bold run named `Answers` or `Lifts` inside either field's line (a run tried at every `**`), two answers whose
+> labels are equal with case and whitespace folded, an entry with
 > either field that `_entry_parts()` refuses, two of one name, a field whose section runs past its line (a line
 > glued below it, or a later paragraph before the next lead), a `**Lifts:**` with no `**Answers:**`, an empty
 > `**Answers:**` or `**Lifts:**`, two answers marked, answers `item_file()` refuses as a `decide`'s `answers`,
-> `default` and `lifts` (fewer than two among them), and answers of which none lifts. `check()` flags an open entry
-> whose `Blocked by` names a decision and which it refuses (`answers-unusable`; an error on an entry the edit
+> `default` and `lifts` (fewer than two among them), and answers of which none lifts (its reason naming the labels
+> read). It names the first fault found. `check()` flags an open entry
+> whose `Blocked by` names a decision and which it refuses (`answers-unusable`, its text ending *(the first fault
+> found)*; an error on an entry the edit
 > changed — its whole text — ℹ on a standing ledger). The gate sweep offers them (*The gate sweep*).
 
 **In *The gate sweep*, the `decision (<p>)` bullet:** *`Answers: Go | Not yet.`* becomes
