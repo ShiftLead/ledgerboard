@@ -4796,7 +4796,8 @@ def migrate_body(text: str, declared_fields=()) -> str:
                                   "hand")
                 new = field_key(name)
                 if new != key and (new in reads or new.startswith("event (") or
-                                   new in {v for i, v in keys.items() if i != a and v is not None}):
+                                   new in {v for i, v in keys.items() if i != a and v is not None}
+                                   | set(glued.values())):  # D7: tested after splitting, so a glued lead's key too
                     raise Refused(f"{tid}: respelling {lines[x][:first.end()]!r} as **{name}:** would make it "
                                   f"{'another section of the entry' if new not in reads else 'a section this format reads'}"
                                   " — reword it by hand")

@@ -2,7 +2,7 @@
  "exit": 1,
  "out": {
   "action": "migrate-body",
-  "entries": 27,
+  "entries": 28,
   "migrated": [
    "ledger/TD-001.md",
    "ledger/TD-002.md",
@@ -77,6 +77,10 @@
    {
     "path": "ledger/TD-024.md",
     "why": "TD-024: respelling '**Note.**' as **Note:** would make it another section of the entry — reword it by hand"
+   },
+   {
+    "path": "ledger/TD-026.md",
+    "why": "TD-026: respelling '**Notes.**' as **Notes:** would make it another section of the entry — reword it by hand"
    }
   ],
   "subject": null
