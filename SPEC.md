@@ -1048,7 +1048,9 @@ a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per g
   `covers()` finds answered without a lift within `reask_days`, and not held by an answer owing a lift (below): a `decide` whose text is the entry's Ask (else its
   title), `Answers: Go | Not yet.`, on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
   listing board with the lowest pick key (`origin_key`, bytewise; boards with no readable origin after, by lowercased
-  basename). Its Context is `TD-n decision (<p>)`, written `<repo>#TD-n …` on another repo's board. When no board
+  basename). Its Context is `TD-n decision (<p>)`, written `<repo>#TD-n …` on another repo's board. From v3.3 its
+  detail block's context is the entry's `**Context:**` section (*The entry*, *Data fields*), its whitespace collapsed
+  to one line, where the entry has one; else it is the sentence earlier releases wrote. When no board
   lists `<p>`: an `act`, `decision (<p>) on TD-n has no board: …`, on this repo's own board.
   An **answer owing a lift** (v2.7) is an item `covers()` would find for an entry's `decision (<p>)`, closed, whose
   `Decided:` label lifts, dated `D` no later than `today_local`, given by `<p>` (or by no one named, or, under `Answered by: any`, by a name on
@@ -2468,6 +2470,10 @@ a colon-less lead is still a lead and an Ask's later paragraphs are still read, 
 strict form alone once every consumer's ledger is migrated. `migrate-body` changes what is read only where it
 adds a boundary: a glued lead becomes its own section, and an Ask of several paragraphs is read as its first. An Ask's context moves to a `**Context:**`
 section. No item key, canonical form or Log line changes.
+
+**v3.3's sweep carries an entry's Context** (*The gate sweep*): the `decide` it files for a `decision (<p>)` takes
+the entry's `**Context:**` section, on one line, as its detail block's context, where the entry has one; an entry
+with none gives the item the context earlier releases wrote.
 
 ## Appendix: grammar
 
