@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 1, 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 3 (round 1's fact-check and its re-check applied), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -25,7 +25,7 @@ seat on `People:` makes it a person, which it is not.
   *Appendix*). A preamble line is read only above a v2 board's first item, anywhere in a v3 board's `README.md`,
   the first one winning; an older reader ignores a preamble line it does not know.
 - A minor release reads every file its major's earlier releases wrote (SPEC *Versions*); a new form older
-  readers do not read has been a minor before (`People:` v2.3, `Answered by:` v2.4, `Doer` v3.1).
+  readers do not read has been a minor before (`People:` v2.3, `Answered by:` v2.4, `Doer` v2.8).
 - The module reads no file and knows no consumer: what a scope *means* (ShiftLead's merge line, its routine
   design go) is the consumer's; the package can only compare names.
 - No v2 writer of `Decided:` is left (v3.0 removed `decided_line()`); v2 lines are read, and converted by
@@ -43,7 +43,10 @@ A delegated answer's v3 `Decided` value is
 (`merge-line`). Example: `**Decided:** 2026-11-20 by director for pat (merge-line) — Merge`. The person is the one
 the answer counts as; the delegate is who wrote it; the scope is the authority it used. A value with `for` but no
 `(<scope>)`, or a scope that is no name, is outside the form (`item_file_problem()`'s `decided` fault, as a bad
-`by` is today). `parse_decided_value(value)` keeps its `(label, date, by)` triple, `by` the **person**, and
+`by` is today). Every place that writes or re-renders the form takes the delegated one: `_item_values_problems()`'s
+canonical re-render, `_item_dir_problems()`'s reader fault, `edit_item()`'s `put("Decided", …)` and its read-back,
+`decided_file()`, and `_item_read()`'s tuple, which gains the two fields so `edit_item()`'s and `decided_file()`'s read-backs
+compare them; `ITEM_FIELDS` and `ITEM_FIELD_KEYS` gain `Scope` after `Doer`. `parse_decided_value(value)` keeps its `(label, date, by)` triple, `by` the **person**, and
 `parse_decided_delegation(value)` (new) reads `(delegate, scope)` or None. So every reader that compares
 `decided_by` with a gate's person — the lift, the sweep, every verdict — reads a delegated answer as the person's
 unchanged, and only the delegation checks (D3) read the delegate.
@@ -52,13 +55,17 @@ unchanged, and only the delegation checks (D3) read the delegate.
 person.
 
 **The v2 line** is not extended: nothing writes it, so no v2 line holds a delegate. A v2 `(by director for pat
-(merge-line))` is outside the v2 form, as any non-person `by` is today; `_v2_read()` converts only what v2 reads.
+(merge-line))` is read as today, as label text with no `by` (`DECIDED_BY_RE` needs `(by <person>)` at the end); `_v2_read()` converts only what v2 reads.
 
 **The Log line** a lift writes names the delegation the same way:
 `gate lifted: decision (pat) — by director for pat (merge-line); answer "Merge"`, and `kept waiting: … — by
-director for pat (merge-line); answer "Not yet"`. `LOG_SHAPES`' `by` token becomes `by <name>[ for <name>
-(<name>)]`; `parse_log()` returns `by` as the person and the delegate and scope beside it. An undelegated line reads
-as today.
+director for pat (merge-line); answer "Not yet"`. The optional ` for <person> (<scope>)` is added in place, after
+the `by` group, to two of `LOG_SHAPES`' patterns only: the `gate-lifted` answer shape and the `kept-waiting` shape
+(in place: no shape added or reordered, so the `gate-lifted` shapes' `via` index is unchanged; `delegate` and
+`scope` are new named groups). `log_line()` (and `log_lines()`)
+return `by` as the **person** (the `for` name when present, else the `by` name, so `tripwire` and
+`ledger_lift_verdict`, which read `rec["by"]`, compare the person as today) and `delegate` and `scope` beside it,
+None for an undelegated line. An undelegated line reads as today.
 
 ### D2. Where delegations are declared: `Delegates:` beside `People:`
 
@@ -113,8 +120,9 @@ and the review's (a scope is visible in the item and in the PR that adds it).
   (`lift-delegated`): a ledger-only lift has no item and no scope. `tripwire()` compares `(decided, decided_by,
   decided_delegate, decided_scope)` where it compares `(decided, decided_by)` today, so a change of delegate alone
   is seen.
-- **A change to `Delegates:`** is never a carve-out: `lift_pr_verdict()` refuses a PR that changes the line in
-  the board's `README.md` (`delegates-changed`), so it goes to ordinary review. A board-write carve-out, and the
+- **A change to `Delegates:`** is never a carve-out: `lift_pr_verdict()` already sends a PR that changes any
+  board file beyond the one item's to review (`lift-board-diff`, `_one_items_change()`), the `README.md` among
+  them, so no new reason is needed; a fixture shows it. A board-write carve-out, and the
   person-paths gate that keeps the line the person's, are the consumer's (agent-cadence's board row and its
   person paths; its entry). The package does not decide who the person is.
 - **A standing board** (`board_problems()` with no `old`, which judges open items): an open item whose delegated
@@ -128,7 +136,7 @@ and the review's (a scope is visible in the item and in the PR that adds it).
 `SPLIT_PREAMBLE_LINE_RE` (`People|Answered by|Ledgerboard`) gains `Delegates`, so `_split_text()` refuses it below
 the first item as it does the others, and `_split_check()`'s equality check compares `board_delegates()` of the
 old and new boards beside `board_people()` and `answered_by()`. `_split_readme()` carries every preamble line whole and needs no change. SPEC's
-sentence naming the lines a split refuses below an item (*The board as a directory*, *Migration*: "`People:`,
+sentence naming the lines a split refuses below an item (*The board as a directory*, the split's bullet: "`People:`,
 `Answered by:` or `Ledgerboard:`") gains `Delegates:`.
 
 ### D6. The release
@@ -175,8 +183,8 @@ board it answers.
 
 > A `Decided` written in the PR by a delegate passes `lift_pr_verdict()` only when the **base** tree's
 > `Delegates:` grants that delegate, for that person, the item's base `Scope`, and the person may answer the item
-> as an undelegated answer is judged; else `delegate-uncovered`. A PR that changes the `Delegates:` line is
-> refused (`delegates-changed`), so it goes to review. `ledger_lift_verdict()` refuses a delegated Log line
+> as an undelegated answer is judged; else `delegate-uncovered`. A PR that changes the `Delegates:` line changes
+> the board's `README.md`, so it is refused as any lift PR touching more than its item is (`lift-board-diff`). `ledger_lift_verdict()` refuses a delegated Log line
 > (`lift-delegated`). `tripwire()` compares an item's delegate and scope with its answer and answerer.
 
 **In *The ledger*, the Log shapes:** `by <name>` becomes `by <name>[ for <name> (<name>)]`, the delegate first
@@ -200,8 +208,8 @@ missing its scope (outside), a `Scope` field read. `fixtures/board_writer/`: `de
 `decide_delegated_no_scope`, `decide_delegated_wrong_scope`, `decide_delegated_no_grant`,
 `decide_delegated_not_gate_person` (owner board), `decide_delegated_any_board` (accepted for any of People),
 `add_scope`. `fixtures/verdict/`: a delegated answer covered at base; one whose grant the PR itself adds
-(`delegate-uncovered`); one whose item's `Scope` the PR changes; a PR changing `Delegates:` refused by the board
-carve-out. `fixtures/board_split/`: a v2 board with `Delegates:` carried into `README.md`; one below an item
+(`delegate-uncovered`); one whose item's `Scope` the PR changes; a lift PR that also changes `Delegates:`
+(`lift-board-diff`). `fixtures/board_split/`: a v2 board with `Delegates:` carried into `README.md`; one below an item
 refused. `fixtures/lift/`: the delegated Log line written; the ledger fixtures' `log_lines` cases: it read
 (`by` the person, `delegate`, `scope`), and the `gate-lifted` override, check and date shapes unchanged.
 `fixtures/grammar/`: `decided-field` delegated, `delegates-line`, `scope-field`. `fixtures/run.py` gains runners
