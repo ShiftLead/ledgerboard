@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 12 (rounds 1–9 applied, rounds 7, 8 and 9 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–9: 7, 8, 2, 2, 2, 2, 1, 2, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7, 8 and 9 found holding on every case they tried; round 9's one build-changing finding is how a malformed or misplaced `Scope` reads (as `Doer` does), not the mechanism; its six minor findings fix stale or unstated refusals and fixtures), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 12 (rounds 1–9 applied, rounds 7, 8 and 9 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–9: 7, 8, 2, 2, 2, 2, 1, 2, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7, 8 and 9 found holding on every case they tried; round 9's one build-changing finding is how a malformed or misplaced `Scope` reads (as `Doer` does), not the mechanism; its six minor findings fix stale or unstated refusals and fixtures; closing fact-check (R15) raised 5 minor, applied, none build-changing; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -122,16 +122,7 @@ none either (`delegates_problems()` faults it).
 An item a delegate may answer carries a header field `**Scope:** <scope>`, one name, written by whoever raises the
 item (`python3 -m ledgerboard.board add --scope merge-line`, agent-cadence's `board_edit.py` passing it;
 `item_file(..., scope=)`), placed after `Doer` in the writers' order. `Scope` is a `decide` item's field only: on
-any other kind it is a fault (`item_file_problem()`), as `Doer` is off an `act`.
-
-**Reading `Scope`.** As `Doer` is read: a `Scope` value that is no name in the person grammar is kept and read as
-absent (`BoardItem.scope` and `item_record()["scope"]` None; the item takes no delegated answer, rule 1), and
-`item_file_problem()` faults it and `board_dir_problems()` names it (rule 14, `scope: \`Scope\` is no name; read as
-no scope`); a `Scope` on a kind other than `decide` is read as written (`scope` the value) and faulted the same
-way as the other kind-bound fields, `("scope", "Scope", ("decide",))` joining `_item_dir_problems()`'s tuple
-beside `Doer`'s, its message that tuple's (`scope: an act carries no \`Scope\`; read as written`).
-
- The item's raiser says what kind
+any other kind it is a fault (`item_file_problem()`), as `Doer` is off an `act`. The item's raiser says what kind
 of decision it is; the person's grant says which kinds the delegate may take. A delegated answer is accepted only
 when **all** hold:
 
@@ -159,6 +150,16 @@ when **all** hold:
    needs a gate, or with `Lifts:` and not exactly one entry already meets the existing `context` fault): it carries nothing and owes no lift, so rule 5 does not apply. Of rule 5's cases,
    `item_file_problem()` and `item_file()` already refuse a gated `decide` naming other than one entry; only two
    gates is new at the item level.
+
+**Reading `Scope`.** As `Doer` is read: a `Scope` value that is no name in the person grammar is kept and read as
+absent (`BoardItem.scope` and `item_record()["scope"]` None; the item takes no delegated answer, rule 1), and
+`item_file_problem()` faults it and `board_dir_problems()` names it (rule 14, `scope: \`Scope\` is no name; read as
+no scope`); a `Scope` on a kind other than `decide` is read as written (`scope` the value) and faulted the same
+way as the other kind-bound fields, `("scope", "Scope", ("decide",))` joining `_item_dir_problems()`'s tuple
+beside `Doer`'s, its message that tuple's (`scope: an act carries no \`Scope\`; read as written`). A value that is no name reads as no scope whatever the
+kind, and on a kind other than `decide` it takes both faults.
+
+**Writing `Scope`.** `item_file(..., scope=)` refuses a scope on any kind but `decide` (`only a decide names its scope, not <a kind>`) and one that is no name (`a scope is one name, not <value>`), as it refuses a `doer`.
 
 A delegate may give any of the item's answers, a waiting-only one included: its `Not yet` closes the item and
 keeps the gate waiting, as the person's would (the re-ask window then runs as for the person's answer). A grant is
@@ -339,6 +340,10 @@ add a `Scope`); ShiftLead's vendor PR, then the director seat writes delegated a
 `board_dir_problems()` likewise: "a `Kind`, `Hide until`, `Parts`, `Doer` or `Scope` not in its form", and its
 list of fields a kind does not take gains "`Scope` on any kind but `decide`".
 
+**In *A new item*:** the signature ends `doer, scope)`; the header block's order reads "`Parts`, `Doer`, `Scope`,
+`Due` …"; and after the `doer` sentence: "A `scope` (v3.4) is refused on any kind but `decide`, and when it is no
+name."
+
 **The `Decided` bullet gains:**
 
 > or, answered by a delegate, `<date> by <delegate> for <person> (<scope>) — <label>` (v3.4):
@@ -387,7 +392,7 @@ list of fields a kind does not take gains "`Scope` on any kind but `decide`".
 > `detail.context` the same, and its `detail.recommended` exactly
 > `Lift it with ledger.py set --blocked-by … --by <person> --delegate <delegate> --scope <scope> --answer "<answer>"; that PR goes to review. Not an override, which would record the person's own lift; to ask again instead, close this and add the question`,
 > `<answer>` being `d`'s label, and `set --blocked-by …` written as shown, with no entry id and a literal `…`
-> (the act's ids name the entries; as today's recommendation, the session fills the gates each keeps). With no delegated answer in the group the act is today's, byte for byte. Its board
+> (the act's ids name the entries, and the session fills the gates each keeps; today's act recommends an override, which has no such form). With no delegated answer in the group the act is today's, byte for byte. Its board
 > and ids are today's (from `last` and the group). The longer `text` is the package's; a consumer's rules for
 > text a person reads apply where it shows it.
 
@@ -414,16 +419,16 @@ All invented. `fixtures/board/`: a README with `Delegates:` read (`delegates.jso
 delegate on `People:`, a delegate for itself, a repeated grant, a repeated scope, a second line);
 `delegation_covers` false on a line with one bad grant; `delegates_changed` true and false. `fixtures/item/`: a
 delegated `Decided` read (`item_record`'s `by` the person, `decided_delegate`, `decided_scope`), one missing its
-scope (outside), a `Scope` field read, `Scope` on an `act` faulted (read as written), a `Scope` that is no name faulted (read as no scope, `scope` null), a delegated value whose scope differs from the
+scope (outside), a `Scope` field read, `Scope` on an `act` faulted (read as written), a `Scope` that is no name faulted (read as no scope, `scope` null), one that is no name on an `act` (both faults, `scope` null), a delegated value whose scope differs from the
 item's or whose delegate is its person faulted. `fixtures/board_writer/`: `decide_delegated` (written, spellings
 from grant, `People:` and `Scope`), `decide_delegated_no_scope`, `decide_delegated_no_grant`,
 `decide_delegated_bad_line` (one bad grant voids it), `decide_delegated_not_gate_person` (owner board),
 `decide_delegated_any_board` (accepted for any of `People:`), `decide_delegated_event_gate`,
 `decide_delegated_gateless`, `decide_delegated_other_repo` (refused), `decide_delegated_not_yet` (closes, kept
-waiting), `decide_delegated_board_only` (refused, its message above), `decide_delegated_on_done` (`--delegate is a decide's`), `decide_delegated_multi_ref` and `decide_delegated_two_gates` (refused,
+waiting), `decide_delegated_board_only` (refused, its message above), `decide_delegated_on_done` (the CLI's `TAKES` usage error, exit 2; `plan_edit()`'s own `--delegate is a decide's` a unit test in `tests/`), `decide_delegated_multi_ref` and `decide_delegated_two_gates` (refused,
 rule 5), `decide_delegated_one_ref_no_gate` and `decide_delegated_two_refs_no_gate` (accepted, gateless), `decide_delegated_other_repo_second_ref` (a `#`
 ref beside a second ref: rule 4), `decide_delegated_work_order` (open, a delegated `kept waiting` line on a decision gate), `decide_own_answer_bad_delegates` (the person's own answer
-written on a board whose standing `Delegates:` line is faulty), `add_scope`. `fixtures/board/` also: a bad grant an
+written on a board whose standing `Delegates:` line is faulty), `add_scope`, `add_scope_on_act` and `add_scope_no_name` (both refused). `fixtures/board/` also: a bad grant an
 edit introduces (error) against one standing (ℹ); `delegates_changed` false on reordered grants and whitespace.
 `fixtures/lift/`: `lift_gate` refusing a delegate on the override, check and date shapes, the `board <repo>`
 suffix, one equal to `by`, one outside the person grammar, a delegate without a scope and a scope without a
