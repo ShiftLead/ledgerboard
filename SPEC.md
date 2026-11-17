@@ -1506,7 +1506,7 @@ item only when it is added.
   reads as no field, no reply and no part of the prefix (the text, and any words a hand edit left outside the
   fields), in their order, verbatim but for runs of whitespace collapsed to one space, so no word of the line outside its head is lost (a
   head's text after its session and host, which no v2 reader reads, is not carried, and `split_board_notes()`
-  names it) and no
+  names it, and a host's run-on as `host kept to its first word`) and no
   period is added or removed; a bold head stays in it as written.
 - `README.md` is the board's text before its first item, with `Ledgerboard: 3` under its title (any
   `Ledgerboard:` line dropped) and without the `## ` heading nearest the first item (the one heading that opens the
@@ -1554,9 +1554,12 @@ item only when it is added.
   carried from the archive, `<n>` its line in that text), then each shape the split
   carried that `board_dir_problems()` names, at its field's line (the first header line of that field's name),
   then each item whose v2 line's head group held more than its session and host, at its `Session` line (with
-  none, its heading), `why` `head text not carried: <text>`: the group's text less the session and the host,
-  which no file holds. A line of the archive's own text is named at the path `(archive)` and its line in the
-  archive, which `board.py split` gives as the archive's path; an open twin's note is at its file's heading,
+  none, its heading): where the host's match is followed, after one closing backtick, by a space and words before
+  the group's first `,` or `;` (its end, with none), `why` `host kept to its first word; not carried: <run-on>`,
+  those words collapsed (v3.3); then, where text remains beyond the run-on, `why` `head text not carried:
+  <text>`: the group's text less the session, the host's match with its closing backtick, and its run-on,
+  collapsed and trimmed of `,`, `;` and spaces, which no file holds; text before the host stays in it.
+  A line of the archive's own text is named at the path `(archive)` and its line in the archive, which `board.py split` gives as the archive's path; an open twin's note is at its file's heading,
   `open twin's detail not carried` or `open twin's line not carried` (a reply, a `Due` or a `Hide until` the
   closed line lacks or holds otherwise).
 
@@ -2397,7 +2400,10 @@ names the form such a lift takes, and the ledger lift's commit subject, written 
 by `lift_subject_parts()`. No parse, field, Log line, item key or canonical form changes. One reading
 changes: `subject_kind()` names that subject `lift`, where earlier releases read None. `split_board_notes()`
 also lists each line a split carries to `README.md` from below the first item, which no item holds and which
-earlier releases carried with no note; what `split_board()` writes is unchanged.
+earlier releases carried with no note, and names a host's run-on, the words a head ran on with past its
+host's first word, as `host kept to its first word; not carried: <run-on>` apart from the rest of the head's
+text, which earlier releases named whole as `head text not carried`; what `split_board()` writes is
+unchanged.
 
 ## Appendix: grammar
 

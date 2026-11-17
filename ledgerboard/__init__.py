@@ -4008,14 +4008,25 @@ def _split_check(board: str, archive: str, files: dict[str, str]) -> None:
         raise Refused(f"the split would not read as its files say ({'; '.join(bad)}) — nothing was split")
 
 
-def _head_extra(line: str) -> str:
-    """The text a v2 line's head group holds after its session and host, which no file holds (v3.0)."""
+def _head_extra(line: str) -> tuple[str, str]:
+    """The text a v2 line's head group holds beyond its session and host, which no file holds, as ``(run-on,
+    rest)`` (v3.0; the run-on v3.3): the run-on is what follows the host's match, one closing backtick dropped, up
+    to the group's first ``,`` or ``;``, collapsed; the rest is the group less the session, the host's match with
+    that backtick, and the run-on, collapsed and trimmed of ``,``, ``;`` and spaces."""
     m = ITEM_RE.match(line) or CLOSED_ITEM_RE.match(line)
     g = SPLIT_HEAD_RE.match(m.group("text").strip()) if m else None
     if g is None:
-        return ""
-    inner = HEAD_HOST_RE.sub("", SPLIT_SESSION_RE.sub("", g.group("inner"), count=1), count=1)
-    return " ".join(inner.split()).strip(",; ")
+        return "", ""
+    inner = SPLIT_SESSION_RE.sub("", g.group("inner"), count=1)
+    run_on = ""
+    h = HEAD_HOST_RE.search(inner)
+    if h:
+        end = h.end() + (inner[h.end():h.end() + 1] == "`")
+        tail = inner[end:]
+        cut = next((i for i, c in enumerate(tail) if c in ",;"), len(tail))
+        run_on = _collapsed(tail[:cut])
+        inner = inner[:h.start()] + tail[cut:]
+    return run_on, _collapsed(inner).strip(",; ")
 
 
 def _collapsed(text: str) -> str:
@@ -4028,7 +4039,8 @@ def split_board_notes(files: Mapping[str, str], board: str, archive: str = "") -
     board; each line carried to `README.md` from below the first item, which no item holds; the archive's own lines
     before its first item, not carried (path ``(archive)``, the archive's line);
     an open twin whose detail block or line held what its closed twin's does not; each rule-14 shape the split
-    carried, at its field's line; and each item whose v2 line's head group held more than its session and host."""
+    carried, at its field's line; and each item whose v2 line's head group held more than its session and host, a
+    host's run-on apart from the rest (v3.3)."""
     got = _split_items(board, archive)
     out: list[tuple[str, int, str, str]] = []
     for n, ln in enumerate(files.get(BOARD_README, "").splitlines(), 1):
@@ -4064,10 +4076,14 @@ def split_board_notes(files: Mapping[str, str], board: str, archive: str = "") -
         out += [(path, line, lines[line - 1] if line else "", msg)
                 for rule, line, msg in _item_dir_problems(p) if rule == 14]
     for it, path, _, p in parsed:
-        extra = _head_extra(it.raw)
-        if extra and p is not None:
+        run_on, extra = _head_extra(it.raw)
+        if (run_on or extra) and p is not None:
             line = _field_line(p, "Session") or 1
-            out.append((path, line, files[path].splitlines()[line - 1], f"head text not carried: {extra}"))
+            text = files[path].splitlines()[line - 1]
+            if run_on:
+                out.append((path, line, text, f"host kept to its first word; not carried: {run_on}"))
+            if extra:
+                out.append((path, line, text, f"head text not carried: {extra}"))
     return out
 
 
