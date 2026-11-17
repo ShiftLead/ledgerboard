@@ -1,6 +1,6 @@
 # TD-128: a board split names a host written as a phrase
 
-**Status:** Draft 1, 2026-11-17 (session lb-designer). Class: **in-repo** (one function's warning text and its
+**Status:** Draft 2 (rounds 1–2 applied), 2026-11-17 (session lb-designer). Class: **in-repo** (one function's warning text and its
 SPEC sentence; no file format, reader or consumer changes; cap 4 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-128.md](../reviews/TD-128.md). In plain words: [docs/synopses/TD-128.md](../synopses/TD-128.md).
 
@@ -80,9 +80,9 @@ more than its session and host, at its `Session` line (with none, its heading), 
 > then each item whose v2 line's head group held more than its session and host, at its `Session` line (with
 > none, its heading): where the host's match is followed, after one closing backtick, by a space and words before
 > the group's first `,` or `;` (its end, with none), `why` `host kept to its first word; not carried: <run-on>`,
-> those words collapsed (v3.N); then, where text remains after that separator, `why` `head text not carried:
+> those words collapsed (v3.N); then, where text remains beyond the run-on, `why` `head text not carried:
 > <text>`: the group's text less the session, the host's match with its closing backtick, and its run-on,
-> which no file holds; text before the host stays in it.
+> collapsed and trimmed of `,`, `;` and spaces, which no file holds; text before the host stays in it.
 
 **In the item's heading paragraph**, the parenthetical *(a head's text after its session and host, which no v2
 reader reads, is not carried, and `split_board_notes()` names it)* becomes *(a head's text after its session and
@@ -93,7 +93,7 @@ host, which no v2 reader reads, is not carried, and `split_board_notes()` names 
 `fixtures/board_split/host_phrase/` (`board.md`, `expected.json` with `files` and `notes`, as `head_extra/`), every
 name invented: an open line `(session s-3 on Pat's laptop, main)` (Session `s-3 on Pat's`; notes `host kept to its
 first word; not carried: laptop` then `head text not carried: main`, both at its Session line); a closed line
-`(session s-4 on pats work laptop)` (one note, `not carried: work laptop`); a line `(session s-5 on `pats` laptop;
+`(session s-4 on pats work laptop)` (one note, `host kept to its first word; not carried: work laptop`); a line `(session s-5 on `pats` laptop;
 pr 9)` (backticked host, its closing backtick dropped: `laptop`, then `pr 9`); a line `(session s-6, branch y)` with no host (today's one
 note, `branch y`); a line `(session s-7 branch z on host-c, pr 2)` with text before the host (no run-on; `head text
 not carried: branch z , pr 2`, collapsed as today); and a line `` (session s-8 on `host-d`) `` (no note, the closing
