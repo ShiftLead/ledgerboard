@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 9 (rounds 1–6 applied; the ledger-only lift path redesigned after round 4; the rounds ended at the cap), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 9 (rounds 1–6 and the closing fact-check applied; the ledger-only lift path redesigned after round 4; the rounds ended at the cap, round 6 still raising 2 build-changing findings; build-changing per design review, rounds 1–6: 7, 8, 2, 2, 2, 2; recurring topic the ledger-only lift after a delegated answer; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -131,14 +131,19 @@ when **all** hold:
 4. the item's Context names no gate on **another repo's** entry: where the Context names a gate
    (`CONTEXT_ANY_GATE_RE`), no entry ref in it (every `REF_TD_RE` match, not only `_item_gate()`'s one ref, which
    is None when there are two) holds `#` (the own-repo `#` form is `lift-own-ref` in `lift_pr_verdict()` already).
-   Rule 4 is judged before rule 5, so a `#` ref beside a second ref is rule 4's: that repo lifts its own gate by its own tool PR,
+   In `delegate_problem()`, which returns the first rule that fails, rule 4 is judged before rule 5, so a `#` ref
+   beside a second ref is reported as rule 4 (as an item fault it is already the existing `context` fault, a gated
+   `decide` naming other than one entry): that repo lifts its own gate by its own tool PR,
    reading only its own board, so it could neither carry nor check the delegation. A delegated answer there is
    refused in this release (*Not done*);
 5. where the item's Context names a gate (`CONTEXT_ANY_GATE_RE`), `_item_gate()` returns **one** entry ref and
    **one** gate, the decide lift's shape. Any other gated Context (two entries, two gates, a gate with no entry) is
    refused (`delegate_problem()`'s `context` rule): the writer writes it board-only, so the gate it answers would
    stay carried with no ledger half and nothing in the delegate's name to lift it. A Context that names no gate is
-   a gateless item whatever entries it names: it carries nothing and owes no lift, so rule 5 does not apply.
+   a gateless item whatever entries it names (with no `Parts:` or `Lifts:`, which make it a gated item to the
+   existing `context` fault): it carries nothing and owes no lift, so rule 5 does not apply. Of rule 5's cases,
+   `item_file_problem()` and `item_file()` already refuse a gated `decide` naming other than one entry; only two
+   gates is new at the item level.
 
 A delegate may give any of the item's answers, a waiting-only one included: its `Not yet` closes the item and
 keeps the gate waiting, as the person's would (the re-ask window then runs as for the person's answer). A grant is
@@ -356,7 +361,7 @@ suffix, one equal to `by`, and a delegate without a scope; the delegated Log lin
 (`lift-board-diff`); one that also changes the item's `Scope` (`lift-board-line`); one under no grant
 (`lift-delegate-uncovered`); one on another repo's entry (`lift-delegate-uncovered`); a ledger lift over a delegated item,
 undelegated Log line or delegated (`ledger-lift-delegated` both), the item open and decided, and a delegated
-item among a `shared` form's items while the `decided` form wins (and the reverse), `ledger-lift-delegated` both (a closed one is not in the tree and is not needed), and a delegated line on the person's own form
+item among the `shared` set while the `decided` form wins, `ledger-lift-delegated` (a closed one is not in the tree and is not needed), and a delegated line on the person's own form
 (`ledger-lift-delegated`); `lift-delegate-uncovered` before `lift-ledger` on a PR with both faults; a delegate-only change seen by `tripwire`.
 `fixtures/board_split/`: a v2 board with `Delegates:` carried into `README.md`; one below an item refused.
 The ledger fixtures' `log_lines` cases: the delegated
