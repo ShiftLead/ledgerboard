@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 9 (rounds 1–6 and the closing fact-check applied; the ledger-only lift path redesigned after round 4; the rounds ended at the cap, round 6 still raising 2 build-changing findings; build-changing per design review, rounds 1–6: 7, 8, 2, 2, 2, 2; recurring topic the ledger-only lift after a delegated answer; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 10 (rounds 1–7 applied, round 7 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–7: 7, 8, 2, 2, 2, 2, 1; recurring topic the ledger-only lift after a delegated answer, which round 7 found holding on every case it tried, its one build-changing finding a stale SPEC sentence on another topic; closing fact-check (R11) raised 2 build-changing and 4 minor, applied: what a malformed Context meets in the verdict, and a mixed group's act date; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -95,7 +95,11 @@ board's other writes, the person's own answers and `done` among them.
 **A faulty line grants nothing.** `delegation_covers(board, delegate, person, scope)` (new, the one function the
 writer and every verdict call) returns True only when `delegates_problems()` finds no fault in the line and a grant
 of that delegate, for that person, names that scope. So a line with one bad grant voids every delegated answer until it
-is fixed; the person's own answers are unaffected. There is no wildcard scope; a board with no
+is fixed; the person's own answers are unaffected. That reaches further than the fault: a person removed from
+`People:` leaves their grants faulty and so voids every delegate's grant on the line, for every person, until the
+line is fixed, and the only sign is the ℹ. This is chosen, not missed: a line is the person's whole statement of
+authority, and one that no longer reads cleanly grants nothing rather than a part a reader would have to pick
+out; the person's own answers still work. There is no wildcard scope; a board with no
 `Delegates:` line accepts no delegated answer.
 
 **Case.** `delegation_covers()` compares the delegate, the person and the scope case-insensitively; a written
@@ -130,7 +134,8 @@ when **all** hold:
    (`decide_lift()`'s rule); on an item with no gate, a name on `People:` (`who_answered()`);
 4. the item's Context names no gate on **another repo's** entry: where the Context names a gate
    (`CONTEXT_ANY_GATE_RE`), no entry ref in it (every `REF_TD_RE` match, not only `_item_gate()`'s one ref, which
-   is None when there are two) holds `#` (the own-repo `#` form is `lift-own-ref` in `lift_pr_verdict()` already).
+   is None when there are two) holds `#` (in `lift_pr_verdict()` a lone own-repo `#` ref meets this rule, `lift-delegate-uncovered`, before
+   `lift-own-ref`, D4).
    In `delegate_problem()`, which returns the first rule that fails, rule 4 is judged before rule 5, so a `#` ref
    beside a second ref is reported as rule 4 (as an item fault it is already the existing `context` fault, a gated
    `decide` naming other than one entry): that repo lifts its own gate by its own tool PR,
@@ -138,7 +143,7 @@ when **all** hold:
    refused in this release (*Not done*);
 5. where the item's Context names a gate (`CONTEXT_ANY_GATE_RE`), `_item_gate()` returns **one** entry ref and
    **one** gate, the decide lift's shape. Any other gated Context (two entries, two gates, a gate with no entry) is
-   refused (`delegate_problem()`'s `context` rule): the writer writes it board-only, so the gate it answers would
+   refused (`delegate_problem()`'s rule 5 message): the writer writes it board-only, so the gate it answers would
    stay carried with no ledger half and nothing in the delegate's name to lift it. A Context that names no gate is
    a gateless item whatever entries it names (with no `Parts:` or `Lifts:`, which make it a gated item to the
    existing `context` fault): it carries nothing and owes no lift, so rule 5 does not apply. Of rule 5's cases,
@@ -167,7 +172,11 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
 ### D4. Who checks what
 
 - **The board writer**: `delegate_problem(board, item, delegate, person)` (new, pure; the one D3 test the
-  writer and `lift_pr_verdict()` share) returns the first rule that fails, in D3's order, or None. It tests rule 1 only as
+  writer and `lift_pr_verdict()` share) returns the first rule that fails, in D3's order, as its fixed message,
+  or None. The messages, which the writer's refusal and `lift-delegate-uncovered` both carry and the fixtures
+  test: `rule 1: the item has no Scope`; `rule 2: no faultless Delegates: grant covers <delegate> for <person>
+  (<scope>)`; `rule 3: <person> may not answer this item`; `rule 4: the Context names a gate on another repo's
+  entry`; `rule 5: the gated Context is not one entry and one gate`, each `<…>` as the answer writes it. It tests rule 1 only as
   *the item has a `Scope`*: the answer's scope equalling it is the recompute's (`lift-board-line`) and
   `item_file_problem()`'s. `plan_edit()`
   calls it; `edit_item(..., "decide", by=, delegate=)` (`by` the person) needs only the item's own text, the
@@ -190,7 +199,12 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
   a PR that also changes the item's `Scope` differs from it and is `lift-board-line`; one that also changes
   `README.md` (a grant added or changed) is `lift-board-diff` (`_one_items_change()`), before any D3 test. So a PR
   can neither grant nor rescope what it uses. A gateless delegated answer goes to review as every gateless answer
-  does (`lift-no-gate`); one on another repo's entry is `lift-delegate-uncovered` (rule 4).
+  does (`lift-no-gate`); one on another repo's entry is `lift-delegate-uncovered` (rule 4). The verdict's own
+  order decides what a malformed Context meets first: any gated Context that is not one entry and one gate (two
+  refs, a `#` ref beside a second among them, two gates, a gate with no entry) leaves `_item_gate()` no single ref
+  or gate, so it is `lift-no-gate` before any D3 test, and the verdict never meets rule 5; a lone `#` ref naming this repo is `lift-delegate-uncovered`
+  (rule 4), the delegate test running before `lift-own-ref`. Both go to review; *rule 4 before rule 5* is
+  `delegate_problem()`'s order, not the verdict's.
 - **A delegated answer carries its own ledger half.** The writer writes a delegated answer only by the
   decide-lift route, which writes the ledger in the same PR (`plan_edit()`'s `_decide_ledger()`): a lifting answer
   lifts the gate, a waiting-only one writes its `kept waiting` line, both in D1's delegated Log form; `--board-only`
@@ -201,11 +215,13 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
   answer on a gate its entry no longer carries writes no ledger line (`decide_lift()` returns nothing) and owes
   nothing.
 - **`ledger_lift_verdict()`**, the ledger-only lift (ShiftLead's *Lift the hold*): it carves out no delegation. A Log
-  line in the delegated form is `ledger-lift-delegated`, the first check after the Log line is read; and any open
+  line in the delegated form is `ledger-lift-delegated`, judged in step 5 once `ledger-lift-log` has found the one
+  new `gate lifted … answer` line and before its date is parsed and `ledger-lift-by` is judged; and any open
   covering item whose `Decided` is delegated is `ledger-lift-delegated`. That second test is the verdict's own scan,
   not `lift_form()`'s, whose return names only the winning case's items and stays as SPEC documents it: right after
   `ledger-lift-asked` and before the bytes are recomputed, the verdict reads
-  `covers(entry text, gate, [base board], repo)`, keeps the `COVERING` states, and returns `ledger-lift-delegated`
+  `covers(btext, gate, [_tree_board(base_tree, repo)], repo)` (the base entry's text, and the board as the
+  sweep's `(origin_url, basename, Board)` triple, not the verdict's `b_board`), keeps the `COVERING` states, and returns `ledger-lift-delegated`
   if any such item's `Decided` carries a delegate, whichever case `lift_form()` chose. Open items are always in the verdict's tree, so it
   needs no archive: a closed delegated answer's gate was lifted, or kept waiting, in its own PR. The person's own
   lift with no item is judged as today, `by` the person, and is true: the person pressed it. A delegated ledger
@@ -220,14 +236,14 @@ delegated form. agent-cadence's and ShiftLead's entries say so.
 - **The sweep**: `_answers_owing()` (which serves this repo's entries named on its own board, a bare `TD-n`, and
   named as `<this repo>#TD-n` on other boards) reads a delegated answer as it reads any: on the ordinary route it
   owes nothing, its gate lifted in its own PR; where the gate is still carried (the gap above), it files the owed
-  lift as for any answer. The act's wording follows `last`, the newest answer the act already names: where `last`
-  is undelegated the act is today's, byte for byte, even if an older answer in the group was delegated (the
-  person's own newer lift is true); where `last` is delegated, its `text` is today's with
-  ` by <delegate> for <person> (<scope>)` after `answered with a lift`, its `detail.context` the same, and its
-  `detail.recommended` is exactly
-  `Lift it with ledger.py set --blocked-by … --by <person> --delegate <delegate> --scope <scope> --answer <answer>; that PR goes to review. Not an override, which would record the person's own lift; to ask again instead, close this and add the question`,
-  each `<…>` filled from `last`'s `Decided` (the names as written there). So the session writes the Log line in the
-  delegated form, which goes to review. Elsewhere the sweep reads
+  lift as for any answer. Where any answer in the group is delegated, the act's wording follows the newest
+  delegated answer, not `last`; with none it is today's, byte for byte. The exact strings are the SPEC text's
+  (*The gate sweep*, below). The group's owed ids are a union over its answers, so an undelegated `last` does not
+  speak for an entry only an older delegated answer owes: there the delegated wording is the safe one, since its
+  `set` is reviewed, where an override would record the person's own lift on an entry they did not answer. On an
+  entry the person's newer answer owes too, it errs the other way, naming the delegate where the person also
+  answered; that is chosen, since the review of the `set` sees both answers, and an override is never reviewed. So the
+  session writes the Log line in the delegated form, which goes to review. Elsewhere the sweep reads
   `decided_by`, the person, as today: a delegated answer covers its gate and opens the `kept waiting` window as the
   person's would.
 - **A change to `Delegates:`** never passes a lift carve-out (`lift-board-diff`, above). Who may change it is the
@@ -305,22 +321,38 @@ add a `Scope`); ShiftLead's vendor PR, then the director seat writes delegated a
 > With `delegate`, it writes the delegated form, the delegate as the grant spells it, the person as `People:`
 > does, the scope as the item's `Scope` does, and refuses an answer `delegation_covers()` does not allow, on an
 > item with no `Scope`, by a person who may not answer the item, on a gate on another repo's entry, or on an item
-> whose Context names other than one entry and one gate, or neither.
+> whose Context names a gate but not exactly one entry and one gate; a Context that names no gate is not refused
+> for the entries it names. The refusal is `delegate_problem()`'s message, one fixed text per rule.
 
 **In *The merge gate's verdicts*, a paragraph:**
 
 > A `Decided` written in the PR by a delegate passes `lift_pr_verdict()` only when `delegate_problem()` finds no
 > fault over the **base** board and item (a grant covering the item's `Scope`, a person who may answer it as an
 > undelegated answer is judged, a gate on this repo's entry), tested right after the answerer and date checks;
-> else `lift-delegate-uncovered`. A PR that also changes the item's
+> else `lift-delegate-uncovered`, its text `delegate_problem()`'s message. A gated Context that is not one entry and
+> one gate never reaches that test: it is `lift-no-gate`, as for any answer, so rule 5 is the writer's and
+> `item_file_problem()`'s. A PR that also changes the item's
 > `Scope` is `lift-board-line`, one that also changes `README.md` `lift-board-diff`, as for any lift PR.
 > A delegated answer is written only with its ledger half, in the same PR (the decide lift). `ledger_lift_verdict()`
-> carves out no delegation: a delegated Log line (the first check after the Log line is read), or any open covering
+> carves out no delegation: a delegated Log line (judged once the one new `gate lifted … answer` line is found,
+> before its date is read), or any open covering
 > item whose `Decided` is delegated (every item `covers()` names in an open or decided state, judged right after
 > `ledger-lift-asked`, whichever form `lift_form()` chose), is `ledger-lift-delegated`, so that lift goes to review.
 > The sweep's *answers owing* files an owed lift of a delegated answer only where its gate is still carried; where
-> the newest answer is delegated, its act names the delegate and scope and recommends the delegated `set`, never an
-> override.
+> an answer in the group is delegated, its act names the delegate and scope and recommends the delegated `set`,
+> never an override (*The gate sweep*).
+
+**In *The gate sweep*, after the *answers owing* act's sentence:**
+
+> Where any answer in the group is delegated, the act follows the newest delegated answer `d` (ties broken by the
+> pick key, as `last` is) instead of `last`, its delegate, person and scope as `d`'s `Decided` writes them: its
+> `text` is today's with ` by <delegate> for <person> (<scope>)` after `answered with a lift` and `d`'s date in
+> place of the newest, its
+> `detail.context` the same, and its `detail.recommended` exactly
+> `Lift it with ledger.py set --blocked-by … --by <person> --delegate <delegate> --scope <scope> --answer "<answer>"; that PR goes to review. Not an override, which would record the person's own lift; to ask again instead, close this and add the question`,
+> `<answer>` being `d`'s label. With no delegated answer in the group the act is today's, byte for byte. Its board
+> and ids are today's (from `last` and the group). The longer `text` is the package's; a consumer's rules for
+> text a person reads apply where it shows it.
 
 **In *The ledger*, the Log shapes:** the `gate-lifted` answer shape and the `kept-waiting` shape read
 `by <name>[ for <name> (<name>)]`: with ` for`, the first name is the delegate, the second the person, the third
@@ -352,7 +384,7 @@ from grant, `People:` and `Scope`), `decide_delegated_no_scope`, `decide_delegat
 `decide_delegated_any_board` (accepted for any of `People:`), `decide_delegated_event_gate`,
 `decide_delegated_gateless`, `decide_delegated_other_repo` (refused), `decide_delegated_not_yet` (closes, kept
 waiting), `decide_delegated_board_only` (refused), `decide_delegated_multi_ref` and `decide_delegated_two_gates` (refused,
-rule 5), `decide_delegated_one_ref_no_gate` (accepted, gateless), `decide_delegated_other_repo_second_ref` (a `#`
+rule 5), `decide_delegated_one_ref_no_gate` and `decide_delegated_two_refs_no_gate` (accepted, gateless), `decide_delegated_other_repo_second_ref` (a `#`
 ref beside a second ref: rule 4), `decide_delegated_work_order` (open, a delegated `kept waiting` line on a decision gate), `decide_own_answer_bad_delegates` (the person's own answer
 written on a board whose standing `Delegates:` line is faulty), `add_scope`. `fixtures/board/` also: a bad grant an
 edit introduces (error) against one standing (ℹ); `delegates_changed` false on reordered grants and whitespace.
@@ -369,7 +401,11 @@ The ledger fixtures' `log_lines` cases: the delegated
 date shapes unchanged. `fixtures/sweep/`: a delegated answer covering its gate (no item filed); a
 closed delegated answer whose gate was lifted owing nothing; one whose gate is still carried filed as owed, its act's
 `text`, `detail.context` and `detail.recommended` the delegated wording above; a group whose newest answer is the
-person's own and an older one delegated, filed with today's wording.
+person's own and an older one delegated, filed with the older delegated answer's wording (its `set` reviewed);
+a group of two delegated answers, the newer one's names in the act. `fixtures/board_writer/` and
+`fixtures/verdict/` assert `delegate_problem()`'s exact message for each rule's refusal (rule 5 in the writer's
+alone: the verdict meets it as `lift-no-gate`), and the verdict cases
+an own-repo `#` ref (`lift-delegate-uncovered`, rule 4) and a `#` ref beside a second ref (`lift-no-gate`).
 `fixtures/board_writer/` also: a delegated lifting answer writing its ledger half in the delegated Log form. `fixtures/grammar/`: `decided-field`
 delegated, `delegates-line`, `scope-field`. `fixtures/run.py` gains runners for `board_delegates`,
 `delegates_problems`, `delegation_covers`, `delegates_changed` and `parse_decided_delegation`.
