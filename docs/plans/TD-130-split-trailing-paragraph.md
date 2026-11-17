@@ -42,7 +42,9 @@ and the PR shows the move; where it is a note about the board, it leaves it in t
 item's (the consumers' tools are not read here; the SPEC definition binds them); attaching it would make the split the one reader that reads it
 otherwise, and its read-back check would need an exception for exactly the text it most needs to check. Nor could it attach exactly: an item file's
 body is bullets in one part with no blank line inside it (`item_file_problem()`), and the paragraph is neither a
-bullet nor joined to the block, so attaching it as written would need a change to the v3 item format. The shapes
+bullet nor joined to the block, so attaching it as written would need a change to the v3 item format. A paragraph with no blank line is already the detail
+block's, and the split attaches it (if it is no `- ` bullet, `item_file_problem()` then faults the file, and the
+session fixes it in the PR). The shapes
 cannot be told apart: an indented paragraph after a blank line is sometimes an item's update and sometimes a note
 about the section or the next item, and a rule that guesses (an indent, a bold `Update` label, a date) is format
 the package keeps forever for a one-time move. And an attached update that says `Due: 2026-03-09` beside a header
