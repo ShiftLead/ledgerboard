@@ -4827,7 +4827,7 @@ def migrate_body(text: str, declared_fields=()) -> str:
                         any("`" in lines[i] for i in para):
                     raise Refused(f"{tid}: its Ask's first paragraph runs over lines and holds a comment or a code "
                                   "span — join it by hand")
-                if any(re.match(r"^(?: {4}|[ \t]*[>|])", lines[i]) or LIST_ITEM_RE.match(lines[i])
+                if any(re.match(r"^(?: {4}|[ \t]*[>|#]|[ \t]*(?:-{3,}|={3,}|\*{3,}|_{3,})[ \t]*$)", lines[i]) or LIST_ITEM_RE.match(lines[i])
                        or FENCE_RE.match(lines[i]) for i in got["para"][1:]) or \
                         any(lines[i].endswith(("\\", "  ")) for i in got["para"][:-1]):
                     raise Refused(f"{tid}: its Ask's first paragraph holds a line that is not plain text — join it by "

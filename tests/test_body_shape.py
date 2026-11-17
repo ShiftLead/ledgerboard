@@ -122,6 +122,11 @@ class Migrate(unittest.TestCase):
         with self.assertRaises(Refused):
             L.migrate_body(entry("**Why:** a.\n\n**Ask:** Go  \nahead?"))
 
+    def test_a_heading_or_rule_in_a_wrapped_ask_is_refused(self):
+        for line in ("# A heading", "---", "===", "***"):
+            with self.assertRaises(Refused, msg=line):
+                L.migrate_body(entry(f"**Why:** a.\n\n**Ask:** Go?\nmore\n{line}"))
+
     def test_the_event_names_are_refused(self):
         with self.assertRaises(Refused):
             L.migrate_body(entry("**Why:** a.\n\n**Event (live).** b."))

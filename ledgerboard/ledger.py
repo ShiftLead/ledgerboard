@@ -74,6 +74,9 @@ from . import (
     XREPO_ITEM_RE,
     Refused,
     Resolve,
+    _entry_parts,
+    _entry_sections,
+    _keyed,
     _left_with_open_parts,
     archive_path,
     archive_plan,
@@ -564,7 +567,7 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
         if context is not None:  # v3.3: the Ask's context, right after it
             if not str(context).strip():
                 raise Refused("--context is empty: a section is never emptied by set")
-            if not re.search(r"^\*\*Ask\b", out, re.MULTILINE | re.IGNORECASE):
+            if not _keyed(_entry_sections(_entry_parts(out)[2]), "ask"):  # the Ask section edit_entry places it after
                 raise Refused(f"{entries(text)[0]['id']} has no Ask: a Context is its Ask's context (v3.3) — give --ask too")
             out = edit_entry(out, "edit", section="Context", words=context, today=day,
                              declared_fields=tuple(declared(led.texts()[0])[0]))
