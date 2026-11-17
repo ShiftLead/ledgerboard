@@ -3790,10 +3790,11 @@ def _fenced(lines: list[str]) -> set[int]:
     return out
 
 
-def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
+def _split_text(text: str, where: str) -> tuple[list[str], list[list[tuple[int, str]]]]:
     """A v2 board's (or archive's) lines before its first item, and its carried groups: each line after the first
-    item that is no item, no detail block's line and not blank, in order, a `## ` heading opening the group of the
-    lines under it (a heading with none under it dropped). Refused for a carried line README.md would read."""
+    item that is no item, no detail block's line and not blank, in order, with its line number, a `## ` heading
+    opening the group of the lines under it (a heading with none under it dropped). Refused for a carried line
+    README.md would read."""
     lines = text.splitlines()
     first = next((i for i, ln in enumerate(lines) if ANY_ITEM_RE.match(ln)), len(lines))
     taken: set[int] = set()
@@ -3809,7 +3810,7 @@ def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
         if i in taken or (not ln.strip() and i not in fenced):
             continue
         if ln.startswith("## ") and i not in fenced:
-            head, open_group = ln, False
+            head, open_group = (i + 1, ln), False
             continue
         if SPLIT_PREAMBLE_LINE_RE.match(ln):
             raise Refused(f"{where}'s line {i + 1}, {ln.split(':', 1)[0]}:, stands below the first item, where no "
@@ -3820,7 +3821,7 @@ def _split_text(text: str, where: str) -> tuple[list[str], list[list[str]]]:
         elif not open_group:
             groups.append([])
             open_group = True
-        groups[-1].append(ln)
+        groups[-1].append((i + 1, ln))
     return lines[:first], groups
 
 
@@ -3928,7 +3929,17 @@ def _split_items(board: str, archive: str) -> dict:
     title = next((i for i, ln in enumerate(apre) if ln.strip()), None)
     archive_pre = [(n, ln) for n, ln in enumerate(apre, 1)
                    if ln.strip() and not (n - 1 == title and ln.startswith("# "))]
-    return {"items": items, "readme": _split_readme(pre, [*carried, *acarried]), "archive_pre": archive_pre}
+    groups = [*carried, *acarried]
+    readme = _split_readme(pre, [[ln for _, ln in g] for g in groups])
+    at = len(readme.splitlines()) - sum(1 + len(g) for g in groups)
+    moved = []
+    for where, gs in (("the board", carried), ("the archive", acarried)):
+        for g in gs:
+            at += 1
+            for n, _ in g:
+                at += 1
+                moved.append((at, where, n))
+    return {"items": items, "readme": readme, "archive_pre": archive_pre, "carried": moved}
 
 
 def _split_file(it: BoardItem) -> str:
@@ -4014,7 +4025,8 @@ def _collapsed(text: str) -> str:
 def split_board_notes(files: Mapping[str, str], board: str, archive: str = "") -> list[tuple[str, int, str, str]]:
     """What a caller warns about after a split (v3.0, SPEC *Migration*), ``(path, line number, line, why)``, nothing
     rewritten: ``files`` is ``split_board(board, archive)``. `README.md`'s lines that may still describe the v2
-    board; the archive's own lines before its first item, not carried (path ``(archive)``, the archive's line);
+    board; each line carried to `README.md` from below the first item, which no item holds; the archive's own lines
+    before its first item, not carried (path ``(archive)``, the archive's line);
     an open twin whose detail block or line held what its closed twin's does not; each rule-14 shape the split
     carried, at its field's line; and each item whose v2 line's head group held more than its session and host."""
     got = _split_items(board, archive)
@@ -4025,6 +4037,10 @@ def split_board_notes(files: Mapping[str, str], board: str, archive: str = "") -
             out.append((BOARD_README, n, ln, f"names {named}: the board is now this directory"))
         elif ln.startswith("Format:"):
             out.append((BOARD_README, n, ln, "a Format: line: it may describe the v2 board's lines"))
+    readme = files.get(BOARD_README, "").splitlines()
+    out += [(BOARD_README, at, readme[at - 1],
+             f"carried from {where}'s line {n}, below an item: no item holds it")
+            for at, where, n in got["carried"] if at <= len(readme) and readme[at - 1].strip()]
     out += [(SPLIT_ARCHIVE, n, ln, "archive preamble not carried") for n, ln in got["archive_pre"]]
     parsed = [(it, path, twin, parse_item(files[path], path)) for it, path, twin in got["items"] if path in files]
     for it, path, twin, p in parsed:
