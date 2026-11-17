@@ -94,7 +94,8 @@ empty value is refused, never the title. Three refusals keep the read exact, and
 This is the whole boundary rule here: the field is a line, so where it ends needs no rule; where it starts is
 `_entry_sections()`'s, which TD-124 makes strict for every section. This reader keeps all three refusals after
 TD-124 lands (TD-124 D6: TD-119's refusals stay its own); TD-124's `glued-lead` flag also fires on the strict
-column-0 case, while the glued, indented and colon-less forms are refused here alone. Lines inside a code fence are never tested
+column-0 case, while the indented, colon-less and non-strict glued forms (glued without the strict `**Name:**` lead) are refused
+here alone. Lines inside a code fence are never tested
 (the fence as `_entry_sections()` tracks it: `FENCE_RE`, its open and close rules); an indented code block is not a
 fence, so an `Answers` or `Lifts` lead quoted in one is refused as a lead that starts no section, and is quoted in
 a fence instead. A fence that never closes (one opened by a run and never closed by a bare run of its own
