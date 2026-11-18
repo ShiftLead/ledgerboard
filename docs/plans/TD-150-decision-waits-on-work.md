@@ -1,8 +1,8 @@
 # TD-150: the gate sweep asks a decision once the work it waits on is done
 
-**Status:** Draft 6, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 7, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rounds, cadence.md §4.8). The rounds
-ended by the stop rule after round 5: build-changing findings per round 4, 3, 1, 1, 0. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
+ended by the stop rule after round 5: build-changing findings per round 4, 3, 1, 1, 0; the closing fact-check 0 (two minors applied). The author recommends Go. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
 [docs/synopses/TD-150.md](../synopses/TD-150.md).
 
 **Entry:** [TD-150](../ledger/TD-150.md), asked for by agent-cadence's grinder for its TD-291 (a bought review
@@ -148,8 +148,9 @@ read its fixes. Only the direct parent is read, one level, as `covers()` reads o
    ids: flagged `decision-deferred` alone, its text exactly
    `<TD-n> gains <gate>, deferred behind <ids> — the sweep asks it once none is in flight`, `<TD-n>` the entry's
    id and `<gate>` as the entry writes it; `<ids>` joined with `, `, the entry's own in-flight ids first, as
-   written, in the order written, each once (at its first place), then its parent's (D2), each written `<id> (blocks <parent>)`, `<parent>`
-   the parent's id as its heading writes it;
+   written, in the order written, each once (at its first place), then its parent's (D2) likewise, each written
+   `<id> (blocks <parent>)`, `<parent>` the parent's id as its heading writes it; an id in both lists is written in
+   each, and two ids are the same when their verbatim text is;
 3. else today's rule: refused `decision-uncovered` when the board lists `<p>`, flagged `decision-elsewhere` when
    it does not.
 
@@ -215,7 +216,7 @@ is added:
 > alone, exactly `<TD-n> gains <gate>, deferred behind <ids> — the sweep asks it once none is in flight`, `<ids>`
 > joined with `, `, the entry's own as written, in the order its `Blocked by` writes them, each once at its first
 > place, then its parent's likewise, each `<id> (blocks <parent>)` with `<parent>` as its heading writes it; an id
-> in both lists is written in each. The verdict reads it on the head tree's ledger, where an entry of the archive is
+> in both lists is written in each, and two ids are the same when their verbatim text is. The verdict reads it on the head tree's ledger, where an entry of the archive is
 > closed whatever its Status, with no resolver, and counts as in flight, besides an id ending at an open entry,
 > any id whose chain ends at a `<repo>#TD-n`, which it cannot resolve; the sweep asks the decision once nothing it
 > waits on is in flight.
