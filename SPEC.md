@@ -592,6 +592,11 @@ them. An entry `canonical()` refuses is not read for it. `check()` reads the Log
   - `gate lifted: until YYYY-MM-DD — by <host>; date reached`.
   - `gate lift skipped: <id> no longer carries <gate>`, the gate a `decision (<person>)` or an `event (<name>)`.
   - `kept waiting: <gate> — by <who>; answer "<label>"`.
+  - (v3.4) The `gate-lifted` answer shape and the `kept-waiting` shape read `by <name>[ for <name> (<name>)]`: with
+    ` for`, the first name is the delegate, the second the person, the third the scope (`gate lifted: decision
+    (pat) — by director for pat (merge-line); answer "Merge"`). `log_line()` returns `by` as the person, with
+    `delegate` and `scope` on every record of those two shapes (`null` on an undelegated line) and on no other
+    record.
   - `gate reassigned: decision (<a>) → decision (<b>) — by <who>; <why>`.
   - `archived: <Status word> — <why>`, `reopened — <why>`, and `was: <Status>`.
   - `retitled: was "<title>"` (v2.8), the title the heading held before `set` changed it.
@@ -752,6 +757,13 @@ shape exactly, and anything else is refused:
   segment), or `@` and the record's UTC time as `YYYYMMDDTHHMMSSZ`, a token of `[A-Za-z0-9_.@/-]+`; the check type is
   read from the entry's `**Event (<name>):**` section, never passed in. `by` is the host's token.
 - **`until D`:** none of them; `today` must have reached D.
+
+`lift_gate()` and `decide_lift()` (v3.4) also take `delegate` and `scope`, which only change the Log line they
+write to the delegated form (*The ledger*'s Log shapes): `gate lifted: <gate> — by <delegate> for <by> (<scope>);
+answer "<label>"`; every comparison they make is of `by`, the person. `lift_gate()` refuses a delegate on the
+override, check and date shapes and with the `board <repo>` suffix, a delegate outside the person grammar or equal
+to `by`, and a delegate without a scope or a scope without a delegate; `decide_lift()` refuses the same on the
+`kept waiting` line it writes.
 
 A waiting-only answer (*The board*) is refused, as is a gate the entry does not carry and an archived entry.
 **The reassign** (`reassign_gate(text, frm, to, *, by,
@@ -964,7 +976,7 @@ line's end, in this order:
   `item_record()`'s `decided_by`); the rest, never empty, is the label (`parse_decided()` keeps its shape,
   `(label, date)`). A `Decided:` with no `(by …)` stays valid, as every one written before v2.3 is: it names
   nobody. The item key strips the whole field, so a `(by …)` moves no key. In an item file it is `Decided:
-  <date>[ by <person>] — <label>` (*The item file*).
+  <date>[ by <person>[ for <person> (<scope>)]] — <label>` (*The item file*; the delegated form v3.4's).
 
 **The bold head** — an item's first `**…**` run, whitespace collapsed, read outside its replies'
 words (its fields' are read: a bold answer with no bold before it is the head), is its title where it
@@ -1001,13 +1013,35 @@ no preamble line, so it ignores it.
 It is read as `People:` is (`answered_by(content)`: the value as written, or None). A one-person board reads
 the same either way.
 
+**`Delegates:`** (v3.4) — `Delegates: <delegate> for <person> (<scope>, …); …`, a preamble line read as
+`People:` is, granting a delegate the authority to answer for a person on the board's `People:`, on `decide`
+items whose `Scope` the grant names. The value splits at `;`, each grant's whitespace dropped at its ends and
+folded to one space inside, its scopes split at `,`; an empty piece is skipped. Each name is a person's name in
+grammar, compared case-insensitively. `board_delegates(content)` returns the grants as written,
+`(delegate, person, scopes)` each, a piece outside the form as `(piece, None, None)`, `[]` for a line that holds
+no grant, or None with no line.
+`delegates_problems(board, old=None)` names a grant outside the form, a person not on `People:`, a delegate on
+`People:`, a delegate granted for itself (that fault alone for the grant), two grants of one delegate for one
+person, a scope named twice in a grant, a line that lists no grant, and a second line. A fault is an error when
+the edit introduces it (its line differs from `old`'s, or `old` is None) and ℹ otherwise, so a standing bad
+grant never blocks the board's other writes. On a standing board (`board_problems()` with no `old`) an open item
+whose delegated answer the current line no longer covers is ℹ. A line with any such fault grants nothing:
+`delegation_covers(board, delegate, person, scope)` is true only on a faultless line holding that grant. No
+wildcard: a board with no line accepts no delegated answer.
+`delegates_changed(base, head)` says whether two boards' grants differ. A delegated answer counts as its
+person's for every purpose: it lifts the gate or keeps it waiting, closes the item and covers the gate as the
+person's answer would. A delegate may not answer an item whose Context names a gate on another repo's entry.
+`delegate_problem(board, item, delegate, person)` gives the first of the five rules a delegated answer fails, as
+its fixed message (*Edits*), or None.
+
 **A closed item** is read as an open one is, once its trailing `Closed:` field is cut (`parse_closed_items(content)`,
 v2.4, of a board or its archive: each a `BoardItem` with its line and detail block). On a v3 board a closed item
 is a file under `archive/` with its `Closed:` (*Reading a board*). Its `raw`, `closed`, `fields`, `words` and
 `context` (v3.0) are read from the `- [x]` line as written.
 
 **The decide lift** (v2.4) is what a lifting answer on a `decide` item whose Context names one entry and one gate
-does to the ledger: `decide_lift(item, entries, label, by, today, board_people, answered_by, archived=())`,
+does to the ledger: `decide_lift(item, entries, label, by, today, board_people, answered_by, archived=(),
+delegate=None, scope=None)` (`delegate` and `scope` v3.4),
 `item` an item file's text or a `BoardItem` (v3.0; a v2 line before it),
 returns `{id: new text}` for each entry it changes, from the base item, the base texts of the Context entry
 and each `Parts:` id that the ledger's directory holds, whatever its Status (`entries`), the ids of those only its
@@ -1020,7 +1054,8 @@ below are skipped) and `Answered by:`. It covers a `decision (<p>)` and an `even
   Status reads; its `Part of` is not read), is logged on the Context entry as `gate lift skipped: <id> no longer
   carries <gate>`, in the `Parts:` line's order, an archived part spelled as the first member of its number in
   `archived` spells it;
-- a waiting-only answer logs `kept waiting: <gate> — by <by>; answer "<label>"` on each of those that still
+- a waiting-only answer logs `kept waiting: <gate> — by <by>[ for <person> (<scope>)]; answer "<label>"` (the
+  delegated form, v3.4, with `delegate` and `scope`: `by <delegate> for <by> (<scope>)`) on each of those that still
   carries it, which resets the gate's age; for a decision, so does every other answer (a work order such as
   `One more round`); for an event, any other answer (`Rewrite the check`, `Drop the entry`) writes nothing;
 - `<p>` is compared case-insensitively, and the Log writes the entry's own spelling.
@@ -1090,7 +1125,22 @@ a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per g
   is open, nor when one, open or closed, on any board read or its archive is dated on or after the newest answer's
   `D − 1`. An entry
   owed is held: it is not asked again while an answer owing it is within `reask_days`, or while an act
-  for the Context entry and gate of an answer owing it is open on a board read or filed in the same sweep;
+  for the Context entry and gate of an answer owing it is open on a board read or filed in the same sweep.
+  Where any answer in the group is delegated (v3.4), the act follows the newest delegated answer `d` (ties broken
+  by the pick key, as `last` is) instead of `last`, its delegate, person and scope as `d`'s `Decided` writes them:
+  its `text` is today's with ` by <delegate> for <person> (<scope>)` after `answered with a lift` and `d`'s date in
+  place of the newest, exactly
+  `<gate> on <ref> was answered with a lift by <delegate> for <person> (<scope>) on <d's date> but still stands on <ids>: lift it.`,
+  its `detail.context` likewise, exactly
+  `<ref>'s <gate> was answered with a lift by <delegate> for <person> (<scope>) on <d's date>, and the item was closed as lifted, but the gate was never lifted on <ids>`,
+  its `detail.question` today's, and its `detail.recommended` exactly
+  `Lift it with ledger.py set --blocked-by … --by <person> --delegate <delegate> --scope <scope> --answer "<answer>"; that PR goes to review. Not an override, which would record the person's own lift; to ask again instead, close this and add the question`,
+  `<answer>` being `d`'s label, and `set --blocked-by …` written as shown, with no entry id and a literal `…`
+  (the act's ids name the entries, and the session fills the gates each keeps; today's act recommends an
+  override, which has no such form). With no delegated answer in the group the act is today's, byte for byte. Its
+  board and ids are today's (from `last` and the group). The longer `text` is the package's; a consumer's rules
+  for text a person reads apply where it shows it. Elsewhere the sweep reads `decided_by`, the person: a delegated
+  answer covers its gate and opens the `kept waiting` window as the person's would;
 - **`until D`**, D reached: a lift, `kind: until`, evidence `date reached`. Nothing is filed;
 - **`event (<name>)`**, by its outcome, on this repo's own board: `passed`, a lift (`kind: event`, the result's
   evidence); `error`, an `act` `Event check broken on TD-n: …`; `impossible`, a `decide` `… can no longer happen.`
@@ -1173,7 +1223,9 @@ the gate, or by a new `gate lifted … answer` line whose suffix fits the board 
 A lift line whose `by` is not the gate's person is flagged (`tripwire-by`) unless it has no suffix, the base board
 says `Answered by: any` and lists `by`, and the covering item's head `Decided:` names `by`. The other flags are
 `tripwire-unanswered` (no line accounts for it), `tripwire-no-decided`, `tripwire-no-board-item`, `tripwire-shared`,
-`tripwire-shared-decided` (v2.7) and `tripwire-board`.
+`tripwire-shared-decided` (v2.7) and `tripwire-board`. Where the tripwire compares an item's answer (v3.4) it
+compares `(decided, decided_by, decided_delegate, decided_scope)`, so a change of the delegate alone is a change of
+the answer.
 Exempt are an entry the diff archives and the one-time migrate commit, known by its subject alone, `ledger:
 migrate v<release> (<n> entries)` (written by v2.x's `migrate`; `subject_kind()` still names it `migrate`). The tripwire is
 forgeable, and says so: a well-formed hand edit passes it, and review is the backstop.
@@ -1207,6 +1259,23 @@ datetime, taken as its UTC date. The carve-out needs every one of:
   alone. A suffix, a host's lift, an override or a reassign cannot equal `decide_lift()`'s output, so takes
   review. **For another repo's entry** (`<repo>#TD-n`, never this repo's), the PR changes the item's files alone, the
   gate's person and the answerer are on `People:`, and under `owner` the answerer is the gate's person.
+
+In (b), a delegated `Decided` (v3.4) is `D by <delegate> for <person> (<scope>) — <label>`, and the head file is
+`edit_item(…, by=<person>, delegate=<delegate>)`, the scope read from the item's `Scope`; in (c), for a delegated
+head, `decide_lift()` is called with the head's `delegate` and the item's `scope`. A `Decided` written in the PR by
+a delegate passes `lift_pr_verdict()` only when `delegate_problem()` finds no fault over the **base** board and item
+(a grant covering the item's `Scope`, a person who may answer it as an undelegated answer is judged, a gate on this
+repo's entry), tested right after the answerer and date checks; else `lift-delegate-uncovered`, its text
+`delegate_problem()`'s message. For the recompute it resolves a delegated answer's delegate to the base grant's
+spelling and its person to `People:`'s; an undelegated answer's person is passed as written, as before. An
+undelegated `Decided` is judged exactly as before, on an item with a `Scope` as on any other: the test is not run
+and the recompute takes no delegate and no scope. A gated Context that is not one entry and one gate never reaches
+that test: it is `lift-no-gate`, as for any answer, so rule 5 is the writer's and `item_file_problem()`'s; a lone
+`#` ref naming this repo is `lift-delegate-uncovered` (rule 4), the test running before `lift-own-ref`. A PR that
+also rescopes the item and answers in the new scope is `lift-ledger` (the recompute takes the scope from the base
+item, and the ledger is recomputed first), one whose `Decided` alone carries another scope, or that changes only
+the item's `Scope`, is `lift-board-line`, and one that also changes `README.md` is `lift-board-diff`, as for any
+lift PR. A delegated answer is written only with its ledger half, in the same PR (the decide lift).
 
 **The order** (v3.0): `review` names the first condition that fails, the board's presence and form first, then
 the files, then the diff, each before (a0): a base or head with no board (`load_board()`'s `form` None, read from
@@ -1253,6 +1322,10 @@ person, the shape the person's press writes; otherwise `review` names the first 
 - the subject's person, the gate's person and that line's `by` are one name in any case, which the base
   board lists on `People:`; `Answered by: any` admits no other (`ledger-lift-by`);
 - `lift_form()` of the base is not `asked` (`ledger-lift-asked`);
+- (v3.4) the Log line is not delegated (judged once the one new `gate lifted … answer` line is found, before its
+  date is read and `ledger-lift-by` is judged), and no item `covers()` names over the base entry and board in an
+  open or decided state carries a delegated `Decided` (judged right after `ledger-lift-asked`, whichever form
+  `lift_form()` chose) (`ledger-lift-delegated`): a delegated ledger lift goes to review;
 - the head entry is `lift_gate(base text, gate, by, answer=label, suffix=S, today=T)` byte for byte, `S` the
   form's suffix, any refusal from `lift_gate()` failing too (`ledger-lift-bytes`); the board is unchanged for
   `shared` and `none`, and for `decided` changes exactly each item the form names, its open file removed and
@@ -1338,6 +1411,8 @@ that add one id conflict as two files at one path. An id never changes.
     (*Appendix: grammar*, `doer-repo`), or `team <team>`, `<team>` a person's name; `Doer: team` alone names the
     repo `team`. `doer_value(value)` reads it as `("repo" | "team", name)`, or None outside that form,
     reading a run of spaces or tabs after `team` as one space (`item_file_problem()` faults that spelling);
+  - `Scope` (v3.4) — on a `decide` only: one name, the kind of decision the item is, written by whoever raises it; a
+    delegate may answer the item only under a grant naming it (*The board*, `Delegates:`);
   - `Due`, `Hide until` — a date each; a `Due` that is no day is reported as written (`bad_due`; an empty one as
     `""`, which a reader tests as present, `bad_due` not None), never silently undated; on an `fyi`, a `Due` is ignored, and flagged (`fyi_due`), as on a v2 line;
   - `Answers`, `Lifts` — as on a v2 line, without the final period;
@@ -1346,8 +1421,14 @@ that add one id conflict as two files at one path. An id never changes.
     whose text from `by ` to the first ` — ` is no person is outside the form. The label is never split on a
     trailing `(by …)`: the person is only the `by <person>` before ` — ` (`2026-11-12 — Go (by pat)` is decided
     `Go (by pat)`, by no one). `parse_decided_value(value)` reads it as `(label, date, by)`, or None outside that
-    form, and `parse_item()` reads it into `decided` and `decided_by`; `parse_decided()` and `parse_decided_by()`
-    read a v2 line's;
+    form, and `parse_item()` reads it into `decided` and `decided_by`, and a delegated value's delegate and scope
+    into `decided_delegate` and `decided_scope`; the `Scope` field into `scope`; `parse_decided()` and
+    `parse_decided_by()` read a v2 line's. Or, answered by a delegate, `<date> by <delegate> for <person> (<scope>) —
+    <label>` (v3.4): `parse_decided_value()` returns the person as `by`, and `parse_decided_delegation(value)` the
+    `(delegate, scope)`, None for an undelegated value. `item_file_problem()` faults a delegated value on an item
+    with no `Scope`, with a scope other than the item's, whose delegate is its person, on a gate on another
+    repo's entry, or on a gated Context that is not one entry and one gate. `item_record()` gains
+    `scope`, `decided_delegate` and `decided_scope`;
   - `Closed` — `<date>` or `<date> — <why>`, read by `parse_closed_value(value)` as `(date, why)`, or None outside
     that form.
 
@@ -1359,10 +1440,10 @@ that add one id conflict as two files at one path. An id never changes.
 
   A line in the header block that is no field does not end it: it is in no field, every edit keeps it byte for
   byte, and `board_dir_problems()` names it. A value not in its form, for `Decided`, `Closed`, `Kind`, `Hide
-  until`, `Parts` or `Doer`, is kept, and read as the field absent: no answer, no close, no kind (so a to-do,
-  shown), not hidden, no parts, no doer; `board_dir_problems()` names it. A `Due` not in its form is reported, as
-  *The board* says. A field on a kind that does not take it (`Parts` or `Lifts` off a `decide`, `Doer` off an
-  `act`, `Answers` on a kind that takes none) is read as written, as a v2 line's is; `item_file_problem()` faults
+  until`, `Parts`, `Doer` or `Scope`, is kept, and read as the field absent: no answer, no close, no kind (so a to-do,
+  shown), not hidden, no parts, no doer, no scope; `board_dir_problems()` names it. A `Due` not in its form is
+  reported, as *The board* says. A field on a kind that does not take it (`Parts` or `Lifts` off a `decide`, `Doer`
+  off an `act`, `Scope` off a `decide`, `Answers` on a kind that takes none) is read as written, as a v2 line's is; `item_file_problem()` faults
   it and `board_dir_problems()` names it. A file is cut into lines at `\n` alone, a line's `\r` before it dropped,
   so no other line-break character ends a value. A field the reader does not
   know is kept: it is in `BoardItem.fields` (every header field as written, in its order), every edit keeps its
@@ -1500,16 +1581,17 @@ the directory; on an empty `Board`, the path that was missing).
   12. `board_dir_problems() only`: a header-block line that is no field: kept, in no field.
   13. `board_dir_problems() only`: an `Added` that is a day but not the id's date.
   14. `board_dir_problems() only`: a `Decided` or `Closed` not in its form: read as no answer, or no close; a
-      `Kind`, `Hide until`, `Parts` or `Doer` not in its form: read as the field absent, a `Kind` outside the five
+      `Kind`, `Hide until`, `Parts`, `Doer` or `Scope` not in its form: read as the field absent, a `Kind` outside the five
       as a to-do, shown; a `Doer` that reads but is spelled with more than one space, or a tab, after `team`:
       read; a `Kind` in the wrong case: read as that kind; a `Due` on an `fyi`: read as `fyi_due`; a field its
-      kind does not take (`Parts` or `Lifts` on any kind but `decide`, `Doer` on any kind but `act`, `Answers` on a
-      kind that takes none): read as written, as on a v2 line.
+      kind does not take (`Parts` or `Lifts` on any kind but `decide`, `Doer` on any kind but `act`, `Scope` on any
+      kind but `decide`, `Answers` on a kind that takes none): read as written, as on a v2 line.
   15. `board_dir_problems() only`: a `Closed:` in its form on a file outside `archive/`: read as closed.
   16. `board_dir_problems() only`: an archived file in a month that is not its `Closed:` date's: read as closed.
 - **The readers take the `Board`**: `needs_you()`, `covers()`, `sweep()`, `board_problems()` and the merge gate's
   verdicts; `board_people()`,
-  `answered_by()`, `people_problems()` and `answered_by_problems()` read its preamble, every line of `README.md`
+  `answered_by()`, `people_problems()`, `answered_by_problems()`, `board_delegates()` and `delegates_problems()`
+  (v3.4) read its preamble, every line of `README.md`
   on a `"dir"` board and the lines above the first item on a `"file"` one, as `board.py`'s
   `who_answered(board, by)` does through `board_people()`; and a consumer calls
   `version_problem(board)` before it trusts the rest. `people_problems(board)` and
@@ -1585,7 +1667,8 @@ item only when it is added.
 - It refuses a board that declares a major above 2 (`Ledgerboard: 3`, a stub's, among them); an item with no date, or a date that is no day of the
   calendar; a closed line with no readable
   `Closed:` date (no month to file it under: date it first); two open lines, or two closed lines, of one id; two
-  items given one id; a carried line that is a `People:`, `Answered by:` or `Ledgerboard:` line, which a v2
+  items given one id; a carried line that is a `People:`, `Answered by:`, `Delegates:` (v3.4) or `Ledgerboard:`
+  line, which a v2
   reader never read below the first item and `README.md` would read (move or delete it first); a `Due` v2 reads
   as unreadable that v3 would read otherwise: on any kind but `fyi`, a colonless `Due <day>.`, and on any kind
   the `Due` v2 reads lying inside another field's words or a reply's (fix it first; a date-shaped `Due` there that
@@ -1633,7 +1716,18 @@ sets that is there is rewritten in place. A line it adds or rewrites ends as the
   gate, it also sets `Closed: <today> — kept waiting` for a waiting-only answer or `Closed: <today> — lifted` for a
   lifting one, and refuses any other answer (`closes()` says when to pass it). An answer that fills one of the
   item's forms is written as its fill, the head as offered (v2.8); one that is a form as offered, unfilled, is
-  refused (*<head> needs its words*);
+  refused (*<head> needs its words*). With `delegate` (v3.4), it writes the delegated form, the delegate as the
+  grant spells it, the person as `People:` does, the scope as the item's `Scope` does, and refuses an answer
+  `delegation_covers()` does not allow, on an item with no `Scope`, by a person who may not answer the item, on a
+  gate on another repo's entry, or on an item whose Context names a gate but not exactly one entry and one gate; a
+  Context that names no gate is not refused for the entries it names. The refusal is `delegate_problem()`'s
+  message, one fixed text per rule: `rule 1: the item has no Scope`; `rule 2: no faultless Delegates: grant covers
+  <delegate> for <person> (<scope>)`; `rule 3: <person> may not answer this item`; `rule 4: the Context names a gate
+  on another repo's entry`; `rule 5: the gated Context is not one entry and one gate`, each `<…>` as the answer
+  writes it, `<scope>` the item's `Scope`. `edit_item()` itself needs only the item's text, the scope read from its
+  `Scope`, and refuses a delegate with no `Scope`, with no `by`, outside the person grammar or equal to `by`; the
+  grant and rules 2 to 5 are the caller's (`delegate_problem()`). Without `delegate` the decide edit is today's, on
+  an item with a `Scope` as on any other;
 - **reply** appends `- <today>: <by>: <words>` to the Log, opening a `**Log:**` section after the body when there is
   none. It refuses a `by` holding `:` or of more than 40 characters, and empty or blank words.
 
@@ -1641,12 +1735,13 @@ An edit that closes the item gives a file whose place is `item_path(id, closed)`
 write.
 
 **A new item** (`item_file(text, due, today, session, host, context, *, kind, answers, default, detail,
-hide_until, lifts, parts, doer)`, v3.0) is one file: `## <text>`, a blank line, the header block (`Kind` when
-given, `Added: <today>`, `Session` when there is a session, `Context`, then `Parts`, `Doer`, `Due`, `Hide until`,
+hide_until, lifts, parts, doer, scope)`, v3.0) is one file: `## <text>`, a blank line, the header block (`Kind` when
+given, `Added: <today>`, `Session` when there is a session, `Context`, then `Parts`, `Doer`, `Scope`, `Due`, `Hide until`,
 `Answers` and `Lifts` as given), and, after a blank line, the detail block. The text is trimmed and not empty, and
 no period is added. An empty context is `none`. `Session` is `<session>` or `<session> on <host>`. `Lifts` is
 written only when it names answers other than `Go` alone (each one of its answers, once, written as its answer
-spells it). A `doer` is refused on any kind but `act`, and outside its form. A decide's `parts` (v2.6) are written
+spells it). A `doer` is refused on any kind but `act`, and outside its form. A `scope` (v3.4) is refused on any kind
+but `decide`, and when it is no name. A decide's `parts` (v2.6) are written
 ordered by number, separated by `, `, each as given, and are refused on any kind but `decide`, for an empty list,
 for an id that is not `TD-` and 1 to 18 ASCII digits, for an id that shares its number with another or with the
 Context's entry, unless the Context names exactly one entry, a bare `TD-n`, and one gate, a `decision (<person>)`,
@@ -1714,7 +1809,9 @@ file's spelling, so it rewrites any field.
 
 **The gate** is `board_problems(board, old)` (v3.0, both `Board`s, `old` read whole): first `README.md`'s
 `People:` and `Answered by:` problems (`people_problems()`, `answered_by_problems()` of the board, the `(path,
-problem)` pairs as they come, each `("README.md", problem)`), then `item_file_problem()`'s fault of each open item
+problem)` pairs as they come, each `("README.md", problem)`), then (v3.4) `delegates_problems(board, old)`'s
+pairs, each `("README.md", problem)`, right after `answered_by_problems()`'s, and on a standing board (no `old`)
+the ℹ of each open item whose delegated answer the line no longer covers, then `item_file_problem()`'s fault of each open item
 whose id no item of `old` (open or closed) has, as `(path, problem)`, and, on a new `decide` whose Context names a
 gate, `decision (<person>)`, a `People:` line that does not list that person. `old` may be a v2 board (a split's
 base) or None (every open item judged). An edit keeps an item's id, so an item is judged once, when it is added;
@@ -1763,7 +1860,8 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   held (`<board>: <id> is held`). With `--parts TD-a,TD-b` (v2.6), a decide's snapshot (`item_file(parts=)`): the
   option may be repeated, each value is split on `,` and each piece trimmed, and an empty piece is refused;
   `--parts` with `--decided` is refused, and so is `--ledger` without `--parts`. With `--doer <value>` (v2.8), an
-  act's doer (`item_file(doer=)`); `--doer` with `--decided` is refused. Then the ledger is read (`--ledger <v2
+  act's doer (`item_file(doer=)`); `--doer` with `--decided` is refused. With `--scope <name>` (v3.4), a
+  decide's scope (`item_file(scope=)`); `--scope` with `--decided` is refused. Then the ledger is read (`--ledger <v2
   directory>`, default `ledger/` beside the board when it is a directory, its open and archived entries), and the
   write is refused, with every problem, when `parts_problems()` names any, or when no ledger is found. With
   `--said` and `--by`, a question already answered: its answer is the item's first reply, the Log line `-
@@ -1771,7 +1869,7 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   or blank words); `--said` is refused when it holds a character `str.splitlines()` splits on, checked before
   any collapse, and the rest of its whitespace, and `--by`'s, is collapsed as today. With `--decided`, an item
   the person decided elsewhere (`decided_file()`). The write is refused when `board_problems()` faults the item
-  it adds. **The order** (v3.0): a usage error (exit 2); `--parts` or `--doer` with `--decided`, an empty
+  it adds. **The order** (v3.0): a usage error (exit 2); `--parts`, `--doer` or `--scope` with `--decided`, an empty
   `--parts` piece, a `--detail` that is no JSON object (exit 1); a bad `--today` (exit 2); `--ledger` without
   `--parts`, a `--decided` item given `--due`, `--kind`, `--detail`, `--session`, `--host`, `--said`,
   `--hide-until` or `--lift`, and on an item not `--decided` `--said` without `--by` or the reverse (exit 1); a
@@ -1786,7 +1884,12 @@ back; it never runs git, the network or anything of a consumer's. Its actions:
   required. A `--by` the list does not hold is refused, and one it holds is written as the list spells it. On a
   board with no `People:` line, `--by` is required and checked as a person's name only. A `People:` line the gate
   faults refuses every answer. The caller supplies the name of the person who answered; a commit's author is
-  never one, since an agent commits under the person's name;
+  never one, since an agent commits under the person's name. With `--delegate <name>` (v3.4), a delegated answer:
+  refused, before `who_answered()`, with `--board-only` (`--delegate writes its own ledger half, never
+  --board-only`) and on any action but `decide` (`--delegate is a decide's`, the CLI's usage error); after it,
+  `delegate_problem()`'s message for the first rule that fails, before the item edit and the ledger half. The
+  answer is then written in the delegated form, the delegate as the grant spells it, its ledger half by the
+  decide lift in the delegated Log form. `add --decided` takes no `--delegate`;
 - **the decide lift** (v2.4) — a `decide` on an item whose Context names one bare `TD-n` and one gate writes the
   board and the ledger (`--ledger <v2 directory>`, default `ledger/` beside the board when it is a directory) as one write, both
   or neither: the entries `decide_lift()` changes, from their texts as they stand, each listed id the ledger's
@@ -1915,7 +2018,9 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   `--board <repo>`, `--no-board-item`, `--shared-item`; or anyone, with `--override "<why>"`. One that swaps one
   decision for another reassigns it (`reassign_gate()`), with `--by` and `--why`. Who may run either (a session a
   person started) is the caller's to check; the writer records `by`. These flags on a `set` that drops no
-  decision are a usage error;
+  decision are a usage error. With `--delegate <name> --scope <name>` (v3.4), the lift's Log line names the
+  delegation (`lift_gate(delegate=, scope=)`); both or neither, only with `--by` and an explicit `--answer` on a
+  lift, else a usage error. The writer reads no board: such a `set` is reviewed;
 - **`lift TD-n --gate "<gate>" --by <who>`** — one gate lifted (`lift_gate()`, *Lifting a gate*), its inputs one
   shape exactly: a decision with `--answer` and at most one board flag (with `--people P,…` and `--answered-by
   any`, anyone listed may answer); an event with `--answer` and `--people`, or with a host's `--evidence`; `until`
@@ -2511,6 +2616,18 @@ entry that already holds an `**Answers:**` section is offered its own answers, a
 offered is flagged ℹ when it waits on a person; an edit is refused only where it makes the flag, a `reopen` or a
 `renumber` of such an entry among them. *Text a person reads*' allowance of a repo's own
 `**Answers:**` section is narrowed: on an entry with a decision gate, it is now the format's one-line field.
+
+**v3.4 adds delegated answers** (TD-132; *The board*, *The board as a directory*, *Edits*, *Lifting a gate*, *The
+board writer*, *The ledger writer*, *The merge gate's verdicts*, *The gate sweep*): the `Delegates:` preamble line,
+the `decide` item's `Scope` field, the delegated `Decided` form and Log `by` form, `board_delegates()`,
+`delegates_problems()`, `delegation_covers()`, `delegates_changed()`, `parse_decided_delegation()`, the writer's
+`delegate` and `scope`, `delegate_problem()`, `ledger.py set`'s `--delegate` and `--scope`, and the verdicts'
+`lift-delegate-uncovered` and `ledger-lift-delegated`. `BoardItem` and `item_record()` gain `scope`,
+`decided_delegate` and `decided_scope`, and `log_line()`'s records of a `gate lifted … answer` line and a `kept
+waiting` line gain `delegate` and `scope`. Every file an earlier v3 wrote reads the same; an earlier reader reads a
+delegated `Decided` as outside the form (the item reads as undecided), an earlier `log_problems()` faults the new Log
+form and an earlier `item_file_problem()` an item's `Scope`, so no delegate writes one, and no item carries a
+`Scope`, until every repo that reads the board has this release.
 
 ## Appendix: grammar
 
