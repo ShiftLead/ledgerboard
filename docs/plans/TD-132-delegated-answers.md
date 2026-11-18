@@ -1,6 +1,6 @@
 # TD-132: an answer a delegate makes for the person
 
-**Status:** Draft 13 (rounds 1–10 applied, rounds 7–10 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–10: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–10 found holding on every case they tried; round 10's one build-changing finding is that the delegation test and the recompute's scope apply only to a delegated answer, so the person's own answer on an item with a `Scope` is judged as today, not the mechanism; its five minor findings state the Log keys, the SPEC text for the writers and the lift, the sweep's exact strings, an empty `Delegates:` line and a delegate's free-text answer; closing fact-check (R17) raised 2 minor, applied, none build-changing; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
+**Status:** Draft 14 (rounds 1–11 applied, rounds 7–11 bought past the cap by the person's One more round; the ledger-only lift path redesigned after round 4; build-changing per design review, rounds 1–11: 7, 8, 2, 2, 2, 2, 1, 2, 1, 1, 1; recurring topic the ledger-only lift after a delegated answer, which rounds 7–11 found holding on every case they tried; round 11's one build-changing finding is that SPEC's grammar appendix gains the delegated form of its two Log productions, with their grammar fixtures, not the mechanism; its two minor findings are the writer's read-back when the person re-answers a delegate's open work order, and the verdict's clause (b) naming the delegated form; closing fact-check (R19) raised 2 minor, applied, none build-changing; awaiting the person's answer on the end-of-rounds item), 2026-11-17 (session lb-designer). Class: **wide** (a vendored, published format: a new
 board preamble line, a new item field, a new `Decided` form and Log line form that every merge-gate verdict reads;
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
@@ -46,7 +46,7 @@ the answer counts as; the delegate is who wrote it; the scope is the authority i
 `by` is today). Every place that writes or re-renders the form takes the delegated one: `_item_values_problems()`'s
 canonical re-render, `_item_dir_problems()`'s reader fault, `edit_item()`'s `put("Decided", …)` and its read-back,
 `decided_file()` (which writes no delegated value: `add --decided` refuses a delegate, *Not done*), and `_item_read()`'s tuple, which gains the three new attributes (`scope`, `decided_delegate`, `decided_scope`) so `edit_item()`'s and `decided_file()`'s read-backs
-compare them; `ITEM_FIELDS` and `ITEM_FIELD_KEYS` gain `Scope` after `Doer`. `parse_decided_value(value)` keeps its `(label, date, by)` triple, `by` the **person**, and
+compare them, and `edit_item()`'s read-back `want` always sets `decided_delegate` and `decided_scope`, to the new answer's values or to None for an undelegated decide, so the person's own answer over a delegate's open work order reads back; `ITEM_FIELDS` and `ITEM_FIELD_KEYS` gain `Scope` after `Doer`. `parse_decided_value(value)` keeps its `(label, date, by)` triple, `by` the **person**, and
 `parse_decided_delegation(value)` (new) reads `(delegate, scope)` or None. So every reader that compares
 `decided_by` with a gate's person — the lift, the sweep, every verdict — reads a delegated answer as the person's
 unchanged, and only the delegation checks (D3, D4) read the delegate.
@@ -63,7 +63,7 @@ director for pat (merge-line); answer "Not yet"`. The optional ` for <person> (<
 the `by` group, to two of `LOG_SHAPES`' patterns only: the `gate-lifted` answer shape and the `kept-waiting` shape
 (in place: no shape added or reordered, so the `gate-lifted` shapes' `via` index is unchanged). The regex's
 existing `by` group keeps the name written after `by`; new named groups `person` and `scope` hold the `for` name and
-the scope. After the match `log_line()` sets `delegate` to the `by` group and `by` to `person` when `person` matched;
+the scope, each `LOG_TOKEN`, as the `by` group is, so the grammar's `log-token` is the reader's class. After the match `log_line()` sets `delegate` to the `by` group and `by` to `person` when `person` matched;
 else `by` stays and `delegate` and `scope` are None; the `person` key is dropped from the result. `log_line()` (and `log_lines()`)
 return `by` as the **person** (the `for` name when present, else the `by` name, so `tripwire` and
 `ledger_lift_verdict`, which read `rec["by"]`, compare the person as today) and `delegate` and `scope` beside it.
@@ -406,6 +406,8 @@ reviewed."
 
 **In *The merge gate's verdicts*, a paragraph:**
 
+> In (b), a delegated `Decided` (v3.4) is `D by <delegate> for <person> (<scope>) — <label>`, and the head file is
+> `edit_item(…, by=<person>, delegate=<delegate>)`, the scope read from the item's `Scope`; this paragraph says when it passes.
 > A `Decided` written in the PR by a delegate passes `lift_pr_verdict()` only when `delegate_problem()` finds no
 > fault over the **base** board and item (a grant covering the item's `Scope`, a person who may answer it as an
 > undelegated answer is judged, a gate on this repo's entry), tested right after the answerer and date checks;
@@ -457,7 +459,9 @@ shapes (`null` on an undelegated line) and on no other record.
 **Appendix: grammar:** `decided-field ::= "**Decided:** " date ( " by " person ( " for " person " (" person ")" )? )? " — " item-text`;
 `delegates-line ::= "Delegates: " grant ( "; " grant )*`, `grant ::= person " for " person " (" person ( ", " person )* ")"`
 (the canonical spelling; the reader's tolerance is the prose above); `item-header` gains
-`scope-field ::= "**Scope:** " person`, after `doer-field`, on a `decide` only. Each new production gets its
+`scope-field ::= "**Scope:** " person`, after `doer-field`, on a `decide` only; `log-lift-answer` and `log-kept-waiting` read
+`" — by " log-token ( " for " log-token " (" log-token ")" )? '; answer "'` (v3.4; the Log line's person and scope
+tokens are `log-token`, as the reader's regex takes them). Each new or changed production gets its
 `fixtures/grammar/` case.
 
 ## The fixtures
@@ -476,7 +480,7 @@ from grant, `People:` and `Scope`), `decide_delegated_no_scope`, `decide_delegat
 waiting), `decide_delegated_board_only` (refused, its message above), `decide_delegated_on_done` (the CLI's `TAKES` usage error, exit 2; `plan_edit()`'s own `--delegate is a decide's` a unit test in `tests/`), `decide_delegated_multi_ref` and `decide_delegated_two_gates` (refused,
 rule 5), `decide_delegated_one_ref_no_gate` and `decide_delegated_two_refs_no_gate` (accepted, gateless), `decide_delegated_other_repo_second_ref` (a `#`
 ref beside a second ref: rule 4), `decide_delegated_work_order` (open, a delegated `kept waiting` line on a decision gate), `decide_own_answer_bad_delegates` (the person's own answer
-written on a board whose standing `Delegates:` line is faulty), `decide_own_answer_scoped` (the person's own
+written on a board whose standing `Delegates:` line is faulty), `decide_own_answer_over_delegated_work_order` (the person's own answer over a delegate's open work order, written and read back, its `Decided` undelegated), `decide_own_answer_scoped` (the person's own
 answer on an item with a `Scope`, written and lifted as today, its `Decided` and Log line undelegated),
 `decide_delegated_free_text` (a delegate's answer outside `Answers` on a decision gate: written as said, the gate
 kept waiting with a delegated `kept waiting` line), `add_scope`, `add_scope_on_act`, `add_scope_no_name` and `add_scope_decided` (the last three refused, `add_scope_decided` with exit 1 in `add`'s order, beside `--doer` with `--decided`). `fixtures/board/` also: a bad grant an
@@ -511,7 +515,7 @@ alone: the verdict meets it as `lift-no-gate`; the verdict's rule 1 on an item w
 owner board each a case of its own), and the verdict cases
 an own-repo `#` ref (`lift-delegate-uncovered`, rule 4) and a `#` ref beside a second ref (`lift-no-gate`).
 `fixtures/board_writer/` also: a delegated lifting answer writing its ledger half in the delegated Log form. `fixtures/grammar/`: `decided-field`
-delegated, `delegates-line`, `scope-field`. `fixtures/run.py` gains runners for `board_delegates`,
+delegated, `delegates-line`, `scope-field`, and a delegated `log-line` of each of the two shapes (`gate lifted … answer`, `kept waiting`), each with an accepted case and a refused one (` for <person>` with no `(<scope>)`). `fixtures/run.py` gains runners for `board_delegates`,
 `delegates_problems`, `delegation_covers`, `delegates_changed` and `parse_decided_delegation`.
 
 ## Builds
