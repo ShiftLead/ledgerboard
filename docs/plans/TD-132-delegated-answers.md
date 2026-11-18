@@ -5,7 +5,7 @@ board preamble line, a new item field, a new `Decided` form and Log line form th
 both consumers vendor it; cap 6 rounds, cadence.md §4.8). The record:
 [docs/reviews/TD-132.md](../reviews/TD-132.md). In plain words: [docs/synopses/TD-132.md](../synopses/TD-132.md).
 
-**Entry:** [TD-132](../ledger/TD-132.md), from ShiftLead's director seat (the person's conversation of
+**Entry:** [TD-132](../ledger/archive/TD-132.md), from ShiftLead's director seat (the person's conversation of
 2026-11-16): a seat that answers some cards on the person's behalf.
 
 ## The problem
