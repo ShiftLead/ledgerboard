@@ -714,7 +714,9 @@ def item_attrs(item) -> dict:
             "bad_due": item.bad_due, "fyi_due": item.fyi_due, "hide_until": day(item.hide_until),
             "context": item.context, "answers": item.answers, "default": item.default,
             "decided": [item.decided[0], day(item.decided[1])] if item.decided else None,
-            "decided_by": item.decided_by, "doer": list(item.doer) if item.doer else None, "parts": item.parts,
+            "decided_by": item.decided_by, "decided_delegate": item.decided_delegate,  # v3.4
+            "decided_scope": item.decided_scope, "scope": item.scope,  # v3.4
+            "doer": list(item.doer) if item.doer else None, "parts": item.parts,
             "replies": [list(r) for r in item.replies],
             "closed": [day(item.closed[0]), item.closed[1]] if item.closed is not None else None}
 

@@ -655,7 +655,7 @@
    },
    {
     "accepted": false,
-    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+    "why": "decided: `Decided` is `<date>[ by <person>[ for <person> (<scope>)]] — <label>`"
    }
   ],
   "digit": [
@@ -775,7 +775,7 @@
    },
    {
     "accepted": false,
-    "why": "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+    "why": "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Scope, Due, Hide until, Answers, Lifts, Decided, Closed"
    }
   ],
   "item-label": [
@@ -875,7 +875,7 @@
    },
    {
     "accepted": false,
-    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+    "why": "decided: `Decided` is `<date>[ by <person>[ for <person> (<scope>)]] — <label>`"
    }
   ],
   "person-part": [
@@ -885,7 +885,7 @@
    },
    {
     "accepted": false,
-    "why": "decided: `Decided` is `<date>[ by <person>] — <label>`"
+    "why": "decided: `Decided` is `<date>[ by <person>[ for <person> (<scope>)]] — <label>`"
    }
   ],
   "reply-by": [

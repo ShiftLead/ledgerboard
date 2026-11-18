@@ -191,7 +191,7 @@
    "ok": [
     [
      "2026-01-06-5e6f7a8b.md",
-     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Scope, Due, Hide until, Answers, Lifts, Decided, Closed"
     ]
    ]
   },
@@ -202,7 +202,7 @@
    "ok": [
     [
      "2026-01-06-5e6f7a8b.md",
-     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed"
+     "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Scope, Due, Hide until, Answers, Lifts, Decided, Closed"
     ]
    ]
   },
@@ -2121,7 +2121,7 @@
   "marked_form_decided": null,
   "marked_form_open": "answers: a form cannot be the default: pressing it sends no words",
   "no_blank_line": "heading: one blank line, then the header block",
-  "out_of_order": "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Due, Hide until, Answers, Lifts, Decided, Closed",
+  "out_of_order": "header: Context stands after Due; the fields' order is Kind, Added, Session, Context, Parts, Doer, Scope, Due, Hide until, Answers, Lifts, Decided, Closed",
   "parts_on_act": "parts: an act carries no `Parts`: only a decide asks about a parent's parts",
   "twice": "header: Due stands twice",
   "two_forms_closed": null,
