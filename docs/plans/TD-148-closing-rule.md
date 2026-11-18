@@ -1,6 +1,6 @@
 # TD-148: an entry's closing rule is no section's text
 
-**Status:** Draft 6 (rounds 1–5 applied), 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 7 (rounds 1–6 applied), 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `check()` flags, what three readers read and where the writers put what they add; cap 6 rounds,
 cadence.md §4.8). The record: [docs/reviews/TD-148.md](../reviews/TD-148.md). In plain words:
 [docs/synopses/TD-148.md](../synopses/TD-148.md).
@@ -80,16 +80,19 @@ write giving text to a body that was only the tail puts one blank line before it
   person reads and its context (`_entry_ask()`, `_entry_context()`, the gate sweep's detail block),
   `entry_answers()`, and the Event sections (`event_sections()`), open and archived entries, v1 and v2 alike. An entry
 `_entry_parts()` refuses is read as today: `event_sections()`'s fallback reads its raw text, rule and all. Its
-  `---` is then read by nothing, as in v1 it separated entries and meant nothing. A reader given an entry's text
+  `---` is then read by nothing (bar that fallback, where it is the last section's text, as today), as in v1 it
+  separated entries and meant nothing. A reader given an entry's text
   with comments already dropped finds the same rule as the raw readers, since the rule is decided on that text
   for both; the suite checks the two paths agree on every `check` fixture but the fence-in-a-comment one.
 - **Writers** keep the tail, verbatim, as the entry's end, after everything they write: a Log made or a line
   appended (`note`, `set`, `lift`, `archive`, `reopen`), a section added or replaced (`edit --section`, the Fix's
   replacement on `archive`), `migrate-body`'s `**Context:**`, and `canonical()`, whose output is unchanged (the
-  body byte for byte, the tail after it, as today). Where the tail is the whole body (no line with words above the
-  rule) and a write puts text above it, one blank line goes between them, so it stays a rule whatever the tail
-  opens with (a comment, as in `<!-- a`, `-->---`, or the rule); any other tail is written as found, so
-  `canonical()` of an unchanged entry, whose body without the tail is then empty, inserts nothing.
+  body byte for byte, the tail after it, as today). Where the tail's text with comments dropped does not open
+  with a blank line (the tail was the whole body: `---`, or `<!-- a`, `-->---`) and the body written above it is
+  not empty, one blank line goes between them, so it stays a rule; the test reads the tail alone, so every writer
+  decides it alike. Any other tail is written as found: a tail cut after a line with words opens, dropped, with
+  the blank line that made it a rule (or the empty line a comment-only line leaves), and an unchanged entry whose
+  body is only the tail has an empty body above it, so `canonical()` inserts nothing.
 - **A fence line in a comment.** The raw readers pair fence lines inside comments (`fence-open`, *The body's
   shape*). A comment holding a fence line that the cut puts in the tail leaves its pair, above the cut, unclosed:
   `fence-open` then flags the body, where v3.4 paired the two. It is a flag on a hand-written shape (fences in
@@ -113,13 +116,16 @@ dropped) into the body without the tail and the tail (`""` for none), deciding t
 dropped and mapping the cut back to the text it was given. `_entry_parts()` keeps its three-tuple and
 returns the body without the tail, so every reader built on it needs no change; `_entry_tail(text)`, new, returns
 the tail of the body `_entry_parts()` cut. `_render()` gains a `tail` argument (default `""`), written after the
-body: on the line after it, where the tail came after a line with words; after one blank line where the tail was
-the whole body and the body is now not empty; and as the body when the body is empty. Each writer that renders an entry passes `_entry_tail()` of the text it was given: `canonical()`,
-`edit_entry()` (every action: `note`, `set`, `edit`, `archive`, `reopen`, `lift`), `_logged()`,
+body: as the body when the body is empty; else on the line after it, with one blank line first where the tail's
+comment-dropped text does not open with a blank line (*Writers*, above). Each writer that renders an entry passes `_entry_tail()` of the text it was given: `canonical()`,
+`edit_entry()` (every action in `ENTRY_ACTIONS`: `set`, `note`, `edit`, `archive`, `reopen`, `renumber`,
+`rename_ref`), `_logged()` (the lift's write, among others),
 `status_notes_to_log()` and `migrate_body()` — every caller of `_render()` but `entry_text()`, whose new entry has
 none (on `main`, lines 4808, 5173, 5835, 6210 and 6460); each then runs `canonical()`, which cuts the tail again
-and keeps it. `_readback()` returns the tail as a fifth element, so a writer that drops or changes it is refused,
-never written. `_body_faults()` keeps its contract (a body in, faults out); `body_problems()` and
+and keeps it. `_readback()` returns the tail as a fifth element, so `canonical()`'s own read-back covers it; the writers'
+checks (`edit_entry()`'s and `_logged()`'s sections compared) do not, and the writers' fixtures (*The fixtures*)
+are what hold each writer to keeping the tail. `_entry_tail(text)` normalises line ends as `_entry_parts()` does
+and cuts the whole body, before any trim of the tail, itself. `_body_faults()` keeps its contract (a body in, faults out); `body_problems()` and
 `migrate_body()` give it the body without the tail. `_raw_entry_texts()` and `_entry_texts()` cut at `## `
 headings as today and need no change, nor does `ledger.py`'s read of `_entry_parts(out)[2]` after an edit, which
 then reads the body without the tail, as meant.
@@ -227,6 +233,10 @@ them)*, becomes:
 > after. The last section of an entry with one reads without it; an entry without one reads, flags and writes as
 > before. No item key, canonical form or Log line changes.
 
+**Elsewhere in SPEC.** *An entry's own answers* (a field that runs past its line), *Text a person reads* (an Ask's
+later paragraphs) and the Log's line rule are not amended: each reads a section, and the new *The entry* bullet
+takes the closing tail out of every section for every reader.
+
 ## The fixtures
 
 All invented, no real ledger's text. Each `check()` case calls `check()` (so `body_problems()`), never
@@ -239,7 +249,7 @@ All invented, no real ledger's text. Each `check()` case calls `check()` (so `bo
   `Ask / <!-- c --> / ---` (the comment-only line drops to a blank one); `Ask /     <!-- c --> / ---` (*Rendering
   aside*); `**Ask:** x / (blank) / <!-- c / -->---` (the drop leaves the Ask, a blank line, `---`; the raw tail opens
   at the blank line); `Ask / (blank) / ---` with CRLF line ends; a line holding only a no-break space in place of
-  the blank line, and after the `---` (blank, both paths); `**Log:** / - 2026-01-02: x / (blank) / ---` and the same
+  the blank line above the `---`, and a following line holding only one (blank, both paths); `**Log:** / - 2026-01-02: x / (blank) / ---` and the same
   followed by `(blank) / <!-- t -->` (no `log-line`); `**Answers:** Go | Not yet / (blank) / **Lifts:** Go / (blank)
   / ---<!-- t -->` on a gated entry (no `answers-unusable`); a v1 ledger of three entries joined by `(blank) / --- /
   (blank)`, the middle ending in its Ask, the last ending `(blank) / ---` before the file ends. Flagged
@@ -252,12 +262,12 @@ All invented, no real ledger's text. Each `check()` case calls `check()` (so `bo
 - `fixtures/ledger_edit/` `canonical` cases: an entry with a closing rule after one blank line and after three
   (each byte for byte); a body that is only `---` (byte for byte); `<!-- c -->`, a
   blank line, `---` as the whole body (byte for byte, the whole body its tail); a line of
-  two spaces above the rule, one comment-only line above it with no blank line (byte for byte, no blank
-  inserted), and a rule with trailing spaces (byte for byte); each run twice (idempotent).
+  two spaces between the last words and the rule (byte for byte); `Fix / <!-- c --> / ---`, a comment-only line and
+  no blank (byte for byte, no blank inserted); and a rule with trailing spaces (byte for byte); each run twice (idempotent).
 - `fixtures/ledger_edit/` `edit_entry` cases, on an entry ending `**Fix:** …`, three blank lines and `---`: `note`
   (the Log made above the tail, the tail kept); a second `note` (the line appended above it); `edit --section Done
   when` adding a section, and replacing the Fix (each above the rule); `archive` and `reopen` (the Resolved line
-  and Log above it); `set` with a Status that moves into the Log (above it); and `note` and `edit --section` on an entry whose body is
+  and Log above it); `set --blocked-by` adding a gate, whose `gate added` Log line is made above it; and `note` and `edit --section` on an entry whose body is
   only `---`, and on one whose body is `<!-- a`, `-->---` (the new text, one blank line, then the tail).
 - `fixtures/ledger_writer/`: `migrate-body` on a ledger holding an entry whose Ask has a second paragraph and a
   closing rule (the Context made, the tail last, as written) and one whose only extra line is the rule (already
