@@ -1,8 +1,8 @@
 # TD-150: the gate sweep asks a decision once the work it waits on is done
 
-**Status:** Draft 3, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
-format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rounds, cadence.md §4.8). Rounds 1 and
-2: 4 and 3 build-changing findings, applied. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
+**Status:** Draft 4, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
+format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rounds, cadence.md §4.8). Rounds 1–3:
+4, 3 and 1 build-changing findings, applied. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
 [docs/synopses/TD-150.md](../synopses/TD-150.md).
 
 **Entry:** [TD-150](../ledger/TD-150.md), asked for by agent-cadence's grinder for its TD-291 (a bought review
@@ -54,12 +54,14 @@ a new entry already held by an open one and a decision is made to file the very 
 reading: `sweep()` reads an entry of `entries` as open unless its Status is an archived word (*The gate sweep*);
 `uncovered_decisions()` reads the head tree's ledger through `_tree_ledger()`, where an entry in the ledger with an
 archived Status, and every entry of the archive, is closed. The archived entries are every other entry the
-function reads, each Status read as *Superseded and dropped* reads it (`_archived_status()` over their texts). Since
-`ARCHIVED_WORDS` are all in the Status vocabulary, the sweep never reads an archived entry whose Status word is
-outside it: such an entry is open to the sweep, so `unknown-status` is an end only the verdict and the resolver
-reach. The two readings differ on one shape, accepted: an entry of the archive whose Status word is not an archived
-one, a word outside the vocabulary among them (open to the sweep, so in flight there; closed to the verdict). The verdict is then the stricter, and the sweep's deferral still holds
-once the item is filed. An entry of the ledger with an archived Status is closed to both, though `pickable()`,
+function reads, each Status read as *Superseded and dropped* reads it (`_archived_status()` over their texts). The sweep reads open by Status alone, so an
+entry of the archive whose Status word is not an archived one (`ARCHIVED_WORDS`) is open to it: a word outside the
+vocabulary, the empty Status, and the words *Superseded and dropped* reads as closed and done on an archived entry
+(`Open`, `Designed`, `Built`, `Partly`, `Live`, `In`). For the sweep, then, `unknown-status` is an end only the
+resolver reaches. That is the one shape on which the two readings differ: open to the sweep, so in flight there;
+closed to the verdict. It is accepted, since such Statuses are v1 history that v2.7's `migrate` maps or stops on,
+and the cure is that migration or the entry's Status rewritten to `Resolved`; but the deferral then holds while it
+stands, so a repo whose archive still holds one is asked nothing about an entry blocked by it. An entry of the ledger with an archived Status is closed to both, though `pickable()`,
 which reads by place, still blocks on it: its decision is asked while the entry stays unpicked, as a `check()`
 flag on the misplaced entry already asks for its move.
 
@@ -69,14 +71,15 @@ a `<repo>#TD-n` the resolver answers `open`, or at the end of a Superseded chain
 end is not in flight: `resolved`, `dropped`, `unknown-status`, `unknown` (no such entry), `cycle` and `unresolved`
 (a `<repo>#TD-n` no resolver answers, or a Superseded entry with no successor). An id whose chain ends at the entry itself,
 at one of its descendants (an entry `Part of` it, or of one of them), or at one of its ancestors (its `Part of`
-parent and theirs) never counts: `pickable()` flags each (`cycle`, `legacy-part`), and the cure is to drop it from
-the Blocked by. Two open entries blocked on each other, each with a decision, defer each other until one is
+parent and theirs) never counts. Written directly, `pickable()` flags it (`cycle` for the entry itself or an
+ancestor, `legacy-part` for a descendant), and the cure is to drop it from the Blocked by; reached through a
+Superseded chain it is excluded with no flag of its own beyond `blocker-superseded`. Two open entries blocked on each other, each with a decision, defer each other until one is
 archived; that is accepted, since `pickable()` flags the `cycle` and neither entry can go on anyway.
 
-One helper decides it, so the sweep and the verdict cannot drift: **`_deferred(num, open, gone, resolve,
-cross_open=False)`** over an entry's number, the open entries' texts by number, the archived entries' statuses
-(`_archived_status()`'s form) and the resolver, returning the in-flight ids, the entry's own and then its parent's
-(D2), in the form and order of D4's flag text (empty: not deferred). `cross_open` counts a chain that ends
+One helper decides it, so the sweep and the verdict cannot drift: **`_deferred(num, gate, open, gone, resolve,
+cross_open=False)`** over an entry's number, the decision gate, the open entries' texts by number, the archived
+entries' statuses (`_archived_status()`'s form) and the resolver, returning the in-flight ids, the entry's own and
+then its parent's (D2, only when the parent carries `gate`, compared by `_gate_key()`), in the form and order of D4's flag text (empty: not deferred). `cross_open` counts a chain that ends
 `unresolved` at another repo's id (its path's last id holds `#`) as in flight; a Superseded entry with no
 successor also ends `unresolved`, at a local id, and does not count. The sweep calls it with its resolver, the
 verdict with none and `cross_open=True` (D4), each with its own open reading.
@@ -186,10 +189,10 @@ ends *…opens the `kept waiting` window as the person's would.* (its `;` become
 
 > A decision is **deferred** (v3.N) while its entry names a **blocker in flight**: an id of its `Blocked by` that,
 > followed through Superseded entries as `pickable()` follows it (*Superseded and dropped*), ends at an open
-> entry — one of `entries` the sweep reads as open (an archived entry whose Status word is not an archived one is
-> open to it, a word outside the vocabulary among them), or a `<repo>#TD-n` `resolve` answers `open` — and not at
+> entry — one of `entries` the sweep reads as open (an archived entry whose Status word is not an archived one,
+> a word outside the vocabulary, none, or one *Superseded and dropped* reads as closed and done, is open to it), or a `<repo>#TD-n` `resolve` answers `open` — and not at
 > the entry itself, at one of its descendants (entries `Part of` it, or of one of them) or at one of its
-> ancestors, which `pickable()` flags as a cycle. One that ends Resolved, Dropped, at no entry, in a loop, at a
+> ancestors, which written directly `pickable()` flags (`cycle`, `legacy-part`). One that ends Resolved, Dropped, at no entry, in a loop, at a
 > Superseded entry with no successor, or at a `<repo>#TD-n` no resolver answers is not in flight. A part's
 > decision is also deferred while its `Part of` parent, one level up, is open, carries the same gate (its person
 > compared case-insensitively) and names a blocker in flight, read on the parent (the parent's own id,
@@ -224,26 +227,32 @@ is added:
 ## Fixtures and tests
 
 **Sweep cases** go in a directory of their own, `fixtures/sweep/in_flight/<case>/` (invented entries, repo
-`acme/widgets`), each its own `ledger.md`, optional `archive.md`, and one v3 board directory, swept on one date
-apart from the shared runs, as the `answers` and `delegated` cases are (`fixtures/run.py`, `answers_case()`), so
-the shared `ledger.md`'s expected output is untouched. A case may carry `resolve`, a map from a `<repo>#TD-n` item
-to the resolver's answer (`[state, why]`, or a record), or `"raise"`, which the harness turns into a callable; with
-no map the sweep is called with no `resolve`. The runner reports `{"missing": …}` against a module whose
+`acme/widgets`), each its own `ledger.md`, optional `archive.md`, and one v3 board directory `board/`, swept on one
+date apart from the shared runs, as the `answers` and `delegated` cases are (`fixtures/run.py`, `answers_case()`),
+so the shared `ledger.md`'s expected output is untouched. They are listed in `sweep/cases.json` under
+`in_flight`, each `{name, dir, today_utc, today_local}` and optionally `resolve`, and their outputs are
+`sweep/expected.json`'s `in_flight`, an object keyed by case name. A case's `resolve` is a map from a
+`<repo>#TD-n` item to the resolver's answer (`[state, why]`, or a record), or the string `"raise"`, which the
+harness turns into a callable raising `LookupError`; with no `resolve` the sweep is called with none. One case is
+one directory and one sweep, so a numbered item below with several variants is several cases, each named. The runner reports `{"missing": …}` against a module whose
 `sweep()` takes no `resolve` (`inspect.signature`), as the others guard by `hasattr`. Unless a case says
 otherwise, its board holds a closed decide for the gate answered `One more round` (no lift) more than
 `reask_days` before the run, on the entry alone (no `Parts:`), so only the new rule keeps the sweep quiet. Each
 case's expected output is `{to_file, to_close, lifts, rerun}`, `rerun` the same sweep over the board once the
-first run's items are filed (`item_file()`) and its closes moved, which files and closes nothing:
+first run's items are filed (`item_file()`) and its closes moved, which files and closes nothing; a case whose
+sweep raises is `{"raised": "<the exception's class name>"}` and nothing else:
 
 1. `decision (pat)` beside a live `TD-n`: files nothing.
 2. The same with `TD-n` archived Resolved: files the decide.
 3. Beside `TD-n` archived Superseded by a live `TD-m`: nothing; by an archived Resolved `TD-m`: files; Superseded
    with no successor: files.
-4. Beside `TD-n` archived Dropped: files. Beside `TD-n` in the archive with a Status word outside the vocabulary:
-   nothing (open to the sweep, D1; the verdict's case below reads it closed).
+4. Beside `TD-n` archived Dropped: files. Beside `TD-n` in the archive with a Status word outside the vocabulary,
+   and beside one in the archive with Status `Built`: each nothing (open to the sweep, D1; the verdict's cases
+   below read them closed).
 5. Beside an id in neither ledger nor archive: files.
 6. Beside `acme/other#TD-n`: no `resolve`, files; `resolve` answering `open`, nothing; answering `archived` with
-   a Resolved status, files; answering garbage (read unresolved), files; raising, the sweep raises.
+   a Resolved status, files; answering garbage (read unresolved), files; raising, `{"raised": "LookupError"}`
+(five cases).
 7. Beside `TD-n` Superseded by `acme/other#TD-m`: `resolve` answering `open` for it, nothing.
 8. Two blockers, one live and one archived Resolved: nothing.
 9. The entry's own id in its Blocked by; a part of it there (`legacy-part`); its parent there; a live `TD-n`
@@ -267,7 +276,7 @@ first run's items are filed (`item_file()`) and its closes moved, which files an
 tree with it, no item, the board listing `pat` unless said, the expected `(refusals, flags)` with each flag's
 exact text: beside a live id, the `decision-deferred` flag and no refusal; beside an archived Resolved id, refused
 as today; beside `TD-n` in the archive with a Status word outside the vocabulary, refused (closed to the
-verdict); beside `acme/other#TD-n`, flagged deferred; beside a local id Superseded by `acme/other#TD-m`, flagged
+verdict), and with Status `Built`, refused; beside `acme/other#TD-n`, flagged deferred; beside a local id Superseded by `acme/other#TD-m`, flagged
 deferred; beside two live ids, both named in order; covered by an open item beside a live id, nothing; the board
 not listing `pat`, beside a live id, `decision-deferred` alone (no `decision-elsewhere`); a part gaining
 `decision (pat)` whose parent carries it and a live blocker, deferred, its text naming `<id> (blocks <parent>)`.
@@ -275,7 +284,7 @@ not listing `pat`, beside a live id, `decision-deferred` alone (no `decision-els
 **A suite test** that the two agree: for sweep cases 1, 2, 3, 4 (Dropped only), 5, 8, 9, 11, 12 and 13, each as a
 v2 tree for the verdict with a base tree lacking the gate and a board listing `pat`, the sweep files no decide for
 the gate exactly when the verdict flags it `decision-deferred` and refuses nothing. Left out, each for its reason:
-4's unknown Status word (the shape D1 accepts as differing), 6 and 7 (another repo's ids, read with a resolver by
+4's unknown Status word and `Built` (the shape D1 accepts as differing), 6 and 7 (another repo's ids, read with a resolver by
 the sweep and with none by the verdict), 10 (no blocker either way), and 14 to 17 (what they test has no verdict
 counterpart).
 
