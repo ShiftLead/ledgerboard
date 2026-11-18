@@ -2593,6 +2593,20 @@ def _delegates_line(content: str, every: bool = False) -> tuple[int, str] | None
     return None
 
 
+def _delegates_lines(board: Board) -> list[str]:
+    """Every `Delegates:` line a board's preamble holds, in order (v3.4): what an edit of the line changes, a
+    second line among them."""
+    text, every = _preamble(board)
+    out = []
+    for ln in text.splitlines():
+        if ANY_ITEM_RE.match(ln) and not every:
+            break
+        m = DELEGATES_RE.match(ln.rstrip())
+        if m:
+            out.append(m.group("value"))
+    return out
+
+
 def _grants(value: str) -> list[tuple[str, str | None, list[str] | None]]:
     """A `Delegates:` value's grants as written (v3.4): split at `;`, each piece stripped and its inner whitespace
     folded to one space, an empty piece skipped; a piece outside `<delegate> for <person> (<scope>, …)` as
@@ -2624,7 +2638,8 @@ def delegates_problems(board: Board, old: Board | None = None) -> list[tuple[str
     """``(path, problem)`` for the board's `Delegates:` preamble line (v3.4): a grant outside the form, a person
     not on `People:`, a delegate on `People:`, a delegate granted for itself (that fault alone for its grant), two
     grants of one delegate for one person, a scope named twice in a grant, a line that lists no grant, and a second
-    line. A fault is an error when the edit introduces it — the line differs from ``old``'s, or ``old`` is None —
+    line. A fault is an error when the edit introduces it — the board's `Delegates:` lines, a second among them, differ
+    from ``old``'s, or ``old`` is None —
     and opens `ℹ` otherwise. Names are compared case-insensitively. Each is named as people_problems() names them."""
     board = _a_board(board, "delegates_problems()")
     found = _delegates_problems(*_preamble(board), board_people(board))
@@ -2632,8 +2647,7 @@ def delegates_problems(board: Board, old: Board | None = None) -> list[tuple[str
         return []
     if old is not None:
         old = _a_board(old, "delegates_problems()'s old")
-        mine, theirs = _delegates_line(*_preamble(board)), _delegates_line(*_preamble(old))
-        if (mine and mine[1]) == (theirs and theirs[1]):
+        if _delegates_lines(board) == _delegates_lines(old):
             found = [(n, p if p.startswith("ℹ") else f"ℹ {p}") for n, p in found]
     return [(_preamble_path(board), p) for _, p in found]
 
@@ -6506,11 +6520,11 @@ def lift_gate(text: str, gate: str, by: str, *, answer: str | None = None, evide
     given = [k for k, v in (("answer", answer), ("evidence", evidence), ("suffix", suffix), ("override", override))
              if v is not None]
     by = " ".join(str(by or "").split())
-    who = _delegated_by(by, delegate, scope)
     if delegate is not None and (override is not None or evidence is not None or gate.startswith("until")):
         raise Refused("only an answer is delegated: an override, a check's lift and a date's take no delegate")
     if delegate is not None and suffix is not None and " ".join(str(suffix).split()).removeprefix("; ").startswith("board "):
         raise Refused("a delegate answers no gate on another repo's entry (rule 4): no board <repo> suffix")
+    who = _delegated_by(by, delegate, scope)
 
     def only(*allowed: str) -> None:
         stray = [k for k in given if k not in allowed]

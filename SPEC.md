@@ -1023,7 +1023,7 @@ no grant, or None with no line.
 `delegates_problems(board, old=None)` names a grant outside the form, a person not on `People:`, a delegate on
 `People:`, a delegate granted for itself (that fault alone for the grant), two grants of one delegate for one
 person, a scope named twice in a grant, a line that lists no grant, and a second line. A fault is an error when
-the edit introduces it (its line differs from `old`'s, or `old` is None) and ℹ otherwise, so a standing bad
+the edit introduces it (its `Delegates:` lines, a second one among them, differ from `old`'s, or `old` is None) and ℹ otherwise, so a standing bad
 grant never blocks the board's other writes. On a standing board (`board_problems()` with no `old`) an open item
 whose delegated answer the current line no longer covers is ℹ. A line with any such fault grants nothing:
 `delegation_covers(board, delegate, person, scope)` is true only on a faultless line holding that grant. No

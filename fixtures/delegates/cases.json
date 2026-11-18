@@ -461,6 +461,16 @@
    "old": {
     "readme": "# Attention board\n\nLedgerboard: 3\nPeople: pat, sam\nDelegates: director for pat (merge-line, design-go); director for sam (merge-line)\n"
    }
+  },
+  {
+   "name": "faults: an edit adds a second line (error)",
+   "fn": "delegates_problems",
+   "board": {
+    "readme": "# Attention board\n\nLedgerboard: 3\nPeople: pat, sam\nDelegates: director for pat (merge-line)\nDelegates: bot for pat (merge-line)\n"
+   },
+   "old": {
+    "readme": "# Attention board\n\nLedgerboard: 3\nPeople: pat, sam\nDelegates: director for pat (merge-line)\n"
+   }
   }
  ]
 }

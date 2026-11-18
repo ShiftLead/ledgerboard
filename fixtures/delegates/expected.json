@@ -122,6 +122,14 @@
    ]
   ]
  },
+ "faults: an edit adds a second line (error)": {
+  "ok": [
+   [
+    "README.md",
+    "delegates: a second `Delegates:` line — the first is read"
+   ]
+  ]
+ },
  "faults: an edit fixing one of two faults meets the other as an error": {
   "ok": [
    [
