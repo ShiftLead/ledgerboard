@@ -1,8 +1,8 @@
 # TD-150: the gate sweep asks a decision once the work it waits on is done
 
-**Status:** Draft 5, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
-format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rounds, cadence.md §4.8). Rounds 1–4:
-4, 3, 1 and 1 build-changing findings, applied. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
+**Status:** Draft 6, 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
+format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rounds, cadence.md §4.8). The rounds
+ended by the stop rule after round 5: build-changing findings per round 4, 3, 1, 1, 0. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
 [docs/synopses/TD-150.md](../synopses/TD-150.md).
 
 **Entry:** [TD-150](../ledger/TD-150.md), asked for by agent-cadence's grinder for its TD-291 (a bought review
@@ -72,8 +72,9 @@ a `<repo>#TD-n` the resolver answers `open`, or at the end of a Superseded chain
 end is not in flight: `resolved`, `dropped`, `unknown-status`, `unknown` (no such entry), `cycle` and `unresolved`
 (a `<repo>#TD-n` no resolver answers, or a Superseded entry with no successor). An id whose chain ends at the entry itself,
 at one of its descendants (an entry `Part of` it, or of one of them), or at one of its ancestors (its `Part of`
-parent and theirs) never counts (descendants and ancestors read over the open entries' `Part of`, as `pickable()` reads
-them). Written directly, `pickable()` flags it (`cycle` for the entry itself or an
+parent and theirs) never counts (descendants and ancestors read over the open entries' `Part of`; the comparison is by
+number and only for a local end, one with no `#` in the path's last id, so another repo's `#TD-5` is never
+entry TD-5). Written directly, `pickable()` flags it (`cycle` for the entry itself or an
 ancestor, `legacy-part` for a descendant), and the cure is to drop it from the Blocked by; reached through a
 Superseded chain it is excluded with no flag of its own beyond `blocker-superseded`. Two open entries blocked on each other, each with a decision, defer each other until one is
 archived; that is accepted, since `pickable()` flags the `cycle` and neither entry can go on anyway.
@@ -212,8 +213,9 @@ is added:
 
 > An uncovered decision that is deferred (*The gate sweep*; v3.N) is neither: it is flagged `decision-deferred`
 > alone, exactly `<TD-n> gains <gate>, deferred behind <ids> — the sweep asks it once none is in flight`, `<ids>`
-> joined with `, `, the entry's own in the order its `Blocked by` writes them, then its parent's, each
-> `<id> (blocks <parent>)`. The verdict reads it on the head tree's ledger, where an entry of the archive is
+> joined with `, `, the entry's own as written, in the order its `Blocked by` writes them, each once at its first
+> place, then its parent's likewise, each `<id> (blocks <parent>)` with `<parent>` as its heading writes it; an id
+> in both lists is written in each. The verdict reads it on the head tree's ledger, where an entry of the archive is
 > closed whatever its Status, with no resolver, and counts as in flight, besides an id ending at an open entry,
 > any id whose chain ends at a `<repo>#TD-n`, which it cannot resolve; the sweep asks the decision once nothing it
 > waits on is in flight.
@@ -272,14 +274,16 @@ sweep raises is `{"raised": "<the exception's class name>"}` and nothing else:
 12. A part with `decision (pat)` whose parent is blocked by a live entry and carries no decision: files (D3).
 13. A part with `decision (pat)` whose parent carries `decision (pat)` and, in its Blocked by, only a sibling part
     (`legacy-part` on the parent): the part files (D2, the parent's descendants excluded).
-14. Beside an `until` a later day, and beside `event (x)` with outcome `not yet`: files as today.
+14. Beside an `until` a later day, and beside `event (x)` with no outcome (the `in_flight` cases carry no
+    `results`): files as today.
 15. An open decide covering the gate, a live blocker in the Blocked by: neither filed nor closed.
 16. No board lists `<p>`, a live blocker beside it: the `has no board` act is filed.
 17. A closed decide answered with a lift whose gate still stands (an answer owing a lift), a live blocker beside
     it: the `was answered with a lift` act is filed as today.
 
-**Verdict cases** in `fixtures/verdict/`, `uncovered_decisions()`, each a base tree without the gate and a head
-tree with it, no item, the board listing `pat` unless said, the expected `(refusals, flags)` with each flag's
+**Verdict cases** in `fixtures/verdict/`, `uncovered_decisions()`, each an overlay in `cases/` on the shared
+`base/` (as the existing `uncovered` cases are), its invented entries numbered from TD-161 up so none meets the
+base's, the base tree without the gate and the head tree with it, no item, the board listing `pat` unless said, the expected `(refusals, flags)` with each flag's
 exact text: beside a live id, the `decision-deferred` flag and no refusal; beside an archived Resolved id, refused
 as today; beside `TD-n` in the archive with a Status word outside the vocabulary, refused (closed to the
 verdict), and with Status `Built`, refused; beside `acme/other#TD-n`, flagged deferred; beside a local id Superseded by `acme/other#TD-m`, flagged
@@ -287,7 +291,7 @@ deferred; beside two live ids, both named in order; covered by an open item besi
 not listing `pat`, beside a live id, `decision-deferred` alone (no `decision-elsewhere`); a part gaining
 `decision (pat)` whose parent carries it and a live blocker, deferred, its text naming `<id> (blocks <parent>)`.
 
-**A suite test** that the two agree: for sweep cases 1, 2, 3, 4 (Dropped only), 5, 8, 9, 11, 12 and 13, each as a
+**A suite test**, in `tests/test_ledgerboard.py`, that the two agree: for sweep cases 1, 2, 3, 4 (Dropped only), 5, 8, 9, 11, 12 and 13, each as a
 v2 tree for the verdict with a base tree lacking the gate and a board listing `pat`, compared per entry gaining the gate, the
 sweep files no decide for that entry's gate exactly when the verdict flags that entry `decision-deferred` and
 refuses nothing for it. Left out, each for its reason:
