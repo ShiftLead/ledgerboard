@@ -8,6 +8,8 @@
   "Robin",
   "--override",
   "away",
+  "--answer",
+  "Go",
   "--delegate",
   "director",
   "--scope",

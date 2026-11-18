@@ -2,6 +2,6 @@
  "exit": 2,
  "out": {
   "action": "set",
-  "unusable": "--delegate needs an explicit --answer: Go by default is the person's shorthand, not a delegate's"
+  "unusable": "a reassign takes --by and --why, no --answer, board flag, --override or --delegate"
  }
 }
