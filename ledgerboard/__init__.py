@@ -7747,14 +7747,26 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
             ref, gate = ref_of(cnum, on_own), last["gate"]
             ids = ", ".join(ref_of(n, on_own) for n in todo)
             day = newest.isoformat()
+            recommended = ("Lift it by hand (an `override:` naming the answer); to ask again instead, close this "
+                           "and add the question")
+            by = ""
+            delegated = [a for a in answers if a["read"]["item"].decided_delegate is not None]
+            if delegated:  # v3.4: the act follows the newest delegated answer, and recommends its reviewed set
+                d_day = max(a["date"] for a in delegated)
+                d = min((a for a in delegated if a["date"] == d_day), key=lambda a: a["read"]["pick"])["read"]["item"]
+                day = d_day.isoformat()
+                by = f" by {d.decided_delegate} for {d.decided_by} ({d.decided_scope})"
+                recommended = (f"Lift it with ledger.py set --blocked-by … --by {d.decided_by} --delegate "
+                               f"{d.decided_delegate} --scope {d.decided_scope} --answer \"{d.decided[0]}\"; that PR "
+                               "goes to review. Not an override, which would record the person's own lift; to ask "
+                               "again instead, close this and add the question")
             add(last["read"]["board"], cnum, gate, "unlifted", {
-                "text": f"{gate} on {ref} was answered with a lift on {day} but still stands on {ids}: lift it.",
+                "text": f"{gate} on {ref} was answered with a lift{by} on {day} but still stands on {ids}: lift it.",
                 "context": f"{ref} {gate} lift", "kind": "act", "answers": None, "default": None, "lifts": None,
-                "detail": {"context": f"{ref}'s {gate} was answered with a lift on {day}, and the item was closed "
+                "detail": {"context": f"{ref}'s {gate} was answered with a lift{by} on {day}, and the item was closed "
                                       f"as lifted, but the gate was never lifted on {ids}",
                            "question": "Lift the gate by hand, or ask the question again?",
-                           "recommended": "Lift it by hand (an `override:` naming the answer); to ask again "
-                                          "instead, close this and add the question"}}, "lift")
+                           "recommended": recommended}}, "lift")
             filing = True
         for a in (answers if is_open or filing else within):
             held.update((n, key) for n in a["owed"])
@@ -8007,6 +8019,12 @@ def _new_log(base: str | None, head: str) -> list[dict]:
     return out
 
 
+def _answer_of(it: BoardItem) -> tuple:
+    """An item's answer as the tripwire compares it (v3.4): the answer, who it counts as, and its delegate and
+    scope, so a change of the delegate alone is a change of the answer."""
+    return it.decided, it.decided_by, it.decided_delegate, it.decided_scope
+
+
 def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject: str, repo: str) -> list[tuple[str, str]]:
     """The tripwire on a `decision (<p>)` removed (v2.4, SPEC *The merge gate's verdicts*): ``[(kind, text)]``,
     each a removal the diff does not account for. It runs on every PR, the ``set by=`` route included. Trees map
@@ -8073,7 +8091,7 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
             answered_here = []  # the covering items the head answers: (base item, head item)
             for it, s in cov_b:
                 for hit in h_by.get(_ident(it), []):
-                    gained = hit.decided is not None and (hit.decided, hit.decided_by) != (it.decided, it.decided_by)
+                    gained = hit.decided is not None and _answer_of(hit) != _answer_of(it)
                     newly_lifted = (it.decided is not None and it.closed is None and hit.closed is not None
                                     and hit.closed[1] == "lifted" and hit.decided is not None)
                     if gained or newly_lifted:
@@ -8100,9 +8118,9 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                 if not shared:
                     flags.append(("tripwire-shared", f"{tid} lifts {gate} leaving a shared board item open, but no "
                                   "item it covers still asks another listed entry"))
-                base_dec = {_ident(it): (it.decided, it.decided_by) for it, _ in cov_b}
+                base_dec = {_ident(it): _answer_of(it) for it, _ in cov_b}
                 if any(_ident(it) in still and it.decided is not None
-                       and (it.decided, it.decided_by) != base_dec[_ident(it)]
+                       and _answer_of(it) != base_dec[_ident(it)]
                        for it, _ in cov_h):  # v2.7: an answer for one part must not speak for the rest
                     flags.append(("tripwire-shared-decided", f"{tid} lifts {gate} leaving a shared board item open, "
                                   "but the item gains a Decided: that speaks for the entries left — leave it "
@@ -8257,6 +8275,15 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
         return review("lift-no-by", "the Decided: names no answerer (by <person>)")
     if not (created - one <= d <= (merged or created) + one):
         return review("lift-decided-date", f"the Decided: date {d} is outside {created - one} .. {(merged or created) + one}")
+    delegate, scope = h_item.decided_delegate, None
+    if delegate is not None:  # v3.4: a delegated answer, judged over the base board and item
+        fault = delegate_problem(b_board, b_item, delegate, by)
+        if fault is not None:
+            return review("lift-delegate-uncovered", fault)
+        delegate = next(g for g, p, _ in board_delegates(b_board) or []
+                        if p is not None and g.lower() == delegate.lower() and p.lower() == by.lower())
+        by = next(p for p in people if p.lower() == by.lower())
+        scope = b_item.scope
     answered = answered_by(b_board)
     if "#" in ref:
         other = ref.rpartition("#")[0]
@@ -8298,7 +8325,8 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
             return review("lift-log-date", f"the new Log lines carry more than one date: {sorted(days)}")
         t = date.fromisoformat(days.pop()) if days else created
         try:
-            result = decide_lift(b_item, entries_given, label, by, t, people, answered, archived=gone)
+            result = decide_lift(b_item, entries_given, label, by, t, people, answered, archived=gone,
+                                 delegate=delegate, scope=scope)
         except Refused as e:
             return review("lift-refused", f"decide_lift refuses it: {e}")
         if result and not (created - one <= t <= min(created + one, merged or created + one)):
@@ -8318,7 +8346,8 @@ def lift_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], 
     try:
         close = closes(b_item, label, {**entries_given, **result})
         want_path = item_path(b_item.id, d.isoformat() if close else None)
-        text = edit_item(base_tree[pre + b_rel], "decide", answer=label, by=by, today=d, close=close)
+        text = edit_item(base_tree[pre + b_rel], "decide", answer=label, by=by, today=d, close=close,
+                         delegate=delegate)
     except (Refused, ValueError) as e:
         return review("lift-board-line", f"the decide writer refuses the answer: {e}")
     if h_rel != want_path or head_tree.get(pre + h_rel) != text:
@@ -8450,6 +8479,9 @@ def ledger_lift_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, st
     if rec is None or rec["kind"] != "gate-lifted" or rec.get("via") != "answer" \
             or _gate_key(rec["gate"]) != _gate_key(gate):
         return review("ledger-lift-log", f"{tid}'s Log does not gain exactly one gate lifted: {gate} … answer line")
+    if rec.get("delegate") is not None:  # v3.4: a delegated ledger lift carves out nothing
+        return review("ledger-lift-delegated", f"{tid}'s lift of {gate} is written by {rec['delegate']} for "
+                      f"{rec['by']} ({rec['scope']}): a delegated ledger lift takes review")
     label, by = rec["label"], rec["by"]
     try:
         t = date.fromisoformat(rec["date"])
@@ -8465,6 +8497,10 @@ def ledger_lift_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, st
     if case == "asked":
         return review("ledger-lift-asked", f"an open item on this repo's board asks {gate} for {tid} — its answer "
                       "is the decide lift")
+    for _, it, state in covers(btext, gate, [_tree_board(base_tree, repo)], repo):  # v3.4, whatever the form
+        if state in COVERING and it.decided_delegate is not None:
+            return review("ledger-lift-delegated", f"the item {it.id} covering {gate} for {tid} was answered by "
+                          f"{it.decided_delegate} for {it.decided_by} ({it.decided_scope}): its lift takes review")
     # 8. The bytes: the entry's, then the board's.
     try:
         want = lift_gate(base_tree[path], gate, by, answer=label, suffix=LIFT_FORM_SUFFIX[case], today=t)

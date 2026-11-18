@@ -801,6 +801,43 @@ def item_cases(L, spec: dict) -> dict:
     }
 
 
+def delegates_cases(L, spec: dict) -> dict:
+    """Delegated answers (v3.4): each case one call over boards built from a `README.md` text (``readme``) and item
+    files (``items``, by name) — ``board_delegates()``, ``delegates_problems()`` (with an ``old`` board),
+    ``delegation_covers()``, ``delegates_changed()``, ``delegate_problem()``, ``board_problems()`` — or
+    ``parse_decided_delegation()`` of a ``Decided`` value; a ``Refused`` recorded as ``{"refused": why}``."""
+    if not hasattr(L, "board_delegates"):  # a module older than v3.4
+        return {"missing": "the module has no board_delegates — older than v3.4"}
+
+    def board(b):
+        if b is None:
+            return None
+        files = {"b/README.md": b["readme"], **{f"b/{n}": t for n, t in b.get("items", {}).items()}}
+        return L.load_board("b", dict_ls(files), files.get)
+
+    def call(c):
+        fn = c["fn"]
+        if fn == "parse_decided_delegation":
+            got = L.parse_decided_delegation(c["value"])
+            return list(got) if got is not None else None
+        if fn == "board_delegates":
+            got = L.board_delegates(board(c["board"]))
+            return [list(g) for g in got] if got is not None else None
+        if fn == "delegates_problems":
+            return [list(x) for x in L.delegates_problems(board(c["board"]), board(c.get("old")))]
+        if fn == "board_problems":
+            return [list(x) for x in L.board_problems(board(c["board"]), board(c.get("old")))]
+        if fn == "delegation_covers":
+            return L.delegation_covers(board(c["board"]), c["delegate"], c["person"], c["scope"])
+        if fn == "delegates_changed":
+            return L.delegates_changed(board(c["base"]), board(c["head"]))
+        if fn == "delegate_problem":
+            b = board(c["board"])
+            return L.delegate_problem(b, next(i for i in b.items if i.path == c["item"]), c["delegate"], c["person"])
+        raise ValueError(f"no such call: {fn}")
+    return {c["name"]: _refused(lambda c=c: call(c)) for c in spec["cases"]}
+
+
 def ledger_edit_cases(L, spec: dict, root: Path = HERE) -> dict:
     """The entry writers' cases (v2.2): an input is an entry file beside ``cases.json`` or inline
     ``text`` (a CRLF case must be inline: a text read here has its line endings translated)."""
@@ -1391,6 +1428,8 @@ def cases(L, root: Path):
     yield root / "edit" / "expected.json", edit_cases(L, spec, root)
     spec = json.loads((root / "item" / "cases.json").read_text(encoding="utf-8"))
     yield root / "item" / "expected.json", item_cases(L, spec)  # v3.0
+    spec = json.loads((root / "delegates" / "cases.json").read_text(encoding="utf-8"))
+    yield root / "delegates" / "expected.json", delegates_cases(L, spec)  # v3.4
     if hasattr(L, "__path__"):  # the writers ship in the package; a single module file has none
         for case in sorted(p for p in (root / "board_writer").glob("*") if p.is_dir()):
             yield case, writer_case(L, case)
