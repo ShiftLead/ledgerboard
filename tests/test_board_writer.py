@@ -693,3 +693,26 @@ class Module(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Delegate(unittest.TestCase):
+    """A delegated answer (v3.4) as ``plan_edit()`` takes it: ``--delegate`` on an action that is not a decide is
+    refused by ``plan_edit()`` itself (the CLI meets it first as its usage error, a fixture), before the id's
+    edit, as is a delegate with ``board_only``."""
+
+    def test_a_delegate_on_an_edit_that_is_not_a_decide_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = make_board(tmp)
+            for action, kw in (("done", {}), ("reply", {"text": "seen", "by": "pat"}),
+                               ("snooze", {"to": "2026-01-16"})):
+                with self.subTest(action=action), self.assertRaises(L.Refused) as e:
+                    B.plan_edit(board, action, ID, delegate="director", today="2026-01-15", **kw)
+                self.assertEqual(str(e.exception), "--delegate is a decide's")
+
+    def test_a_delegate_with_board_only_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            board = make_board(tmp)
+            with self.assertRaises(L.Refused) as e:
+                B.plan_edit(board, "decide", ID, answer="Go", by="pat", delegate="director", board_only=True,
+                            today="2026-01-15")
+            self.assertEqual(str(e.exception), "--delegate writes its own ledger half, never --board-only")

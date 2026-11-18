@@ -1,1144 +1,1194 @@
 {
+ "rank-file": {
   "rank-file": {
-    "rank-file": {
-      "accept": [
-        "# The rank (a comment).\nTD-3: 0h\nTD-1: 2|0|000001\n",
-        "",
-        "# only a comment"
-      ],
-      "refuse": [
-        "# The rank (a comment).\nTD-3: 0h\n\nTD-1: 2|0|000001\n"
-      ]
-    },
-    "comment-line": {
-      "accept": [
-        "# one\n# two\nTD-3: 0h\n"
-      ],
-      "refuse": [
-        "TD-3: 0h\n# below\n"
-      ]
-    },
-    "rank-line": {
-      "accept": [
-        "TD-3:\t0h \nTD-12: 0i\n"
-      ],
-      "refuse": [
-        "TD-3 0h\n",
-        "TD-3:0h\n"
-      ]
-    },
-    "key": {
-      "accept": [
-        "TD-3: a.b/c_d-e|f\n"
-      ],
-      "refuse": [
-        "TD-3: |a\n",
-        "TD-3: a:b\n"
-      ]
-    },
-    "eol": {
-      "accept": [
-        "TD-3: 0h\r\nTD-4: 0i\rTD-5: 0j\n"
-      ],
-      "refuse": [
-        "TD-3: 0h TD-4: 0i\n"
-      ]
-    },
-    "line-char": {
-      "accept": [
-        "# a comment, with: anything #\nTD-3: 0h\n"
-      ],
-      "refuse": [
-        "#\f\nTD-3: 0h\n"
-      ]
-    },
-    "comment": {
-      "accept": [
-        "# a\n# b"
-      ],
-      "refuse": [
-        "TD-3: 0h\n# b"
-      ]
-    },
-    "rank-entry": {
-      "accept": [
-        "TD-3: 0h\nTD-4: 0i"
-      ],
-      "refuse": [
-        "TD-3: 0h\nTD-4 0i"
-      ]
-    }
+   "accept": [
+    "# The rank (a comment).\nTD-3: 0h\nTD-1: 2|0|000001\n",
+    "",
+    "# only a comment"
+   ],
+   "refuse": [
+    "# The rank (a comment).\nTD-3: 0h\n\nTD-1: 2|0|000001\n"
+   ]
   },
-  "blocked-by": {
-    "blocked-by": {
-      "accept": [
-        "TD-1, decision (pat), until 2026-02-01, event (ships)",
-        "TD-1,TD-2"
-      ],
-      "refuse": [
-        "TD-1; TD-2"
-      ]
-    },
-    "blocked-item": {
-      "accept": [
-        "other#TD-3"
-      ],
-      "refuse": [
-        "soon"
-      ]
-    },
-    "gate": {
-      "accept": [
-        "until 2026-02-01",
-        "event (a-1)"
-      ],
-      "refuse": [
-        "hold",
-        "decision (pat) — after the review"
-      ]
-    },
-    "event-name": {
-      "accept": [
-        "event (vendor-ships-2)"
-      ],
-      "refuse": [
-        "event (Big)",
-        "event (a_b)"
-      ]
-    },
-    "entry-id": {
-      "accept": [
-        "TD-12"
-      ],
-      "refuse": [
-        "td-12"
-      ]
-    },
-    "repo": {
-      "accept": [
-        "acme/tools#TD-3",
-        "owner/.github#TD-3"
-      ],
-      "refuse": [
-        "a//b#TD-3",
-        "https://h/o/r#TD-3"
-      ]
-    },
-    "repo-part": {
-      "accept": [
-        "my.repo_2#TD-3"
-      ],
-      "refuse": [
-        "-x#TD-3"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "TD-7"
-      ],
-      "refuse": [
-        "TD-x"
-      ]
-    },
-    "date": {
-      "accept": [
-        "until 2026-01-20"
-      ],
-      "refuse": [
-        "until 2026-1-20"
-      ]
-    },
-    "person": {
-      "accept": [
-        "decision (pat)",
-        "decision (sam.lee)",
-        "decision (Sam_Lee-2)"
-      ],
-      "refuse": [
-        "decision (sam..lee)",
-        "decision (sam lee)",
-        "decision (.sam)"
-      ]
-    },
-    "person-part": {
-      "accept": [
-        "decision (a-b_c)"
-      ],
-      "refuse": [
-        "decision (a+b)",
-        "decision ()"
-      ]
-    }
+  "comment-line": {
+   "accept": [
+    "# one\n# two\nTD-3: 0h\n"
+   ],
+   "refuse": [
+    "TD-3: 0h\n# below\n"
+   ]
   },
-  "event-section": {
-    "event-section": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged acme/tools#3"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships."
-      ]
-    },
-    "event-name": {
-      "accept": [
-        "**Event (a-1):** w.\ncheck: pr-merged a#1"
-      ],
-      "refuse": [
-        "**Event (Ships):** w.\ncheck: pr-merged a#1"
-      ]
-    },
-    "event-words": {
-      "accept": [
-        "**Event (ships):** w\ncheck: pr-merged a#1"
-      ],
-      "refuse": [
-        "**Event (ships):**\ncheck: pr-merged a#1"
-      ]
-    },
-    "char": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x y\""
-      ],
-      "refuse": [
-        "**Event (ships):** w\n\ncheck: pr-merged a#1"
-      ]
-    },
-    "check-line": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123abc"
-      ],
-      "refuse": [
-        "**Event (ships):** w.\ncheck:pr-merged a#1"
-      ]
-    },
-    "check": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#1"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: url-up x"
-      ]
-    },
-    "pr-merged": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b/c#7"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b#12a"
-      ]
-    },
-    "file-contains": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools@v2.4 files/a.py \"say \"hi\" now\""
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools a.md \"x\" trailing",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a/b x.md\"t\""
-      ]
-    },
-    "ref-includes": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools@deploy/prod 0123abc"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools 0123abc"
-      ]
-    },
-    "repo": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged owner/.github#3"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged https://h/o/r#1"
-      ]
-    },
-    "repo-part": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged my.repo_2#3"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged -x#1",
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a/..#1"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#12"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: pr-merged a#x"
-      ]
-    },
-    "ref": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@v2.4 0123abc"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ 0123abc"
-      ]
-    },
-    "ref-char": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@release/2026_01 0123abc"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a~1 0123abc",
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a^ 0123abc",
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ma#in 0123abc",
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@mé 0123abc"
-      ]
-    },
-    "path": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/x.md \"v\""
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a \"v\""
-      ]
-    },
-    "path-char": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a .github/x-y_z.md \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a c++/x.h \"v\""
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/*.md \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a a#b \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a café.md \"v\""
-      ]
-    },
-    "quoted": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"\""
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\" \"y\" z",
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\u0001y\""
-      ]
-    },
-    "commit": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123456789abcdef0123456789abcdef01234567"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 012345",
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF0"
-      ]
-    },
-    "hex": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main abcdef0"
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF1"
-      ]
-    },
-    "text-char": {
-      "accept": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"tab-free text, quotes \" kept\""
-      ],
-      "refuse": [
-        "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"xy\""
-      ]
-    },
-    "host-log": {
-      "accept": [
-        "**Event (applied):** the next Apply.\ncheck: host-log team-events kind press times 2 \"Apply nightly-build\""
-      ],
-      "refuse": [
-        "**Event (applied):** the next Apply.\ncheck: host-log team-events times 2 kind press \"x\""
-      ]
-    },
-    "source": {
-      "accept": [
-        "**Event (applied):** the next Apply.\ncheck: host-log ci \"x\""
-      ],
-      "refuse": [
-        "**Event (applied):** the next Apply.\ncheck: host-log -ci \"x\""
-      ]
-    },
-    "token": {
-      "accept": [
-        "**Event (applied):** the next Apply.\ncheck: host-log s kind precheck-fail \"x\""
-      ],
-      "refuse": [
-        "**Event (applied):** the next Apply.\ncheck: host-log s kind Press \"x\""
-      ]
-    },
-    "count": {
-      "accept": [
-        "**Event (applied):** the next Apply.\ncheck: host-log s times 999 \"x\""
-      ],
-      "refuse": [
-        "**Event (applied):** the next Apply.\ncheck: host-log s times 0 \"x\"",
-        "**Event (applied):** the next Apply.\ncheck: host-log s times 1000 \"x\""
-      ]
-    }
+  "rank-line": {
+   "accept": [
+    "TD-3:\t0h \nTD-12: 0i\n"
+   ],
+   "refuse": [
+    "TD-3 0h\n",
+    "TD-3:0h\n"
+   ]
   },
-  "status-open": {
-    "status-open": {
-      "accept": [
-        "Open"
-      ],
-      "refuse": [
-        "Open 2026-01-05",
-        "open",
-        "Open, held"
-      ]
-    }
+  "key": {
+   "accept": [
+    "TD-3: a.b/c_d-e|f\n"
+   ],
+   "refuse": [
+    "TD-3: |a\n",
+    "TD-3: a:b\n"
+   ]
   },
-  "status-resolved": {
-    "status-resolved": {
-      "accept": [
-        "Resolved 2026-01-05"
-      ],
-      "refuse": [
-        "Resolved",
-        "Resolved 2026-01-05.",
-        "Resolved 2026-01-05: shipped"
-      ]
-    },
-    "date": {
-      "accept": [
-        "Resolved 2026-01-31"
-      ],
-      "refuse": [
-        "Resolved 2026-1-31"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "Resolved 2026-10-09"
-      ],
-      "refuse": [
-        "Resolved 2026-1O-09"
-      ]
-    }
+  "eol": {
+   "accept": [
+    "TD-3: 0h\r\nTD-4: 0i\rTD-5: 0j\n"
+   ],
+   "refuse": [
+    "TD-3: 0h TD-4: 0i\n"
+   ]
   },
-  "status-dropped": {
-    "status-dropped": {
-      "accept": [
-        "Dropped 2026-01-05"
-      ],
-      "refuse": [
-        "Dropped",
-        "Dropped 2026-01-05.",
-        "Dropped 2026-01-05: shipped"
-      ]
-    },
-    "date": {
-      "accept": [
-        "Dropped 2026-01-31"
-      ],
-      "refuse": [
-        "Dropped 2026-1-31"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "Dropped 2026-10-09"
-      ],
-      "refuse": [
-        "Dropped 2026-1O-09"
-      ]
-    }
+  "line-char": {
+   "accept": [
+    "# a comment, with: anything #\nTD-3: 0h\n"
+   ],
+   "refuse": [
+    "#\f\nTD-3: 0h\n"
+   ]
   },
-  "status-superseded": {
-    "status-superseded": {
-      "accept": [
-        "Superseded 2026-01-05 by TD-7"
-      ],
-      "refuse": [
-        "Superseded 2026-01-05",
-        "Superseded 2026-01-05 by",
-        "Superseded 2026-01-05 by TD-7: merged"
-      ]
-    },
-    "date": {
-      "accept": [
-        "Superseded 2026-01-31 by TD-7"
-      ],
-      "refuse": [
-        "Superseded 26-01-31 by TD-7"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "Superseded 2026-01-05 by TD-70"
-      ],
-      "refuse": [
-        "Superseded 2026-01-05 by TD-7a"
-      ]
-    },
-    "entry-id": {
-      "accept": [
-        "Superseded 2026-01-05 by TD-12"
-      ],
-      "refuse": [
-        "Superseded 2026-01-05 by td-12"
-      ]
-    },
-    "repo": {
-      "accept": [
-        "Superseded 2026-01-05 by acme/tools#TD-3"
-      ],
-      "refuse": [
-        "Superseded 2026-01-05 by a//b#TD-3"
-      ]
-    },
-    "repo-part": {
-      "accept": [
-        "Superseded 2026-01-05 by my.repo_2#TD-3"
-      ],
-      "refuse": [
-        "Superseded 2026-01-05 by -x#TD-3"
-      ]
-    }
+  "comment": {
+   "accept": [
+    "# a\n# b"
+   ],
+   "refuse": [
+    "TD-3: 0h\n# b"
+   ]
   },
-  "added": {
-    "added": {
-      "accept": [
-        "2026-01-05"
-      ],
-      "refuse": [
-        "2026-01-01 (x)",
-        "2026-01-01.",
-        "soon"
-      ]
-    },
-    "date": {
-      "accept": [
-        "2026-12-31"
-      ],
-      "refuse": [
-        "2026-1-31"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "2026-10-09"
-      ],
-      "refuse": [
-        "2026-1O-09"
-      ]
-    }
-  },
-  "header-block": {
-    "header-block": {
-      "accept": [
-        "**Priority:** High\n**Type:** debt\n**Status:** Open"
-      ],
-      "refuse": [
-        "Priority: High",
-        "**Priority** High"
-      ]
-    },
-    "field-line": {
-      "accept": [
-        "**Blocked by:** TD-2, decision (pat)",
-        "**Kind:**"
-      ],
-      "refuse": [
-        "**1st:** x",
-        "**A*b:** x"
-      ]
-    },
-    "char": {
-      "accept": [
-        "**Why it waits:** a — b, c: \"d\""
-      ],
-      "refuse": [
-        "**Priority:** High\nnot a field"
-      ]
-    }
-  },
-  "log-line": {
-    "log-line": {
-      "accept": [
-        "- 2026-01-05: gate added: until 2026-02-01"
-      ],
-      "refuse": [
-        "2026-01-05: gate added: until 2026-02-01",
-        "- 2026-01-05:gate added: until 2026-02-01"
-      ]
-    },
-    "log-words": {
-      "accept": [
-        "- 2026-01-05: reopened — the fix did not hold"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: someone said so"
-      ]
-    },
-    "log-filed": {
-      "accept": [
-        "- 2026-01-05: filed by grinder-1, session s-7, while TD-3: \"the parser drops a comment\"",
-        "- 2026-01-05: filed by pat, session n/a: \"a \"quoted\" word\""
-      ],
-      "refuse": [
-        "- 2026-01-05: filed by grinder-1: \"no session\"",
-        "- 2026-01-05: filed by grinder-1, session s-7, while soon: \"x\""
-      ]
-    },
-    "log-gate-added": {
-      "accept": [
-        "- 2026-01-05: gate added: decision (pat)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate added: hold"
-      ]
-    },
-    "gate": {
-      "accept": [
-        "- 2026-01-05: gate added: event (vendor-ships)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate added: until soon"
-      ]
-    },
-    "log-lift-answer": {
-      "accept": [
-        "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; shared board item left open"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: decision (pat) — by pat; answer Go",
-        "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; left open"
-      ]
-    },
-    "lift-gate": {
-      "accept": [
-        "- 2026-01-05: gate lifted: event (ships) — by pat; answer \"Drop the gate\""
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: until 2026-02-01 — by pat; answer \"Go\""
-      ]
-    },
-    "lift-suffix": {
-      "accept": [
-        "- 2026-01-05: gate lifted: decision (pat) — by sam; answer \"Go\"; board acme/tools",
-        "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; no board item"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; board a//b"
-      ]
-    },
-    "log-lift-override": {
-      "accept": [
-        "- 2026-01-05: gate lifted: decision (pat) — by sam; override: pat is away a month"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: decision (pat) — by sam; override:"
-      ]
-    },
-    "log-lift-check": {
-      "accept": [
-        "- 2026-01-05: gate lifted: event (ships) — by box-1; pr-merged passed; acme/tools#3"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: event (ships) — by box-1; pr-merged passed; two words"
-      ]
-    },
-    "log-lift-date": {
-      "accept": [
-        "- 2026-01-05: gate lifted: until 2026-01-05 — by box-1; date reached"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lifted: until 2026-01-05 — by box-1; reached"
-      ]
-    },
-    "log-lift-skipped": {
-      "accept": [
-        "- 2026-01-05: gate lift skipped: TD-9 no longer carries decision (pat)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lift skipped: TD-9 no longer carries until 2026-02-01"
-      ]
-    },
-    "log-kept-waiting": {
-      "accept": [
-        "- 2026-01-05: kept waiting: decision (pat) — by pat; answer \"Not yet\""
-      ],
-      "refuse": [
-        "- 2026-01-05: kept waiting: decision (pat) — by pat"
-      ]
-    },
-    "log-reassigned": {
-      "accept": [
-        "- 2026-01-05: gate reassigned: decision (pat) → decision (sam) — by pat; sam owns the export now"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate reassigned: decision (pat) -> decision (sam) — by pat; why"
-      ]
-    },
-    "log-archived": {
-      "accept": [
-        "- 2026-01-05: archived: Resolved — the comment survives a round trip"
-      ],
-      "refuse": [
-        "- 2026-01-05: archived: Resolved 2026-01-05 — done"
-      ]
-    },
-    "log-reopened": {
-      "accept": [
-        "- 2026-01-05: reopened — it came back"
-      ],
-      "refuse": [
-        "- 2026-01-05: reopened —  it came back"
-      ]
-    },
-    "log-was": {
-      "accept": [
-        "- 2026-01-05: was: Done: shipped"
-      ],
-      "refuse": [
-        "- 2026-01-05: was: "
-      ]
-    },
-    "log-retitled": {
-      "accept": [
-        "- 2026-01-05: retitled: was \"An \"old\" title\"",
-        "- 2026-01-05: retitled: was \"\""
-      ],
-      "refuse": [
-        "- 2026-01-05: retitled: the old one"
-      ]
-    },
-    "log-token": {
-      "accept": [
-        "- 2026-01-05: kept waiting: until 2026-02-01 — by w-1@box.2/a_b; answer \"Keep waiting\""
-      ],
-      "refuse": [
-        "- 2026-01-05: kept waiting: until 2026-02-01 — by pat, sam; answer \"Keep waiting\""
-      ]
-    },
-    "nonspace": {
-      "accept": [
-        "- 2026-01-05: was: «Open»"
-      ],
-      "refuse": [
-        "- 2026-01-05: was:  Open"
-      ]
-    },
-    "char": {
-      "accept": [
-        "- 2026-01-05: archived: Dropped — ⚠ it no longer applies"
-      ],
-      "refuse": [
-        "- 2026-01-05: archived: Dropped — first\nsecond"
-      ]
-    },
-    "date": {
-      "accept": [
-        "- 2026-12-31: reopened — again"
-      ],
-      "refuse": [
-        "- 2026-12-1: reopened — again"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "- 2026-10-09: reopened — again"
-      ],
-      "refuse": [
-        "- 2026-1O-09: reopened — again"
-      ]
-    },
-    "entry-id": {
-      "accept": [
-        "- 2026-01-05: gate lift skipped: TD-12 no longer carries event (ships)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lift skipped: TD12 no longer carries event (ships)"
-      ]
-    },
-    "repo": {
-      "accept": [
-        "- 2026-01-05: gate lift skipped: acme/tools#TD-4 no longer carries decision (pat)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lift skipped: https://h/o#TD-4 no longer carries decision (pat)"
-      ]
-    },
-    "repo-part": {
-      "accept": [
-        "- 2026-01-05: gate lift skipped: .github#TD-4 no longer carries decision (pat)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate lift skipped: -x#TD-4 no longer carries decision (pat)"
-      ]
-    },
-    "event-name": {
-      "accept": [
-        "- 2026-01-05: gate added: event (vendor-v2)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate added: event (Vendor)"
-      ]
-    },
-    "person": {
-      "accept": [
-        "- 2026-01-05: gate added: decision (sam.lee)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate added: decision (sam..lee)"
-      ]
-    },
-    "person-part": {
-      "accept": [
-        "- 2026-01-05: gate added: decision (a-b_c)"
-      ],
-      "refuse": [
-        "- 2026-01-05: gate added: decision (a+b)"
-      ]
-    }
-  },
-  "item-file": {
-    "item-file": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20"
-      ]
-    },
-    "item-text": {
-      "accept": [
-        "## Ping sam, Context: TD-9 Due: 2026-01-01.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam. \n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "item-header": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15, TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** Go | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Due:** 2026-11-20\n**Context:** TD-1\n"
-      ]
-    },
-    "kind-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** watch\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** banana\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "added-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** soon\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "session-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w 9\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "context-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1 decision (pat), Due: 2026-01-01\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** \n**Due:** 2026-11-20\n"
-      ]
-    },
-    "parts-field": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15,TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "doer-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** team ops\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** team  ops\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "doer-repo": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme/widgets\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme/widgets.\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "doer-part": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** .github\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme.\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "due-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** soon\n"
-      ]
-    },
-    "hide-field": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Hide until:** 2026-11-15\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Hide until:** later\n"
-      ]
-    },
-    "answers-field": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:**Go | No\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "lifts-field": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** \n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "decided-field": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat — Go (by Friday)\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat smith — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "closed-field": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 — Go\n**Closed:** 2026-11-12 — lifted\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 — Go\n**Closed:** 2026-11-12 —\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "item-answer": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the scope stands | Change — reply with what changes\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:**  Go | No\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "item-label": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** look\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Answers:** Works | Not right: <what>\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | No |\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "item-body": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** a.\n\n- **Question:** b?\n"
-      ]
-    },
-    "body-line": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** a.\n  - more.\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\nPlain prose line.\n"
-      ]
-    },
-    "item-log": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n\n**Log:**\n- 2026-11-12: pat: does S4 cover it?\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n\n**Log:**\n"
-      ]
-    },
-    "reply-line": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: pat: does S4 cover it?\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12 pat: words\n"
-      ]
-    },
-    "reply-by": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: sam.lee: ok\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: a:b: words\n"
-      ]
-    },
-    "date": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-1\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-1١\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "char": {
-      "accept": [
-        "## Ping — sam: ok? «yes»\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\nmore words\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "nonspace": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1 \n**Due:** 2026-11-20\n"
-      ]
-    },
-    "head-name": {
-      "accept": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ],
-      "refuse": [
-        "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host;a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
-      ]
-    },
-    "entry-id": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme/widgets#TD-15, TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-x\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "repo": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme/widgets#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme//widgets#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "repo-part": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** .github#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** -x#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "person": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by sam.lee — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by sam..lee — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "person-part": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat_2 — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat! — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "answer-sep": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go|Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go || Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "label-start": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** \\|x | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    },
-    "label-char": {
-      "accept": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go — now | Hold: wait a bit\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ],
-      "refuse": [
-        "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | Spl\nit\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
-      ]
-    }
-  },
-  "lift-subject": {
-    "lift-subject": {
-      "accept": [
-        "shiftlead: lift decision (paul) on TD-12 (session n/a)"
-      ],
-      "refuse": [
-        "shiftlead: lift decision (paul) on TD-12 (session n/a) ",
-        "shiftlead: lift decision (paul) for TD-12 (session n/a)",
-        "shiftlead: lift until (paul) on TD-12 (session n/a)"
-      ]
-    },
-    "log-token": {
-      "accept": [
-        "a.b@c/d_e-1: lift decision (paul) on TD-12 (session w-1)"
-      ],
-      "refuse": [
-        "shift lead: lift decision (paul) on TD-12 (session n/a)",
-        "shiftlead: lift decision (paul) on TD-12 (session a b)",
-        "shiftlead: lift decision (paul) on TD-12 (session `lb-designer`)"
-      ]
-    },
-    "person": {
-      "accept": [
-        "shiftlead: lift decision (sam.lee) on TD-12 (session n/a)"
-      ],
-      "refuse": [
-        "shiftlead: lift decision (a b) on TD-12 (session n/a)",
-        "shiftlead: lift decision (sam..lee) on TD-12 (session n/a)"
-      ]
-    },
-    "person-part": {
-      "accept": [
-        "shiftlead: lift decision (a-b_C) on TD-12 (session n/a)"
-      ],
-      "refuse": [
-        "shiftlead: lift decision (a+b) on TD-12 (session n/a)",
-        "shiftlead: lift decision () on TD-12 (session n/a)"
-      ]
-    },
-    "digit": {
-      "accept": [
-        "shiftlead: lift decision (paul) on TD-0012 (session n/a)"
-      ],
-      "refuse": [
-        "shiftlead: lift decision (paul) on TD-١٢ (session n/a)",
-        "shiftlead: lift decision (paul) on TD-x (session n/a)"
-      ]
-    }
+  "rank-entry": {
+   "accept": [
+    "TD-3: 0h\nTD-4: 0i"
+   ],
+   "refuse": [
+    "TD-3: 0h\nTD-4 0i"
+   ]
   }
+ },
+ "blocked-by": {
+  "blocked-by": {
+   "accept": [
+    "TD-1, decision (pat), until 2026-02-01, event (ships)",
+    "TD-1,TD-2"
+   ],
+   "refuse": [
+    "TD-1; TD-2"
+   ]
+  },
+  "blocked-item": {
+   "accept": [
+    "other#TD-3"
+   ],
+   "refuse": [
+    "soon"
+   ]
+  },
+  "gate": {
+   "accept": [
+    "until 2026-02-01",
+    "event (a-1)"
+   ],
+   "refuse": [
+    "hold",
+    "decision (pat) — after the review"
+   ]
+  },
+  "event-name": {
+   "accept": [
+    "event (vendor-ships-2)"
+   ],
+   "refuse": [
+    "event (Big)",
+    "event (a_b)"
+   ]
+  },
+  "entry-id": {
+   "accept": [
+    "TD-12"
+   ],
+   "refuse": [
+    "td-12"
+   ]
+  },
+  "repo": {
+   "accept": [
+    "acme/tools#TD-3",
+    "owner/.github#TD-3"
+   ],
+   "refuse": [
+    "a//b#TD-3",
+    "https://h/o/r#TD-3"
+   ]
+  },
+  "repo-part": {
+   "accept": [
+    "my.repo_2#TD-3"
+   ],
+   "refuse": [
+    "-x#TD-3"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "TD-7"
+   ],
+   "refuse": [
+    "TD-x"
+   ]
+  },
+  "date": {
+   "accept": [
+    "until 2026-01-20"
+   ],
+   "refuse": [
+    "until 2026-1-20"
+   ]
+  },
+  "person": {
+   "accept": [
+    "decision (pat)",
+    "decision (sam.lee)",
+    "decision (Sam_Lee-2)"
+   ],
+   "refuse": [
+    "decision (sam..lee)",
+    "decision (sam lee)",
+    "decision (.sam)"
+   ]
+  },
+  "person-part": {
+   "accept": [
+    "decision (a-b_c)"
+   ],
+   "refuse": [
+    "decision (a+b)",
+    "decision ()"
+   ]
+  }
+ },
+ "event-section": {
+  "event-section": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged acme/tools#3"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships."
+   ]
+  },
+  "event-name": {
+   "accept": [
+    "**Event (a-1):** w.\ncheck: pr-merged a#1"
+   ],
+   "refuse": [
+    "**Event (Ships):** w.\ncheck: pr-merged a#1"
+   ]
+  },
+  "event-words": {
+   "accept": [
+    "**Event (ships):** w\ncheck: pr-merged a#1"
+   ],
+   "refuse": [
+    "**Event (ships):**\ncheck: pr-merged a#1"
+   ]
+  },
+  "char": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x y\""
+   ],
+   "refuse": [
+    "**Event (ships):** w\n\ncheck: pr-merged a#1"
+   ]
+  },
+  "check-line": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123abc"
+   ],
+   "refuse": [
+    "**Event (ships):** w.\ncheck:pr-merged a#1"
+   ]
+  },
+  "check": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a#1"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: url-up x"
+   ]
+  },
+  "pr-merged": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b/c#7"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a/b#12a"
+   ]
+  },
+  "file-contains": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools@v2.4 files/a.py \"say \"hi\" now\""
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains acme/tools a.md \"x\" trailing",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a/b x.md\"t\""
+   ]
+  },
+  "ref-includes": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools@deploy/prod 0123abc"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes acme/tools 0123abc"
+   ]
+  },
+  "repo": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged owner/.github#3"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged https://h/o/r#1"
+   ]
+  },
+  "repo-part": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged my.repo_2#3"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged -x#1",
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a/..#1"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a#12"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: pr-merged a#x"
+   ]
+  },
+  "ref": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@v2.4 0123abc"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ 0123abc"
+   ]
+  },
+  "ref-char": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@release/2026_01 0123abc"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a~1 0123abc",
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@a^ 0123abc",
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@ma#in 0123abc",
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@mé 0123abc"
+   ]
+  },
+  "path": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/x.md \"v\""
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a \"v\""
+   ]
+  },
+  "path-char": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a .github/x-y_z.md \"v\"",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a c++/x.h \"v\""
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a docs/*.md \"v\"",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a a#b \"v\"",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a a%2e \"v\"",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a café.md \"v\""
+   ]
+  },
+  "quoted": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"\""
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"\"",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\" \"y\" z",
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"x\u0001y\""
+   ]
+  },
+  "commit": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 0123456789abcdef0123456789abcdef01234567"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main 012345",
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF0"
+   ]
+  },
+  "hex": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main abcdef0"
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: ref-includes a@main ABCDEF1"
+   ]
+  },
+  "text-char": {
+   "accept": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"tab-free text, quotes \" kept\""
+   ],
+   "refuse": [
+    "**Event (ships):** the vendor ships.\ncheck: file-contains a b.md \"xy\""
+   ]
+  },
+  "host-log": {
+   "accept": [
+    "**Event (applied):** the next Apply.\ncheck: host-log team-events kind press times 2 \"Apply nightly-build\""
+   ],
+   "refuse": [
+    "**Event (applied):** the next Apply.\ncheck: host-log team-events times 2 kind press \"x\""
+   ]
+  },
+  "source": {
+   "accept": [
+    "**Event (applied):** the next Apply.\ncheck: host-log ci \"x\""
+   ],
+   "refuse": [
+    "**Event (applied):** the next Apply.\ncheck: host-log -ci \"x\""
+   ]
+  },
+  "token": {
+   "accept": [
+    "**Event (applied):** the next Apply.\ncheck: host-log s kind precheck-fail \"x\""
+   ],
+   "refuse": [
+    "**Event (applied):** the next Apply.\ncheck: host-log s kind Press \"x\""
+   ]
+  },
+  "count": {
+   "accept": [
+    "**Event (applied):** the next Apply.\ncheck: host-log s times 999 \"x\""
+   ],
+   "refuse": [
+    "**Event (applied):** the next Apply.\ncheck: host-log s times 0 \"x\"",
+    "**Event (applied):** the next Apply.\ncheck: host-log s times 1000 \"x\""
+   ]
+  }
+ },
+ "status-open": {
+  "status-open": {
+   "accept": [
+    "Open"
+   ],
+   "refuse": [
+    "Open 2026-01-05",
+    "open",
+    "Open, held"
+   ]
+  }
+ },
+ "status-resolved": {
+  "status-resolved": {
+   "accept": [
+    "Resolved 2026-01-05"
+   ],
+   "refuse": [
+    "Resolved",
+    "Resolved 2026-01-05.",
+    "Resolved 2026-01-05: shipped"
+   ]
+  },
+  "date": {
+   "accept": [
+    "Resolved 2026-01-31"
+   ],
+   "refuse": [
+    "Resolved 2026-1-31"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "Resolved 2026-10-09"
+   ],
+   "refuse": [
+    "Resolved 2026-1O-09"
+   ]
+  }
+ },
+ "status-dropped": {
+  "status-dropped": {
+   "accept": [
+    "Dropped 2026-01-05"
+   ],
+   "refuse": [
+    "Dropped",
+    "Dropped 2026-01-05.",
+    "Dropped 2026-01-05: shipped"
+   ]
+  },
+  "date": {
+   "accept": [
+    "Dropped 2026-01-31"
+   ],
+   "refuse": [
+    "Dropped 2026-1-31"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "Dropped 2026-10-09"
+   ],
+   "refuse": [
+    "Dropped 2026-1O-09"
+   ]
+  }
+ },
+ "status-superseded": {
+  "status-superseded": {
+   "accept": [
+    "Superseded 2026-01-05 by TD-7"
+   ],
+   "refuse": [
+    "Superseded 2026-01-05",
+    "Superseded 2026-01-05 by",
+    "Superseded 2026-01-05 by TD-7: merged"
+   ]
+  },
+  "date": {
+   "accept": [
+    "Superseded 2026-01-31 by TD-7"
+   ],
+   "refuse": [
+    "Superseded 26-01-31 by TD-7"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "Superseded 2026-01-05 by TD-70"
+   ],
+   "refuse": [
+    "Superseded 2026-01-05 by TD-7a"
+   ]
+  },
+  "entry-id": {
+   "accept": [
+    "Superseded 2026-01-05 by TD-12"
+   ],
+   "refuse": [
+    "Superseded 2026-01-05 by td-12"
+   ]
+  },
+  "repo": {
+   "accept": [
+    "Superseded 2026-01-05 by acme/tools#TD-3"
+   ],
+   "refuse": [
+    "Superseded 2026-01-05 by a//b#TD-3"
+   ]
+  },
+  "repo-part": {
+   "accept": [
+    "Superseded 2026-01-05 by my.repo_2#TD-3"
+   ],
+   "refuse": [
+    "Superseded 2026-01-05 by -x#TD-3"
+   ]
+  }
+ },
+ "added": {
+  "added": {
+   "accept": [
+    "2026-01-05"
+   ],
+   "refuse": [
+    "2026-01-01 (x)",
+    "2026-01-01.",
+    "soon"
+   ]
+  },
+  "date": {
+   "accept": [
+    "2026-12-31"
+   ],
+   "refuse": [
+    "2026-1-31"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "2026-10-09"
+   ],
+   "refuse": [
+    "2026-1O-09"
+   ]
+  }
+ },
+ "header-block": {
+  "header-block": {
+   "accept": [
+    "**Priority:** High\n**Type:** debt\n**Status:** Open"
+   ],
+   "refuse": [
+    "Priority: High",
+    "**Priority** High"
+   ]
+  },
+  "field-line": {
+   "accept": [
+    "**Blocked by:** TD-2, decision (pat)",
+    "**Kind:**"
+   ],
+   "refuse": [
+    "**1st:** x",
+    "**A*b:** x"
+   ]
+  },
+  "char": {
+   "accept": [
+    "**Why it waits:** a — b, c: \"d\""
+   ],
+   "refuse": [
+    "**Priority:** High\nnot a field"
+   ]
+  }
+ },
+ "log-line": {
+  "log-line": {
+   "accept": [
+    "- 2026-01-05: gate added: until 2026-02-01"
+   ],
+   "refuse": [
+    "2026-01-05: gate added: until 2026-02-01",
+    "- 2026-01-05:gate added: until 2026-02-01"
+   ]
+  },
+  "log-words": {
+   "accept": [
+    "- 2026-01-05: reopened — the fix did not hold"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: someone said so"
+   ]
+  },
+  "log-filed": {
+   "accept": [
+    "- 2026-01-05: filed by grinder-1, session s-7, while TD-3: \"the parser drops a comment\"",
+    "- 2026-01-05: filed by pat, session n/a: \"a \"quoted\" word\""
+   ],
+   "refuse": [
+    "- 2026-01-05: filed by grinder-1: \"no session\"",
+    "- 2026-01-05: filed by grinder-1, session s-7, while soon: \"x\""
+   ]
+  },
+  "log-gate-added": {
+   "accept": [
+    "- 2026-01-05: gate added: decision (pat)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate added: hold"
+   ]
+  },
+  "gate": {
+   "accept": [
+    "- 2026-01-05: gate added: event (vendor-ships)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate added: until soon"
+   ]
+  },
+  "log-lift-answer": {
+   "accept": [
+    "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; shared board item left open",
+    "- 2026-01-05: gate lifted: decision (pat) — by director for pat (merge-line); answer \"Go\""
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: decision (pat) — by pat; answer Go",
+    "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; left open",
+    "- 2026-01-05: gate lifted: decision (pat) — by director for pat; answer \"Go\""
+   ]
+  },
+  "lift-gate": {
+   "accept": [
+    "- 2026-01-05: gate lifted: event (ships) — by pat; answer \"Drop the gate\""
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: until 2026-02-01 — by pat; answer \"Go\""
+   ]
+  },
+  "lift-suffix": {
+   "accept": [
+    "- 2026-01-05: gate lifted: decision (pat) — by sam; answer \"Go\"; board acme/tools",
+    "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; no board item"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: decision (pat) — by pat; answer \"Go\"; board a//b"
+   ]
+  },
+  "log-lift-override": {
+   "accept": [
+    "- 2026-01-05: gate lifted: decision (pat) — by sam; override: pat is away a month"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: decision (pat) — by sam; override:"
+   ]
+  },
+  "log-lift-check": {
+   "accept": [
+    "- 2026-01-05: gate lifted: event (ships) — by box-1; pr-merged passed; acme/tools#3"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: event (ships) — by box-1; pr-merged passed; two words"
+   ]
+  },
+  "log-lift-date": {
+   "accept": [
+    "- 2026-01-05: gate lifted: until 2026-01-05 — by box-1; date reached"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lifted: until 2026-01-05 — by box-1; reached"
+   ]
+  },
+  "log-lift-skipped": {
+   "accept": [
+    "- 2026-01-05: gate lift skipped: TD-9 no longer carries decision (pat)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lift skipped: TD-9 no longer carries until 2026-02-01"
+   ]
+  },
+  "log-kept-waiting": {
+   "accept": [
+    "- 2026-01-05: kept waiting: decision (pat) — by pat; answer \"Not yet\"",
+    "- 2026-01-05: kept waiting: decision (pat) — by director for pat (merge-line); answer \"Not yet\""
+   ],
+   "refuse": [
+    "- 2026-01-05: kept waiting: decision (pat) — by pat",
+    "- 2026-01-05: kept waiting: decision (pat) — by director for pat; answer \"Not yet\""
+   ]
+  },
+  "log-reassigned": {
+   "accept": [
+    "- 2026-01-05: gate reassigned: decision (pat) → decision (sam) — by pat; sam owns the export now"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate reassigned: decision (pat) -> decision (sam) — by pat; why"
+   ]
+  },
+  "log-archived": {
+   "accept": [
+    "- 2026-01-05: archived: Resolved — the comment survives a round trip"
+   ],
+   "refuse": [
+    "- 2026-01-05: archived: Resolved 2026-01-05 — done"
+   ]
+  },
+  "log-reopened": {
+   "accept": [
+    "- 2026-01-05: reopened — it came back"
+   ],
+   "refuse": [
+    "- 2026-01-05: reopened —  it came back"
+   ]
+  },
+  "log-was": {
+   "accept": [
+    "- 2026-01-05: was: Done: shipped"
+   ],
+   "refuse": [
+    "- 2026-01-05: was: "
+   ]
+  },
+  "log-retitled": {
+   "accept": [
+    "- 2026-01-05: retitled: was \"An \"old\" title\"",
+    "- 2026-01-05: retitled: was \"\""
+   ],
+   "refuse": [
+    "- 2026-01-05: retitled: the old one"
+   ]
+  },
+  "log-token": {
+   "accept": [
+    "- 2026-01-05: kept waiting: until 2026-02-01 — by w-1@box.2/a_b; answer \"Keep waiting\""
+   ],
+   "refuse": [
+    "- 2026-01-05: kept waiting: until 2026-02-01 — by pat, sam; answer \"Keep waiting\""
+   ]
+  },
+  "nonspace": {
+   "accept": [
+    "- 2026-01-05: was: «Open»"
+   ],
+   "refuse": [
+    "- 2026-01-05: was:  Open"
+   ]
+  },
+  "char": {
+   "accept": [
+    "- 2026-01-05: archived: Dropped — ⚠ it no longer applies"
+   ],
+   "refuse": [
+    "- 2026-01-05: archived: Dropped — first\nsecond"
+   ]
+  },
+  "date": {
+   "accept": [
+    "- 2026-12-31: reopened — again"
+   ],
+   "refuse": [
+    "- 2026-12-1: reopened — again"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "- 2026-10-09: reopened — again"
+   ],
+   "refuse": [
+    "- 2026-1O-09: reopened — again"
+   ]
+  },
+  "entry-id": {
+   "accept": [
+    "- 2026-01-05: gate lift skipped: TD-12 no longer carries event (ships)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lift skipped: TD12 no longer carries event (ships)"
+   ]
+  },
+  "repo": {
+   "accept": [
+    "- 2026-01-05: gate lift skipped: acme/tools#TD-4 no longer carries decision (pat)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lift skipped: https://h/o#TD-4 no longer carries decision (pat)"
+   ]
+  },
+  "repo-part": {
+   "accept": [
+    "- 2026-01-05: gate lift skipped: .github#TD-4 no longer carries decision (pat)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate lift skipped: -x#TD-4 no longer carries decision (pat)"
+   ]
+  },
+  "event-name": {
+   "accept": [
+    "- 2026-01-05: gate added: event (vendor-v2)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate added: event (Vendor)"
+   ]
+  },
+  "person": {
+   "accept": [
+    "- 2026-01-05: gate added: decision (sam.lee)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate added: decision (sam..lee)"
+   ]
+  },
+  "person-part": {
+   "accept": [
+    "- 2026-01-05: gate added: decision (a-b_c)"
+   ],
+   "refuse": [
+    "- 2026-01-05: gate added: decision (a+b)"
+   ]
+  }
+ },
+ "item-file": {
+  "item-file": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20"
+   ]
+  },
+  "item-text": {
+   "accept": [
+    "## Ping sam, Context: TD-9 Due: 2026-01-01.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam. \n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "item-header": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15, TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** Go | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Due:** 2026-11-20\n**Context:** TD-1\n"
+   ]
+  },
+  "kind-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** watch\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** banana\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "added-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** soon\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "session-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w 9\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "context-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1 decision (pat), Due: 2026-01-01\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** \n**Due:** 2026-11-20\n"
+   ]
+  },
+  "parts-field": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-15,TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "doer-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** team ops\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** team  ops\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "doer-repo": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme/widgets\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme/widgets.\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "doer-part": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** .github\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Doer:** acme.\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "due-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** soon\n"
+   ]
+  },
+  "hide-field": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Hide until:** 2026-11-15\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Hide until:** later\n"
+   ]
+  },
+  "answers-field": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:**Go | No\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "lifts-field": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Lifts:** \n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "decided-field": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat — Go (by Friday)\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n",
+    "## Merge the parser change?\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Context:** TD-5 decision (pat)\n**Scope:** merge-line\n**Due:** 2026-11-18\n**Answers:** Go | Not yet\n**Decided:** 2026-11-12 by director for pat (merge-line) — Go\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat smith — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n",
+    "## Merge the parser change?\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Context:** TD-5 decision (pat)\n**Scope:** merge-line\n**Due:** 2026-11-18\n**Answers:** Go | Not yet\n**Decided:** 2026-11-12 by director for pat — Go\n"
+   ]
+  },
+  "closed-field": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 — Go\n**Closed:** 2026-11-12 — lifted\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 — Go\n**Closed:** 2026-11-12 —\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "item-answer": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the scope stands | Change — reply with what changes\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:**  Go | No\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "item-label": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** look\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n**Answers:** Works | Not right: <what>\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | No |\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "item-body": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** a.\n\n- **Question:** b?\n"
+   ]
+  },
+  "body-line": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** a.\n  - more.\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\nPlain prose line.\n"
+   ]
+  },
+  "item-log": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n\n**Log:**\n- 2026-11-12: pat: does S4 cover it?\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n- **Context:** the key is old.\n  - nested, Context: words.\n\n**Log:**\n"
+   ]
+  },
+  "reply-line": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: pat: does S4 cover it?\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12 pat: words\n"
+   ]
+  },
+  "reply-by": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: sam.lee: ok\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n\n**Log:**\n- 2026-11-12: a:b: words\n"
+   ]
+  },
+  "date": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-1\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-1١\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "char": {
+   "accept": [
+    "## Ping — sam: ok? «yes»\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\nmore words\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "nonspace": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1 \n**Due:** 2026-11-20\n"
+   ]
+  },
+  "head-name": {
+   "accept": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ],
+   "refuse": [
+    "## Ping sam.\n\n**Kind:** act\n**Added:** 2026-11-11\n**Session:** w-9 on host;a\n**Context:** TD-1\n**Due:** 2026-11-20\n"
+   ]
+  },
+  "entry-id": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme/widgets#TD-15, TD-16\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** TD-x\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "repo": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme/widgets#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** acme//widgets#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "repo-part": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** .github#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Parts:** -x#TD-15\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "person": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by sam.lee — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by sam..lee — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "person-part": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat_2 — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go (default) — the split stands | Split | Hold: <note>\n**Decided:** 2026-11-12 by pat! — Go\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "answer-sep": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go|Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go || Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "label-start": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** \\|x | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | | Split\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "label-char": {
+   "accept": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go — now | Hold: wait a bit\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ],
+   "refuse": [
+    "## Say Go to the split.\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Session:** w-9 on host-a\n**Context:** TD-5 decision (pat)\n**Due:** 2026-11-18\n**Answers:** Go | Spl\nit\n\n- **Context:** TD-5 asks.\n- **Question:** Go?\n- **Recommended:** Go — it is ready.\n"
+   ]
+  },
+  "scope-field": {
+   "accept": [
+    "## Merge the parser change?\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Context:** the parser review\n**Scope:** merge-line\n**Due:** 2026-11-18\n**Answers:** Merge | Hold\n"
+   ],
+   "refuse": [
+    "## Merge the parser change?\n\n**Kind:** decide\n**Added:** 2026-11-11\n**Context:** the parser review\n**Scope:** merge line\n**Due:** 2026-11-18\n**Answers:** Merge | Hold\n"
+   ]
+  }
+ },
+ "lift-subject": {
+  "lift-subject": {
+   "accept": [
+    "shiftlead: lift decision (paul) on TD-12 (session n/a)"
+   ],
+   "refuse": [
+    "shiftlead: lift decision (paul) on TD-12 (session n/a) ",
+    "shiftlead: lift decision (paul) for TD-12 (session n/a)",
+    "shiftlead: lift until (paul) on TD-12 (session n/a)"
+   ]
+  },
+  "log-token": {
+   "accept": [
+    "a.b@c/d_e-1: lift decision (paul) on TD-12 (session w-1)"
+   ],
+   "refuse": [
+    "shift lead: lift decision (paul) on TD-12 (session n/a)",
+    "shiftlead: lift decision (paul) on TD-12 (session a b)",
+    "shiftlead: lift decision (paul) on TD-12 (session `lb-designer`)"
+   ]
+  },
+  "person": {
+   "accept": [
+    "shiftlead: lift decision (sam.lee) on TD-12 (session n/a)"
+   ],
+   "refuse": [
+    "shiftlead: lift decision (a b) on TD-12 (session n/a)",
+    "shiftlead: lift decision (sam..lee) on TD-12 (session n/a)"
+   ]
+  },
+  "person-part": {
+   "accept": [
+    "shiftlead: lift decision (a-b_C) on TD-12 (session n/a)"
+   ],
+   "refuse": [
+    "shiftlead: lift decision (a+b) on TD-12 (session n/a)",
+    "shiftlead: lift decision () on TD-12 (session n/a)"
+   ]
+  },
+  "digit": {
+   "accept": [
+    "shiftlead: lift decision (paul) on TD-0012 (session n/a)"
+   ],
+   "refuse": [
+    "shiftlead: lift decision (paul) on TD-١٢ (session n/a)",
+    "shiftlead: lift decision (paul) on TD-x (session n/a)"
+   ]
+  }
+ },
+ "delegates-line": {
+  "delegates-line": {
+   "accept": [
+    "Delegates: director for pat (merge-line); director for sam (merge-line, design-go)"
+   ],
+   "refuse": [
+    "Delegates: director for pat (merge-line);",
+    "Delegates:director for pat (merge-line)"
+   ]
+  },
+  "grant": {
+   "accept": [
+    "Delegates: director for pat (merge-line, design-go)"
+   ],
+   "refuse": [
+    "Delegates: director for pat ()",
+    "Delegates: director for pat (merge-line,design-go)"
+   ]
+  },
+  "person": {
+   "accept": [
+    "Delegates: lead.bot for pat.lee (merge-line)"
+   ],
+   "refuse": [
+    "Delegates: lead. for pat (merge-line)"
+   ]
+  },
+  "person-part": {
+   "accept": [
+    "Delegates: d_1 for p-2 (s_3)"
+   ],
+   "refuse": [
+    "Delegates: d!1 for pat (merge-line)"
+   ]
+  }
+ }
 }

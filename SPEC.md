@@ -2606,7 +2606,7 @@ An item file as the writers write it (*The form the writers write*): a text `ite
 item-file      ::= "## " item-text #xA #xA item-header ( #xA #xA item-body )? ( #xA #xA item-log )? #xA
 item-text      ::= nonspace ( char* nonspace )?
 item-header    ::= ( kind-field #xA )? added-field ( #xA session-field )? #xA context-field ( #xA parts-field )?
-                   ( #xA doer-field )? ( #xA due-field )? ( #xA hide-field )? ( #xA answers-field )?
+                   ( #xA doer-field )? ( #xA scope-field )? ( #xA due-field )? ( #xA hide-field )? ( #xA answers-field )?
                    ( #xA lifts-field )? ( #xA decided-field )? ( #xA closed-field )?
 kind-field     ::= "**Kind:** " ( "decide" | "act" | "look" | "watch" | "fyi" )
 added-field    ::= "**Added:** " date
@@ -2614,6 +2614,7 @@ session-field  ::= "**Session:** " head-name ( " on " head-name )?
 context-field  ::= "**Context:** " item-text
 parts-field    ::= "**Parts:** " entry-id ( ", " entry-id )*
 doer-field     ::= "**Doer:** " ( doer-repo | "team " person )
+scope-field    ::= "**Scope:** " person
 doer-repo      ::= ( repo-part "/" )* doer-part
 doer-part      ::= [A-Za-z0-9_] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
                  | "." [A-Za-z0-9_-] ( [A-Za-z0-9_.-]* [A-Za-z0-9_-] )?
@@ -2622,7 +2623,7 @@ due-field      ::= "**Due:** " date
 hide-field     ::= "**Hide until:** " date
 answers-field  ::= "**Answers:** " item-answer ( answer-sep item-answer )*
 lifts-field    ::= "**Lifts:** " item-label ( answer-sep item-label )*
-decided-field  ::= "**Decided:** " date ( " by " person )? " — " item-text
+decided-field  ::= "**Decided:** " date ( " by " person ( " for " person " (" person ")" )? )? " — " item-text
 closed-field   ::= "**Closed:** " date ( " — " item-text )?
 item-answer    ::= item-label " (default)"? ( " — " char* )?
 item-label     ::= label-start label-char*
@@ -2634,7 +2635,10 @@ reply-by       ::= [^#x20#x9:#xA] [^:#xA]*
 ```
 
 `item-header` gives the fields' order, each at most once, with `added-field` and `context-field` always. What the
-productions leave to prose: `parts-field` only on a `decide`, `doer-field` only on an `act`; a
+productions leave to prose: `parts-field` only on a `decide`, `doer-field` only on an `act`; a `scope-field` only on
+a `decide` (v3.4); a delegated `decided-field` only on an item whose `scope-field` names its scope, its delegate not
+its person, its Context naming no gate on another repo's entry and, if it names a gate, exactly one entry and one
+gate; a
 `due-field` on every kind but `fyi`; answers as *A new item* says a kind takes them, and a `lifts-field` only on
 a `decide`, each label one of its answers once and never `Go` alone; a decided file has no `session-field` and may
 carry any answers or none. Which labels are forms (*The board*, the `Answers:` bullet) is a reading of an
@@ -2713,6 +2717,18 @@ person         ::= person-part ( "." person-part )*
 person-part    ::= [A-Za-z0-9_-]+
 ```
 
+### `Delegates:` (v3.4)
+
+A board's `Delegates:` line in its canonical spelling (*The board*, `Delegates:`): `board_delegates()` reads at
+least one grant from it, none outside the form, and the grants re-rendered as `<delegate> for <person> (<scope>, …)`
+joined by `; ` after `Delegates: ` are the line itself. The reader's tolerance (whitespace folded, a trailing `;`) is
+the prose's; which grants are faults (`delegates_problems()`) is the board's, not the grammar's.
+
+```ebnf
+delegates-line ::= "Delegates: " grant ( "; " grant )*
+grant          ::= person " for " person " (" person ( ", " person )* ")"
+```
+
 ### The rank file (v2.3)
 
 A rank file the reader reads without a flag (*The rank*): `rank()` gives no ⚠ and no ℹ for it.
@@ -2758,7 +2774,8 @@ log-words         ::= log-filed | log-gate-added | log-lift-answer | log-lift-ov
                     | log-reopened | log-was | log-retitled
 log-filed         ::= "filed by " log-token ", session " log-token ( ", while " entry-id )? ': "' char* '"'
 log-gate-added    ::= "gate added: " gate
-log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token '; answer "' char* '"' lift-suffix?
+log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token ( " for " log-token " (" log-token ")" )? '; answer "'
+                      char* '"' lift-suffix?
 lift-gate         ::= "decision (" person ")" | "event (" event-name ")"
 lift-suffix       ::= "; board " repo | "; no board item" | "; shared board item left open"
 lift-subject      ::= log-token ": lift decision (" person ") on TD-" digit+ " (session " log-token ")"
@@ -2766,7 +2783,8 @@ log-lift-override ::= "gate lifted: decision (" person ") — by " log-token "; 
 log-lift-check    ::= "gate lifted: event (" event-name ") — by " log-token "; " [a-z0-9-]+ " passed; " nonspace+
 log-lift-date     ::= "gate lifted: until " date " — by " log-token "; date reached"
 log-lift-skipped  ::= "gate lift skipped: " entry-id " no longer carries " lift-gate
-log-kept-waiting  ::= "kept waiting: " gate " — by " log-token '; answer "' char* '"'
+log-kept-waiting  ::= "kept waiting: " gate " — by " log-token ( " for " log-token " (" log-token ")" )? '; answer "'
+                      char* '"'
 log-reassigned    ::= "gate reassigned: decision (" person ") → decision (" person ") — by " log-token "; "
                       nonspace char*
 log-archived      ::= "archived: " [A-Za-z]+ " — " nonspace char*
