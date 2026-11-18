@@ -1,6 +1,6 @@
 # TD-148: an entry's closing rule is no section's text
 
-**Status:** Draft 2 (round 1 applied), 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 3 (rounds 1–2 applied), 2026-11-18 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `check()` flags, what three readers read and where the writers put what they add; cap 6 rounds,
 cadence.md §4.8). The record: [docs/reviews/TD-148.md](../reviews/TD-148.md). In plain words:
 [docs/synopses/TD-148.md](../synopses/TD-148.md).
@@ -50,31 +50,36 @@ the body, the last line of whatever section came before. An entry that ended in 
 
 ### D1. The closing rule
 
-An entry's **closing rule** is a line of its raw body (comments kept, as *The body's shape* reads it) such that:
+An entry's **closing rule** is a line of its body read with HTML comments aside, as `field-lines` reads an Ask (a
+line counts by its words outside comment spans; a comment-only line, and a line inside a comment, has none):
 
-- it is a thematic break: up to three spaces, then three or more of one of `-`, `*` or `_`, with any spaces or
-  tabs between and after them and nothing else (CommonMark's thematic break), so `---<!-- t -->` is not one;
+- its words outside comments are a thematic break: up to three spaces, then three or more of one of `-`, `*` or
+  `_`, with any spaces or tabs between and after them and nothing else (CommonMark's thematic break), so `--` and
+  `-*-` are not one, and `---<!-- t -->` is;
 - it stands outside a code fence and starts outside an HTML comment;
-- every line after it is blank (a comment-only line is not blank, so `---`, a blank line, `<!-- t -->` holds no
-  closing rule); and
-- the line above it is blank, unless it is the body's only line.
+- no line after it has words outside comments (blank, comment-only and in-comment lines may follow); and
+- the line above it has no words outside comments (blank or comment-only), unless it is the body's first line.
 
-It is the entry's, not its body's: no section holds it. The **gap** is the blank lines between it and the body's
-last other line, as written.
+It is the entry's, not its body's: no section holds it. The **tail** is everything from the line after the body's
+last line with words (outside comments) above the rule, to the body's end: the gap's lines as written (blank,
+whitespace-only or comment-only), the rule's line as written, and any lines after it, verbatim.
 
-- **Readers** read the body without the gap and the rule: every section's text (`_entry_sections()`,
-  `_section_spans()`), the four body kinds (`check()`, through `body_problems()`), the Log (`log_lines()`,
-  `log_problems()`), the Ask a person reads and its context (`_entry_ask()`, the gate sweep's detail block),
-  `entry_answers()`, and the Event sections (`event_sections()`). Its `---` is then read by nothing, as in v1 it
-  separated entries and meant nothing.
-- **Writers** keep it, with its gap as found, as the entry's last line, after everything they write: a Log made or
-  a line appended (`note`, `set`, `lift`, `archive`, `reopen`), a section added or replaced (`edit --section`, the
-  Fix's replacement on `archive`), `migrate-body`'s `**Context:**`, and `canonical()`, whose output is unchanged
-  (the body byte for byte, the gap and the rule after it, as today). An entry whose body is only the rule keeps it
-  as its body's one line, after the blank line below the header block.
+- **Readers** read the body without the tail: every section's text (`_entry_sections()`, `_section_spans()`), the
+  four body kinds (`check()`, through `body_problems()`), the Log (`log_lines()`, `log_problems()`), the Ask a
+  person reads and its context (`_entry_ask()`, `_entry_context()`, the gate sweep's detail block),
+  `entry_answers()`, and the Event sections (`event_sections()`), open and archived entries, v1 and v2 alike. Its
+  `---` is then read by nothing, as in v1 it separated entries and meant nothing. A reader given an entry's text
+  with comments already dropped (`check()`'s `_entry_texts()`, `entry_answers()`'s own drop) finds the same rule,
+  since comments are aside in the rule; the one shape where the two texts differ, a rule written on the line a
+  multi-line comment closes on, is no rule on the raw text (it starts inside a comment) and is accepted as is.
+- **Writers** keep the tail, verbatim, as the entry's end, after everything they write: a Log made or a line
+  appended (`note`, `set`, `lift`, `archive`, `reopen`), a section added or replaced (`edit --section`, the Fix's
+  replacement on `archive`), `migrate-body`'s `**Context:**`, and `canonical()`, whose output is unchanged (the
+  body byte for byte, the tail after it, as today). Where the tail's gap holds no blank line (a body that is only
+  the rule) and a write puts text above it, one blank line goes between them, so it stays a rule.
 - **The one line.** Only the last. A second break above it (`---`, blank, `---`) is text in the section above,
-  and flagged where that section is a data field; a break with text or a comment after it is text; a `---` glued
-  under a line (no blank above) is text and stays flagged under an Ask. That last is a choice: CommonMark reads
+  and flagged where that section is a data field; a break with words after it is text; a `---` glued under a line
+  with words (no blank above) is text and stays flagged under an Ask. That last is a choice: CommonMark reads
   such a `---` as the line's setext underline, a heading, so it is the line's, never a separator; the v1 seed
   agent-cadence ships (`files/docs/technical_debt.md`) sets its rules after a blank line, and the case agent-cadence
   TD-283 reports is that form.
@@ -82,22 +87,25 @@ last other line, as written.
   file written by hand may end with one; telling them apart would need the ledger's layout, which an entry's text
   does not carry.
 
-**Where it travels.** One helper, `_closing_rule(body) -> (body, tail)`, cuts the raw body (as `_entry_parts()`
-returns it today) into the body without the rule and its `tail`, the gap's newlines and the rule's line as written
-(`""` for none). `_entry_parts()` returns the body without the rule, so every reader built on it needs no change;
-the writers need the tail back, so `_render()` gains a `tail` argument (default `""`) written after the body, and
-each writer that renders an entry passes the tail of the entry it was given: `canonical()`, `edit_entry()` (every
-action: `note`, `set`, `edit`, `archive`, `reopen`, `lift`), `_logged()`, `status_notes_to_log()` and
-`migrate_body()` — every caller of `_render()` but `entry_text()`, whose new entry has none (on `main`, lines
-4808, 5173, 5835, 6210 and 6460); each then runs `canonical()`, which reads the tail again and keeps it. `_readback()`
-compares the tail with the body, so a writer that drops it is refused, never written. `_body_faults()` keeps its
-contract (a raw body in, faults out); `body_problems()` and `migrate_body()` give it the body without the rule.
+**Where it travels.** One helper, `_closing_rule(body) -> (body, tail)`, cuts a body (raw, or with comments
+dropped) into the body without the tail and the tail (`""` for none). `_entry_parts()` keeps its three-tuple and
+returns the body without the tail, so every reader built on it needs no change; `_entry_tail(text)`, new, returns
+the tail of the body `_entry_parts()` cut. `_render()` gains a `tail` argument (default `""`), written after the
+body (one blank line between where a non-empty body meets a tail with no blank line; the tail as the body when the
+body is empty). Each writer that renders an entry passes `_entry_tail()` of the text it was given: `canonical()`,
+`edit_entry()` (every action: `note`, `set`, `edit`, `archive`, `reopen`, `lift`), `_logged()`,
+`status_notes_to_log()` and `migrate_body()` — every caller of `_render()` but `entry_text()`, whose new entry has
+none (on `main`, lines 4808, 5173, 5835, 6210 and 6460); each then runs `canonical()`, which cuts the tail again
+and keeps it. `_readback()` returns the tail as a fifth element, so a writer that drops or changes it is refused,
+never written. `_body_faults()` keeps its contract (a body in, faults out); `body_problems()` and
+`migrate_body()` give it the body without the tail. `_raw_entry_texts()` and `_entry_texts()` cut at `## `
+headings as today and need no change.
 
 ### D2. `migrate-body` leaves it
 
-`migrate-body` reads the body without the rule (D1), so an Ask whose only text past its line is the rule is clean
+`migrate-body` reads the body without the tail (D1), so an Ask whose only text past its line is the tail is clean
 and already migrated: neither written nor refused. One with more to move gets its `**Context:**` as today, and the
-rule stays the entry's last line, after the Context. Its guard compares sections, and no section holds the rule.
+tail stays the entry's end, after the Context. Its guard compares sections, and no section holds the rule.
 
 ### D3. `split()` is unchanged
 
@@ -108,8 +116,10 @@ in a v2 file is read by nothing, and costs one line. `split_notes()` names nothi
 ### What it changes for a reader
 
 Under v3.4 a closing rule is the last line of the last section. Under D1 that section's text ends before the
-gap and the rule. A ledger with no closing rule reads, flags and writes exactly as in v3.4. `canonical()`
-writes no different byte for any entry. `check()` flags less, never more. No item key, canonical form or Log line
+tail. A ledger with no closing rule reads, flags and writes exactly as in v3.4. `canonical()` writes no different
+byte for any entry. `check()` flags less, never more: the tail held only a break, blank lines and comments, so
+taking it out of a section removes text a flag can name and adds none, on the raw and the comment-dropped paths
+alike. No item key, canonical form or Log line
 changes: a minor release.
 
 ## Options weighed
@@ -139,33 +149,34 @@ The build adds or changes these, word for word.
 
 **The entry** (SPEC *The entry*), a new bullet after *The body* bullet and its sub-bullets, before *Data fields*:
 
-> - **The closing rule** (v3.5). The body's last line, blank lines aside, is the entry's **closing rule** when it is
->   a thematic break — up to three spaces, then three or more of one of `-`, `*` or `_`, with any spaces or tabs
->   between and after them and nothing else — read on the raw body (a comment-only line after it is not blank, and
->   a comment on its line makes it no break), outside a code fence, starting outside an HTML comment, with a blank
->   line above it unless it is the body's only line. It is the entry's, not the body's: no section holds it or the
->   blank lines above it, so a data field before it ends at its line and a Log before it reads its lines, and every
->   reader reads the body without it. A v1 ledger's `---` between entries
->   is the entry above's closing rule, and a split keeps it in that entry's file. Every writer keeps it, and the blank lines above
->   it as written, as the entry's last line, after what it adds or replaces. Only the last such line is one; a break with text after it,
->   or with no blank line above it (a setext underline), is text.
+> - **The closing rule** (v3.5). The body's last line with words outside HTML comments is the entry's **closing
+>   rule** when those words are a thematic break — up to three spaces, then three or more of one of `-`, `*` or
+>   `_`, with any spaces or tabs between and after them and nothing else — outside a code fence, starting outside
+>   a comment, and the line above it has no words outside comments unless it is the body's first line. It and the
+>   lines around it that have no words (the blank and comment-only lines above it back to the last line with
+>   words, and every line after it) are the entry's **tail**, not the body's: no section holds the tail, so a data
+>   field before it ends at its line and a Log before it reads its lines, and every reader reads the body without
+>   it. A v1 ledger's `---` between entries is the entry above's closing rule, and a split keeps it in that
+>   entry's file. Every writer keeps the tail as written, as the entry's end, after what it adds or replaces, with
+>   one blank line put above it where a write gives text to a body that was only the tail. Only the last such
+>   line is one; a break with words after it, or with words on the line above it (a setext underline), is text.
 
 **Canonical form**, the body's line, changed from *the body byte for byte, with its leading and trailing blank lines
 dropped and one trailing newline* to:
 
-> - the body byte for byte, with its leading and trailing blank lines dropped (its closing rule, v3.5, its last
->   line, blank lines aside, the blank lines above it kept as written), and one trailing newline.
+> - the body byte for byte, with its leading and trailing blank lines dropped (its tail, v3.5, kept as written as
+>   its end), and one trailing newline.
 
 **The body's shape** (v3.3), after its first sentence (*… cut at `## ` headings outside HTML comments:*), the
 sentence before the list of kinds gains:
 
-> … `check()` flags four kinds on each open entry's raw body, its closing rule aside (v3.5, *The entry*), cut at
+> … `check()` flags four kinds on each open entry's raw body, its tail aside (v3.5, *The entry*), cut at
 > `## ` headings outside HTML comments: …
 
 **The ledger writer**, *`migrate-body`* (v3.3), at the end of its bullet:
 
-> A closing rule (v3.5, *The entry*) is no section's text: an Ask whose only text past its line is the rule is
-> already migrated, and a rewritten entry keeps the rule as its last line.
+> An entry's tail (v3.5, *The entry*) is no section's text: an Ask whose only text past its line is the tail is
+> already migrated, and a rewritten entry keeps the tail as its end.
 
 **The ledger as a directory**, *Migration*, after *… is its file with trailing blank lines trimmed to one newline.*:
 
@@ -174,11 +185,11 @@ sentence before the list of kinds gains:
 **Versions**, a new paragraph after v3.4's:
 
 > **v3.5 reads an entry's closing rule as the entry's** (TD-148; *The entry*, *Canonical form*, *The body's shape*,
-> *The ledger writer*, *The ledger as a directory*): a thematic break that is the body's last line, after a blank
-> line, is no section's text. `check()` no longer flags a data field or a Log that is the last section before it
+> *The ledger writer*, *The ledger as a directory*): a thematic break that is the body's last line with words, after a
+> line with none, is no section's text, nor are the blank and comment-only lines around it. `check()` no longer flags a data field or a Log that is the last section before it
 > (`field-lines`, `log-line`), `entry_answers()` reads an `Answers` or `Lifts` that is the last section before it, the Ask a person reads and its context leave it out, and `migrate-body`
 > leaves it in place. Writers put what they add before it, where v3.4 put it after. The last section of an entry
-> with one reads one line shorter; an entry without one reads, flags and writes as before. No item key, canonical
+> with one reads without it; an entry without one reads, flags and writes as before. No item key, canonical
 > form or Log line changes.
 
 ## The fixtures
@@ -190,19 +201,25 @@ All invented, no real ledger's text. Each `check()` case calls `check()` (so `bo
   and `---` (clean), and the same with `***`, `___`, `- - -` and `   ---` (clean); with three blank lines above the
   `---` (clean); `    ---`, four spaces (`field-lines`: an indented code line); a `---` glued under the Ask line
   (`field-lines`); `---`, a blank line, `---` after the Ask (`field-lines`, the upper one); the Ask, a blank line,
-  `---`, a blank line, a paragraph (`field-lines`); the Ask, `---`, a blank line, `<!-- t -->` (`field-lines`: the
-  comment-only line is not blank); `---<!-- t -->` after the Ask (`field-lines`); an entry whose last section is
-  its `**Log:**`, then `---` (no `log-line`); a v1 ledger of three entries joined by `---`, the middle ending in
+  `---`, a blank line, a paragraph (`field-lines`); the Ask, `---`, a blank line, `<!-- t -->` (clean: the
+  comment is in the tail); `---<!-- t -->` after the Ask (clean); `--`, and `-*-`, after the Ask (`field-lines`);
+  `* * *` and `_ _ _` (clean); a `---` inside a fence that closes after it (`field-lines` where the fence is in the
+  Ask's section; no rule); a CRLF entry ending in its rule (clean); an entry whose last section is
+  its `**Log:**`, then `---` (no `log-line`), and the same with a blank line and `<!-- t -->` after the `---`;
+  an `**Answers:**` then `**Lifts:**` as the last sections, then `---<!-- t -->` (no `answers-unusable`); a v1 ledger of three entries joined by `---`, the middle ending in
   its Ask (clean), the last ending in `---` before the file ends (clean).
 - `fixtures/ledger_edit/` `canonical` cases: an entry with a closing rule after one blank line and after three
-  (each byte for byte); a body that is only `---` (byte for byte).
+  (each byte for byte); a body that is only `---` (byte for byte); a gap
+  holding a line of two spaces, and a rule with trailing spaces (byte for byte); each run twice (idempotent).
 - `fixtures/ledger_edit/` `edit_entry` cases, on an entry ending `**Fix:** …`, three blank lines and `---`: `note`
   (the Log made above the rule, the gap kept); a second `note` (the line appended above it); `edit --section Done
   when` adding a section, and replacing the Fix (each above the rule); `archive` and `reopen` (the Resolved line
-  and Log above it); `set` with a Status that moves into the Log (above it).
+  and Log above it); `set` with a Status that moves into the Log (above it); and `note` and `edit --section` on an entry whose body is
+  only `---` (the new text, one blank line, then `---`).
 - `fixtures/ledger_writer/`: `migrate-body` on a ledger holding an entry whose Ask has a second paragraph and a
   closing rule (the Context made, the rule last, its gap kept) and one whose only extra line is the rule (already
-  migrated: not written, not refused).
+  migrated: not written, not refused); `fmt --check` on a split file ending in its rule (no change), and `--check
+  --base` over an edit of it (no `not-canonical`).
 - `fixtures/sweep/`: the `decide` the sweep files for a gated entry ending `**Ask:** Should it? Yes or no.` and
   `---` (its text without `---`); and a gated entry ending `**Answers:** Go | Not yet`, `**Lifts:** Go` and `---`
   (its answers offered, no `answers-unusable`).
