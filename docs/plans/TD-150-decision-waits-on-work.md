@@ -22,9 +22,13 @@ its own (not `Part of` the design: a parent's Blocked by names no part, §2.4), 
 `**Blocked by:** TD-<round>, decision (<person>)` until the round ends and writes the next end-of-rounds item by
 hand. `One more round` lifts nothing, so the closed item keeps the sweep quiet for `reask_days` (30) only. A round
 that runs longer (rounds wait on reviewers, on the person's other answers, on a usage reset) has the sweep file
-the design's decide again mid-round, with `Answers: Go | Not yet` or the entry's own; a `Go` pressed on it lifts
-the design, and with the end-of-rounds item's `Parts:`, its held builds, before the round's reviews have read the
-fixes the round was bought for.
+the design's decide again mid-round, with `Answers: Go | Not yet` or the entry's own: a question that cannot be
+answered yet. A `Go` on it lifts only the decision; the design stays Blocked by the round and is not built
+(agent-cadence's cadence.md §4.8 says so for the interim), but the round's end must then add the gate back before
+its end-of-rounds item. The sharper harm is the held builds: the item the sweep files has no `Parts:`, so each
+build `Part of` the design, held by its own `decision (<p>)`, is asked on its own once the window lapses, and a
+`Go` on one of those frees that build, blocked by nothing else, before the round's reviews have read the fixes
+the round was bought for (F1).
 
 The merge gate has the same shape: `uncovered_decisions()` refuses (`decision-uncovered`) a PR in which an open
 entry gains `decision (<p>)` with no covering item on this repo's board, whatever else blocks it. A PR that files
