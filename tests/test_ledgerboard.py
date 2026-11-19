@@ -1247,6 +1247,44 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
                 self.assertEqual([k for k, _ in got], ["decision-no-lift"])
 
 
+class DeferredAgreement(unittest.TestCase):  # v3.5 (TD-150): the sweep and the verdict defer the same decisions
+    D = Path(__file__).resolve().parent.parent / "fixtures" / "sweep"
+    CASES = ("01 ", "02 ", "03a ", "03b ", "03c ", "04a ", "05 ", "08 ", "09a ", "09b ", "09c ", "09d ", "11 ", "12 ",
+             "13 ")
+    BOARD = "# Needs the user\n\nLedgerboard: 3\nPeople: pat\n"
+
+    def test_sweep_and_verdict_agree(self):
+        spec = json.loads((self.D / "cases.json").read_text(encoding="utf-8"))
+        top = spec["boards"][0]
+        chosen = [c for c in spec["in_flight"] if c["name"].startswith(self.CASES)]
+        self.assertEqual(len(chosen), len(self.CASES))
+        for c in chosen:
+            d = self.D / c["dir"]
+            led = (d / "ledger.md").read_text(encoding="utf-8")
+            arch = (d / "archive.md").read_text(encoding="utf-8") if (d / "archive.md").exists() else ""
+            files = {f"board/{p.relative_to(d / 'board')}": p.read_text(encoding="utf-8")
+                     for p in sorted((d / "board").rglob("*")) if p.is_file()}
+            board = L.load_board("board", L._tree_ls(files), files.get)
+            got = L.sweep([led, arch], [(top["url"], top["basename"], board)], {}, c["today_utc"], c["today_local"],
+                          repo=spec["repo"])
+            asked = {it["context"].split()[0] for x in got["to_file"].values() for it in x if it["kind"] == "decide"}
+            base = {"docs/ledger/README.md": "# Ledger\n\nLedgerboard: 2\n",
+                    "docs/user_attention/README.md": self.BOARD}
+            head = dict(base)
+            for tid, body in L._entry_texts(led).items():
+                head[f"docs/ledger/{tid}.md"] = body
+            for tid, body in L._entry_texts(arch).items():
+                head[f"docs/ledger/archive/{tid}.md"] = body
+            refusals, flags = L.uncovered_decisions(base, head, [], spec["repo"])
+            for tid, body in L._entry_texts(led).items():
+                if not L._decisions(body):
+                    continue
+                with self.subTest(case=c["name"], entry=tid):
+                    deferred = any(k == "decision-deferred" and t.startswith(f"{tid} ") for k, t in flags)
+                    refused = any(t.startswith(f"{tid} ") for _, t in refusals)
+                    self.assertEqual(tid not in asked, deferred and not refused)
+
+
 class LedgerLiftVerdict(unittest.TestCase):  # v3.3 (TD-115, TD-123): what the ledger_lift fixtures do not carry
     D = MergeGateVerdicts.D
     trees = MergeGateVerdicts.trees

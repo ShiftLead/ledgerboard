@@ -5,7 +5,7 @@ format: what `sweep()` files and what `uncovered_decisions()` refuses; cap 6 rou
 ended by the stop rule after round 5: build-changing findings per round 4, 3, 1, 1, 0; the closing fact-check 0 (two minors applied). The author recommends Go. The record: [docs/reviews/TD-150.md](../reviews/TD-150.md). In plain words:
 [docs/synopses/TD-150.md](../synopses/TD-150.md).
 
-**Entry:** [TD-150](../ledger/TD-150.md), asked for by agent-cadence's grinder for its TD-291 (a bought review
+**Entry:** [TD-150](../ledger/archive/TD-150.md), asked for by agent-cadence's grinder for its TD-291 (a bought review
 round holds its design as `**Blocked by:** TD-<round>, decision (<person>)` while it runs).
 
 ## The problem

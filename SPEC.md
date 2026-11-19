@@ -1092,7 +1092,7 @@ board whose `People:` lists the gate's person (any board, for an event). Its sta
 `Decided:`), `closed` or `closed-decided` (closed: on a v3 board, its file under `archive/`; on a v2 board, closed on
 the board or in its archive). Only `open` and `decided` cover.
 
-`sweep(entries, boards, results, today_utc, today_local, reask_days=30, event_age_days=30, repo)` returns `{to_file:
+`sweep(entries, boards, results, today_utc, today_local, reask_days=30, event_age_days=30, repo, *, resolve=None)` returns `{to_file:
 {board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}`, `to_close` listing ids
 (v3.0); an item
 read from a v2 line with no readable date has no id and is never in `to_close`: the sweep leaves it for a person, as
@@ -1101,9 +1101,10 @@ and the archive's texts; an entry is open unless its Status is an archived one, 
 `results` maps `(TD-n, event name)` to a check's outcome (`passed`, `not yet`, `impossible`, `error`), or to
 `(outcome, evidence)`. Log ages and `until` dates are read against `today_utc`, `Decided:` dates against
 `today_local`. Each item filed is `item_file()`'s arguments (the same names); the host adds today, its `Due:`, session and host. It refuses boards holding no board of `repo`,
-a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per gate of an open entry:
+a negative or non-whole window, and a `repo` outside the `<repo>` grammar. `resolve` is `pickable()`'s resolver for `<repo>#TD-n` items (v3.5), called only to tell whether a blocker of a
+decision the sweep would otherwise ask is in flight (below); one that raises propagates. Per gate of an open entry:
 - **`decision (<p>)`**, not covered and with no `kept waiting` Log line for it newer than `reask_days`, and no item
-  `covers()` finds answered without a lift within `reask_days`, and not held by an answer owing a lift (below): a `decide` whose text is the entry's Ask (else its
+  `covers()` finds answered without a lift within `reask_days`, not held by an answer owing a lift (below), and not deferred (v3.5, below): a `decide` whose text is the entry's Ask (else its
   title), its answers the entry's own (*An entry's own answers*: `entry_answers()`'s `answers`, `default` and `lifts`),
   else `Answers: Go | Not yet.` (v3.3: also when the entry's answers are refused, its detail context then saying
   so), on **the person's board**: this repo's own if its `People:` lists `<p>`, else the
@@ -1140,7 +1141,23 @@ a negative or non-whole window, and a `repo` outside the `<repo>` grammar. Per g
   override, which has no such form). With no delegated answer in the group the act is today's, byte for byte. Its
   board and ids are today's (from `last` and the group). The longer `text` is the package's; a consumer's rules
   for text a person reads apply where it shows it. Elsewhere the sweep reads `decided_by`, the person: a delegated
-  answer covers its gate and opens the `kept waiting` window as the person's would;
+  answer covers its gate and opens the `kept waiting` window as the person's would.
+  A decision is **deferred** (v3.5) while its entry names a **blocker in flight**: an id of its `Blocked by` that,
+  followed through Superseded entries as `pickable()` follows it (*Superseded and dropped*), ends at an open
+  entry — one of `entries` the sweep reads as open (an entry of `entries`, wherever held, is open unless its
+  Status's first word is Resolved, Superseded, Dropped, Done, Moved or OBE, so one with `Built`, `Open`, no Status
+  or a word outside the vocabulary is open), or a `<repo>#TD-n` `resolve` answers `open` — and not at
+  the entry itself, at one of its descendants (entries `Part of` it, or of one of them) or at one of its
+  ancestors, which written directly `pickable()` flags (`cycle`, `legacy-part`). One that ends Resolved, Dropped, at no entry, in a loop, at a
+  Superseded entry with no successor, or at a `<repo>#TD-n` no resolver answers is not in flight. A part's
+  decision is also deferred while its `Part of` parent, one level up, is open, carries the same gate (its person
+  compared case-insensitively) and names a blocker in flight, read on the parent (the parent's own id,
+  descendants and ancestors excluded): a held build waits with its design. While deferred, the sweep files no
+  `decide` for it, so the question is asked once the work it waits on has ended; the bullet's other conditions
+  then decide as before. Nothing else defers it: not the entry's own open parts (a design's held builds wait on its
+  decision), nor its other gates. A decide already open stays open (*The close rule*). The `has no board` act is
+  filed as before. An entry of the ledger with an archived Status is not open here, though `pickable()`, which
+  reads by place, still blocks on it;
 - **`until D`**, D reached: a lift, `kind: until`, evidence `date reached`. Nothing is filed;
 - **`event (<name>)`**, by its outcome, on this repo's own board: `passed`, a lift (`kind: event`, the result's
   evidence); `error`, an `act` `Event check broken on TD-n: …`; `impossible`, a `decide` `… can no longer happen.`
@@ -1353,7 +1370,15 @@ audit is its backstop, and a direct commit of this shape is the consumer's to re
 boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
 names it. A `decision (<p>)` an open entry gains in the diff is refused (`decision-uncovered`) when this repo's
 board lists `<p>` on `People:` and no item on it covers the gate, and flagged (`decision-elsewhere`) when the board
-does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads. A new `decide` item on this repo's board (its id on no base item: open, or closed in an archive file the tree holds) whose Context names a
+does not list `<p>`, since its coverage then rests on another repo's board, which not every machine reads.
+An uncovered decision that is deferred (*The gate sweep*; v3.5) is neither: it is flagged `decision-deferred`
+alone, exactly `<TD-n> gains <gate>, deferred behind <ids> — the sweep asks it once none is in flight`, `<ids>`
+joined with `, `, the entry's own as written, in the order its `Blocked by` writes them, each once at its first
+place, then its parent's likewise, each `<id> (blocks <parent>)` with `<parent>` as its heading writes it; an id
+in both lists is written in each, and two ids are the same when their verbatim text is. The verdict reads it on the head tree's ledger, where an entry of the archive is
+closed whatever its Status, with no resolver, and counts as in flight, besides an id ending at an open entry,
+any id whose chain ends at a `<repo>#TD-n`, which it cannot resolve; the sweep asks the decision once nothing it
+waits on is in flight. A new `decide` item on this repo's board (its id on no base item: open, or closed in an archive file the tree holds) whose Context names a
 decision and none of whose answers lifts (*Closing on the answer*) is refused (`decision-no-lift`). Refusals rest on
 this repo's own board alone, so they are the same on every machine.
 
@@ -2628,6 +2653,13 @@ waiting` line gain `delegate` and `scope`. Every file an earlier v3 wrote reads 
 delegated `Decided` as outside the form (the item reads as undecided), an earlier `log_problems()` faults the new Log
 form and an earlier `item_file_problem()` an item's `Scope`, so no delegate writes one, and no item carries a
 `Scope`, until every repo that reads the board has this release.
+
+**v3.5 defers a decision behind its work** (TD-150; *The gate sweep*, *The merge gate's verdicts*): the sweep
+files no `decide` for a `decision (<p>)` while a blocker of its entry, or of a part's parent carrying the same
+gate, is in flight, and takes `resolve` to tell for another repo's ids; `uncovered_decisions()` flags such a
+gained decision `decision-deferred`, a new flag kind, rather than refusing or flagging it as before. The sweep
+files less and the verdict refuses less; no parse, field, Log line, item key or canonical form changes, and a
+caller passing no `resolve` sees another repo's ids as before.
 
 ## Appendix: grammar
 
