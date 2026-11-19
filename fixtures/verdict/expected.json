@@ -798,6 +798,28 @@
    ],
    "refusals": []
   },
+  "deferred: an id in its own and its parent's lists": {
+   "flags": [
+    [
+     "decision-deferred",
+     "TD-184 gains decision (pat), deferred behind TD-186, TD-186 (blocks TD-185) — the sweep asks it once none is in flight"
+    ],
+    [
+     "decision-deferred",
+     "TD-185 gains decision (pat), deferred behind TD-186 — the sweep asks it once none is in flight"
+    ]
+   ],
+   "refusals": []
+  },
+  "deferred: an id written twice": {
+   "flags": [
+    [
+     "decision-deferred",
+     "TD-182 gains decision (pat), deferred behind TD-183 — the sweep asks it once none is in flight"
+    ]
+   ],
+   "refusals": []
+  },
   "deferred: beside a live id": {
    "flags": [
     [
@@ -815,6 +837,15 @@
     ]
    ],
    "refusals": []
+  },
+  "deferred: beside a local id Superseded with no successor": {
+   "flags": [],
+   "refusals": [
+    [
+     "decision-uncovered",
+     "TD-187 gains decision (pat) and no open decide item on this repo's board asks it — file the item in the same PR"
+    ]
+   ]
   },
   "deferred: beside an archived Resolved id": {
    "flags": [],

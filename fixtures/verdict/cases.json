@@ -1208,6 +1208,18 @@
   {
    "name": "deferred: a part whose parent carries the gate and a live blocker",
    "boards": []
+  },
+  {
+   "name": "deferred: an id written twice",
+   "boards": []
+  },
+  {
+   "name": "deferred: an id in its own and its parent's lists",
+   "boards": []
+  },
+  {
+   "name": "deferred: beside a local id Superseded with no successor",
+   "boards": []
   }
  ],
  "ledger_lift": [
