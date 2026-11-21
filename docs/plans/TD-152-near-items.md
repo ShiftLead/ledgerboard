@@ -1,8 +1,8 @@
 # TD-152: the gate sweep points at the item that already names the entry, and the tripwire names its items
 
-**Status:** Draft 3, 2026-11-21 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 4, 2026-11-21 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
-Build-changing findings per round so far: 7, 6 (applied); round 3 next. The record:
+Build-changing findings per round so far: 7, 6, 2 (applied); round 4 next. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -52,8 +52,8 @@ gate: a gateless or multi-entry Context counts here.
 
 **Near.** A near item is each open item (state `open` or `decided`) on any board read, of any kind but `fyi`, that
 names the entry, that `covers()` does not find for the gate, and that is neither of:
-- **about another gate**: its Context names exactly one gate (`CONTEXT_ANY_GATE_RE`, as `_context_gate()` reads
-  it), whatever the entries, and that gate's `_gate_key()` is not this gate's (a `decide` for the entry's event; an
+- **about another gate**: its Context names exactly one gate (`CONTEXT_ANY_GATE_RE`'s matches, counted once per
+  `_gate_key()`), whatever the entries, and that gate's `_gate_key()` is not this gate's (a `decide` for the entry's event; an
   `act` about two entries' `event (release)`);
 - **the sweep's own**: its Context names exactly one entry, that entry, and this gate (by `_gate_key()`), and
   either goes on after the gate with `lift` or `board <repo>` (`_sweep_context()`'s qualifier), or its
@@ -72,13 +72,17 @@ context ends with one more clause naming them. The context is first assembled as
 it); if the assembled string ends in `.`, that one `.` is dropped; then the clause is appended:
 `; <named> also <verb> <ref>, but only an answer here is counted when <gate> is lifted`.
 - `<named>` is `item <id>` for one, `items <id>, <id>…` for several, ordered by id, then by board name
-  (bytewise); each id is followed by ` on <board>` when its board is not the one the decide is filed on, the board
+  (both bytewise); each id is followed by ` on <board>` when its board is not the one the decide is filed on, the board
   named as the sweep names boards (`origin_key`, else the basename): `items A on b, C`.
 - `<verb>` is `names` for one item, `name` for several.
 - `<ref>` is the entry as the filed item's Context spells it (`TD-n` on this repo's own board, `<repo>#TD-n` on
   another); `<gate>` as the entry spells it.
 - An item with no id (a v2 line with no readable date) is not named; when no near item has one, the context is
   today's.
+- Today's sentence (*… waits on <gate>, and no board item asked for it*) is kept as it is when the clause follows
+  it: the clause qualifies it. The ids and the board name are the package's longer text; a consumer's rules for
+  text a person reads apply where it shows it, as for the `was answered with a lift` act's text. The person who
+  acts is the one answering this item, which the clause's *here* names.
 
 **`near`.** `sweep()` returns a new key, always present: `near`, a list with one record per decide it files whose
 clause names items, `{id, gate, board, items}`: `id` the entry's `TD-n`, `gate` as the entry spells it, `board` the
@@ -108,7 +112,7 @@ without a search. Only this repo's board is read, as today:
 
 `<ids>` are those items' ids, each once, in id order (bytewise), joined by `, `. An item with no id is left out,
 and when every covering item lacks one the text is today's. The flags' kinds, and when each is raised, are
-unchanged; `lift_pr_verdict()`'s `flags` are `tripwire()`'s, so they carry the same text.
+unchanged; `lift_pr_verdict()`'s and `ledger_lift_verdict()`'s `flags` are `tripwire()`'s, so they carry the same text.
 
 D2 is also the remedy for the reported path, which D1 does not reach: the person answering the old item first.
 The session that then tries the lift is told which item does count.
@@ -162,12 +166,11 @@ one.
 
 ## SPEC text
 
-In *The gate sweep*, the `sweep(…)` paragraph's return, after `lifts: [{id, gate, kind, evidence}]}`:
+In *The gate sweep*, the `sweep(…)` paragraph's return clause, today *returns `{to_file: {board: [item]},
+to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}`, `to_close` listing ids (v3.0)*, becomes:
 
-> , and from v3.6 `near: [{id, gate, board, items}]` (TD-152, below)
-
-so that it reads `returns {to_file: {board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind,
-evidence}], near: [{id, gate, board, items}]}` (`near` from v3.6).
+> returns `{to_file: {board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}], near:
+> [{id, gate, board, items}]}`, `to_close` listing ids (v3.0) and `near` the near items (v3.6, below)
 
 In *The gate sweep*, after the `covers(…)` paragraph's last sentence (*Only `open` and `decided` cover.*):
 
@@ -184,14 +187,16 @@ In the `decision (<p>)` bullet, after *else it is the sentence earlier releases 
 > `Part of` parent while one of its `Parts:` ids, read the same way, is the entry. A near item is an open item
 > (state `open` or `decided`) on any board read, of any kind but `fyi`, that names the entry and that `covers()`
 > does not find for the gate; except an item whose Context names exactly one gate, not this one, and an item of
-> the sweep's own for this entry and gate (its Context naming that one entry and this gate and going on with
-> `lift` or `board <repo>`, or its words holding the first of the sweep's fixed words of *One filing rule* or
-> `was answered with a lift`, in the kind the sweep files with them). Gates compare by their keys; refs as
-> `ref_key()` compares them. Such an item asks about the entry in a form whose answer the merge gate does not count
+> the sweep's own for this entry and gate: its Context names exactly that one entry and this gate, and either goes
+> on after the gate with `lift` or `board <repo>`, or its words hold any of the sweep's fixed words (those of *One
+> filing rule*, then `was answered with a lift`, taken in that order) and the item is of the kind the sweep files
+> with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key; refs are
+> read as the sweep reads an item's Context entry (a bare `TD-n` on this repo's own board, `<repo>#TD-n` naming
+> this repo on any). Such an item asks about the entry in a form whose answer the merge gate does not count
 > (above). With any that has an id, the decide is filed all the same, and its detail block's context, assembled as
 > before (with any clause the sweep already adds), a single trailing `.` of it dropped, ends `; <named> also
 > <verb> <ref>, but only an answer here is counted when <gate> is lifted`: `<named>` is `item <id>`, or `items
-> <id>, <id>…` ordered by id, then board name (bytewise), each followed by ` on <board>` when on a board other than
+> <id>, <id>…` ordered by id, then board name (both bytewise), each followed by ` on <board>` when on a board other than
 > the one filed on (named as the sweep names boards); `<verb>` is `names` for one item, `name` for several;
 > `<ref>` is the entry as the filed item's Context spells it, `<gate>` as the entry spells it. An item with no id is
 > not named. `near` holds one record per decide so filed, `{id, gate, board, items}`: the entry's `TD-n`, the gate
@@ -263,9 +268,12 @@ has a `People:` line naming someone else (a board with no `People:` is D3's othe
 14. A part `TD-p` of `TD-n`, `TD-p` carrying `decision (pat)` and `TD-n` none, both boards listing `pat` but where
     said: an open `decide` keyed `TD-n event (x)` with `Parts: TD-p` is not named (about another gate); an open
     `decide` keyed `TD-n decision (pat)` with `Parts: TD-p` on `other/`, which here does not list `pat`, Context and
-    `Parts:` written `acme/widgets#…`, is named for `TD-p` (if the writer refuses a qualified `Parts:`, its file is
-    written by hand, as fixtures are); an open `decide` whose Context is `TD-n` alone, no gate, with `Parts: TD-p`
+    `Parts:` written `acme/widgets#…`, is named for `TD-p`; an open `decide` whose Context is `TD-n` alone, no gate, with `Parts: TD-p`
     on the own board: named for `TD-p` (three cases; `Parts:` is a decide's alone).
+
+Cases 3 and 14 hold items `item_file()` refuses to write (a gate with several entries; `Parts:` on a Context that
+is not one entry and one decision; a qualified `Parts:`), which a person or an older writer can leave on a board
+and `load_board()` reads: their files are written by hand.
 15. An entry carrying `decision (pat)` and `decision (sam)`, both listed, one `act` naming the entry: two
     decides, each with the clause; `near` two records, in gate order.
 
@@ -273,8 +281,9 @@ In every case the rerun files nothing further and `near` is empty on it.
 
 **Verdict cases.** `fixtures/verdict/expected.json` holds twelve of the two flags' texts (ten
 `tripwire-no-decided`, two `tripwire-no-board-item`); each gains its ending from its own case's covering items,
-regenerated by the build and read one by one in its review. Two new cases on the shared `base/`, invented entries
-from TD-161 up: a `; no board item` lift with one covering item at the base and a second added at the head (both
+(three under `verdict`, seven under `ledger_lift`, the rest under `tripwire`) regenerated by the build and read one
+by one in its review. Two new cases in `cases.json`'s `tripwire` list, each an overlay on the shared `base/` with
+its own invented entries, TD-191 and TD-192 (ids no case uses yet): a `; no board item` lift with one covering item at the base and a second added at the head (both
 ids, in id order), and a lift with no suffix and no item covering the gate at the base or the head (the `no item
 on this repo's board covers it` ending).
 
