@@ -1,8 +1,8 @@
 # TD-152: the gate sweep points at the item that already names the entry, and the tripwire names its items
 
-**Status:** Draft 4, 2026-11-21 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 5, 2026-11-21 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
-Build-changing findings per round so far: 7, 6, 2 (applied); round 4 next. The record:
+The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -13,7 +13,7 @@ Build-changing findings per round so far: 7, 6, 2 (applied); round 4 next. The r
 `People:` lists the gate's person, whose Context names the entry (or its `Part of` parent, with the entry among
 `Parts:`) and the gate, nothing after the gate (SPEC *The gate sweep*; `ledgerboard/__init__.py`, `_covers()`,
 `_names_entry()`, `_sweep_context()`, `_context_gate()`). A Context naming more than one entry, no gate, or more
-than one gate keys to nothing (`_context_gate()` returns `None` for each).
+than one gate keys to nothing (`_context_gate()` yields no entry, or no gate).
 
 So an item that does ask the person about the entry, in another form, is invisible to the sweep: an `act`; a
 `decide` naming several entries, or the entry with no gate; a `decide` keyed to the gate on a board that does not
@@ -55,7 +55,8 @@ names the entry, that `covers()` does not find for the gate, and that is neither
 - **about another gate**: its Context names exactly one gate (`CONTEXT_ANY_GATE_RE`'s matches, counted once per
   `_gate_key()`), whatever the entries, and that gate's `_gate_key()` is not this gate's (a `decide` for the entry's event; an
   `act` about two entries' `event (release)`);
-- **the sweep's own**: its Context names exactly one entry, that entry, and this gate (by `_gate_key()`), and
+- **the sweep's own**: its Context names exactly one entry, that entry, and exactly one gate, this one (gates
+  counted once per `_gate_key()` here too, not as `_context_gate()` dedupes them), and
   either goes on after the gate with `lift` or `board <repo>` (`_sweep_context()`'s qualifier), or its
   `_sweep_head()` (the first of `SWEEP_HEADS`' fixed words its words hold, as *One filing rule* reads them) is set
   and `SWEEP_KINDS` of that head is its kind. The `has no board` act, keyed `TD-n decision (<p>)` with nothing
@@ -180,7 +181,8 @@ In *The gate sweep*, after the `covers(…)` paragraph's last sentence (*Only `o
 > is not counted for any of them. A lift resting on such an item is an override (`lift_gate(…, override=)`),
 > which review reads.
 
-In the `decision (<p>)` bullet, after *else it is the sentence earlier releases wrote.*:
+In the `decision (<p>)` bullet, as a paragraph of its own after the whole bullet (after *… which reads by place,
+still blocks on it;*, before the `until D` bullet), indented as the bullet's continuation:
 
 > **Near items** (v3.6). Before filing the decide, the sweep reads the entry's near items for the gate. An item
 > names the entry when one of its Context's refs, read as that board reads refs, is the entry, or is the entry's
@@ -190,7 +192,7 @@ In the `decision (<p>)` bullet, after *else it is the sentence earlier releases 
 > the sweep's own for this entry and gate: its Context names exactly that one entry and this gate, and either goes
 > on after the gate with `lift` or `board <repo>`, or its words hold any of the sweep's fixed words (those of *One
 > filing rule*, then `was answered with a lift`, taken in that order) and the item is of the kind the sweep files
-> with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key; refs are
+> with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key in both exceptions; refs are
 > read as the sweep reads an item's Context entry (a bare `TD-n` on this repo's own board, `<repo>#TD-n` naming
 > this repo on any). Such an item asks about the entry in a form whose answer the merge gate does not count
 > (above). With any that has an id, the decide is filed all the same, and its detail block's context, assembled as
@@ -230,10 +232,11 @@ each of `runs` and for `rerun`, so each gains `"near": []`; the `in_flight`, `an
 named keys and are unchanged.
 
 **Sweep cases** in `fixtures/sweep/near/<case>/`, each its own `ledger.md` and v3 board directory `board/` (this
-repo's own board), and, where a case says, a second v3 board directory `other/` (invented entries, repo
-`acme/widgets`). They are listed in `sweep/cases.json` under `near`, each `{name, dir, today_utc, today_local}` and
+repo's own board), and, where a case says, a second v3 board directory `other/`, a board of another repo whose items name this repo's entries as
+`acme/widgets#TD-n` (invented entries; `acme/widgets` is the sweep's `repo`). They are listed in `sweep/cases.json` under `near`, each `{name, dir, today_utc, today_local}` and
 optionally `other: {url, basename}`, and expected in `sweep/expected.json`'s `near`, an object keyed by case name.
-A new harness function, `near_cases()` beside `in_flight_cases()`, sweeps each with the top-level `repo`, no
+A new harness function, `near_cases()` beside `in_flight_cases()` and called from `sweep_cases()` as it is (its
+result under `near` when the spec has `near`), sweeps each with the top-level `repo`, no
 `results` and no `resolve`, over `[(top url, top basename, board/)]`, then `(other url, other basename, other/)`
 when given, `top` the first top-level board. `rerun` is the same sweep once the first run's closes are moved and
 its filings written (`item_file()`, as `in_flight_cases()` writes them) on each board by its name. Each case's
@@ -271,13 +274,14 @@ has a `People:` line naming someone else (a board with no `People:` is D3's othe
     `Parts:` written `acme/widgets#…`, is named for `TD-p`; an open `decide` whose Context is `TD-n` alone, no gate, with `Parts: TD-p`
     on the own board: named for `TD-p` (three cases; `Parts:` is a decide's alone).
 
-Cases 3 and 14 hold items `item_file()` refuses to write (a gate with several entries; `Parts:` on a Context that
-is not one entry and one decision; a qualified `Parts:`), which a person or an older writer can leave on a board
-and `load_board()` reads: their files are written by hand.
 15. An entry carrying `decision (pat)` and `decision (sam)`, both listed, one `act` naming the entry: two
     decides, each with the clause; `near` two records, in gate order.
 
 In every case the rerun files nothing further and `near` is empty on it.
+
+Cases 3 and 14 hold items `item_file()` refuses to write (a gate with several entries; `Parts:` on a Context that
+is not one entry and one decision; a qualified `Parts:`), which a person or an older writer can leave on a board
+and `load_board()` reads: their files are written by hand.
 
 **Verdict cases.** `fixtures/verdict/expected.json` holds twelve of the two flags' texts (ten
 `tripwire-no-decided`, two `tripwire-no-board-item`); each gains its ending from its own case's covering items,
@@ -303,7 +307,7 @@ shiftlead`), its own to take or leave.
 
 - **B1** D2: `tripwire()`'s two texts, the SPEC sentence in *The merge gate's verdicts*, the verdict fixtures and
   cases above.
-- **B2** D1 and D3: `sweep()`'s near items, its `near` key and the clause, the SPEC text in *The gate sweep*, the
+- **B2** D1 and D3: `sweep()`'s near items, its `near` key (and its docstring's list of keys) and the clause, the SPEC text in *The gate sweep*, the
   `near` sweep cases and their harness, the suite tests; with *Versions*' v3.6 paragraph (B1's PR adds it if B1
   lands first, naming its half, and B2 completes it).
 
