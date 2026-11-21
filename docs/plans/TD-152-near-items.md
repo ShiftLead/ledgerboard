@@ -2,7 +2,9 @@
 
 **Status:** Draft 5, 2026-11-21 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
-The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0. The record:
+The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0; the closing
+fact-check 0 (one minor applied). Round 4's six minors and the closing fact-check's one are read by no design
+review, so the author recommends One more round. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -189,7 +191,8 @@ still blocks on it;*, before the `until D` bullet), indented as the bullet's con
 > `Part of` parent while one of its `Parts:` ids, read the same way, is the entry. A near item is an open item
 > (state `open` or `decided`) on any board read, of any kind but `fyi`, that names the entry and that `covers()`
 > does not find for the gate; except an item whose Context names exactly one gate, not this one, and an item of
-> the sweep's own for this entry and gate: its Context names exactly that one entry and this gate, and either goes
+> the sweep's own for this entry and gate: its Context names exactly that one entry and exactly one gate, this one,
+> and either goes
 > on after the gate with `lift` or `board <repo>`, or its words hold any of the sweep's fixed words (those of *One
 > filing rule*, then `was answered with a lift`, taken in that order) and the item is of the kind the sweep files
 > with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key in both exceptions; refs are
