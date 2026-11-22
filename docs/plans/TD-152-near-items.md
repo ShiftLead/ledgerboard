@@ -7,8 +7,10 @@ fact-check 0 (one minor applied). Paul answered One more round (2026-11-21): rou
 build-changing and 5 minors, all applied; its closing fact-check 1 build-changing (F42's anchor split a
 paragraph) and 4 minors, all applied, and its repeat 2 more minors, applied, so the author recommended One more
 round. Paul answered One more round (2026-11-22): round 6 (TD-155), the cap, raised 1 build-changing (the near
-cases' names: three cases hold several scenarios, so they take letters) and 4 minors, all applied; the rounds end
-here whatever the closing fact-check finds. The record:
+cases' names: four cases hold several scenarios, so they take letters) and 4 minors, all applied; its closing fact-check
+2 minors, applied, and its repeat 0. The rounds end here, at the cap; since F53's fix changes
+the cases a builder writes and no design review has read it, the author recommends One more round, a seventh,
+past the cap. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -246,10 +248,10 @@ named keys and are unchanged.
 **Sweep cases** in `fixtures/sweep/near/<case>/`, each its own `ledger.md` and v3 board directory `board/` (this
 repo's own board), and, where a case says, a second v3 board directory `other/`, a board of another repo whose items name this repo's entries as
 `acme/widgets#TD-n` (invented entries; `acme/widgets` is the sweep's `repo`). They are listed in `sweep/cases.json` under `near`, each `{name, dir, today_utc, today_local}`, named as the
-`in_flight` cases are, `NN <words>` (two digits, the case number below), and a case below that holds several scenarios
+`in_flight` cases are, `NN <words>` (two digits, the case number below; `01 an act naming the entry and two others`, `dir`
+`near/<name>`), and a case below that holds several scenarios
 (7, 13, 14 and 16) takes a letter for each, in the order written (`07a`–`07e`, `13a`–`13b`, `14a`–`14c`,
-`16a`–`16b`), each scenario its own directory, `cases.json` entry and `expected.json` key, 24 in all
-(`01 an act naming the entry and two others`, `dir` `near/<name>`), and
+`16a`–`16b`), each scenario its own directory, `cases.json` entry and `expected.json` key, 24 in all, and
 optionally `other: {url, basename}`, and expected in `sweep/expected.json`'s `near`, an object keyed by case name.
 A new harness function, `near_cases()` beside `in_flight_cases()` and called from `sweep_cases()` as it is (its
 result under `near` when the spec has `near`), sweeps each with the top-level `repo`, no
