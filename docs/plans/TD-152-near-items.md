@@ -1,6 +1,6 @@
 # TD-152: the gate sweep points at the item that already names the entry, and the tripwire names its items
 
-**Status:** Draft 8, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 9, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
 The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0; the closing
 fact-check 0 (one minor applied). Paul answered One more round (2026-11-21): round 5 (TD-154) raised 0
@@ -8,9 +8,9 @@ build-changing and 5 minors, all applied; its closing fact-check 1 build-changin
 paragraph) and 4 minors, all applied, and its repeat 2 more minors, applied, so the author recommended One more
 round. Paul answered One more round (2026-11-22): round 6 (TD-155), the cap, raised 1 build-changing (the near
 cases' names: four cases hold several scenarios, so they take letters) and 4 minors, all applied; its closing fact-check
-2 minors, and its repeats 3, 4 and 1 more, all applied. The rounds end here, at the cap; since F53's fix changes
-the cases a builder writes and no design review has read it, the author recommends One more round, a seventh,
-past the cap. The record:
+2 minors, its repeats 3, 4 and 1 more, and a last repeat none, all applied. Paul answered One more round
+(2026-11-22): round 7 (TD-156), past the cap, read the lettered cases and raised 0 build-changing and 4 minors, all
+applied (two more lettered cases, 26 in all). The rounds end here, the round Paul bought. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -250,8 +250,8 @@ repo's own board), and, where a case says, a second v3 board directory `other/`,
 `acme/widgets#TD-n` (invented entries; `acme/widgets` is the sweep's `repo`). They are listed in `sweep/cases.json` under `near`, each `{name, dir, today_utc, today_local}`, named as the
 `in_flight` cases are, `NN <words>` (two digits, the case number below; `01 an act naming the entry and two others`, `dir`
 `near/<name>`), and a case below that holds several scenarios
-(7, 13, 14 and 16) takes a letter for each, in the order written (`07a`–`07e`, `13a`–`13b`, `14a`–`14c`,
-`16a`–`16b`), each scenario its own directory, `cases.json` entry and `expected.json` key, 24 in all, and
+(7, 13, 14 and 16) takes a letter for each, in the order written (`07a`–`07g`, `13a`–`13b`, `14a`–`14c`,
+`16a`–`16b`), each scenario its own directory, `cases.json` entry and `expected.json` key, 26 in all, and
 optionally `other: {url, basename}`, and expected in `sweep/expected.json`'s `near`, an object keyed by case name.
 A new harness function, `near_cases()` beside `in_flight_cases()` and called from `sweep_cases()` as it is (its
 result under `near` when the spec has `near`), sweeps each with the top-level `repo`, no
@@ -275,19 +275,24 @@ has a `People:` line naming someone else (a board with no `People:` is D3's othe
 6. An open `act` keyed `TD-n decision (pat)` whose words hold none of the sweep's fixed words: named.
 7. Not named, `near` empty and the rest as today: an open `fyi` naming `TD-n`; an open `decide` keyed `TD-n event
    (x)`; an open `act` naming `TD-n` and `TD-q` with Context gate `event (release)`; a closed `act` naming `TD-n`;
-   an open `has no board` act keyed `TD-n decision (pat)` (five cases; in the last the act is closed on the
-   rerun, the gate now covered).
+   an open `has no board` act keyed `TD-n decision (pat)`, the act closed on the rerun, the gate now covered; an
+   open `act` whose Context is `TD-n decision (pat) lift`; an open `act` whose Context is `TD-n decision (pat)
+   board acme/other` (seven cases; the last two hold none of the sweep's fixed words, so only the qualifier
+   excludes them, and each stays open on both runs). In `07b` the entry carries no `event (x)`, so today's close
+   rule lists that decide in `to_close`.
 8. Two near items added in the reverse of id order: `items <a>, <b>` in id order, verb `name`.
 9. An `act` on `other/` (not listing `pat`) naming `acme/widgets#TD-n`: named, with ` on <other>`.
 10. A covering decide open, a near `act` beside it: nothing filed, `near` empty.
 11. The entry deferred (a live blocker, v3.5) with a near `act`: nothing filed, `near` empty.
 12. The entry with a `**Context:**` section ending in `.`, a near `act`: the clause follows that section's
     collapsed text, the `.` dropped.
-13. The entry with refused answers (the `unusable` clause) and a near `act`: the clause comes after it; and the
+13. The entry with refused answers (the `unusable` clause; its body as `sweep/cases.json`'s `entry_answers` case
+    `lifts names a label not offered`, a `**Lifts:**` naming a label its `**Answers:**` does not offer) and a near `act`: the clause comes after it; and the
     same with a `**Context:**` section ending in `.`: `….; its own answers could not be offered (…); item …`, the
     section's `.` kept, since the assembled string ends in `)` (two cases).
 14. A part `TD-p` of `TD-n`, `TD-p` carrying `decision (pat)` and `TD-n` none, both boards listing `pat` but where
-    said: an open `decide` keyed `TD-n event (x)` with `Parts: TD-p` is not named (about another gate); an open
+    said: an open `decide` keyed `TD-n event (x)` with `Parts: TD-p` is not named (about another gate), and since
+    neither entry carries `event (x)`, today's close rule lists it in `to_close`; an open
     `decide` keyed `TD-n decision (pat)` with `Parts: TD-p` on `other/`, which here does not list `pat`, Context and
     `Parts:` written `acme/widgets#…`, is named for `TD-p`; an open `decide` whose Context is `TD-n` alone, no gate, with `Parts: TD-p`
     on the own board: named for `TD-p` (three cases; `Parts:` is a decide's alone).
