@@ -1,6 +1,6 @@
 # TD-152: the gate sweep points at the item that already names the entry, and the tripwire names its items
 
-**Status:** Draft 6, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 7, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
 The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0; the closing
 fact-check 0 (one minor applied). Paul answered One more round (2026-11-21): round 5 (TD-154) raised 0
@@ -196,8 +196,8 @@ still blocks on it;*, before the `until D` bullet), indented as the bullet's con
 > does not find for the gate; except an item whose Context names exactly one gate, not this one, and an item of
 > the sweep's own for this entry and gate: its Context names exactly that one entry and exactly one gate, this one,
 > and either goes
-> on after the gate with `lift` or `board <repo>` (the words after the gate, trailing `.`s dropped and compared
-> case-blind: `lift` exactly, or beginning `board `), or its words hold any of the sweep's fixed words (those of *One
+> on after the gate with `lift` or `board <repo>` (the words after the gate, trailing `.`s dropped, whitespace collapsed and
+> compared case-blind: `lift` exactly, or beginning `board `), or its words hold any of the sweep's fixed words (those of *One
 > filing rule*, then `was answered with a lift`, taken in that order) and the item is of the kind the sweep files
 > with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key in both exceptions, and in the sweep's own its refs once per spelling (a repo's case aside: `TD-n` and `<repo>#TD-n` are two); refs are
 > read as the sweep reads an item's Context entry (a bare `TD-n` on this repo's own board, `<repo>#TD-n` naming
