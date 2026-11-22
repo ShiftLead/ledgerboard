@@ -1,11 +1,14 @@
 # TD-152: the gate sweep points at the item that already names the entry, and the tripwire names its items
 
-**Status:** Draft 7, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
+**Status:** Draft 8, 2026-11-22 (session lb-designer). Class: **wide** (a change to the published, vendored
 format: what `sweep()` files and returns, and the text of two `tripwire()` flags; cap 6 rounds, cadence.md §4.8).
 The rounds ended by the stop rule after round 4: build-changing findings per round 7, 6, 2, 0; the closing
 fact-check 0 (one minor applied). Paul answered One more round (2026-11-21): round 5 (TD-154) raised 0
 build-changing and 5 minors, all applied; its closing fact-check 1 build-changing (F42's anchor split a
-paragraph) and 4 minors, all applied, so the author recommends One more round. The record:
+paragraph) and 4 minors, all applied, and its repeat 2 more minors, applied, so the author recommended One more
+round. Paul answered One more round (2026-11-22): round 6 (TD-155), the cap, raised 1 build-changing (the near
+cases' names: three cases hold several scenarios, so they take letters) and 4 minors, all applied; the rounds end
+here whatever the closing fact-check finds. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -113,8 +116,8 @@ without a search. Only this repo's board is read, as today:
 - `tripwire-no-board-item`'s text ends ` (<ids>)`, the ids of the items `covers()` finds covering the gate
   (states `open`, `decided`) on this repo's board at the base or the head;
 - `tripwire-no-decided`'s text ends ` (asked by <ids>)`, the same items; or, when no item covers the gate at the
-  base nor at the head, ` (no item on this repo's board covers it: log the lift ; no board item, or ; board <repo>
-  for an answer on another repo's board)`.
+  base nor at the head, ` (no item on this repo's board covers it: log the lift with the suffix "; no board item",
+  or "; board <repo>" for an answer on another repo's board)`.
 
 `<ids>` are those items' ids, each once, in id order (bytewise), joined by `, `. An item with no id is left out,
 and when every covering item lacks one the text is today's. The flags' kinds, and when each is raised, are
@@ -221,11 +224,11 @@ flags they exempt):
 > From v3.6 (TD-152) two flags name their items: `tripwire-no-board-item`'s text ends ` (<ids>)`, and
 > `tripwire-no-decided`'s ` (asked by <ids>)`, `<ids>` the ids of the items covering the gate (states `open`,
 > `decided`) on this repo's board at the base or the head, each once, in id order (bytewise), joined by `, `;
-> `tripwire-no-decided`'s ends instead ` (no item on this repo's board covers it: log the lift ; no board item, or
-> ; board <repo> for an answer on another repo's board)` when none covers it at either. An item with no id is left
+> `tripwire-no-decided`'s ends instead ` (no item on this repo's board covers it: log the lift with the suffix
+> "; no board item", or "; board <repo>" for an answer on another repo's board)` when none covers it at either. An item with no id is left
 > out, and when every covering item lacks one the text is as before v3.6.
 
-In *Versions*, after v3.5's paragraphs:
+In *Versions*, after v3.5's paragraph:
 
 > **v3.6 names what a duplicate question needs** (TD-152; *The gate sweep*, *The merge gate's verdicts*): the
 > sweep's decide for an uncovered decision names, in its detail context, the open items that already name the
@@ -243,8 +246,10 @@ named keys and are unchanged.
 **Sweep cases** in `fixtures/sweep/near/<case>/`, each its own `ledger.md` and v3 board directory `board/` (this
 repo's own board), and, where a case says, a second v3 board directory `other/`, a board of another repo whose items name this repo's entries as
 `acme/widgets#TD-n` (invented entries; `acme/widgets` is the sweep's `repo`). They are listed in `sweep/cases.json` under `near`, each `{name, dir, today_utc, today_local}`, named as the
-`in_flight` cases are, `NN <words>` (two digits, the case number below; no case here needs `in_flight`'s letter) (`01 an act naming the entry and two others`, `dir`
-`near/<name>`), and
+`in_flight` cases are, `NN <words>` (two digits, the case number below), and a case below that holds several scenarios
+(7, 13, 14 and 16) takes a letter for each, in the order written (`07a`–`07e`, `13a`–`13b`, `14a`–`14c`,
+`16a`–`16b`), each scenario its own directory, `cases.json` entry and `expected.json` key, 24 in all
+(`01 an act naming the entry and two others`, `dir` `near/<name>`), and
 optionally `other: {url, basename}`, and expected in `sweep/expected.json`'s `near`, an object keyed by case name.
 A new harness function, `near_cases()` beside `in_flight_cases()` and called from `sweep_cases()` as it is (its
 result under `near` when the spec has `near`), sweeps each with the top-level `repo`, no
@@ -287,6 +292,8 @@ has a `People:` line naming someone else (a board with no `People:` is D3's othe
 
 15. An entry carrying `decision (pat)` and `decision (sam)`, both listed, one `act` naming the entry: two
     decides, each with the clause; `near` two records, in gate order.
+16. An open `look` naming `TD-n`; an open `watch` naming `TD-n`: each named, since a near item is of any kind but
+    `fyi` (two cases).
 
 In every case the rerun files nothing further and `near` is empty on it.
 
