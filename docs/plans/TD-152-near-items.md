@@ -8,7 +8,7 @@ build-changing and 5 minors, all applied; its closing fact-check 1 build-changin
 paragraph) and 4 minors, all applied, and its repeat 2 more minors, applied, so the author recommended One more
 round. Paul answered One more round (2026-11-22): round 6 (TD-155), the cap, raised 1 build-changing (the near
 cases' names: four cases hold several scenarios, so they take letters) and 4 minors, all applied; its closing fact-check
-2 minors, and its repeat 3 more, all applied. The rounds end here, at the cap; since F53's fix changes
+2 minors, and its repeats 3 and 4 more, all applied. The rounds end here, at the cap; since F53's fix changes
 the cases a builder writes and no design review has read it, the author recommends One more round, a seventh,
 past the cap. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
