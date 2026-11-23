@@ -2,8 +2,9 @@
 
 **Status:** Draft 4, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
 what `decide_lift()`, and so the board writer's decide, accepts; cap 6 rounds, cadence.md §4.8). The rounds ended by
-the stop rule after round 3: build-changing findings per round 4, 1, 0. Round 2's sixth minor was rejected, and every
-other finding is applied. The record:
+the stop rule after round 3: build-changing findings per round 4, 1, 0. Its closing fact-check raised 3 minors, all
+applied, and its repeat none. Round 2's sixth minor was rejected, and every other finding is applied. Waits on Paul's
+end-of-rounds answer. The record:
 [docs/reviews/TD-159.md](../reviews/TD-159.md).
 
 **Entry:** [TD-159](../ledger/TD-159.md), filed from D3 of [TD-152's design](TD-152-near-items.md).
