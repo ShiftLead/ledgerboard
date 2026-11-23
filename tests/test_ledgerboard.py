@@ -1171,6 +1171,25 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         alone = {**{k: v for k, v in base.items() if k not in self.board_of(base)}, **self.board_of(head)}
         self.assertEqual(L.tripwire(alone, head, "ledger: set TD-150 (session w-1)", "acme/widgets"), [])
 
+    def test_the_tripwire_names_its_items_on_a_v2_board_as_on_a_v3_one(self):  # v3.6 (TD-152 D2)
+        subj = "ledger: set TD-150 (session w-1)"
+        base, head = self.trees("no board item, but the base had one (read the head alone and it passes)")
+        v3 = L.tripwire(base, head, subj, "acme/widgets")
+        self.assertEqual([k for k, _ in v3], ["tripwire-no-board-item"])
+        self.assertTrue(v3[0][1].endswith("answer that item (2026-01-06-54236abb)"), v3[0][1])
+        line = ("- [ ] decide 2026-01-06 (session `w-1`) — Make the search fuzzy? Context: TD-150 decision (pat). "
+                "Due: 2026-01-20. Answers: Go | Not yet.\n")
+        board = "# Needs the user\n\nKinds: decide | act | look | watch | fyi\nPeople: pat, sam\n\n" + line
+
+        def as_v2(tree):
+            rest = {k: v for k, v in tree.items() if not k.startswith(L.BOARD_DIR + "/")}
+            return {**rest, L.BOARD_V2_PATH: board}
+        v2 = L.tripwire(as_v2(base), as_v2(head), subj, "acme/widgets")
+        self.assertEqual([k for k, _ in v2], ["tripwire-no-board-item"])
+        item_id = L._tree_load(as_v2(base)).items[0].id  # a dated v2 line's id is derived from the line
+        self.assertIsNotNone(item_id)
+        self.assertTrue(v2[0][1].endswith(f"answer that item ({item_id})"), v2[0][1])
+
     def test_a_shared_lift_whose_item_gains_a_decided_is_flagged(self):  # v2.7 (TD-067 D3)
         subj = "ledger: set TD-111 (session w-1)"
         base, head = self.trees("set by= on one part of a shared item, decided")

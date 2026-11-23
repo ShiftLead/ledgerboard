@@ -8100,6 +8100,13 @@ def _answer_of(it: BoardItem) -> tuple:
     return it.decided, it.decided_by, it.decided_delegate, it.decided_scope
 
 
+def _covering_ids(*covering: Sequence[tuple[BoardItem, str]]) -> str:
+    """The ids of the covering items two tripwire flags name (v3.6, SPEC *The merge gate's verdicts*): each once,
+    in id order (bytewise), joined by ``, ``; an item with no id is left out, so ``""`` when every one lacks one."""
+    ids = {it.id for cov in covering for it, _ in cov if it.id is not None}
+    return ", ".join(sorted(ids, key=lambda i: i.encode("utf-8")))
+
+
 def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject: str, repo: str) -> list[tuple[str, str]]:
     """The tripwire on a `decision (<p>)` removed (v2.4, SPEC *The merge gate's verdicts*): ``[(kind, text)]``,
     each a removal the diff does not account for. It runs on every PR, the ``set by=`` route included. Trees map
@@ -8123,6 +8130,8 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
 
     A ``by`` other than the gate's person is flagged, unless the lift has no suffix, the base board says
     `Answered by: any` and lists ``by`` on `People:`, and the covering item's head `Decided:` names ``by``.
+    ``tripwire-no-board-item`` and ``tripwire-no-decided`` end naming the covering items' ids (v3.6, _covering_ids()),
+    and the second says so when none covers the gate at the base nor at the head.
     Exempt: an entry the diff archives, and the migrate commit (its subject, ``ledger: migrate v<release> (<n>
     entries)``). The tripwire is forgeable, and says so: a well-formed hand edit passes it, and review is the
     backstop."""
@@ -8178,8 +8187,10 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                                   "— its answer is on this board, written as Decided:"))
             elif suffix == "; no board item":
                 if cov_b or cov_h:
+                    ids = _covering_ids(cov_b, cov_h)
                     flags.append(("tripwire-no-board-item", f"{tid} lifts {gate} with no board item, but an open "
-                                  "item on this repo's board asks it — answer that item"))
+                                  "item on this repo's board asks it — answer that item"
+                                  + (f" ({ids})" if ids else "")))
             elif suffix == "; shared board item left open":
                 still = {_ident(it) for it, _ in cov_b} & {_ident(it) for it, _ in cov_h}
                 shared = False
@@ -8201,8 +8212,12 @@ def tripwire(base_tree: Mapping[str, str], head_tree: Mapping[str, str], subject
                                   "but the item gains a Decided: that speaks for the entries left — leave it "
                                   "unanswered"))
             elif not answered_here:
+                ids = _covering_ids(cov_b, cov_h)
+                ending = (f" (asked by {ids})" if ids else "" if cov_b or cov_h else
+                          " (no item on this repo's board covers it: log the lift with the suffix "
+                          '"; no board item", or "; board <repo>" for an answer on another repo\'s board)')
                 flags.append(("tripwire-no-decided", f"{tid} lifts {gate}, and no item covering it on this repo's "
-                              "board gains a Decided: in the same diff"))
+                              f"board gains a Decided: in the same diff{ending}"))
             if by.lower() != person.lower():
                 ok = (not suffix and anyone and people is not None and by.lower() in {p.lower() for p in people}
                       and any((hit.decided_by or "").lower() == by.lower() for _, hit in answered_here))
