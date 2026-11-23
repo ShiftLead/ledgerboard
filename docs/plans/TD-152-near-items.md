@@ -11,7 +11,8 @@ cases' names: four cases hold several scenarios, so they take letters) and 4 min
 2 minors, its repeats 3, 4 and 1 more, and a last repeat none, all applied. Paul answered One more round
 (2026-11-22): round 7 (TD-156), past the cap, read the lettered cases and raised 0 build-changing and 4 minors, all
 applied (two more lettered cases, 26 in all); its closing fact-check 2 minors (one applied, one rejected) and its
-repeat 2 more, applied, and a last repeat none. The rounds end here, the round Paul bought. The record:
+repeat 2 more, applied, and a last repeat none. The rounds ended there, the round Paul bought. Paul answered **Go** (2026-11-22):
+builds TD-157 (B1) and TD-158 (B2), and TD-159 for D3's difference. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
@@ -151,8 +152,8 @@ accepts two items `covers()` does not find: a `decide` whose Context goes on pas
 reads `TD-4 decision (pat) — design ready` as one entry and one gate), and a `decide` on a board with no
 `People:` (its board checks skipped). An answer there writes the lift, and the tripwire then flags it
 `tripwire-no-decided`, which after D2 names the covering item, or says none covers it. Whether the writer should
-refuse those items is its own question, filed on Go as its own `design-first` entry rather than widened into this
-one.
+refuse those items is its own question, filed as its own `design-first` entry, TD-159, rather than widened into
+this one.
 
 ### Limits accepted
 
@@ -325,18 +326,18 @@ tripwire's endings over a v2 board as over a v3 one.
 ## Consumers
 
 None needs a change. The clause rides in the item the host files from `to_file`; `near` is an added key a host
-may show; the two flags keep their kinds. Each consumer takes the release by its vendor PR. On Go, a line to
-ShiftLead's question seat offers showing `near` as a link from the new item to the old (`ao td add --repo
-shiftlead`), its own to take or leave.
+may show; the two flags keep their kinds. Each consumer takes the release by its vendor PR. A line to
+ShiftLead's question seat, sent on Go, offers showing `near` as a link from the new item to the old, its own to
+take or leave.
 
-## Builds (filed on Paul's go)
+## Builds (filed on Paul's go, 2026-11-22)
 
-- **B1** D2: `tripwire()`'s two texts, the SPEC paragraph in *The merge gate's verdicts*, the verdict fixtures and
+- **B1** (TD-157) D2: `tripwire()`'s two texts, the SPEC paragraph in *The merge gate's verdicts*, the verdict fixtures and
   cases above, and the suite test of the tripwire's endings over a v2 board as over a v3 one.
-- **B2** D1 and D3: `sweep()`'s near items, its `near` key (and its docstring's list of keys) and the clause, the SPEC text in *The gate sweep*, the
+- **B2** (TD-158) D1 and D3: `sweep()`'s near items, its `near` key (and its docstring's list of keys) and the clause, the SPEC text in *The gate sweep*, the
   `near` sweep cases and their harness, the existing sweep cases' `runs` and `rerun` regenerated to gain
   `"near": []`, the suite tests but B1's; with *Versions*' v3.6 paragraph (B1's PR adds it if B1
   lands first, naming its half, and B2 completes it).
 
-Both are minor and may share one release; the release's stamp regenerates `fixtures/MANIFEST`. On Go, beside
-them, one `design-first` entry for D3's *difference this design does not settle*.
+Both are minor and may share one release; the release's stamp regenerates `fixtures/MANIFEST`. Beside
+them, one `design-first` entry, TD-159, for D3's *difference this design does not settle*.
