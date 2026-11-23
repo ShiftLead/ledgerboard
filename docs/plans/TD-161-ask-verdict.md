@@ -10,7 +10,7 @@ states the nonce test as D2 does. Its closing fact-check and repeats raised 7 mi
 refusals, the SPEC's nonce clause, D3's `\r` wording) are unread by a design review, so the builder checks them. Paul answered **Go** (2026-11-23): build TD-165 (B1). The record:
 [docs/reviews/TD-161.md](../reviews/TD-161.md).
 
-**Entry:** [TD-161](../ledger/TD-161.md). agent-cadence's TD-297 waits on its release.
+**Entry:** [TD-161](../ledger/archive/TD-161.md). agent-cadence's TD-297 waits on its release.
 
 ## The problem
 
