@@ -2469,6 +2469,14 @@ def _part_id(x: object) -> bool:
     return isinstance(x, str) and bool(PART_ID_RE.fullmatch(x))
 
 
+def _context_tail(ctx: str) -> str:
+    """What a Context says after its first gate (v3.6, TD-159), its case kept: trailing dots are no words, any other
+    text is; ``""`` when nothing follows or it names no gate. The sweep's qualifier, the `Parts:` check and the decide
+    lift read it here, so the three cannot drift apart."""
+    g = CONTEXT_ANY_GATE_RE.search(ctx)
+    return " ".join(ctx[g.end():].strip().rstrip(".").split()) if g else ""
+
+
 def _parts_fault(ctx: str, parts: list) -> str | None:
     """The first fault of a `Parts:` snapshot (v2.6) that the line alone shows, as a fixed string, or None:
     ``ctx`` the Context's words (its final `.` removed), ``parts`` the ids. The Context names exactly one entry,
@@ -2478,9 +2486,8 @@ def _parts_fault(ctx: str, parts: list) -> str | None:
     refs = list(dict.fromkeys(ref_key(x.group(0)) for x in REF_TD_RE.finditer(ctx)))
     ref = next((x.group(0) for x in REF_TD_RE.finditer(ctx)), None)
     gates = list(dict.fromkeys(" ".join(g.group(0).split()) for g in CONTEXT_ANY_GATE_RE.finditer(ctx)))
-    g = CONTEXT_ANY_GATE_RE.search(ctx)
-    qual = ctx[g.end():].strip().rstrip(".").strip() if g else ""
-    if len(refs) != 1 or not _part_id(ref) or len(gates) != 1 or not CONTEXT_GATE_RE.fullmatch(gates[0]) or qual:
+    if (len(refs) != 1 or not _part_id(ref) or len(gates) != 1 or not CONTEXT_GATE_RE.fullmatch(gates[0])
+            or _context_tail(ctx)):
         return PARTS_CONTEXT_FAULT
     seen: set[int] = set()
     for p in parts:
@@ -6677,7 +6684,8 @@ def decide_lift(item: BoardItem | str, entries: Mapping[str, str], label: str, b
     its Status). ``archived`` (v2.6) are the ids of those only the ledger's archive holds, each ``TD-n`` read by
     number as ``entries``' keys are, any other member ignored; an id among ``entries`` is read from its text
     even when ``archived`` holds its number (open before archived). ``board_people`` and ``answered_by`` are the
-    base board's `People:` (None: none, and its checks are skipped) and `Answered by:` (None: ``owner``).
+    base board's `People:` (None: none, and its checks are skipped, though a decision does not lift through that
+    skip, below) and `Answered by:` (None: ``owner``).
     Whichever gate the Context names, ``decision (<p>)`` or ``event (<name>)``:
 
     - a lifting label (one of `Lifts:`, `Go` when it has none, compared in any case; never a waiting-only one)
@@ -6692,7 +6700,11 @@ def decide_lift(item: BoardItem | str, entries: Mapping[str, str], label: str, b
     a tool PR there); a Context entry missing or archived (in ``archived``, or its Status an archived one); a
     `Parts:` id in neither ``entries`` nor ``archived``, of another repo, or, given as a text, not `Part of` the
     Context entry; a gate's person not on `People:`; an answerer not on `People:`, or, for a decision under
-    ``owner``, not the gate's person. ``delegate`` and ``scope`` (v3.4) only write each Log line in the delegated
+    ``owner``, not the gate's person; and (v3.6, TD-159), directly before the writes, a lifting answer that would lift
+    a ``decision (<p>)`` from an entry when the item's Context goes on past the gate (``_context_tail()``) or, that
+    failing, ``board_people`` is None, since covers() finds neither item and the tripwire would flag the lift. An
+    answer with nothing left to lift, a waiting-only answer, a work order and an event gate are not refused for
+    either. ``delegate`` and ``scope`` (v3.4) only write each Log line in the delegated
     form, as lift_gate() does, and are refused as it refuses them."""
     day = utc_day(today, "decide_lift()'s today")
     item = _as_item(item)
@@ -6757,6 +6769,16 @@ def decide_lift(item: BoardItem | str, entries: Mapping[str, str], label: str, b
         return {}  # an event's work order ("Rewrite the check", "Drop the entry"): no ledger line
     out: dict[str, str] = {}
     targets = [(key, ctx_text), *parts]
+    if lifting and person is not None and any(t is not None and _carried(t, gate) is not None for _, t in targets):
+        if _context_tail(item.context or ""):  # v3.6 (TD-159): the merge gate could not count this answer
+            raise Refused(f"{ref}'s {gate} cannot be lifted by an answer on this item: its Context goes on past the "
+                          "gate, so the merge gate does not count it — answer an item naming the entry and the gate "
+                          "alone (the sweep files one when it can), or, while none is open, log the lift with ; no "
+                          "board item")
+        if board_people is None:
+            raise Refused(f"{ref}'s {gate} cannot be lifted by an answer on this board: it has no People: line, so "
+                          f"the merge gate does not count it — add a People: line naming {person}, or log the lift "
+                          "with ; no board item")
     skipped = []
     for k, t in targets:
         if t is None:  # an archived part (v2.6): skipped on a lifting answer, nothing written otherwise
@@ -7260,10 +7282,7 @@ def _sweep_context(item: BoardItem, own: bool, repo: str) -> tuple[int, str, str
     num = _ours(ref, own, repo)
     if num is None or gate is None:
         return None
-    ctx = item.context or ""
-    g = CONTEXT_ANY_GATE_RE.search(ctx)
-    qual = " ".join(ctx[g.end():].strip().rstrip(".").split()).lower() if g else ""
-    return num, _gate_key(gate), qual
+    return num, _gate_key(gate), _context_tail(item.context or "").lower()
 
 
 def _sweep_head(text: str) -> str | None:
@@ -7735,8 +7754,7 @@ def _near_items(reads: list[dict], num: int, gate: str, parent: int | None, repo
         if len(gates) == 1 and key not in gates:
             continue  # about another gate
         if gates == {key} and len({ref_key(x) for x in refs}) == 1 and _ours(refs[0], r["own"], repo) == num:
-            g = CONTEXT_ANY_GATE_RE.search(ctx)
-            qual = " ".join(ctx[g.end():].strip().rstrip(".").split()).lower()
+            qual = _context_tail(ctx).lower()
             if qual == "lift" or qual.startswith("board ") or (
                     r["head"] is not None and SWEEP_KINDS[r["head"]] == it.kind):
                 continue  # the sweep's own

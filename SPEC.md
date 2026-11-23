@@ -1067,6 +1067,14 @@ entry (the snapshot does not match); a gate's person not on `People:`; an answer
 `People:`, or, for a decision under `owner`, not the gate's person. An event has no gate person, so anyone on
 `People:` may answer it. Its output for an entry is byte for byte `lift_gate()`'s for the same answer.
 
+**A lift the merge gate could not count** (v3.6). On a `decision (<p>)` gate, `decide_lift()` refuses a lifting
+answer that would lift the gate from an entry when the item's Context goes on past the gate, or, that failing, when
+`board_people` is None: `covers()` finds neither item, so the merge gate's tripwire would flag the lift
+(`tripwire-no-decided`). The skip of the board checks for a None `board_people` does not let a decision lift
+through. What follows the gate is read as the sweep reads its qualifier: trailing dots are no words, and any other
+text is. Each refusal names its cure. An answer with nothing left to lift, a waiting-only answer and a work order on
+such an item write as above, and an `event (<name>)` gate is not affected.
+
 **Closing on the answer** (v2.4): `closes(item, label, entries_after)` says whether answering closes the item in
 the same write. On an item whose Context names a gate, a waiting-only answer closes it, and a lifting one does
 when the Context names this repo's entry (a bare `TD-n`) and nothing listed still carries the gate after the write
@@ -1850,8 +1858,7 @@ and `<id>: twice`; the kind, an empty list and the lifting answer are `item_file
 entry first, `<ref>: missing` or `<ref>: archived`, and then each part still, in the line's order, its first fault
 of `<id>: missing`, `<id>: archived`, `<id>: not Part of <ref>`, `<id>: does not carry <gate>`. It is stricter than
 *The decide lift*, which skips a part that no longer carries the gate (one archived by its Status, or named in
-`archived` and not given, among them), still lifts an `event (<name>)` snapshot and one whose Context goes on past
-its gate, and, reading a text it is given ahead of `archived`, lifts a part and a Context entry named in `archived`
+`archived` and not given, among them), still lifts an `event (<name>)` snapshot, with or without words after its gate, and, reading a text it is given ahead of `archived`, lifts a part and a Context entry named in `archived`
 whose Status reads `Open`: the snapshot is checked when the question is asked, the lift when it is answered; the
 ledger is not in the item, so `item_file()` does not check these, and a writer that reads the ledger calls it.
 
@@ -2703,6 +2710,11 @@ entry but whose answer is not counted for its gate, and `sweep()` returns them a
 and `tripwire-no-decided` end naming the covering items' ids; and SPEC says which answers the merge gate counts.
 No parse changes, and nothing the sweep files or closes changes but that clause; a consumer reading `sweep()`'s
 three keys, or the two flags by kind, reads as before.
+
+**v3.6 refuses a lift the merge gate could not count** (TD-159; *The decide lift*): `decide_lift()` refuses a
+lifting answer on a `decision (<p>)` gate when the item's Context goes on past the gate or the board has no
+`People:`, so the board writer's decide does too. Nothing a reader reads changes, and a board holding such an
+item reads as before.
 
 ## Appendix: grammar
 

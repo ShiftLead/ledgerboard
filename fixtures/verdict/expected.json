@@ -1027,6 +1027,21 @@
     ]
    ]
   },
+  "a decide lift whose Context goes on past its gate": {
+   "carve_out": false,
+   "flags": [
+    [
+     "tripwire-no-decided",
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (no item on this repo's board covers it: log the lift with the suffix \"; no board item\", or \"; board <repo>\" for an answer on another repo's board)"
+    ]
+   ],
+   "review": [
+    [
+     "lift-refused",
+     "decide_lift refuses it: TD-100's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+    ]
+   ]
+  },
   "a decide lift whose Context is archived": {
    "carve_out": false,
    "flags": [],

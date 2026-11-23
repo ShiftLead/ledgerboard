@@ -2373,14 +2373,7 @@
     "TD-9": []
    },
    "lift": {
-    "ok": {
-     "TD-10": [
-      "gate lifted: decision (pat) — by pat; answer \"Go\""
-     ],
-     "TD-9": [
-      "gate lifted: decision (pat) — by pat; answer \"Go\""
-     ]
-    }
+    "refused": "TD-4's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
    },
    "problems": [
     "item: context: not one entry and one decision"
@@ -2392,14 +2385,7 @@
     "TD-9": []
    },
    "lift": {
-    "ok": {
-     "TD-10": [
-      "gate lifted: decision (pat) — by pat; answer \"Go\""
-     ],
-     "TD-9": [
-      "gate lifted: decision (pat) — by pat; answer \"Go\""
-     ]
-    }
+    "refused": "TD-4's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
    },
    "problems": [
     "item: context: not one entry and one decision"

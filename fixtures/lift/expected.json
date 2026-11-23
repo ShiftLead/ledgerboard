@@ -271,9 +271,26 @@
    "refused": "TD-599, a part the item lists, is not among the entries given"
   },
   "no_people_line": {
+   "refused": "TD-500's decision (pat) cannot be lifted by an answer on this board: it has no People: line, so the merge gate does not count it — add a People: line naming pat, or log the lift with ; no board item"
+  },
+  "no_people_line_event": {
    "ok": {
-    "TD-500": "## TD-500: A parent waiting on its go\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n\n**Why:** the design is still being shaped.\n\n**Ask:** say go once the parts read right.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file the parent\"\n- 2026-01-02: gate added: decision (Pat)\n- 2026-01-15: gate lifted: decision (Pat) — by pat; answer \"Go\"\n- 2026-01-15: gate lift skipped: TD-502 no longer carries decision (Pat)\n",
-    "TD-501": "## TD-501: The first part, waiting on the same go and an entry\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-03\n**Status:** Open\n**Blocked by:** TD-9\n**Part of:** TD-500\n\n**Why:** the first half of the work.\n\n**Ask:** the parent's go.\n\n**Log:**\n- 2026-01-15: gate lifted: decision (pat) — by pat; answer \"Go\"\n"
+    "TD-530": "## TD-530: Waits on a vendor's merged PR\n\n**Priority:** Medium\n**Type:** debt\n**Added:** 2026-01-05\n**Status:** Open\n\n**Why:** the vendor's fix must land first.\n\n**Event (vendor-ships):** the vendor merges its fix.\ncheck: pr-merged acme/tools#42\n\n**Log:**\n- 2026-01-05: gate added: event (vendor-ships)\n- 2026-01-15: gate lifted: event (vendor-ships) — by pat; answer \"Go\"\n"
+   }
+  },
+  "no_people_line_not_yet": {
+   "ok": {
+    "TD-500": "## TD-500: A parent waiting on its go\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** decision (Pat)\n\n**Why:** the design is still being shaped.\n\n**Ask:** say go once the parts read right.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file the parent\"\n- 2026-01-02: gate added: decision (Pat)\n- 2026-01-15: kept waiting: decision (Pat) — by pat; answer \"Not yet\"\n",
+    "TD-501": "## TD-501: The first part, waiting on the same go and an entry\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-03\n**Status:** Open\n**Blocked by:** TD-9, decision (pat)\n**Part of:** TD-500\n\n**Why:** the first half of the work.\n\n**Ask:** the parent's go.\n\n**Log:**\n- 2026-01-15: kept waiting: decision (pat) — by pat; answer \"Not yet\"\n"
+   }
+  },
+  "no_people_line_nothing_left": {
+   "ok": {}
+  },
+  "no_people_line_work_order": {
+   "ok": {
+    "TD-500": "## TD-500: A parent waiting on its go\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-02\n**Status:** Open\n**Blocked by:** decision (Pat)\n\n**Why:** the design is still being shaped.\n\n**Ask:** say go once the parts read right.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file the parent\"\n- 2026-01-02: gate added: decision (Pat)\n- 2026-01-15: kept waiting: decision (Pat) — by pat; answer \"One more round\"\n",
+    "TD-501": "## TD-501: The first part, waiting on the same go and an entry\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-03\n**Status:** Open\n**Blocked by:** TD-9, decision (pat)\n**Part of:** TD-500\n\n**Why:** the first half of the work.\n\n**Ask:** the parent's go.\n\n**Log:**\n- 2026-01-15: kept waiting: decision (pat) — by pat; answer \"One more round\"\n"
    }
   },
   "no_people_line_wrong_person_refused": {
@@ -290,6 +307,17 @@
     "TD-521": "## TD-521: Its one part, waiting only on the go\n\n**Priority:** Low\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n**Part of:** TD-520\n\n**Why:** the only part.\n\n**Ask:** say go.\n\n**Log:**\n- 2026-01-15: gate lifted: decision (Pat) — by pat; answer \"Go\"\n"
    }
   },
+  "question_mark_tail_refused": {
+   "refused": "TD-580's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+  },
+  "spaced_dots_tail_refused": {
+   "refused": "TD-580's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+  },
+  "trailing_dot_lifts": {
+   "ok": {
+    "TD-580": "## TD-580: Waits on a go, or a hold with a note\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n\n**Why:** the build waits on the person's answer.\n\n**Ask:** go, or hold with a note.\n\n**Log:**\n- 2026-01-04: gate added: decision (pat)\n- 2026-01-15: gate lifted: decision (pat) — by pat; answer \"Go\"\n"
+   }
+  },
   "two_lifts_second_label": {
    "ok": {
     "TD-521": "## TD-521: Its one part, waiting only on the go\n\n**Priority:** Low\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n**Part of:** TD-520\n\n**Why:** the only part.\n\n**Ask:** say go.\n\n**Log:**\n- 2026-01-15: gate lifted: decision (Pat) — by PAT; answer \"db\"\n"
@@ -298,6 +326,38 @@
   "two_lifts_waiting": {
    "ok": {
     "TD-521": "## TD-521: Its one part, waiting only on the go\n\n**Priority:** Low\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n**Blocked by:** decision (Pat)\n**Part of:** TD-520\n\n**Why:** the only part.\n\n**Ask:** say go.\n\n**Log:**\n- 2026-01-15: kept waiting: decision (Pat) — by pat; answer \"Not yet\"\n"
+   }
+  },
+  "words_after_gate_archived_part": {
+   "ok": {
+    "TD-520": "## TD-520: A parent that carries no gate of its own\n\n**Priority:** Low\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n\n**Why:** its parts wait, not it.\n\n**Log:**\n- 2026-01-15: gate lift skipped: TD-506 no longer carries decision (pat)\n"
+   }
+  },
+  "words_after_gate_event": {
+   "ok": {
+    "TD-530": "## TD-530: Waits on a vendor's merged PR\n\n**Priority:** Medium\n**Type:** debt\n**Added:** 2026-01-05\n**Status:** Open\n\n**Why:** the vendor's fix must land first.\n\n**Event (vendor-ships):** the vendor merges its fix.\ncheck: pr-merged acme/tools#42\n\n**Log:**\n- 2026-01-05: gate added: event (vendor-ships)\n- 2026-01-15: gate lifted: event (vendor-ships) — by pat; answer \"Go\"\n"
+   }
+  },
+  "words_after_gate_no_people": {
+   "refused": "TD-580's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+  },
+  "words_after_gate_not_yet": {
+   "ok": {
+    "TD-580": "## TD-580: Waits on a go, or a hold with a note\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n**Blocked by:** decision (pat)\n\n**Why:** the build waits on the person's answer.\n\n**Ask:** go, or hold with a note.\n\n**Log:**\n- 2026-01-04: gate added: decision (pat)\n- 2026-01-15: kept waiting: decision (pat) — by pat; answer \"Not yet\"\n"
+   }
+  },
+  "words_after_gate_nothing_left": {
+   "ok": {}
+  },
+  "words_after_gate_part_carries": {
+   "refused": "TD-520's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+  },
+  "words_after_gate_refused": {
+   "refused": "TD-580's decision (pat) cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while none is open, log the lift with ; no board item"
+  },
+  "words_before_gate_lifts": {
+   "ok": {
+    "TD-580": "## TD-580: Waits on a go, or a hold with a note\n\n**Priority:** Medium\n**Type:** feature\n**Added:** 2026-01-04\n**Status:** Open\n\n**Why:** the build waits on the person's answer.\n\n**Ask:** go, or hold with a note.\n\n**Log:**\n- 2026-01-04: gate added: decision (pat)\n- 2026-01-15: gate lifted: decision (pat) — by pat; answer \"Go\"\n"
    }
   },
   "work_order_keeps_waiting": {
