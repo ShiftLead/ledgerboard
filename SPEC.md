@@ -58,7 +58,8 @@ entry; `<repo>` as below), then **gates** (v2.4), each one of
   "Last" is in file order. A Log that cannot be read (one `log_problems()` faults, or two Logs) answers nothing,
   and the Log alone decides, on an edit as on a standing ledger. An `**Ask (…):**` lead is its own section,
   never an Ask. The cure is the gate (`set`), or, where nothing waits on a person, the Ask removed: `edit
-  --section Ask --remove`, or a header `Ask` emptied with `set`. Which `Owner` values name a person is a
+  --section Ask --remove` (v3.6: its `Answers`, `Lifts` and `Context` go the same way, each by its own write, so
+  a later decision offers none of them), or a header `Ask` emptied with `set`. Which `Owner` values name a person is a
   ledger's own, so an Owner is never read as a wait here. A decision reassigned more than twice to
   reach the person it names now is noted (ℹ, `gate-reassigned-often`, v2.4; `reassigns()` counts the run of
   `gate reassigned` Log lines that led to it), scoped by the entry's whole text.
@@ -707,9 +708,10 @@ vocabulary, a `Blocked by` item, a cycle) is `check()`'s, which the caller runs 
   entry whose `Blocked by` names no decision (as `decision-missing` counts one): the writer's `set --ask` writes
   the gate and the Ask together (*The ledger writer*), and an entry that already has an Ask may take its gate
   first. An answered entry's Ask (*The ledger*) is therefore never rewritten while ungated. With `remove` (v2.8)
-  it removes a **misplaced section**, one named `Title` or a header name, and (v3.1) the `Ask` section of an entry
+  it removes a **misplaced section**, one named `Title` or a header name, and (v3.1) the `Ask` section, or (v3.6) the
+  `Answers`, `Lifts` or `Context` section, of an entry
   whose `Blocked by` names no decision (as `decision-missing` counts one, *The ledger*); it is refused for any
-  other section, for an `Ask` that is not misplaced while a decision holds, for a header name the entry's header
+  other section, for one of those four that is not misplaced while a decision holds or that the entry lacks, for a header name the entry's header
   lacks (`set` it first), and with words. Names compare as leads do, so a qualified lead is never one. From v2.5, `edit` takes an optional `today`. Replacing or adding an
   `**Event (<name>):**` section for a gate the entry carries, when its check becomes `host-log` or its
   `host-log` source, kind, count or text changes (read by `parse_check()`, so spacing alone is no change),
@@ -2076,7 +2078,7 @@ ledger as a directory*); a write takes a v2 directory, and a v1 file is refused 
   the same write, and refused when empty or when the entry has no Ask; `edit --section Context` adds a missing
   one right after the Ask, where the entry has one. `note TD-n "<words>"` appends a dated Log line, and `edit TD-n --section NAME
   --from FILE|-` replaces one section (or, v2.8, with `--remove` in place of `--from`, removes a misplaced
-  one, or (v3.1) the `Ask` of an entry with no decision; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
+  one, or (v3.1) the `Ask`, or (v3.6) the `Answers`, `Lifts` or `Context`, of an entry with no decision; the ledger's `Fields:` names are passed as `declared_fields`). `note` (v2.8) also takes an archived entry whose
   Status is in the closed set, writing its file where it is in `archive/`, and refuses one whose Status is not (*The
   closed Status set*'s cure); `set` and `edit` take an archived entry only once reopened. From v2.5 `set` and `edit`
   pass the day (`--today`, default the UTC date) to `edit_entry()`, which dates a gate `set` adds and an Event
@@ -2715,6 +2717,13 @@ three keys, or the two flags by kind, reads as before.
 lifting answer on a `decision (<p>)` gate when the item's Context goes on past the gate or the board has no
 `People:`, so the board writer's decide does too. Nothing a reader reads changes, and a board holding such an
 item reads as before.
+
+**v3.6 clears the rest of a question** (TD-162; *Edits*, *The ledger writer*): `edit`'s `remove` takes an entry's
+`Answers`, `Lifts` and `Context` sections as v3.1's takes its `Ask`: only while its Blocked by names no decision (a
+retired item standing for one counts as one), each by its own write, in any order, and refused for a section the
+entry lacks. Once `Answers` and `Lifts` are gone `entry_answers()` reads None, so a decision added later does not
+offer the old question's answers. Nothing a reader reads changes; the refusal's words for a section `remove` does
+not take now name the four.
 
 ## Appendix: grammar
 
