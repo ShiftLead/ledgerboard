@@ -1,9 +1,10 @@
 # TD-161: the merge gate's verdict for a question a tool asks
 
-**Status:** Draft 5, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
+**Status:** Draft 6, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
 a new verdict, subject reader and entry writer; cap 6 rounds, cadence.md §4.8). The rounds ended by the stop rule
-after round 4: build-changing findings per round 2, 1, 1, 0, all applied. The closing fact-check raised 4 minors, all
-applied, and one of them adds two refusals to D2 that no design review has read. The record:
+after round 4, and Paul bought round 5 (TD-163), after which they end: build-changing findings per round 2, 1, 1, 0,
+1, all applied. Round 5's one names the exact nonce test in D2 and D3. Its closing fact-check and repeats raised 2 build-changing
+(a stale count, an ambiguous SPEC clause) and 4 minor, all applied; round 5's fixes (the nonce test in D2 and D3, the `hold` refusal and the UTF-8 refusal in D2) are unread by a design review. The record:
 [docs/reviews/TD-161.md](../reviews/TD-161.md).
 
 **Entry:** [TD-161](../ledger/TD-161.md). agent-cadence's TD-297 waits on its release.
@@ -33,8 +34,9 @@ holds one entry back and asks about it.
 Read from ShiftLead at `715dab451ea0`, and unchanged at its main on 2026-11-23. A prototype ran that writer's sequence
 through ShiftLead's vendored v3.5 and through this repo's main, on invented entries.
 
-1. It refuses an entry that already carries a gate `GATE_DECISION_RE` matches in `gate_items()`. That test misses two
-   forms that still block the entry: the old `decision (bob) — words` and a retired role such as `decision (designer)`.
+1. It refuses an entry that already carries a gate `GATE_DECISION_RE` matches in `gate_items()`. That test misses three
+   forms that still block the entry: the old `decision (bob) — words`, a retired role such as `decision (designer)`,
+   and the retired `hold`.
 2. It sets Blocked by to `<raw>, decision (<p>)`, which the canonical form reorders (`until 2026-11-02` becomes
    `decision (ann), until 2026-11-02`), and logs `gate added: decision (<p>)`.
 3. It writes Ask, then Context, then Lifts, then Answers, replacing any earlier ones. Its first ledger check runs
@@ -67,14 +69,17 @@ consumer calls `ask_subject_parts()` to choose this verdict.
 as `lift_gate()` does for a lift. `answers` and `lifts` are lists,
 joined with ` | `. It is public so the verdict and a writer share one definition. It raises `Refused` when:
 
-- the Blocked by holds **any** decision, by `parse_gates()`: an item of `decisions`, a `retired` item of kind `role`,
-  or a `bad` item matching `re.match(r"decision\b", item, re.IGNORECASE)`. So `decision (bob) — words` refuses, and
-  `decisions (bob)` does not. The writer's own test misses the first two of these shapes, and a verdict without this
-  rule passed a PR adding a second person beside one;
+- the Blocked by holds **any** decision, by `parse_gates()`: an item of `decisions`, **any** `retired` item (a role
+  or `hold`, each of which `_names_decision()` reads as a decision), or a `bad` item matching
+  `re.match(r"decision\b", item, re.IGNORECASE)`. So `decision (bob) — words` and `hold` refuse, and
+  `decisions (bob)` does not. The writer's own test misses the old form, a retired role and `hold`, and a verdict
+  without this rule passed a PR adding a second person beside one;
 - the entry's text contains `asked by the stage record: <nonce>` as a substring, anywhere, as the writer tests it;
 - the entry holds a header `Ask`, or `declared_fields` declares `Ask`, as `plan_edit()` refuses;
 - `person` is not a whole `PERSON` for which `is_person()` holds, or is a retired role (`person.lower()` in
-  `RETIRED_ROLES`), `nonce` is not one or more non-space characters, or `text` is not exactly one entry. Every refusal is
+  `RETIRED_ROLES`), `nonce` is not a string for which `re.fullmatch(r"\S+", nonce)` holds and which encodes as UTF-8
+  (Unicode whitespace, as `str.split()` reads it, since the Log note collapses it; a nonce the note writer itself
+  refuses, such as an unclosed `<!--`, is refused as that writer does), or `text` is not exactly one entry. Every refusal is
   `Refused`, never another exception.
 
 ### D3. The verdict: `ask_pr_verdict()`
@@ -91,7 +96,7 @@ this order, names the review:
    `BOARD_DIR`, named `<item id>.md` (`ask-files`).
 5. The head file's text, less its one final newline and split at its last `\n`, ends in exactly
    `- T: asked by the stage record: <nonce>`, with no `\r` allowed, `T` a real `YYYY-MM-DD` and `<nonce>`
-   one or more non-space characters, and the head holds exactly one each of Ask, Context, Answers and Lifts
+   matching `\S+` whole, as in D2, and the head holds exactly one each of Ask, Context, Answers and Lifts
    (`ask-sections`). Each section's **words** are read exactly: from `canonical(head)`'s section, what follows the
    `**Name:**` lead, less one separating space if there is one and one final newline if there is one, and never
    stripped, since the writer keeps edge whitespace.
@@ -132,7 +137,7 @@ out a clause the format says the person reads, to save a window that closes when
 affected PRs show in the audit as unreviewed, which is the safe direction: a person reads a few real merges, and no
 unreviewed change is passed. ShiftLead's sync to the release ends it.
 
-The same holds for D2's two forms the writer misses. A v3.5 writer lands a question on an entry holding one, and the
+The same holds for D2's three forms the writer misses. A v3.5 writer lands a question on an entry holding one, and the
 verdict sends that PR to review as `ask-bytes`, since a second decision beside a standing one is exactly what the
 carve-out must not pass. Those PRs stay visible in the audit until ShiftLead adopts `ask_gate()`.
 
@@ -165,7 +170,7 @@ lands.
 > - the paths the trees change are exactly `files`, that file and one added item file directly in `BOARD_DIR`
 >   (`ask-files`);
 > - the head file's text, less its one final newline, ends in the line `- T: asked by the stage record: <nonce>`, `T` a
->   real day and `<nonce>` non-space characters, and the head holds one each of Ask, Context, Answers and Lifts, whose words are read exactly, less the
+>   real day and `<nonce>` one or more characters none of them whitespace, and the head holds one each of Ask, Context, Answers and Lifts, whose words are read exactly, less the
 >   one space after the lead and one final newline (`ask-sections`);
 > - the head entry is `ask_gate()` of the base file with those words, `nonce`, `T` and the base ledger's declared
 >   fields, byte for byte, any refusal failing too (`ask-bytes`);
@@ -188,9 +193,9 @@ lands.
 > `ask_gate(text, person, ask, context, answers, lifts, nonce, today, declared_fields=())` (v3.6) is one entry after a
 > tool asks a person about it: `decision (<person>)` added to its Blocked by with every earlier item kept, its Ask,
 > Context, Lifts and Answers written (replacing earlier ones), and the Log note `asked by the stage record: <nonce>`.
-> It refuses an entry whose Blocked by holds any decision (`decision (<p>)`, a retired role, or an unreadable item
+> It refuses an entry whose Blocked by holds any decision (`decision (<p>)`, a retired item, or an unreadable item
 > matching `decision\b` at its start in any case), one whose text already contains that note, a person that is not a
-> `PERSON` or is a retired role, a nonce that is not one or more non-space characters, a text that is not one entry, and one whose Ask is a header field or a declared field.
+> `PERSON` or is a retired role, a nonce that is not a string of one or more characters, none of them Unicode whitespace, that encodes as UTF-8, a nonce the Log note writer refuses (such as an unclosed `<!--`), a text that is not one entry, and one whose Ask is a header field or a declared field.
 
 **In *Edits*, directly after the paragraph on the commit subject of a ledger lift:**
 
@@ -227,7 +232,7 @@ two-paragraph Context; a Context and an Ask with edge whitespace; a recent `kept
 **Review, a case for each kind but the defensive `ask-flagged`**, including the Fix's list: no board; no `People:`; the
 entry archived, absent, and a v1 ledger; another field changed; another entry changed; another
 board item added; an existing gate dropped; a `decision (<q>)` already standing; the old form `decision (<q>) — words`
-standing; a retired role standing; a repeated nonce; an extra Log line; Answers no sweep can offer; a person not on `People:`; an item with a
+standing; a retired role standing; a retired `hold` standing; a repeated nonce; an extra Log line; Answers no sweep can offer; a person not on `People:`; an item with a
 changed word; an id whose date is not `Added`; two commits; a subject naming another person; a v2 board; dates out of
 window; and, for D4, a head item lacking the clause when the near item is an open `decide`, an `act`, and a decided item (an
 `fyi` and an item about another gate carve out); a Log whose last line is not the question's. The extra-Log-line case
@@ -246,16 +251,18 @@ its start (`ask-subject`, `log-token`, `person`, `person-part`, `digit`), and
 
 `tests/`: `ask_gate()` agrees with the sequence of `plan_edit()` and `edit_entry()` calls it replaces, on the
 carve-out entries, `subject_kind()` is None for an ask subject, and `ask_gate()` refuses a retired role
-as `person`, and an empty nonce and one holding a space.
+as `person`, and an empty nonce, one holding a space, one holding a non-ASCII space (`\xa0`), a non-string nonce, a lone surrogate, and an unclosed `<!--`, each as `Refused`.
 
 ## Consumers
 
 - **agent-cadence TD-297** vendors the release and adds the review row, choosing this verdict by
   `ask_subject_parts()`.
 - **ShiftLead** needs no change for the verdict to work. It should adopt `ask_gate()`, keeping its own ledger check
-  around it, and so pick up the refusal of the two missed forms when it next syncs: on Go, that is handed to its question seat with `ao td add --repo ShiftLead/shiftlead`.
+  around it, and so pick up the refusal of the three missed forms when it next syncs: on Go, that is handed to its question seat with `ao td add --repo ShiftLead/shiftlead`.
 
 ## Builds (to file on Paul's go)
 
 - **B1** D1 to D4: the subject reader, `ask_gate()`, `ask_pr_verdict()`, the SPEC text above, the fixtures and tests. A
-  minor release, which may share v3.6 with TD-157, TD-158 and TD-160.
+  grinder takes it. A minor release, cut by Paul, which may share v3.6 with TD-157, TD-158 and TD-160.
+
+Paul's choice at this point: Go (a session files B1), one more design round, or Hold with a note.
