@@ -1247,6 +1247,13 @@ Exempt are an entry the diff archives and the one-time migrate commit, known by 
 migrate v<release> (<n> entries)` (written by v2.x's `migrate`; `subject_kind()` still names it `migrate`). The tripwire is
 forgeable, and says so: a well-formed hand edit passes it, and review is the backstop.
 
+From v3.6 (TD-152) two flags name their items: `tripwire-no-board-item`'s text ends ` (<ids>)`, and
+`tripwire-no-decided`'s ` (asked by <ids>)`, `<ids>` the ids of the items covering the gate (states `open`,
+`decided`) on this repo's board at the base or the head, each once, in id order (bytewise), joined by `, `;
+`tripwire-no-decided`'s ends instead ` (no item on this repo's board covers it: log the lift with the suffix
+"; no board item", or "; board <repo>" for an answer on another repo's board)` when none covers it at either. An item with no id is left
+out, and when every covering item lacks one the text is as before v3.6.
+
 `lift_pr_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` returns `{carve_out,
 flags, review}` for a PR whose one changed board item gains a `Decided:` and whose Context names a gate:
 `carve_out` says the person's answer is its review; otherwise `review` names the first condition that sends it to
@@ -2660,6 +2667,10 @@ gate, is in flight, and takes `resolve` to tell for another repo's ids; `uncover
 gained decision `decision-deferred`, a new flag kind, rather than refusing or flagging it as before. The sweep
 files less and the verdict refuses less; no parse, field, Log line, item key or canonical form changes, and a
 caller passing no `resolve` sees another repo's ids as before.
+
+**v3.6 names what a duplicate question needs** (TD-152; *The merge gate's verdicts*): `tripwire-no-board-item`
+and `tripwire-no-decided` end naming the covering items' ids. No parse changes, and a consumer reading the two
+flags by kind reads as before.
 
 ## Appendix: grammar
 

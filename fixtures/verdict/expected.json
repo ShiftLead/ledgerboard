@@ -115,7 +115,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461)"
     ]
    ],
    "review": [
@@ -320,7 +320,7 @@
    "flags": [
     [
      "tripwire-no-board-item",
-     "TD-100 lifts decision (Pat) with no board item, but an open item on this repo's board asks it — answer that item"
+     "TD-100 lifts decision (Pat) with no board item, but an open item on this repo's board asks it — answer that item (2026-01-06-85a7b461)"
     ]
    ],
    "review": [
@@ -335,7 +335,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461, 2026-01-07-0c1d2e01)"
     ]
    ],
    "review": [
@@ -390,7 +390,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461)"
     ]
    ],
    "review": [
@@ -410,7 +410,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461)"
     ]
    ],
    "review": [
@@ -485,7 +485,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-160 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-160 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff (no item on this repo's board covers it: log the lift with the suffix \"; no board item\", or \"; board <repo>\" for an answer on another repo's board)"
     ]
    ],
    "review": [
@@ -500,7 +500,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-160 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-160 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff (no item on this repo's board covers it: log the lift with the suffix \"; no board item\", or \"; board <repo>\" for an answer on another repo's board)"
     ]
    ],
    "review": [
@@ -687,6 +687,12 @@
     "TD-150 lifts decision (pat) by sam, not pat — only the gate's person answers, or anyone listed on a board whose Answered by is any"
    ]
   ],
+  "a lift with no suffix, and no item covering the gate at the base or the head": [
+   [
+    "tripwire-no-decided",
+    "TD-192 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff (no item on this repo's board covers it: log the lift with the suffix \"; no board item\", or \"; board <repo>\" for an answer on another repo's board)"
+   ]
+  ],
   "a reassign": [],
   "a shared item said to be left open, with nothing shared": [
    [
@@ -709,10 +715,16 @@
   "no board item, but the base had one (read the head alone and it passes)": [
    [
     "tripwire-no-board-item",
-    "TD-150 lifts decision (pat) with no board item, but an open item on this repo's board asks it — answer that item"
+    "TD-150 lifts decision (pat) with no board item, but an open item on this repo's board asks it — answer that item (2026-01-06-54236abb)"
    ]
   ],
   "no board item, on a board with no People": [],
+  "no board item, with one covering item at the base and a second added at the head": [
+   [
+    "tripwire-no-board-item",
+    "TD-191 lifts decision (pat) with no board item, but an open item on this repo's board asks it — answer that item (2026-01-07-91aa0001, 2026-01-08-91aa0002)"
+   ]
+  ],
   "set by= on one part of a shared item, decided": [
    [
     "tripwire-shared-decided",
@@ -725,7 +737,7 @@
   "the item closed with no Decided": [
    [
     "tripwire-no-decided",
-    "TD-150 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+    "TD-150 lifts decision (pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-54236abb)"
    ]
   ],
   "the last part of a shared item lifted, the item newly closed": [],
@@ -990,7 +1002,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (no item on this repo's board covers it: log the lift with the suffix \"; no board item\", or \"; board <repo>\" for an answer on another repo's board)"
     ]
    ],
    "review": [
@@ -1380,7 +1392,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461)"
     ]
    ],
    "review": [
@@ -1475,7 +1487,7 @@
    "flags": [
     [
      "tripwire-no-decided",
-     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff"
+     "TD-100 lifts decision (Pat), and no item covering it on this repo's board gains a Decided: in the same diff (asked by 2026-01-06-85a7b461)"
     ]
    ],
    "review": [
