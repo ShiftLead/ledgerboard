@@ -6,7 +6,8 @@ after round 4, and Paul bought rounds 5 (TD-163) and 6 (TD-164), the cap, after 
 2, 1, 1, 0, 1, 0, all applied. Round 5's one names the exact nonce test in D2 and D3; its closing fact-check and repeats
 raised 2 build-changing (a stale count, an ambiguous SPEC clause) and 4 minor, all applied. Round 6 read those fixes and
 raised 3 minor, all applied: D2 refuses an archived entry and arguments of the wrong type, and the SPEC's verdict clause
-states the nonce test as D2 does. Its closing fact-check and repeats raised 7 minor and nothing build-changing, all applied. The record:
+states the nonce test as D2 does. Its closing fact-check and repeats raised 7 minor and nothing build-changing, all applied. Round 6's fixes (D2's archived-entry and argument-type
+refusals, the SPEC's nonce clause, D3's `\r` wording) are unread by a design review, so the builder checks them. The record:
 [docs/reviews/TD-161.md](../reviews/TD-161.md).
 
 **Entry:** [TD-161](../ledger/TD-161.md). agent-cadence's TD-297 waits on its release.
@@ -107,7 +108,7 @@ this order, names the review:
    `**Name:**` lead, less one separating space if there is one and one final newline if there is one, and never
    stripped, since the writer keeps edge whitespace.
 6. The head entry is `ask_gate(base file, person, <head Ask>, <head Context>, [<head Answers>], [<head Lifts>], nonce,
-   T, <the base ledger's declared fields>)`, byte for byte, any refusal failing too (`ask-bytes`).
+   T, <the base ledger's declared fields, `declared(<ledger>)[0]`>)`, byte for byte, any refusal failing too (`ask-bytes`).
 7. `check()` of the head ledger at `today=T`, with each tree's rank file, against the base ledger as `old`, adds no error the base lacks,
    `cross-repo` and standing flags aside, flags compared as the ledger writer's `gate()` compares them, by kind, id and
    text less its leading ⚠ or ℹ (`ask-check`). This refuses Answers
