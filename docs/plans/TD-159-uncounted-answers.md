@@ -64,8 +64,8 @@ and `<p>` as the item spells them, and the board writer prefixes each with `the 
 refusal of `decide_lift()`:
 
 - `<ref>'s <gate> cannot be lifted by an answer on this item: its Context goes on past the gate, so the merge gate
-  does not count it — answer an item naming the entry and the gate alone (the sweep files one unless it asked within its
-  re-ask window or no board lists <p>), or, while none is open, log the lift with ; no board item`
+  does not count it — answer an item naming the entry and the gate alone (the sweep files one when it can), or, while
+  none is open, log the lift with ; no board item`
 - `<ref>'s <gate> cannot be lifted by an answer on this board: it has no People: line, so the merge gate does not
   count it — add a People: line naming <p>, or log the lift with ; no board item`
 
@@ -89,13 +89,14 @@ A lifting press on such an item is refused with the message above and nothing ch
   when a board lists the person, and after TD-158 that question names this item as an older one.
 - **After a `Not yet` or a work order:** that answer logs `kept waiting`, and the sweep does not ask again until
   `reask_days` (30 by default) have passed. Until then no covering item may exist, so the route is the message's
-  second one: a lift logged `; no board item`, which only the person's own session can write, or the host's lift of
-  a recorded answer where it has one.
+  second one: a lift logged `; no board item`, by the gate's person or, on a board whose `Answered by` is `any`, by
+  anyone it lists.
 - **A board with no `People:`:** the sweep cannot file there. The cure is the `People:` line, or the same logged lift.
 
 The two cures of a tail item exclude each other: once a covering item is open, a lift logged `; no board item` is
-flagged `tripwire-no-board-item`, so that item must be answered instead. Once the covering item lifts the gate, the
-old tail item stays open, since the sweep does not close it, and a `Go` on it closes it with no ledger write.
+flagged `tripwire-no-board-item`, so that item must be answered instead. Once the covering item lifts the gate, an
+old tail item stays open, since the sweep closes none whose tail is anything but exactly `lift`, and a `Go` on it
+closes it with no ledger write.
 
 ### Limits accepted
 
