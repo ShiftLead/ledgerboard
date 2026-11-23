@@ -7,7 +7,7 @@ applied, and its repeat none. Round 2's sixth minor was rejected, and every othe
 **Go** (2026-11-22): build TD-160 (B1). The record:
 [docs/reviews/TD-159.md](../reviews/TD-159.md).
 
-**Entry:** [TD-159](../ledger/TD-159.md), filed from D3 of [TD-152's design](TD-152-near-items.md).
+**Entry:** [TD-159](../ledger/archive/TD-159.md), filed from D3 of [TD-152's design](TD-152-near-items.md).
 
 ## The problem
 
