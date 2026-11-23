@@ -3,8 +3,8 @@
 **Status:** Draft 4, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
 what `decide_lift()`, and so the board writer's decide, accepts; cap 6 rounds, cadence.md §4.8). The rounds ended by
 the stop rule after round 3: build-changing findings per round 4, 1, 0. Its closing fact-check raised 3 minors, all
-applied, and its repeat none. Round 2's sixth minor was rejected, and every other finding is applied. Waits on Paul's
-end-of-rounds answer. The record:
+applied, and its repeat none. Round 2's sixth minor was rejected, and every other finding is applied. Paul answered
+**Go** (2026-11-22): build TD-160 (B1). The record:
 [docs/reviews/TD-159.md](../reviews/TD-159.md).
 
 **Entry:** [TD-159](../ledger/TD-159.md), filed from D3 of [TD-152's design](TD-152-near-items.md).
@@ -121,7 +121,8 @@ closes it with no ledger write.
 
 ## SPEC text
 
-The version below is v3.7. If another release takes it first, the build uses the next free minor.
+The version below is v3.7, written before v3.6 was tagged. The build uses the next minor with no tag when it lands:
+v3.6 if that is still untagged, so the two share a release, and otherwise the next free one.
 
 **In *The decide lift*, a new paragraph directly before `**Closing on the answer** (v2.4):`**
 
@@ -147,7 +148,8 @@ The version below is v3.7. If another release takes it first, the build uses the
 
 ## Fixtures and tests
 
-A prototype of the refusal passes the whole suite and changes exactly three fixture results:
+A prototype of the refusal, rebuilt on main after TD-157 and TD-158 landed, passes the whole suite but for the fixture
+check and changes exactly three fixture results:
 
 - `lift` `decide_lift` `no_people_line`: now the no-`People:` refusal;
 - `sweep` `parts_problems` `line-words-after-gate` and `line-words-after-gate-pr`: each `lift` now the Context
@@ -185,9 +187,9 @@ is answered with the message. agent-cadence's `set` picks through `covers()`, so
 takes the release by its vendor PR, whose own suite is the check that none of its tests presses a lifting answer on
 one of these two item shapes.
 
-## Builds (filed on Paul's go)
+## Builds (filed on Paul's go, 2026-11-22)
 
-- **B1** D1 and D2: `decide_lift()` and its docstring (its `board_people` None wording and its refusals),
+- **B1** (TD-160) D1 and D2: `decide_lift()` and its docstring (its `board_people` None wording and its refusals),
   `_context_tail()` shared by `_sweep_context()` and `_parts_fault()`, each dropping its `g` line once unused (`ruff`
   is the merge gate), the SPEC text above, the three changed fixture results, and the new cases. A minor release,
   which may be shared with TD-157 and TD-158.
