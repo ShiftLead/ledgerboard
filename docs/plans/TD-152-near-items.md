@@ -11,7 +11,7 @@ cases' names: four cases hold several scenarios, so they take letters) and 4 min
 2 minors, its repeats 3, 4 and 1 more, and a last repeat none, all applied. Paul answered One more round
 (2026-11-22): round 7 (TD-156), past the cap, read the lettered cases and raised 0 build-changing and 4 minors, all
 applied (two more lettered cases, 26 in all); its closing fact-check 2 minors (one applied, one rejected) and its
-repeat 2 more, applied, and a last repeat none. The rounds end here, the round Paul bought. The record:
+repeat 2 more, applied, and a last repeat none. The rounds ended there, the round Paul bought. Paul answered **Go** (2026-11-22): builds TD-157 (B1) and TD-158 (B2), and TD-159 for D3's difference. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
 **Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
