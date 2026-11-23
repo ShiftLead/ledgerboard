@@ -1067,6 +1067,7 @@ def sweep_cases(L, spec: dict, root: Path = HERE) -> dict:
         **({"delegated": {c["name"]: answers_case(L, c, files) for c in spec["delegated"]}}  # v3.4
            if "delegated" in spec and hasattr(L, "board_delegates") else {}),
         **({"in_flight": in_flight_cases(L, spec, files)} if "in_flight" in spec else {}),  # v3.5
+        **({"near": near_cases(L, spec, files)} if "near" in spec else {}),  # v3.6
         **({"entry_answers": entry_answers_cases(L, spec["entry_answers"])} if "entry_answers" in spec else {}),
         "runs": runs,
         "rerun": run(first, boards_of(rerun_boards, after)),
@@ -1142,6 +1143,47 @@ def in_flight_cases(L, spec: dict, files: dict[str, str]) -> dict:
         out[c["name"]] = {"to_file": got["to_file"], "to_close": got["to_close"], "lifts": got["lifts"],
                           "rerun": {"to_file": again["to_file"], "to_close": again["to_close"],
                                     "lifts": again["lifts"]}}
+    return out
+
+
+def near_cases(L, spec: dict, files: dict[str, str]) -> dict:
+    """The near items (v3.6, TD-152): ``sweep()`` over each ``near`` case's own ``ledger.md`` and v3 board ``board/``,
+    given under the first top-level board's ``url`` and ``basename``, and its ``other/`` board under the case's
+    ``other`` where it names one, on its one date. ``rerun`` is the same sweep once the first run's closes are moved
+    and its filings written (``item_file()``) on each board by its name. Against a module whose ``sweep()`` result
+    has no ``near`` key (read on the first case), the whole entry says so."""
+    top = spec["boards"][0]
+    out: dict = {}
+    for c in spec["near"]:
+        d = c["dir"]
+        sides = [(top["url"], top["basename"], f"{d}/board")]
+        if "other" in c:
+            sides.append((c["other"]["url"], c["other"]["basename"], f"{d}/other"))
+        ents = [files[f"{d}/ledger.md"], ""]
+
+        def run(fs, c=c, ents=ents, sides=sides):
+            return L.sweep(ents, [(u, b, L.load_board(p, dict_ls(fs), fs.get)) for u, b, p in sides], {},
+                           c["today_utc"], c["today_local"], repo=spec["repo"])
+        fs = {k: v for k, v in files.items() if k.startswith(f"{d}/")}
+        got = run(fs)
+        if "near" not in got:
+            return {"missing": "the module's sweep returns no near — older than v3.6"}
+        day = c["today_local"]
+        after = dict(fs)
+        for u, b, path in sides:
+            name = L.origin_key(u) or b
+            for i in sorted(got["to_close"].get(name, [])):
+                src = after.pop(f"{path}/{i}.md")
+                after[f"{path}/{L.item_path(i, day)}"] = L.edit_item(src, "done", why="swept",
+                                                                     today=date.fromisoformat(day))
+            for it in got["to_file"].get(name, []):
+                new = L.item_file(it["text"], None if it["kind"] == "fyi" else day, day, "sweep", None, it["context"],
+                                  kind=it["kind"], answers=it["answers"], default=it["default"], detail=it["detail"],
+                                  lifts=it["lifts"])
+                after[f"{path}/{L.item_id(day, hashlib.sha256(new.encode()).hexdigest()[:8])}.md"] = new
+        again = run(after)
+        keys = ("to_file", "to_close", "lifts", "near")
+        out[c["name"]] = {**{k: got[k] for k in keys}, "rerun": {k: again[k] for k in keys}}
     return out
 
 

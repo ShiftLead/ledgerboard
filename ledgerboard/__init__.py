@@ -7622,12 +7622,13 @@ def _lifting_labels(got: Mapping) -> list[str]:
 
 def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", title: str = "", extra: str = "",
                 reask_days: int = SWEEP_REASK_DAYS, context: str = "", own: Mapping | None = None,
-                unusable: bool = False) -> dict:
+                unusable: bool = False, near: str = "") -> dict:
     """One item the sweep files, as ``item_file()``'s arguments (the host adds today, its Due:, session and
     host): {text, context, kind, answers, default, detail, lifts}. A decision's item takes the entry's
     ``**Context:**`` (``context``, v3.3) as its detail block's context, where the entry has one, and (v3.3) the
     entry's own answers (``own``, ``entry_answers()``'s), else `Go | Not yet`; ``unusable`` (the entry's answers
-    refused) adds a clause to its context."""
+    refused) adds a clause to its context, and ``near`` (v3.6, ``_near_clause()``) ends it, one trailing ``.`` of
+    what came before dropped."""
     kind = SWEEP_KINDS[cond]
     ctx = f"{ref} {gate}" + (" board " + extra if cond == "audit" else "")
     out: dict = {"text": ask if cond == "uncovered" else _sweep_text(cond, tid, gate, extra), "context": ctx,
@@ -7645,6 +7646,8 @@ def _sweep_item(cond: str, tid: str, ref: str, gate: str, *, ask: str = "", titl
         why = context or f"{tid} ({title}) waits on {gate}, and no board item asked for it"
         if unusable:
             why += "; its own answers could not be offered (the ledger check names why)"
+        if near:
+            why = why.removesuffix(".") + near
         out.update(answers=list(got["answers"]), default=got["default"], lifts=got["lifts"] and list(got["lifts"]),
                    detail={"context": why, "question": ask, "recommended": said})
     elif cond == "impossible":
@@ -7711,12 +7714,56 @@ def _deferred(num: int, gate: str, open_: Mapping[int, str], gone: Mapping[int, 
     return out
 
 
+def _near_items(reads: list[dict], num: int, gate: str, parent: int | None, repo: str) -> list[dict]:
+    """The near items of entry ``num``'s decision (v3.6, TD-152; SPEC *The gate sweep*): each open item, of any kind
+    but ``fyi``, that names the entry by a Context ref (or its parent, with the entry among `Parts:`) and that
+    covers() does not find for the gate; neither one about another gate nor the sweep's own for this entry and gate."""
+    key = _gate_key(gate)
+    found = [id(r) for r in _covers(reads, num, gate, parent, repo)]
+    out = []
+    for r in reads:
+        it = r["item"]
+        if r["state"] not in COVER_STATES[:2] or it.kind == "fyi" or id(r) in found:
+            continue
+        ctx = it.context or ""
+        refs = [x.group(0) for x in REF_TD_RE.finditer(ctx)]
+        nums = {_ours(x, r["own"], repo) for x in refs}
+        if num not in nums and not (parent is not None and parent in nums
+                                    and any(_ours(x, r["own"], repo) == num for x in it.parts)):
+            continue
+        gates = {_gate_key(g.group(0)) for g in CONTEXT_ANY_GATE_RE.finditer(ctx)}
+        if len(gates) == 1 and key not in gates:
+            continue  # about another gate
+        if gates == {key} and len({ref_key(x) for x in refs}) == 1 and _ours(refs[0], r["own"], repo) == num:
+            g = CONTEXT_ANY_GATE_RE.search(ctx)
+            qual = " ".join(ctx[g.end():].strip().rstrip(".").split()).lower()
+            if qual == "lift" or qual.startswith("board ") or (
+                    r["head"] is not None and SWEEP_KINDS[r["head"]] == it.kind):
+                continue  # the sweep's own
+        out.append(r)
+    return out
+
+
+def _near_clause(near: Sequence[dict], board: str, ref: str, gate: str) -> tuple[str, list[list[str]]]:
+    """The clause the sweep's decide ends its context with, and the items it names as ``[board, id]`` (v3.6): those
+    of ``near`` with an id, each once, by id then board name (bytewise); ``("", [])`` when none has one."""
+    named = sorted({(r["item"].id, r["board"]) for r in near if r["item"].id is not None},
+                   key=lambda x: (x[0].encode("utf-8"), x[1].encode("utf-8")))
+    if not named:
+        return "", []
+    said = ", ".join(i + (f" on {b}" if b != board else "") for i, b in named)
+    head, verb = ("item", "names") if len(named) == 1 else ("items", "name")
+    return (f"; {head} {said} also {verb} {ref}, but only an answer here is counted when {gate} is lifted",
+            [[b, i] for i, b in named])
+
+
 def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, today_utc: date | str,
           today_local: date | str, reask_days: int = SWEEP_REASK_DAYS, event_age_days: int = SWEEP_EVENT_AGE_DAYS,
           repo: str = "", *, resolve: Resolve | None = None) -> dict:
     """What one sweep of this repo's ledger does (v2.4, SPEC *The gate sweep*): ``{to_file: {board: [item]},
-    to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}``, each board named as ``covers()``
-    names it. It keeps no state: the boards and the ledger's Log are its state, so a second run over its own
+    to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}], near: [{id, gate, board, items}]}``, each
+    board named as ``covers()`` names it, and ``near`` (v3.6) one record per decide filed whose context names the
+    older items that name its entry but whose answer is not counted, ``items`` as ``[board, item id]``. It keeps no state: the boards and the ledger's Log are its state, so a second run over its own
     writes files and closes nothing.
 
     ``entries`` are this repo's ledger and archive texts (an entry is open unless its Status is an archived
@@ -7765,14 +7812,18 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
     to_file: dict[str, list[dict]] = {}
     to_close: dict[str, list[str]] = {}
     lifts: list[dict] = []
+    near_out: list[dict] = []
     filed: set[tuple] = set()
 
-    def add(board: str, num: int, gate: str, cond: str, item: dict, qual: str = "") -> None:
-        """File ``item`` unless this run already filed its identity (a gate written twice, a lift logged twice)."""
+    def add(board: str, num: int, gate: str, cond: str, item: dict, qual: str = "") -> bool:
+        """File ``item`` unless this run already filed its identity (a gate written twice, a lift logged twice);
+        whether it was filed."""
         key = (board, num, _gate_key(gate), cond, qual)
-        if key not in filed:
-            filed.add(key)
-            to_file.setdefault(board, []).append(item)
+        if key in filed:
+            return False
+        filed.add(key)
+        to_file.setdefault(board, []).append(item)
+        return True
 
     def same(r: dict, num: int, gate: str, cond: str, qual: str = "") -> bool:
         return (r["ctx"] == (num, _gate_key(gate), qual) and r["head"] == cond
@@ -7881,9 +7932,12 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
                     mine, unusable = entry_answers(raws.get(num, text)), False
                 except Refused:
                     mine, unusable = None, True
-                add(_board_name(pick), num, gate, "uncovered", _sweep_item(
-                    "uncovered", tid, ref, gate, ask=_entry_ask(raws.get(num, text), e["title"]), title=e["title"],
-                    context=_entry_context(text), reask_days=reask_days, own=mine, unusable=unusable))
+                clause, named = _near_clause(_near_items(reads, num, gate, pnum, repo), _board_name(pick), ref, gate)
+                if add(_board_name(pick), num, gate, "uncovered", _sweep_item(
+                        "uncovered", tid, ref, gate, ask=_entry_ask(raws.get(num, text), e["title"]), title=e["title"],
+                        context=_entry_context(text), reask_days=reask_days, own=mine, unusable=unusable,
+                        near=clause)) and named:
+                    near_out.append({"id": tid, "gate": gate, "board": _board_name(pick), "items": named})
                 continue
             name = gate[len("event ("): -1]
             got, evidence = _outcome(results, tid, name)
@@ -7922,7 +7976,7 @@ def sweep(entries: Iterable[str], boards: Sequence[Sequence], results: Mapping, 
             k = r["item"].id
             if k not in keys:
                 keys.append(k)
-    return {"to_file": to_file, "to_close": to_close, "lifts": lifts}
+    return {"to_file": to_file, "to_close": to_close, "lifts": lifts, "near": near_out}
 
 
 def _audit_satisfied(reads: list[dict], boards: Sequence[Sequence], there: str, repo: str, tid: str) -> bool:

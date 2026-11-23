@@ -1091,10 +1091,15 @@ nothing after the gate (a Context that goes on past it, `TD-4 decision (pat) —
 board whose `People:` lists the gate's person (any board, for an event). Its state is `open`, `decided` (open, with
 `Decided:`), `closed` or `closed-decided` (closed: on a v3 board, its file under `archive/`; on a v2 board, closed on
 the board or in its archive). Only `open` and `decided` cover.
+Only an item `covers()` finds counts toward a lift by answer on this repo's board (a `gate lifted … answer`
+line with no suffix, or with `; shared board item left open`; v3.6 says so, and no release did otherwise): an
+`act`'s `done` records no answer, and an answer on a `decide` naming several entries, or the entry with no gate,
+is not counted for any of them. A lift resting on such an item is an override (`lift_gate(…, override=)`),
+which review reads.
 
 `sweep(entries, boards, results, today_utc, today_local, reask_days=30, event_age_days=30, repo, *, resolve=None)` returns `{to_file:
-{board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}]}`, `to_close` listing ids
-(v3.0); an item
+{board: [item]}, to_close: {board: [item id]}, lifts: [{id, gate, kind, evidence}], near:
+[{id, gate, board, items}]}`, `to_close` listing ids (v3.0) and `near` the near items (v3.6, below); an item
 read from a v2 line with no readable date has no id and is never in `to_close`: the sweep leaves it for a person, as
 a line it cannot name by id. `entries` are the ledger's
 and the archive's texts; an entry is open unless its Status is an archived one, and only open entries file or lift.
@@ -1158,6 +1163,30 @@ decision the sweep would otherwise ask is in flight (below); one that raises pro
   decision), nor its other gates. A decide already open stays open (*The close rule*). The `has no board` act is
   filed as before. An entry of the ledger with an archived Status is not open here, though `pickable()`, which
   reads by place, still blocks on it;
+
+  **Near items** (v3.6). Before filing the decide, the sweep reads the entry's near items for the gate. An item
+  names the entry when one of its Context's refs, read as that board reads refs, is the entry, or is the entry's
+  `Part of` parent while one of its `Parts:` ids, read the same way, is the entry. A near item is an open item
+  (state `open` or `decided`) on any board read, of any kind but `fyi`, that names the entry and that `covers()`
+  does not find for the gate; except an item whose Context names exactly one gate, not this one, and an item of
+  the sweep's own for this entry and gate: its Context names exactly that one entry and exactly one gate, this one,
+  and either goes
+  on after the gate with `lift` or `board <repo>` (the words after the gate, trailing `.`s dropped, whitespace collapsed and
+  compared case-blind: `lift` exactly, or beginning `board `), or its words hold any of the sweep's fixed words (those of *One
+  filing rule*, then `was answered with a lift`, taken in that order) and the item is of the kind the sweep files
+  with the first it holds. Gates compare by their keys, and a Context's gates are counted once per key in both exceptions, and in the sweep's own its refs once per spelling (a repo's case aside: `TD-n` and `<repo>#TD-n` are two); refs are
+  read as the sweep reads an item's Context entry (a bare `TD-n` on this repo's own board, `<repo>#TD-n` naming
+  this repo on any). Such an item asks about the entry in a form whose answer the merge gate does not count
+  (above). With any that has an id, the decide is filed all the same, and its detail block's context, assembled as
+  before (with any clause the sweep already adds), a single trailing `.` of it dropped, ends `; <named> also
+  <verb> <ref>, but only an answer here is counted when <gate> is lifted`: `<named>` is `item <id>`, or `items
+  <id>, <id>…` ordered by id, then board name (both bytewise), each followed by ` on <board>` when on a board other than
+  the one filed on (named as the sweep names boards); `<verb>` is `names` for one item, `name` for several;
+  `<ref>` is the entry as the filed item's Context spells it, `<gate>` as the entry spells it. An item with no id is
+  not named. `near` holds one record per decide so filed, `{id, gate, board, items}`: the entry's `TD-n`, the gate
+  as the entry spells it, the board filed on, and `items`, the named items as `[board, item id]` in the clause's
+  order; in entry-number order, then the entry's gate order; `[]` when there are none. Nothing else about the
+  decide changes, and no near item is read when no decide is filed.
 - **`until D`**, D reached: a lift, `kind: until`, evidence `date reached`. Nothing is filed;
 - **`event (<name>)`**, by its outcome, on this repo's own board: `passed`, a lift (`kind: event`, the result's
   evidence); `error`, an `act` `Event check broken on TD-n: …`; `impossible`, a `decide` `… can no longer happen.`
@@ -2668,9 +2697,12 @@ gained decision `decision-deferred`, a new flag kind, rather than refusing or fl
 files less and the verdict refuses less; no parse, field, Log line, item key or canonical form changes, and a
 caller passing no `resolve` sees another repo's ids as before.
 
-**v3.6 names what a duplicate question needs** (TD-152; *The merge gate's verdicts*): `tripwire-no-board-item`
-and `tripwire-no-decided` end naming the covering items' ids. No parse changes, and a consumer reading the two
-flags by kind reads as before.
+**v3.6 names what a duplicate question needs** (TD-152; *The gate sweep*, *The merge gate's verdicts*): the
+sweep's decide for an uncovered decision names, in its detail context, the open items that already name the
+entry but whose answer is not counted for its gate, and `sweep()` returns them as `near`; `tripwire-no-board-item`
+and `tripwire-no-decided` end naming the covering items' ids; and SPEC says which answers the merge gate counts.
+No parse changes, and nothing the sweep files or closes changes but that clause; a consumer reading `sweep()`'s
+three keys, or the two flags by kind, reads as before.
 
 ## Appendix: grammar
 
