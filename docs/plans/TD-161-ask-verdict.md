@@ -63,7 +63,8 @@ consumer calls `ask_subject_parts()` to choose this verdict.
 ### D2. The entry writer: `ask_gate()`
 
 `ask_gate(text, person, ask, context, answers, lifts, nonce, today, declared_fields=())`, `today` a date or
-`YYYY-MM-DD` as for `edit_entry()`, returns the entry after the write in step 2 to 4 above, through `edit_entry()`, as `lift_gate()` does for a lift. `answers` and `lifts` are lists,
+`YYYY-MM-DD` as for `edit_entry()`, returns the entry after the write in steps 2 to 4 above, through `edit_entry()`,
+as `lift_gate()` does for a lift. `answers` and `lifts` are lists,
 joined with ` | `. It is public so the verdict and a writer share one definition. It raises `Refused` when:
 
 - the Blocked by holds **any** decision, by `parse_gates()`: an item of `decisions`, a `retired` item of kind `role`,
