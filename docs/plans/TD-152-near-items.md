@@ -15,7 +15,7 @@ repeat 2 more, applied, and a last repeat none. The rounds ended there, the roun
 builds TD-157 (B1) and TD-158 (B2), and TD-159 for D3's difference. The record:
 [docs/reviews/TD-152.md](../reviews/TD-152.md). In plain words: [docs/synopses/TD-152.md](../synopses/TD-152.md).
 
-**Entry:** [TD-152](../ledger/TD-152.md), reported by samscrape's session on 2026-11-21.
+**Entry:** [TD-152](../ledger/archive/TD-152.md), reported by samscrape's session on 2026-11-21.
 
 ## The problem
 
