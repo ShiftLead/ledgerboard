@@ -2922,6 +2922,13 @@ def lift_subject_parts(line: str) -> dict | None:
     return None if m is None else {k: m.group(k) for k in ("tool", "gate", "id", "session")}
 
 
+def ask_subject_parts(line: str) -> dict | None:
+    """A tool's question's commit subject read back (v3.6, SPEC *Edits*): ``{tool, person, id, session}``, each part
+    as written (``n/a`` too), or None for any other line."""
+    m = ASK_SUBJECT_RE.fullmatch(line) if isinstance(line, str) else None
+    return None if m is None else {k: m.group(k) for k in ("tool", "person", "id", "session")}
+
+
 def edit_action(line: str) -> str | None:
     """The action of a board edit's commit subject (`snooze`, `due`, `done`, `decide` or `reply`), None for any
     other subject (v2.3). A `snooze … to D` meant a moved Due: before v2.3 and a hide since."""
@@ -6403,6 +6410,12 @@ LOG_TOKEN_RE = re.compile(LOG_TOKEN)
 LIFT_SUBJECT_RE = re.compile(rf"(?P<tool>{LOG_TOKEN}): lift (?P<gate>decision \({PERSON}\)) on "
                              rf"(?P<id>TD-[0-9]{{1,18}}) \(session (?P<session>{LOG_TOKEN})\)")
 LIFT_TID_RE = re.compile(r"TD-[0-9]{1,18}")
+# The commit subject of a tool's question (v3.6, SPEC *Edits*): `<tool>: ask <p> on TD-n (session <name>)`, matched
+# whole. subject_kind() does not name it, so a consumer that passes a named kind does not pass this one.
+ASK_SUBJECT_RE = re.compile(rf"(?P<tool>{LOG_TOKEN}): ask (?P<person>{PERSON}) on "
+                            rf"(?P<id>TD-[0-9]{{1,18}}) \(session (?P<session>{LOG_TOKEN})\)")
+ASK_NOTE = "asked by the stage record: "  # the Log note ask_gate() ends on, before its nonce
+ASK_NOTE_LINE_RE = re.compile(rf"- (?P<day>[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}): {ASK_NOTE}(?P<nonce>\S+)")
 
 
 def _host_log_evidence_ok(ev: str, source: str) -> bool:
@@ -6617,6 +6630,59 @@ def lift_gate(text: str, gate: str, by: str, *, answer: str | None = None, evide
         raise Refused(f"{by} is not on the board's People: ({', '.join(people)}) — only a listed person answers")
     written, value = _without(text, gate)
     return _logged(text, "lift", value, [f"gate lifted: {written} — by {who}; answer \"{said}\""], day)
+
+
+def ask_gate(text: str, person: str, ask: str, context: str, answers: list[str], lifts: list[str], nonce: str,
+             today: date | str, declared_fields=()) -> str:
+    """One open entry's text after a tool asks ``person`` about it (v3.6, SPEC *Ledger entries and their edits*):
+    ``decision (<person>)`` added to its Blocked by with every earlier item kept, its Ask, Context, Lifts and Answers
+    written in that order (replacing earlier ones, ``answers`` and ``lifts`` joined with `` | ``), and the Log note
+    ``asked by the stage record: <nonce>``, each through edit_entry(). ``declared_fields`` are the ledger's
+    ``Fields:`` names. Every refusal is ``Refused``: an archived entry; an argument of the wrong type; a Blocked by
+    holding any decision (a readable one, a retired item, or an unreadable item opening with the word ``decision``);
+    a text already holding the note; an Ask in the header or declared; a person that is no name or a retired role;
+    a nonce that is empty, holds Unicode whitespace or does not encode as UTF-8, or that the note writer refuses;
+    and a text that is not one entry."""
+    def strings(value: object) -> bool:
+        return isinstance(value, list) and all(isinstance(x, str) for x in value)
+    if not isinstance(text, str):
+        raise Refused("ask_gate takes one entry's text")
+    if not isinstance(ask, str) or not isinstance(context, str):
+        raise Refused("a question's Ask and Context are strings")
+    if not strings(answers) or not strings(lifts):
+        raise Refused("a question's answers and lifts are lists of strings")
+    if not isinstance(declared_fields, (tuple, list, set, dict)) or not all(isinstance(x, str) for x in declared_fields):
+        raise Refused("declared_fields is a tuple, list, set or dict of strings")
+    if not is_person(person) or person.lower() in RETIRED_ROLES:
+        raise Refused(f"who is asked is a person's name and no retired role, not {person!r}")
+    if not isinstance(nonce, str) or not re.fullmatch(r"\S+", nonce):
+        raise Refused(f"a question's nonce is one or more characters with no whitespace, not {nonce!r}")
+    try:
+        nonce.encode("utf-8")
+    except UnicodeEncodeError:
+        raise Refused(f"a question's nonce encodes as UTF-8, and {nonce!r} does not") from None
+    day = utc_day(today, "ask_gate()'s today")
+    found = entries(text)
+    if len(found) != 1:
+        raise Refused("ask_gate takes one entry's text")
+    e = found[0]
+    if first_word(e["fields"].get("status")) in ARCHIVED_WORDS:
+        raise Refused(f"{e['id']} is archived — a question is asked only about an open entry")
+    g = parse_gates(e["blocked_raw"])
+    if g["decisions"] or g["retired"] or any(re.match(r"decision\b", x, re.IGNORECASE) for x in g["bad"]):
+        raise Refused(f"{e['id']}'s Blocked by already holds a decision: {e['blocked_raw']}")
+    note = ASK_NOTE + nonce
+    if note in text:
+        raise Refused(f"{e['id']} already holds {note!r}")
+    if "ask" in e["fields"] or "ask" in _declared_keys(declared_fields):
+        raise Refused(f"{e['id']}'s Ask is a header field here, so a question's Ask section is not written")
+    names = tuple(declared_fields)
+    raw = (e["blocked_raw"] or "").strip()
+    out = edit_entry(text, "set", fields={"Blocked by": f"{raw}, decision ({person})" if raw else f"decision ({person})"},
+                     today=day)
+    for name, words in (("Ask", ask), ("Context", context), ("Lifts", " | ".join(lifts)), ("Answers", " | ".join(answers))):
+        out = edit_entry(out, "edit", section=name, words=words, today=day, declared_fields=names)
+    return edit_entry(out, "note", words=note, today=day)
 
 
 def _delegated_by(by: str, delegate: str | None, scope: str | None) -> str:
@@ -8718,6 +8784,137 @@ def ledger_lift_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, st
     # 10. No flag.
     if flags:
         return review("ledger-lift-flagged", "the tripwire flags the PR")
+    return {"carve_out": True, "flags": flags, "review": []}
+
+
+def ask_pr_verdict(base_tree: Mapping[str, str], head_tree: Mapping[str, str], files: Sequence[str], subject: str,
+                   commits: int, created_at: date | datetime | str, merged_at: date | datetime | str | None,
+                   repo: str) -> dict:
+    """A tool's question's verdict (v3.6, SPEC *The merge gate's verdicts*): ``{carve_out, flags, review}`` for a PR
+    that asks a person about one entry, its arguments and ``flags`` as ledger_lift_verdict()'s. ``carve_out`` says
+    the diff is exactly one ask_gate() write and the one ``decide`` the sweep files for it; no person's press stands
+    behind it, so the trees are the whole proof. Otherwise ``review`` names the first condition that fails, in the
+    order below. The sweep is given the one entry, as the write gives it. A ``Refused`` from tripwire(), which runs
+    first, or from the dates and ``commits``, escapes; past them an unreadable text is a reason."""
+    flags = tripwire(base_tree, head_tree, subject, repo)
+    created = _verdict_day(created_at, "created_at")
+    merged = None if merged_at is None else _verdict_day(merged_at, "merged_at")
+    if merged is not None and merged < created:
+        raise Refused(f"merged_at {merged} is before created_at {created}")
+    if isinstance(commits, bool) or not isinstance(commits, int) or commits < 0:
+        raise Refused(f"commits is the PR's commit count, not {commits!r}")
+    one = timedelta(days=1)
+
+    def review(kind: str, text: str) -> dict:
+        return {"carve_out": False, "flags": flags, "review": [(kind, text)]}
+    # 1. The board.
+    b_board, h_board = _tree_load(base_tree), _tree_load(head_tree)
+    if b_board.form is None or h_board.form is None:
+        return review("ask-no-board", f"the PR has no board at {BOARD_DIR}/ or {BOARD_V2_PATH} at its base or head")
+    if b_board.form != "dir" or h_board.form != "dir":
+        return review("ask-board-v2", "the PR's board is a v2 board at its base or head: a v3 writer writes none")
+    people = board_people(b_board)
+    if people is None:
+        return review("ask-no-people", "the base board declares no People: line, so who may be asked is unchecked")
+    # 2. The subject.
+    parts = ask_subject_parts(subject or "")
+    if parts is None:
+        return review("ask-subject", f"the commit's subject is not a tool's question: {subject!r}")
+    if commits != 1:
+        return review("ask-subject", f"a question's PR is one commit, squash-merged; this has {commits}")
+    tid, person = parts["id"], parts["person"]
+    # 3. The entry.
+    ls, h_ls = _tree_ls(base_tree), _tree_ls(head_tree)
+    if ls(LEDGER_DIR) is None:
+        return review("ask-entry", "a v1 ledger's question is not recomputed — it takes ordinary review")
+    num = _num(tid)
+    btext = _tree_ledger(base_tree)[0].get(num)
+    if btext is None:
+        return review("ask-entry", f"the base ledger holds no open {tid}")
+    path = entry_path(LEDGER_DIR, _entries(btext)[0]["id"], ls)
+    if path is None or "/" in path[len(LEDGER_DIR) + 1:] or base_tree.get(path) is None:
+        return review("ask-entry", f"{tid} is not one open file directly in {LEDGER_DIR}/ at the base")
+    htext = _tree_ledger(head_tree)[0].get(num)
+    if htext is None or entry_path(LEDGER_DIR, _entries(htext)[0]["id"], h_ls) != path or head_tree.get(path) is None:
+        return review("ask-entry", f"the head does not hold {path} open")
+    # 4. The files.
+    pre = BOARD_DIR + "/"
+    changed = {p for p in {*base_tree, *head_tree} if base_tree.get(p) != head_tree.get(p)}
+    if set(files) != changed:
+        return review("ask-files", f"the PR's files {sorted(set(files))} are not what its trees change {sorted(changed)}")
+    added = sorted(changed - {path})
+    rel = added[0][len(pre):] if len(added) == 1 and added[0].startswith(pre) else ""
+    if path not in changed or len(added) != 1 or "/" in rel or not rel.endswith(".md") or not is_item_id(rel[:-3]) \
+            or added[0] in base_tree or added[0] not in head_tree:
+        return review("ask-files", f"the PR changes {sorted(changed)}, and a question changes {path} and adds one "
+                      f"item file directly in {BOARD_DIR}/")
+    item_at = added[0]
+    # 5. The question's note and sections.
+    head = head_tree[path]
+    last = ASK_NOTE_LINE_RE.fullmatch(head.removesuffix("\n").rpartition("\n")[2])
+    if last is None or not _real_day(last.group("day")):
+        return review("ask-sections", f"{path} does not end in the line - <day>: {ASK_NOTE}<nonce>")
+    t, nonce = date.fromisoformat(last.group("day")), last.group("nonce")
+    try:
+        sections = _entry_sections(_entry_parts(canonical(head))[2])
+    except Refused as e:
+        return review("ask-sections", f"{path} does not read as one entry: {e}")
+    words: dict[str, str] = {}
+    for name in ("Ask", "Context", "Answers", "Lifts"):
+        at = _keyed(sections, name.lower())
+        lead_run = f"**{sections[at[0]][0]}**" if len(at) == 1 else ""
+        if len(at) != 1 or not sections[at[0]][1].startswith(lead_run):
+            return review("ask-sections", f"{path} does not hold exactly one {name} section")
+        words[name] = sections[at[0]][1][len(lead_run):].removeprefix(" ").removesuffix("\n")
+    # 6. The bytes.
+    b_led, b_arch = load(LEDGER_DIR, ls, lambda p: base_tree.get(p))
+    try:
+        want = ask_gate(base_tree[path], person, words["Ask"], words["Context"], [words["Answers"]], [words["Lifts"]],
+                        nonce, t, declared(b_led)[0])
+    except Refused as e:
+        return review("ask-bytes", f"ask_gate refuses the question: {e}")
+    if head != want:
+        return review("ask-bytes", f"{path} is not what ask_gate writes, byte for byte")
+    # 7. The ledger's check, as the ledger writer's gate compares it.
+    def same(r: dict) -> tuple:
+        return r["kind"], r["id"], r["text"].lstrip("⚠ℹ ")
+    h_led, h_arch = load(LEDGER_DIR, h_ls, lambda p: head_tree.get(p))
+    rank_at = rank_path(LEDGER_DIR)
+    before = {same(r) for r in check(b_led, b_arch, b_led, None, base_tree.get(rank_at), today=t)}
+    new = [r for r in check(h_led, h_arch, b_led, None, head_tree.get(rank_at), today=t)
+           if same(r) not in before and not r.get("standing") and r["level"] == "error" and r["kind"] != "cross-repo"]
+    if new:
+        return review("ask-check", "the head ledger adds: " + "; ".join(r["text"] for r in new))
+    # 8. Who.
+    if person.lower() not in {p.lower() for p in people}:
+        return review("ask-people", f"{person} is not on the base board's People:")
+    # 9. The item.
+    item = parse_item(head_tree[item_at], rel)
+    day = rel[:10]
+    if item is None or item.id != rel[:-3] or not _real_day(day) or item.added != date.fromisoformat(day):
+        return review("ask-item", f"{item_at} does not read as an item whose id carries its Added day")
+    d = item.added
+    try:
+        got = sweep([head], [_tree_board(base_tree, repo)], {}, t, d, reask_days=0, repo=repo)
+        decides = [x for its in got["to_file"].values() for x in its if x["kind"] == "decide"]
+        if len(decides) != 1:
+            return review("ask-item", f"the sweep files {len(decides)} decide items for {tid}, not one")
+        x = decides[0]
+        want_item = item_file(x["text"], day, day, None, None, x["context"], kind="decide", answers=x["answers"],
+                              default=x["default"], detail=x["detail"], lifts=x["lifts"])
+    except Refused as e:
+        return review("ask-item", f"the sweep's item is refused: {e}")
+    if head_tree[item_at] != want_item:
+        return review("ask-item", f"{item_at} is not the decide the sweep files, byte for byte")
+    # 10. The dates.
+    if not (created - one <= t <= min(created + one, merged or created + one)):
+        return review("ask-date", f"the Log date {t} is outside {created - one} .. "
+                      f"{min(created + one, merged or created + one)}")
+    if not (created - one <= d <= (merged or created) + one):
+        return review("ask-date", f"the Added date {d} is outside {created - one} .. {(merged or created) + one}")
+    # 11. No flag.
+    if flags:
+        return review("ask-flagged", "the tripwire flags the PR")
     return {"carve_out": True, "flags": flags, "review": []}
 
 

@@ -2028,5 +2028,502 @@
    "tid": "TD-171",
    "gate": "decision (pat)"
   }
+ ],
+ "ask": [
+  {
+   "name": "ask-plain",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-f4a90453.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-until",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-e36bbde6.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-id-until",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-aa4722c2.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-open-blocker",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-e25ec330.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-xrepo-blocker",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-980e8321.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-earlier-answers",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-7409429f.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-default-answer",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-b209392c.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-status-notes",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-55635c93.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-two-paragraphs",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-8af1d4a1.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-edge-space",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-7494ac24.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-kept-waiting",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-2770f4cb.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-local-behind",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-14-c8ca24a1.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-local-ahead",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-16-d646829f.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-near-fyi",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-9bdbd619.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-near-other-gate",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-ff8e777d.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-no-board",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-88072354.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15",
+   "delete_base": [
+    "docs/user_attention/"
+   ]
+  },
+  {
+   "name": "ask-board-v2",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-623ffabb.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15",
+   "delete_base": [
+    "docs/user_attention/"
+   ]
+  },
+  {
+   "name": "ask-no-people",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-7288fa84.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-not-a-question",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-6d4fef8d.md"
+   ],
+   "subject": "shiftlead: lift decision (pat) on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-two-commits",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-982f9b14.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 2,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-entry-archived",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-00adb188.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-entry-absent",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-550ff800.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-171 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-v1-ledger",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-f5baf5c7.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15",
+   "delete_base": [
+    "docs/ledger/"
+   ]
+  },
+  {
+   "name": "ask-field-changed",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-685c7bad.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-entry-changed",
+   "files": [
+    "docs/ledger/TD-120.md",
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-a018744a.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-item-added",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-0e0f0a0b.md",
+    "docs/user_attention/2026-01-15-4b09427c.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-gate-dropped",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-7cb56122.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-decision-standing",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-10672435.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-old-form",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-8ea7450c.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-retired-role",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-f5bf255f.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-retired-hold",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-f2808b9c.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-repeated-nonce",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-10f4c646.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-extra-log-line",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-ea1240f5.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-last-line",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-1f8ee174.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-unusable-answers",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-fbcc465e.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-off-people",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-ebd840af.md"
+   ],
+   "subject": "shiftlead: ask kim on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-item-word",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-23682a20.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-item-id-date",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-13-fc7fabde.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-other-person",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-e472b132.md"
+   ],
+   "subject": "shiftlead: ask sam on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-log-date",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-18-7cc422ec.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-20"
+  },
+  {
+   "name": "ask-added-date",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-19-dd3948b8.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-near-decide",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-9728266d.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-near-act",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-ed6ab71a.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  },
+  {
+   "name": "ask-near-decided",
+   "files": [
+    "docs/ledger/TD-170.md",
+    "docs/user_attention/2026-01-15-39956dd7.md"
+   ],
+   "subject": "shiftlead: ask pat on TD-170 (session n/a)",
+   "commits": 1,
+   "created_at": "2026-01-15",
+   "merged_at": "2026-01-15"
+  }
  ]
 }

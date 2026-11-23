@@ -1,4 +1,371 @@
 {
+ "ask": {
+  "ask-added-date": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-date",
+     "the Added date 2026-01-19 is outside 2026-01-14 .. 2026-01-16"
+    ]
+   ]
+  },
+  "ask-board-v2": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-board-v2",
+     "the PR's board is a v2 board at its base or head: a v3 writer writes none"
+    ]
+   ]
+  },
+  "ask-decision-standing": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "ask_gate refuses the question: TD-170's Blocked by already holds a decision: decision (sam)"
+    ]
+   ]
+  },
+  "ask-default-answer": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-earlier-answers": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-edge-space": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-entry-absent": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-entry",
+     "the base ledger holds no open TD-171"
+    ]
+   ]
+  },
+  "ask-entry-archived": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-entry",
+     "the base ledger holds no open TD-170"
+    ]
+   ]
+  },
+  "ask-entry-changed": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-files",
+     "the PR changes ['docs/ledger/TD-120.md', 'docs/ledger/TD-170.md', 'docs/user_attention/2026-01-15-a018744a.md'], and a question changes docs/ledger/TD-170.md and adds one item file directly in docs/user_attention/"
+    ]
+   ]
+  },
+  "ask-extra-log-line": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "docs/ledger/TD-170.md is not what ask_gate writes, byte for byte"
+    ]
+   ]
+  },
+  "ask-field-changed": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "docs/ledger/TD-170.md is not what ask_gate writes, byte for byte"
+    ]
+   ]
+  },
+  "ask-gate-dropped": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "docs/ledger/TD-170.md is not what ask_gate writes, byte for byte"
+    ]
+   ]
+  },
+  "ask-id-until": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-item-added": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-files",
+     "the PR changes ['docs/ledger/TD-170.md', 'docs/user_attention/2026-01-15-0e0f0a0b.md', 'docs/user_attention/2026-01-15-4b09427c.md'], and a question changes docs/ledger/TD-170.md and adds one item file directly in docs/user_attention/"
+    ]
+   ]
+  },
+  "ask-item-id-date": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-item",
+     "docs/user_attention/2026-01-13-fc7fabde.md does not read as an item whose id carries its Added day"
+    ]
+   ]
+  },
+  "ask-item-word": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-item",
+     "docs/user_attention/2026-01-15-23682a20.md is not the decide the sweep files, byte for byte"
+    ]
+   ]
+  },
+  "ask-kept-waiting": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-last-line": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-sections",
+     "docs/ledger/TD-170.md does not end in the line - <day>: asked by the stage record: <nonce>"
+    ]
+   ]
+  },
+  "ask-local-ahead": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-local-behind": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-log-date": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-date",
+     "the Log date 2026-01-18 is outside 2026-01-14 .. 2026-01-16"
+    ]
+   ]
+  },
+  "ask-near-act": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-item",
+     "docs/user_attention/2026-01-15-ed6ab71a.md is not the decide the sweep files, byte for byte"
+    ]
+   ]
+  },
+  "ask-near-decide": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-item",
+     "docs/user_attention/2026-01-15-9728266d.md is not the decide the sweep files, byte for byte"
+    ]
+   ]
+  },
+  "ask-near-decided": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-item",
+     "docs/user_attention/2026-01-15-39956dd7.md is not the decide the sweep files, byte for byte"
+    ]
+   ]
+  },
+  "ask-near-fyi": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-near-other-gate": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-no-board": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-no-board",
+     "the PR has no board at docs/user_attention/ or docs/user_attention.md at its base or head"
+    ]
+   ]
+  },
+  "ask-no-people": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-no-people",
+     "the base board declares no People: line, so who may be asked is unchecked"
+    ]
+   ]
+  },
+  "ask-not-a-question": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-subject",
+     "the commit's subject is not a tool's question: 'shiftlead: lift decision (pat) on TD-170 (session n/a)'"
+    ]
+   ]
+  },
+  "ask-off-people": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-people",
+     "kim is not on the base board's People:"
+    ]
+   ]
+  },
+  "ask-old-form": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "ask_gate refuses the question: TD-170's Blocked by already holds a decision: decision (sam) — when the report is read"
+    ]
+   ]
+  },
+  "ask-open-blocker": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-other-person": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "docs/ledger/TD-170.md is not what ask_gate writes, byte for byte"
+    ]
+   ]
+  },
+  "ask-plain": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-repeated-nonce": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "ask_gate refuses the question: TD-170 already holds 'asked by the stage record: n-ask-repeated-nonce'"
+    ]
+   ]
+  },
+  "ask-retired-hold": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "ask_gate refuses the question: TD-170's Blocked by already holds a decision: hold"
+    ]
+   ]
+  },
+  "ask-retired-role": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-bytes",
+     "ask_gate refuses the question: TD-170's Blocked by already holds a decision: decision (designer)"
+    ]
+   ]
+  },
+  "ask-status-notes": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-two-commits": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-subject",
+     "a question's PR is one commit, squash-merged; this has 2"
+    ]
+   ]
+  },
+  "ask-two-paragraphs": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-until": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  },
+  "ask-unusable-answers": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-check",
+     "the head ledger adds: ⚠ TD-170: the gate sweep cannot offer its own answers (answers-unusable): as a decide's answers they are refused: a lifting answer is one of the item's answers, not 'Nope' (the first fault found)"
+    ]
+   ]
+  },
+  "ask-v1-ledger": {
+   "carve_out": false,
+   "flags": [],
+   "review": [
+    [
+     "ask-entry",
+     "a v1 ledger's question is not recomputed — it takes ordinary review"
+    ]
+   ]
+  },
+  "ask-xrepo-blocker": {
+   "carve_out": true,
+   "flags": [],
+   "review": []
+  }
+ },
  "ledger_lift": {
   "delegated: ledger lift, a delegated item in the shared set while decided wins": {
    "carve_out": false,

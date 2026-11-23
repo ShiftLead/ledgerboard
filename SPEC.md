@@ -780,6 +780,14 @@ Moving a file into `archive/` or back, and the relative links that move with it,
 **A change to the canonical form is a minor release**: each consumer reformats its entries once,
 when it takes that release.
 
+`ask_gate(text, person, ask, context, answers, lifts, nonce, today, declared_fields=())` (v3.6) is one entry after a
+tool asks a person about it: `decision (<person>)` added to its Blocked by with every earlier item kept, its Ask,
+Context, Lifts and Answers written (replacing earlier ones), and the Log note `asked by the stage record: <nonce>`.
+It refuses an archived entry, an `ask` or `context` that is not a string, `answers` or `lifts` that is not a list of
+strings, `declared_fields` that is not a tuple, list, set or dict of strings (a dict's keys), an entry whose Blocked by holds any decision (`decision (<p>)`, a retired item, or an unreadable item
+matching `decision\b` at its start in any case), one whose text already contains that note, a person that is not a
+`PERSON` or is a retired role, a nonce that is not a string of one or more characters, none of them Unicode whitespace, that encodes as UTF-8, a nonce the Log note writer refuses (such as an unclosed `<!--`), a text that is not one entry, and one whose Ask is a header field or a declared field.
+
 ## The rank
 
 The rank is the order a ledger's people set for its entries; it is the pick order.
@@ -1412,6 +1420,37 @@ from `lift_gate()` is `ledger-lift-bytes`. The Log line stays forgeable, and not
 re-reads the lift once it merges (the sweep's audit reads `; board <repo>` lifts alone): the consumer's own
 audit is its backstop, and a direct commit of this shape is the consumer's to refuse, as for the decide lift.
 
+`ask_pr_verdict(base_tree, head_tree, files, subject, commits, created_at, merged_at, repo)` (v3.6) returns
+`{carve_out, flags, review}` for a PR that asks a person about one entry, its arguments and `flags` as
+`ledger_lift_verdict()`'s. `carve_out` says the diff is exactly one `ask_gate()` write and the one `decide` the sweep
+files for it; no person's press stands behind it, so the trees are the whole proof. Otherwise `review` names the
+first condition that fails, in this order:
+- a v3 board at the base and the head (`ask-no-board`, `ask-board-v2`), whose base declares `People:`
+  (`ask-no-people`);
+- the subject is an ask (`ask_subject_parts()`), and the PR is one commit (`ask-subject`);
+- the base ledger is v2 and holds the subject's entry open, its file directly in `LEDGER_DIR`, and the head holds
+  that file open (`ask-entry`);
+- the paths the trees change are exactly `files`, that file and one added item file directly in `BOARD_DIR`
+  (`ask-files`);
+- the head file's text, less its one final newline, ends in the line `- T: asked by the stage record: <nonce>`, `T` a
+  real day and `<nonce>` one or more characters none of them Unicode whitespace (`str.isspace()`), that line holding no `\r`, and the head holds one each of Ask, Context, Answers and Lifts, whose words are read exactly, less the
+  one space after the lead and one final newline (`ask-sections`);
+- the head entry is `ask_gate()` of the base file with those words, `nonce`, `T` and the base ledger's declared
+  fields, byte for byte, any refusal failing too (`ask-bytes`);
+- `check()` of the head ledger at `T`, with each tree's rank file, against the base adds no error, `cross-repo` and standing flags aside (`ask-check`);
+- the base board's `People:` lists the person, in any case (`ask-people`);
+- the item's id carries its `Added` day `D`, and the item is `item_file()` of the one `decide` that
+  `sweep([head entry], [base board], {}, T, D, reask_days=0, repo=repo)` files, `D` its Due and Added, with no session
+  or host, a sweep filing no `decide` or several or a refusal being this too (`ask-item`);
+- `T` lies within a day of `created_at` and not after the merge (else `created_at + 1`), and `D` from `created_at − 1`
+  to the merge date (else `created_at`) `+ 1` (`ask-date`);
+- `flags` is empty (`ask-flagged`).
+
+The sweep is given the one entry, as the write gives it, so a blocker open elsewhere in the ledger does not defer the
+question. The verdict recomputes with its own release: a writer on an earlier release whose item differs, as a v3.5
+writer's does when the board holds a near item (*The gate sweep*), takes review. As for the lift verdicts, a `Refused` from
+`tripwire()`, the dates or `commits` escapes, and a direct commit of this shape is the consumer's to refuse.
+
 `uncovered_decisions(base_tree, head_tree, boards, repo)` returns `(refusals, flags)`. `boards` are other repos'
 boards read, as the sweep takes them; this repo's own is read from `head_tree`, in place of any in `boards` that
 names it. A `decision (<p>)` an open entry gains in the diff is refused (`decision-uncovered`) when this repo's
@@ -1906,6 +1945,10 @@ not a bare `TD-n`, a gate that is no decision, and a tool or session that is not
 `[A-Za-z0-9_.@/-]+`; `lift_subject_parts(line)` reads it back as `{tool, gate, id, session}`, each part as
 written (`n/a` too), or None.
 `edit_action()` and `subject_id()` read board writes alone, and are None for it.
+
+**The commit subject of a tool's question** (v3.6) is one line, `<tool>: ask <p> on TD-n (session <name>)`.
+`ask_subject_parts(line)` reads it back as `{tool, person, id, session}`, each part as written, or None.
+`subject_kind()` does not name it, so a consumer that passes a named kind does not pass this one.
 
 ## The board writer (v2.3)
 
@@ -2725,6 +2768,10 @@ entry lacks. Once `Answers` and `Lifts` are gone `entry_answers()` reads None, s
 offer the old question's answers. Nothing a reader reads changes; the refusal's words for a section `remove` does
 not take now name the four.
 
+**v3.6 adds the verdict for a tool's question** (TD-161; *The merge gate's verdicts*, *Ledger entries and their
+edits*, *Edits*): `ask_gate()`, `ask_subject_parts()` and `ask_pr_verdict()`. No parse, field, Log line, item key or
+canonical form changes, and `subject_kind()` reads every subject as before.
+
 ## Appendix: grammar
 
 The grammars below are informative (v2.3: the open item line, a person's name and the rank file; v2.4: `Blocked by` and an Event section; v2.7: the entry header and the Log; v3.0: the item file; v3.3: the ledger lift's commit subject; later releases add the rest).
@@ -2992,6 +3039,7 @@ log-lift-answer   ::= "gate lifted: " lift-gate " — by " log-token ( " for " l
 lift-gate         ::= "decision (" person ")" | "event (" event-name ")"
 lift-suffix       ::= "; board " repo | "; no board item" | "; shared board item left open"
 lift-subject      ::= log-token ": lift decision (" person ") on TD-" digit+ " (session " log-token ")"
+ask-subject       ::= log-token ": ask " person " on TD-" digit+ " (session " log-token ")"
 log-lift-override ::= "gate lifted: decision (" person ") — by " log-token "; override: " nonspace char*
 log-lift-check    ::= "gate lifted: event (" event-name ") — by " log-token "; " [a-z0-9-]+ " passed; " nonspace+
 log-lift-date     ::= "gate lifted: until " date " — by " log-token "; date reached"
@@ -3026,3 +3074,6 @@ never `\d` unless `re.ASCII`, so `TD-١٢` and a 19-digit id are refused, the ca
 `digit+` cannot say, and the id's number always fits the lookup by number); and `lift_subject()` writes the gate as
 `_one_gate()` spells it, `decision (<p>)` with the keyword's case and the space before `(` normalised; a gate
 `_one_gate()` refuses (`decision (Ann )`, say) is refused.
+
+`ask-subject` (v3.6) is a tool's question's commit subject, judged by `ask_subject_parts()` not None. The reader
+matches the whole line, with no trailing newline, and its digits are ASCII and at most 18, as `lift-subject`'s are.

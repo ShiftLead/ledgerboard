@@ -106,6 +106,7 @@ Fixtures, each an invented input and its expected JSON:
   repo's board under ``boards/`` a directory or a v2 file read through ``load_board()`` (v3.0); and (v3.3)
   ``ledger_lift_verdict()`` of each ``ledger_lift`` case, and ``lift_form()``'s ``[case, item ids]`` of each
   ``lift_form`` case, read from the base of the ``ledger_lift`` case it names (``case``), else its own overlay.
+  ``ask_pr_verdict()`` of each ``ask`` case (v3.6), its trees laid out as ``ledger_lift``'s.
 - ``board_writer/<case>/`` (v2.3): the board writer, ``board.py`` — ``before/`` (the files a command
   starts from; from v3.0 the board a directory of item files, ``board/`` with its ``README.md``, or a v2 file
   for the reads and the refusals), ``cmd.json`` (``{"argv": [...]}``, run in a copy of ``before/``), ``after/``
@@ -1340,6 +1341,13 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
                                     c["merged_at"], spec["repo"])
         return {"carve_out": got["carve_out"], "flags": [list(x) for x in got["flags"]],
                 "review": [list(x) for x in got["review"]]}
+
+    def ask(c):  # v3.6: a tool's question's verdict
+        base, head = trees(c)
+        got = L.ask_pr_verdict(base, head, c["files"], c["subject"], c["commits"], c["created_at"],
+                               c["merged_at"], spec["repo"])
+        return {"carve_out": got["carve_out"], "flags": [list(x) for x in got["flags"]],
+                "review": [list(x) for x in got["review"]]}
     lifts = {c["name"]: c for c in spec.get("ledger_lift", [])}
 
     def form(c):  # v3.3: the base a named ledger_lift case reads, else the form case's own overlay
@@ -1356,6 +1364,8 @@ def verdict_cases(L, spec: dict, root: Path = HERE) -> dict:
                         {"missing": "the module has no ledger_lift_verdict — older than v3.3"}),
         "lift_form": ({c["name"]: form(c) for c in spec.get("lift_form", [])} if hasattr(L, "lift_form") else
                       {"missing": "the module has no lift_form — older than v3.3"}),
+        "ask": ({c["name"]: ask(c) for c in spec.get("ask", [])} if hasattr(L, "ask_pr_verdict") else
+                {"missing": "the module has no ask_pr_verdict — older than v3.6"}),
     }
 
 
@@ -1383,11 +1393,13 @@ def grammar_cases(L, spec: dict) -> dict:
         "blocked-by": lambda s: _gates_verdict(L.parse_gates(s)),  # v2.4: a person's name is a decision's
         "event-section": lambda s: (L.parse_event_section(s)["problem"] is None, L.parse_event_section(s)["problem"]),
         "lift-subject": lambda s: (L.lift_subject_parts(s) is not None, None),  # v3.3: a ledger lift's subject
+        "ask-subject": lambda s: (L.ask_subject_parts(s) is not None, None),  # v3.6: a tool's question's subject
         "delegates-line": lambda s: (_delegates_canonical(L, s), None),  # v3.4
     }
     return {start: ({prod: [dict(zip(("accepted", "why"), judge[start](s))) for s in g["accept"] + g["refuse"]]
                      for prod, g in groups.items()}
                     if (start != "lift-subject" or hasattr(L, "lift_subject_parts"))
+                    and (start != "ask-subject" or hasattr(L, "ask_subject_parts"))
                     and (start != "delegates-line" or hasattr(L, "board_delegates")) else
                     {"missing": f"the module has no reader for {start} — older than its release"})
             for start, groups in spec.items()}
