@@ -96,5 +96,21 @@ class SweepNeverRaises(unittest.TestCase):
                     answers=item["answers"], default=item["default"], detail=item["detail"], lifts=item["lifts"])
 
 
+class ClearedQuestion(unittest.TestCase):
+    """v3.6 (TD-162): a question cleared with its decision gone offers nothing to a later decision."""
+
+    TEXT = ("## TD-6: An invented entry\n\n**Priority:** Medium\n**Status:** Open\n\n**Why:** w\n\n"
+            "**Ask:** Does the widget work?\n\n**Context:** the old question's context.\n\n"
+            "**Answers:** Yes — a session ships it | No — nobody picks it\n\n**Lifts:** Yes\n")
+
+    def test_answers_read_none_once_both_are_removed(self):
+        for order in (("Answers", "Lifts"), ("Lifts", "Answers")):
+            with self.subTest(order=order):
+                text = self.TEXT
+                for section in order:
+                    text = L.edit_entry(text, "edit", section=section, remove=True)
+                self.assertIsNone(L.entry_answers(text))
+
+
 if __name__ == "__main__":
     unittest.main()

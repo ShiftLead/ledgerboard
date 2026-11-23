@@ -5970,7 +5970,8 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
       ``remove`` (no ``words``) removes such a misplaced section — refused for any other, and for a header
       name the entry's header lacks (set it first); from v3.1 writing an ``Ask`` section, replacing or adding it,
       is refused while the entry's Blocked by names no decision (``_names_decision()``), and ``remove`` also
-      takes the ``Ask`` section of such an entry, refused while a decision holds;
+      takes the ``Ask`` section of such an entry (from v3.6 its ``Answers``, ``Lifts`` and ``Context`` too),
+      refused while a decision holds;
     - ``archive`` (``why``; ``pr``, an int or None; ``pointer``; ``as_is``; or ``superseded_by``, ``TD-n`` or
       ``<repo>#TD-n``; or ``dropped``, v2.4: Status ``Dropped <today>`` and ``archived: Dropped — <why>``,
       the rest kept; ``archive_plan()`` says first which dependents each leaves, or refuses): the
@@ -6094,16 +6095,17 @@ def edit_entry(text: str, action: str, *, today: date | str | None = None, field
                     raise Refused(f"the body has no section named {name!r} to remove")
                 if key != "title" and key not in {field_key(n) for n, _ in header}:
                     raise Refused(f"set {name} first: removing it would lose its only words")
-            elif key == "ask":  # v3.1: the Ask of an entry that names no decision
+            elif key in ("ask", "answers", "lifts", "context"):  # v3.1 the Ask, v3.6 the rest of its question
                 if _names_decision(_value(header, "blocked by")):
                     raise Refused(f"{tid}'s Blocked by names a decision (or a retired item standing for one): its "
-                                  "Ask is what the decision waits on (ask-missing would follow) — lift or remove "
-                                  "the decision first")
+                                  + ("Ask is what the decision waits on (ask-missing would follow)" if key == "ask"
+                                     else f"{name} belongs to the question the decision waits on")
+                                  + " — lift or remove the decision first")
                 if not at:
                     raise Refused(f"the body has no section named {name!r} to remove")
             else:
                 raise Refused(f"{name} is not misplaced: only a section named Title or as a header field, or the "
-                              "Ask of an entry with no decision, is removed")
+                              "Ask, Answers, Lifts or Context of an entry with no decision, is removed")
             del sections[at[0]]
         else:
             said = "\n".join(ln.rstrip() if not ln.strip() else ln

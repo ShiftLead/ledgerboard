@@ -541,7 +541,8 @@ def plan_edit(led: Ledger, action: str, tid: str, *, fields: Mapping[str, str] |
     ``words``, or from v2.8 a misplaced one removed with ``remove``; the ledger's ``Fields:`` names are passed as
     ``declared_fields``). A ``set`` whose Blocked by
     drops a decision lifts it (``by``, ``answer``, ``suffix``, or ``override``) or, swapping it for another,
-    reassigns it (``by``, ``why``): ``_gate_route()``. From v3.1 ``edit``'s ``remove`` also takes the ``Ask`` of an
+    reassigns it (``by``, ``why``): ``_gate_route()``. From v3.1 ``edit``'s ``remove`` also takes the ``Ask`` (from
+    v3.6 the ``Answers``, ``Lifts`` and ``Context`` too) of an
     entry whose Blocked by names no decision, and ``set`` takes ``ask``, the words of the entry's ``Ask`` section,
     written (replacing it or adding it) after the fields in the same write, so a decision and its Ask arrive
     together: refused when empty, on an entry holding a header ``Ask``, in a ledger whose ``Fields:`` declares
@@ -1058,7 +1059,7 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
         "set": "set an open entry's header fields (an empty value removes one), or (v2.8) its title",
         "note": "append a dated line to an entry's Log (v2.8: an archived one too, in place)",
         "edit": "replace one section of an open entry (or add it where SPEC puts it), or remove a misplaced one (v2.8) "
-                "or the Ask of an entry with no decision (v3.1)",
+                "or the Ask (v3.1), Answers, Lifts or Context (v3.6) of an entry with no decision",
         "archive": "archive an open entry (Resolved, Superseded or Dropped) and move its file to archive/",
         "reopen": "reopen an archived entry and move its file back into the ledger",
         "renumber": "give an open entry the id the caller took: its file, heading, the fields naming it, its rank line",
@@ -1128,7 +1129,8 @@ def _write_parser(cmd: str) -> argparse.ArgumentParser:
             ap.add_argument("--section", required=True, help="the section's name: Why, Fix, Done when, …")
             ap.add_argument("--from", dest="src", metavar="FILE", help="its new text from a file, or - for stdin")
             ap.add_argument("--remove", action="store_true", help="remove the section, in place of --from: only one "
-                            "named Title or as a header field (v2.8), or the Ask of an entry with no decision (v3.1)")
+                            "named Title or as a header field (v2.8), or the Ask (v3.1), Answers, Lifts or Context "
+                            "(v3.6) of an entry with no decision")
         elif cmd in ("archive", "reopen"):
             ap.add_argument("--why", required=True, help="one line: why it is archived, or open again")
             if cmd == "archive":

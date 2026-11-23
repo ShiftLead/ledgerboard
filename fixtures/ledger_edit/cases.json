@@ -2201,6 +2201,209 @@
    ]
   },
   {
+   "name": "remove_answers_ungated",
+   "text": "## TD-810: Answers with no decision\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_answers_refused_gated",
+   "text": "## TD-820: Answers with a decision\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** decision (pat)\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_answers_refused_retired",
+   "text": "## TD-830: Answers under a retired hold\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** hold\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_answers_refused_absent",
+   "text": "## TD-840: No Answers to remove\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_lifts_ungated",
+   "text": "## TD-811: Lifts with no decision\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Lifts",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_lifts_refused_gated",
+   "text": "## TD-821: Lifts with a decision\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** decision (pat)\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Lifts",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_lifts_refused_retired",
+   "text": "## TD-831: Lifts under a retired hold\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** hold\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Lifts",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_lifts_refused_absent",
+   "text": "## TD-841: No Lifts to remove\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Lifts",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_context_ungated",
+   "text": "## TD-812: Context with no decision\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Context",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_context_refused_gated",
+   "text": "## TD-822: Context with a decision\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** decision (pat)\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Context",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_context_refused_retired",
+   "text": "## TD-832: Context under a retired hold\n\n**Priority:** Low\n**Status:** Open\n**Blocked by:** hold\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Context",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_context_refused_absent",
+   "text": "## TD-842: No Context to remove\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Fix:** f\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Context",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_question_whole",
+   "text": "## TD-850: A whole question cleared\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** which way?\n\n**Context:** the old question's context.\n\n**Answers:** Go — a session builds it | Not yet — nobody picks it\n\n**Lifts:** Go\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Lifts",
+      "remove": true
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Context",
+      "remove": true
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers",
+      "remove": true
+     }
+    },
+    {
+     "action": "edit",
+     "args": {
+      "section": "Ask",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "remove_answers_qualified_refused",
+   "text": "## TD-851: A qualified Answers\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Answers (old):** Go | Not yet\n",
+   "steps": [
+    {
+     "action": "edit",
+     "args": {
+      "section": "Answers (old)",
+      "remove": true
+     }
+    }
+   ]
+  },
+  {
    "name": "edit_ask_refused_ungated_replace",
    "text": "## TD-804: An Ask with no decision\n\n**Priority:** Low\n**Status:** Open\n\n**Why:** w\n\n**Ask:** pat says which way.\n",
    "steps": [
