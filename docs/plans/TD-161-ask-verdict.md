@@ -7,7 +7,7 @@ after round 4, and Paul bought rounds 5 (TD-163) and 6 (TD-164), the cap, after 
 raised 2 build-changing (a stale count, an ambiguous SPEC clause) and 4 minor, all applied. Round 6 read those fixes and
 raised 3 minor, all applied: D2 refuses an archived entry and arguments of the wrong type, and the SPEC's verdict clause
 states the nonce test as D2 does. Its closing fact-check and repeats raised 7 minor and nothing build-changing, all applied. Round 6's fixes (D2's archived-entry and argument-type
-refusals, the SPEC's nonce clause, D3's `\r` wording) are unread by a design review, so the builder checks them. The record:
+refusals, the SPEC's nonce clause, D3's `\r` wording) are unread by a design review, so the builder checks them. Paul answered **Go** (2026-11-23): build TD-165 (B1). The record:
 [docs/reviews/TD-161.md](../reviews/TD-161.md).
 
 **Entry:** [TD-161](../ledger/TD-161.md). agent-cadence's TD-297 waits on its release.
@@ -268,9 +268,7 @@ as `person`, and an empty nonce, one holding a space, one holding a non-ASCII sp
 - **ShiftLead** needs no change for the verdict to work. It should adopt `ask_gate()`, keeping its own ledger check
   around it, and so pick up the refusal of the three missed forms when it next syncs: on Go, that is handed to its question seat with `ao td add --repo ShiftLead/shiftlead`.
 
-## Builds (to file on Paul's go)
+## Builds (filed on Paul's go, 2026-11-23)
 
-- **B1** D1 to D4: the subject reader, `ask_gate()`, `ask_pr_verdict()`, the SPEC text above, the fixtures and tests. A
-  grinder takes it. A minor release, cut by Paul, which may share v3.6 with TD-157, TD-158 and TD-160.
-
-Paul's choice at this point: Go (a session files B1), one more design round, or Hold with a note.
+- **B1** (TD-165) D1 to D4: the subject reader, `ask_gate()`, `ask_pr_verdict()`, the SPEC text above, the fixtures and tests. A
+  grinder takes it. A minor release, cut by Paul, which may share v3.6 with the changes already on main (TD-157, TD-158, TD-160, TD-162).
