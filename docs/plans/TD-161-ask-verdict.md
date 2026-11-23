@@ -266,7 +266,7 @@ as `person`, and an empty nonce, one holding a space, one holding a non-ASCII sp
 - **agent-cadence TD-297** vendors the release and adds the review row, choosing this verdict by
   `ask_subject_parts()`.
 - **ShiftLead** needs no change for the verdict to work. It should adopt `ask_gate()`, keeping its own ledger check
-  around it, and so pick up the refusal of the three missed forms when it next syncs: on Go, that is handed to its question seat with `ao td add --repo ShiftLead/shiftlead`.
+  around it, and so pick up the refusal of the three missed forms when it next syncs: since Paul's Go, a session hands that to its question seat with `ao td add --repo ShiftLead/shiftlead`.
 
 ## Builds (filed on Paul's go, 2026-11-23)
 
