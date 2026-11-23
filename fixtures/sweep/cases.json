@@ -1439,5 +1439,175 @@
    "today_utc": "2026-11-03",
    "today_local": "2026-11-03"
   }
+ ],
+ "near": [
+  {
+   "name": "01 an act naming the entry and two others",
+   "dir": "near/01 an act naming the entry and two others",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "02 a decide naming the entry with no gate",
+   "dir": "near/02 a decide naming the entry with no gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "03 a decide naming two entries and the gate",
+   "dir": "near/03 a decide naming two entries and the gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "04 a decide on a board that does not list the person",
+   "dir": "near/04 a decide on a board that does not list the person",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03",
+   "other": {
+    "url": "git@example.com:acme/other.git",
+    "basename": "other"
+   }
+  },
+  {
+   "name": "05 a decide whose Context goes on past the gate",
+   "dir": "near/05 a decide whose Context goes on past the gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "06 an act keyed to the gate in its own words",
+   "dir": "near/06 an act keyed to the gate in its own words",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07a not named an fyi",
+   "dir": "near/07a not named an fyi",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07b not named a decide about another gate",
+   "dir": "near/07b not named a decide about another gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07c not named an act about two entries and another gate",
+   "dir": "near/07c not named an act about two entries and another gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07d not named a closed act",
+   "dir": "near/07d not named a closed act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07e not named the sweep's has no board act",
+   "dir": "near/07e not named the sweep's has no board act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07f not named an act qualified lift",
+   "dir": "near/07f not named an act qualified lift",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "07g not named an act qualified board",
+   "dir": "near/07g not named an act qualified board",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "08 two near items in id order",
+   "dir": "near/08 two near items in id order",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "09 an act on another board",
+   "dir": "near/09 an act on another board",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03",
+   "other": {
+    "url": "git@example.com:acme/other.git",
+    "basename": "other"
+   }
+  },
+  {
+   "name": "10 a covering decide beside a near act",
+   "dir": "near/10 a covering decide beside a near act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "11 a deferred entry with a near act",
+   "dir": "near/11 a deferred entry with a near act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "12 an entry's Context ending in a full stop",
+   "dir": "near/12 an entry's Context ending in a full stop",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "13a refused answers and a near act",
+   "dir": "near/13a refused answers and a near act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "13b refused answers, a Context ending in a full stop and a near act",
+   "dir": "near/13b refused answers, a Context ending in a full stop and a near act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "14a a parent's decide about another gate",
+   "dir": "near/14a a parent's decide about another gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "14b a parent's decide on a board that does not list the person",
+   "dir": "near/14b a parent's decide on a board that does not list the person",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03",
+   "other": {
+    "url": "git@example.com:acme/other.git",
+    "basename": "other"
+   }
+  },
+  {
+   "name": "14c a parent's decide with no gate",
+   "dir": "near/14c a parent's decide with no gate",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "15 two gates and one near act",
+   "dir": "near/15 two gates and one near act",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "16a a look naming the entry",
+   "dir": "near/16a a look naming the entry",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  },
+  {
+   "name": "16b a watch naming the entry",
+   "dir": "near/16b a watch naming the entry",
+   "today_utc": "2026-11-03",
+   "today_local": "2026-11-03"
+  }
  ]
 }

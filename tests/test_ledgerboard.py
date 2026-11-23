@@ -1143,6 +1143,53 @@ class UnliftedAnswer(unittest.TestCase):  # v2.7 (TD-056): a lifting answer clos
         self.assertEqual(L._sweep_head(L.parse_item(text).words), "unlifted")
 
 
+class SweepNearItems(unittest.TestCase):  # v3.6 (TD-152 D1): what the sweep's near fixtures do not carry
+    LEDGER = ("# Ledger\n\nLedgerboard: 2\n\n## TD-5: The widget waits\n\n**Priority:** Medium\n"
+              "**Added:** 2026-10-01\n**Status:** Open\n**Blocked by:** decision (pat)\n\n**Ask:** Ship it?\n\n"
+              "## TD-6: The gadget waits\n\n**Priority:** Medium\n**Added:** 2026-10-01\n**Status:** Open\n"
+              "**Blocked by:** decision (pat)\n\n**Ask:** Ship that?\n")
+    HEAD = "# Needs the user\n\nKinds: decide | act | look | watch | fyi\nPeople: pat\n\n"
+    OWN = "git@example.com:acme/own.git"
+
+    def swept(self, board, *more):
+        return L.sweep([self.LEDGER], [(self.OWN, "own", v2board(self.HEAD + board)), *more], {}, "2026-11-03",
+                       "2026-11-03", repo="acme/own")
+
+    @staticmethod
+    def read(item_id, board):
+        return {"item": type("I", (), {"id": item_id})(), "board": board}
+
+    def test_the_clause_for_one_item_and_for_several_on_mixed_boards(self):
+        one = L._near_clause([self.read("2026-01-02-bbbbbbbb", "here")], "here", "TD-5", "decision (pat)")
+        self.assertEqual(one, ("; item 2026-01-02-bbbbbbbb also names TD-5, but only an answer here is counted when "
+                               "decision (pat) is lifted", [["here", "2026-01-02-bbbbbbbb"]]))
+        got = L._near_clause([self.read("b", "here"), self.read("a", "there"), self.read("a", "here")], "here",
+                             "acme/own#TD-5", "decision (Pat)")
+        self.assertEqual(got[0], "; items a, a on there, b also name acme/own#TD-5, but only an answer here is counted "
+                                 "when decision (Pat) is lifted")
+        self.assertEqual(got[1], [["here", "a"], ["there", "a"], ["here", "b"]])
+
+    def test_near_is_one_record_per_decide_in_entry_order(self):
+        act = "- [ ] act 2026-10-01 (session `w-1`) — Check them. Context: TD-6, TD-5. Due: 2026-11-20.\n"
+        got = self.swept(act)
+        name = "example.com/acme/own"
+        item = v2board(self.HEAD + act).items[0].id
+        self.assertEqual(got["near"], [{"id": f"TD-{n}", "gate": "decision (pat)", "board": name,
+                                        "items": [[name, item]]} for n in (5, 6)])
+
+    def test_a_v2_line_with_no_readable_date_is_not_named(self):
+        dated = "- [ ] act 2026-10-01 (session `w-1`) — Check it. Context: TD-5. Due: 2026-11-20.\n"
+        undated = "- [ ] act (session `w-1`) — Check it too. Context: TD-5. Due: 2026-11-20.\n"
+        both = v2board(self.HEAD + dated + undated).items
+        self.assertEqual([it.id is None for it in both], [False, True])
+        got = self.swept(dated + undated)
+        self.assertEqual(got["near"][0]["items"], [["example.com/acme/own", both[0].id]])
+        alone = self.swept(undated)
+        self.assertEqual([r["id"] for r in alone["near"]], [])
+        ctx = alone["to_file"]["example.com/acme/own"][0]["detail"]["context"]
+        self.assertEqual(ctx, "TD-5 (The widget waits) waits on decision (pat), and no board item asked for it")
+
+
 class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not carry (ledgerboard TD-032)
     D = Path(__file__).resolve().parent.parent / "fixtures" / "verdict"
 

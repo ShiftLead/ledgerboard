@@ -1231,6 +1231,1011 @@
    }
   }
  },
+ "near": {
+  "01 an act naming the entry and two others": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "02 a decide naming the entry with no gate": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "03 a decide naming two entries and the gate": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "04 a decide on a board that does not list the person": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/other",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/other": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "acme/widgets#TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 on example.com/acme/widgets also names acme/widgets#TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "05 a decide whose Context goes on past the gate": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "06 an act keyed to the gate in its own words": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07a not named an fyi": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07b not named a decide about another gate": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {
+    "example.com/acme/widgets": [
+     "2026-10-01-a1b2c3d4"
+    ]
+   },
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07c not named an act about two entries and another gate": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07d not named a closed act": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07e not named the sweep's has no board act": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {
+     "example.com/acme/widgets": [
+      "2026-10-01-a1b2c3d4"
+     ]
+    },
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07f not named an act qualified lift": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "07g not named an act qualified board": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "08 two near items in id order": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a0000001"
+      ],
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-b0000002"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; items 2026-10-01-a0000001, 2026-10-01-b0000002 also name TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "09 an act on another board": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/other",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 on example.com/acme/other also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "10 a covering decide beside a near act": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {}
+  },
+  "11 a deferred entry with a near act": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {}
+  },
+  "12 an entry's Context ending in a full stop": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "The widget is ready to ship; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "13a refused answers and a near act": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; its own answers could not be offered (the ledger check names why); item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "13b refused answers, a Context ending in a full stop and a near act": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "The widget is ready to ship.; its own answers could not be offered (the ledger check names why); item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "14a a parent's decide about another gate": {
+   "lifts": [],
+   "near": [],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {
+    "example.com/acme/widgets": [
+     "2026-10-01-a1b2c3d4"
+    ]
+   },
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "14b a parent's decide on a board that does not list the person": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/other",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 on example.com/acme/other also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "14c a parent's decide with no gate": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "15 two gates and one near act": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    },
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (sam)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     },
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (sam)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (sam), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (sam) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only sam can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "16a a look naming the entry": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  },
+  "16b a watch naming the entry": {
+   "lifts": [],
+   "near": [
+    {
+     "board": "example.com/acme/widgets",
+     "gate": "decision (pat)",
+     "id": "TD-5",
+     "items": [
+      [
+       "example.com/acme/widgets",
+       "2026-10-01-a1b2c3d4"
+      ]
+     ]
+    }
+   ],
+   "rerun": {
+    "lifts": [],
+    "near": [],
+    "to_close": {},
+    "to_file": {}
+   },
+   "to_close": {},
+   "to_file": {
+    "example.com/acme/widgets": [
+     {
+      "answers": [
+       "Go",
+       "Not yet"
+      ],
+      "context": "TD-5 decision (pat)",
+      "default": null,
+      "detail": {
+       "context": "TD-5 (The widget waits on a go) waits on decision (pat), and no board item asked for it; item 2026-10-01-a1b2c3d4 also names TD-5, but only an answer here is counted when decision (pat) is lifted",
+       "question": "Should the widget ship?",
+       "recommended": "Only pat can say: Go lifts the gate, and Not yet keeps it waiting, asked again in 30 days"
+      },
+      "kind": "decide",
+      "lifts": null,
+      "text": "Should the widget ship?"
+     }
+    ]
+   }
+  }
+ },
  "parts_problems": {
   "context-archived-no-entry": {
    "lift": {
@@ -1756,6 +2761,7 @@
     "kind": "event"
    }
   ],
+  "near": [],
   "to_close": {},
   "to_file": {}
  },
@@ -1781,6 +2787,7 @@
      "kind": "event"
     }
    ],
+   "near": [],
    "to_close": {
     "example.com/acme/widgets": [
      "2026-10-02-f15357db",
@@ -2538,6 +3545,7 @@
      "kind": "event"
     }
    ],
+   "near": [],
    "to_close": {
     "example.com/acme/widgets": [
      "2026-10-02-f15357db",
@@ -3134,6 +4142,7 @@
      "kind": "event"
     }
    ],
+   "near": [],
    "to_close": {
     "example.com/acme/widgets": [
      "2026-10-02-f15357db",
