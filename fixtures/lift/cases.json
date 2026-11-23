@@ -19,7 +19,18 @@
   "hold_shared_head": "## Go on the build?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat)\n**Due:** 2026-01-20\n**Answers:** Hold: <a> | Hold:\n**Lifts:** Hold:\n",
   "waiting_form": "## Go on the build?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat)\n**Due:** 2026-01-20\n**Answers:** Go | Not yet: <why>\n",
   "scoped_decision": "## Go on the store?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-500 decision (pat)\n**Scope:** merge-line\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
-  "scoped_event": "## Has the vendor shipped?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-530 event (vendor-ships)\n**Scope:** merge-line\n**Due:** 2026-01-20\n**Answers:** Go (default) | Rewrite the check\n"
+  "scoped_event": "## Has the vendor shipped?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-530 event (vendor-ships)\n**Scope:** merge-line\n**Due:** 2026-01-20\n**Answers:** Go (default) | Rewrite the check\n",
+  "tail": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat) — design ready\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_event": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-530 event (vendor-ships) — design ready\n**Due:** 2026-01-20\n**Answers:** Go (default) | Rewrite the check\n",
+  "tail_dot": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat).\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_question": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat)?\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_spaced_dots": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-580 decision (pat) . .\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "before_gate": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** Re TD-580 decision (pat)\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_gate_gone": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-520 decision (pat) — design ready\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "gate_gone": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-520 decision (pat)\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_part_carries": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-520 decision (pat) — design ready\n**Parts:** TD-521\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "tail_part_archived": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-520 decision (pat) — design ready\n**Parts:** TD-506\n**Due:** 2026-01-20\n**Answers:** Go (default) | Not yet | One more round\n",
+  "event_go": "## Go on the widget?\n\n**Kind:** decide\n**Added:** 2026-01-06\n**Session:** w-1\n**Context:** TD-530 event (vendor-ships)\n**Due:** 2026-01-20\n**Answers:** Go (default) | Rewrite the check\n"
  },
  "decide_lift": [
   {
@@ -718,6 +729,211 @@
    "scope": "merge-line",
    "line": "scoped_decision",
    "label": "Not yet"
+  },
+  {
+   "name": "no_people_line_not_yet",
+   "line": "go_parts",
+   "entries": [
+    "TD-500",
+    "TD-501",
+    "TD-502",
+    "TD-503",
+    "TD-520",
+    "TD-521",
+    "TD-530",
+    "TD-550",
+    "TD-505"
+   ],
+   "label": "Not yet",
+   "by": "pat",
+   "people": null,
+   "answered_by": null
+  },
+  {
+   "name": "no_people_line_work_order",
+   "line": "go_parts",
+   "entries": [
+    "TD-500",
+    "TD-501",
+    "TD-502",
+    "TD-503",
+    "TD-520",
+    "TD-521",
+    "TD-530",
+    "TD-550",
+    "TD-505"
+   ],
+   "label": "One more round",
+   "by": "pat",
+   "people": null,
+   "answered_by": null
+  },
+  {
+   "name": "no_people_line_event",
+   "line": "event_go",
+   "entries": [
+    "TD-530"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": null,
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_refused",
+   "line": "tail",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_not_yet",
+   "line": "tail",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Not yet",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_event",
+   "line": "tail_event",
+   "entries": [
+    "TD-530"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "trailing_dot_lifts",
+   "line": "tail_dot",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "question_mark_tail_refused",
+   "line": "tail_question",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "spaced_dots_tail_refused",
+   "line": "tail_spaced_dots",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "words_before_gate_lifts",
+   "line": "before_gate",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_nothing_left",
+   "line": "tail_gate_gone",
+   "entries": [
+    "TD-520"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "no_people_line_nothing_left",
+   "line": "gate_gone",
+   "entries": [
+    "TD-520"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": null,
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_no_people",
+   "line": "tail",
+   "entries": [
+    "TD-580"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": null,
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_part_carries",
+   "line": "tail_part_carries",
+   "entries": [
+    "TD-520",
+    "TD-521"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null
+  },
+  {
+   "name": "words_after_gate_archived_part",
+   "line": "tail_part_archived",
+   "entries": [
+    "TD-520"
+   ],
+   "label": "Go",
+   "by": "pat",
+   "people": [
+    "pat"
+   ],
+   "answered_by": null,
+   "archived": [
+    "TD-506"
+   ]
   }
  ],
  "lift_gate": [
