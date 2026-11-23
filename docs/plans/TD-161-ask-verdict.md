@@ -1,10 +1,13 @@
 # TD-161: the merge gate's verdict for a question a tool asks
 
-**Status:** Draft 6, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
+**Status:** Draft 7, 2026-11-23 (session lb-designer). Class: **wide** (a change to the published, vendored format:
 a new verdict, subject reader and entry writer; cap 6 rounds, cadence.md §4.8). The rounds ended by the stop rule
-after round 4, and Paul bought round 5 (TD-163), after which they end: build-changing findings per round 2, 1, 1, 0,
-1, all applied. Round 5's one names the exact nonce test in D2 and D3. Its closing fact-check and repeats raised 2 build-changing
-(a stale count, an ambiguous SPEC clause) and 4 minor, all applied; round 5's fixes (the nonce test in D2 and D3, the `hold` refusal and the UTF-8 refusal in D2) are unread by a design review. The record:
+after round 4, and Paul bought rounds 5 (TD-163) and 6 (TD-164), the cap, after which they end: build-changing findings per round
+2, 1, 1, 0, 1, 0, all applied. Round 5's one names the exact nonce test in D2 and D3; its closing fact-check and repeats
+raised 2 build-changing (a stale count, an ambiguous SPEC clause) and 4 minor, all applied. Round 6 read those fixes and
+raised 3 minor, all applied: D2 refuses an archived entry and arguments of the wrong type, and the SPEC's verdict clause
+states the nonce test as D2 does. Its closing fact-check and repeats raised 7 minor and nothing build-changing, all applied. Round 6's fixes (D2's archived-entry and argument-type
+refusals, the SPEC's nonce clause, D3's `\r` wording) are unread by a design review, so the builder checks them. The record:
 [docs/reviews/TD-161.md](../reviews/TD-161.md).
 
 **Entry:** [TD-161](../ledger/TD-161.md). agent-cadence's TD-297 waits on its release.
@@ -76,6 +79,10 @@ joined with ` | `. It is public so the verdict and a writer share one definition
   without this rule passed a PR adding a second person beside one;
 - the entry's text contains `asked by the stage record: <nonce>` as a substring, anywhere, as the writer tests it;
 - the entry holds a header `Ask`, or `declared_fields` declares `Ask`, as `plan_edit()` refuses;
+- the entry's Status is an archived one (`first_word(status)` in `ARCHIVED_WORDS`), as `lift_gate()` refuses;
+- `ask` or `context` is not a string, `answers` or `lifts` is not a list of strings, or `declared_fields` is not a
+  tuple, list, set or dict of strings (a dict's keys), so `None` and a bare string refuse (`declared()`'s dict of names passes; `answers`
+  as a bare string would join character by character);
 - `person` is not a whole `PERSON` for which `is_person()` holds, or is a retired role (`person.lower()` in
   `RETIRED_ROLES`), `nonce` is not a string for which `re.fullmatch(r"\S+", nonce)` holds and which encodes as UTF-8
   (Unicode whitespace, as `str.split()` reads it, since the Log note collapses it; a nonce the note writer itself
@@ -95,13 +102,13 @@ this order, names the review:
 4. The set of paths the trees change equals `files`, and is exactly that file and one added path directly in
    `BOARD_DIR`, named `<item id>.md` (`ask-files`).
 5. The head file's text, less its one final newline and split at its last `\n`, ends in exactly
-   `- T: asked by the stage record: <nonce>`, with no `\r` allowed, `T` a real `YYYY-MM-DD` and `<nonce>`
+   `- T: asked by the stage record: <nonce>`, that line holding no `\r`, `T` a real `YYYY-MM-DD` and `<nonce>`
    matching `\S+` whole, as in D2, and the head holds exactly one each of Ask, Context, Answers and Lifts
    (`ask-sections`). Each section's **words** are read exactly: from `canonical(head)`'s section, what follows the
    `**Name:**` lead, less one separating space if there is one and one final newline if there is one, and never
    stripped, since the writer keeps edge whitespace.
 6. The head entry is `ask_gate(base file, person, <head Ask>, <head Context>, [<head Answers>], [<head Lifts>], nonce,
-   T, <the base ledger's declared fields>)`, byte for byte, any refusal failing too (`ask-bytes`).
+   T, <the base ledger's declared fields, `declared(<ledger>)[0]`>)`, byte for byte, any refusal failing too (`ask-bytes`).
 7. `check()` of the head ledger at `today=T`, with each tree's rank file, against the base ledger as `old`, adds no error the base lacks,
    `cross-repo` and standing flags aside, flags compared as the ledger writer's `gate()` compares them, by kind, id and
    text less its leading ⚠ or ℹ (`ask-check`). This refuses Answers
@@ -170,7 +177,7 @@ lands.
 > - the paths the trees change are exactly `files`, that file and one added item file directly in `BOARD_DIR`
 >   (`ask-files`);
 > - the head file's text, less its one final newline, ends in the line `- T: asked by the stage record: <nonce>`, `T` a
->   real day and `<nonce>` one or more characters none of them whitespace, and the head holds one each of Ask, Context, Answers and Lifts, whose words are read exactly, less the
+>   real day and `<nonce>` one or more characters none of them Unicode whitespace (`str.isspace()`), that line holding no `\r`, and the head holds one each of Ask, Context, Answers and Lifts, whose words are read exactly, less the
 >   one space after the lead and one final newline (`ask-sections`);
 > - the head entry is `ask_gate()` of the base file with those words, `nonce`, `T` and the base ledger's declared
 >   fields, byte for byte, any refusal failing too (`ask-bytes`);
@@ -193,7 +200,8 @@ lands.
 > `ask_gate(text, person, ask, context, answers, lifts, nonce, today, declared_fields=())` (v3.6) is one entry after a
 > tool asks a person about it: `decision (<person>)` added to its Blocked by with every earlier item kept, its Ask,
 > Context, Lifts and Answers written (replacing earlier ones), and the Log note `asked by the stage record: <nonce>`.
-> It refuses an entry whose Blocked by holds any decision (`decision (<p>)`, a retired item, or an unreadable item
+> It refuses an archived entry, an `ask` or `context` that is not a string, `answers` or `lifts` that is not a list of
+> strings, `declared_fields` that is not a tuple, list, set or dict of strings (a dict's keys), an entry whose Blocked by holds any decision (`decision (<p>)`, a retired item, or an unreadable item
 > matching `decision\b` at its start in any case), one whose text already contains that note, a person that is not a
 > `PERSON` or is a retired role, a nonce that is not a string of one or more characters, none of them Unicode whitespace, that encodes as UTF-8, a nonce the Log note writer refuses (such as an unclosed `<!--`), a text that is not one entry, and one whose Ask is a header field or a declared field.
 
@@ -251,7 +259,7 @@ its start (`ask-subject`, `log-token`, `person`, `person-part`, `digit`), and
 
 `tests/`: `ask_gate()` agrees with the sequence of `plan_edit()` and `edit_entry()` calls it replaces, on the
 carve-out entries, `subject_kind()` is None for an ask subject, and `ask_gate()` refuses a retired role
-as `person`, and an empty nonce, one holding a space, one holding a non-ASCII space (`\xa0`), a non-string nonce, a lone surrogate, and an unclosed `<!--`, each as `Refused`.
+as `person`, and an empty nonce, one holding a space, one holding a non-ASCII space (`\xa0`), a non-string nonce, a lone surrogate, an unclosed `<!--`, an archived entry, a non-string `ask` and `context`, a bare string and a list holding a non-string as `answers` and as `lifts`, and a bare string and `None` as `declared_fields`, each as `Refused`.
 
 ## Consumers
 
