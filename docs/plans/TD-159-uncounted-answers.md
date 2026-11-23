@@ -4,7 +4,7 @@
 what `decide_lift()`, and so the board writer's decide, accepts; cap 6 rounds, cadence.md §4.8). The rounds ended by
 the stop rule after round 3: build-changing findings per round 4, 1, 0. Its closing fact-check raised 3 minors, all
 applied, and its repeat none. Round 2's sixth minor was rejected, and every other finding is applied. Paul answered
-**Go** (2026-11-22): build TD-XXX (B1). The record:
+**Go** (2026-11-22): build TD-160 (B1). The record:
 [docs/reviews/TD-159.md](../reviews/TD-159.md).
 
 **Entry:** [TD-159](../ledger/TD-159.md), filed from D3 of [TD-152's design](TD-152-near-items.md).
@@ -189,7 +189,7 @@ one of these two item shapes.
 
 ## Builds (filed on Paul's go, 2026-11-22)
 
-- **B1** (TD-XXX) D1 and D2: `decide_lift()` and its docstring (its `board_people` None wording and its refusals),
+- **B1** (TD-160) D1 and D2: `decide_lift()` and its docstring (its `board_people` None wording and its refusals),
   `_context_tail()` shared by `_sweep_context()` and `_parts_fault()`, each dropping its `g` line once unused (`ruff`
   is the merge gate), the SPEC text above, the three changed fixture results, and the new cases. A minor release,
   which may be shared with TD-157 and TD-158.
