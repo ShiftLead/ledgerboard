@@ -1197,7 +1197,7 @@ class MergeGateVerdicts(unittest.TestCase):  # v2.4: what the fixtures do not ca
         read = lambda d: {str(p.relative_to(d)): p.read_bytes().decode("utf-8")  # noqa: E731
                           for p in sorted(d.rglob("*")) if p.is_file()} if d.is_dir() else {}
         spec = json.loads((self.D / "cases.json").read_text(encoding="utf-8"))
-        case = next(c for k in ("verdict", "tripwire", "uncovered", "ledger_lift", "lift_form")  # v3.3: the last two
+        case = next(c for k in ("verdict", "tripwire", "uncovered", "ledger_lift", "lift_form", "ask")  # v3.3: lift; v3.6: ask
                     for c in spec.get(k, []) if c["name"] == name)
 
         def drop(t, paths):  # v3.0: a path ending in `/` takes every path under it
@@ -1349,6 +1349,60 @@ class DeferredAgreement(unittest.TestCase):  # v3.5 (TD-150): the sweep and the 
                     deferred = any(k == "decision-deferred" and t.startswith(f"{tid} ") for k, t in flags)
                     refused = any(t.startswith(f"{tid} ") for _, t in refusals)
                     self.assertEqual(tid not in asked, deferred and not refused)
+
+
+class AskGate(unittest.TestCase):  # v3.6 (TD-161, TD-165): what the ask fixtures do not carry
+    ENTRY = ("## TD-7: A report waits\n\n**Priority:** Medium\n**Type:** debt\n**Added:** 2026-01-02\n"
+             "**Status:** Open\n\n**Why:** invented.\n\n**Log:**\n- 2026-01-02: filed by pat, session w-1: \"file\"\n")
+    ARGS = {"person": "pat", "ask": "Ship it?", "context": "It is built.",
+            "answers": ["Ship — a session ships it", "No — nobody ships it"], "lifts": ["Ship"], "nonce": "n1",
+            "today": "2026-01-15"}
+
+    def ask(self, text=None, **over):
+        return L.ask_gate(self.ENTRY if text is None else text, **{**self.ARGS, **over})
+
+    def blocked(self, raw):
+        return self.ENTRY.replace("**Status:** Open\n", f"**Status:** Open\n**Blocked by:** {raw}\n")
+
+    def test_it_is_the_sequence_of_edits_it_replaces(self):
+        for raw in (None, "until 2026-02-01", "TD-3, until 2026-02-01", "acme/other#TD-9"):
+            text = self.ENTRY if raw is None else self.blocked(raw)
+            with self.subTest(blocked=raw):
+                out = L.edit_entry(text, "set", fields={"Blocked by": f"{raw}, decision (pat)" if raw else "decision (pat)"},
+                                   today="2026-01-15")
+                for name, words in (("Ask", "Ship it?"), ("Context", "It is built."), ("Lifts", "Ship"),
+                                    ("Answers", "Ship — a session ships it | No — nobody ships it")):
+                    out = L.edit_entry(out, "edit", section=name, words=words, today="2026-01-15", declared_fields=())
+                out = L.edit_entry(out, "note", words="asked by the stage record: n1", today="2026-01-15")
+                self.assertEqual(self.ask(text), out)
+
+    def test_an_ask_subject_has_no_kind(self):
+        line = "shiftlead: ask pat on TD-7 (session n/a)"
+        self.assertIsNone(L.subject_kind(line))
+        self.assertEqual(L.ask_subject_parts(line), {"tool": "shiftlead", "person": "pat", "id": "TD-7", "session": "n/a"})
+        self.assertIsNone(L.ask_subject_parts(None))
+
+    def test_each_refusal_is_refused(self):
+        for over in ({"person": "designer"}, {"person": "Designer"}, {"person": "a b"}, {"person": None},
+                     {"nonce": ""}, {"nonce": "a b"}, {"nonce": "a\xa0b"}, {"nonce": 7}, {"nonce": "a\ud800"},
+                     {"nonce": "<!--x"}, {"ask": None}, {"ask": 1}, {"context": None}, {"context": 1},
+                     {"answers": "Ship"}, {"answers": ["Ship", 1]}, {"lifts": "Ship"}, {"lifts": ["Ship", 1]},
+                     {"declared_fields": "Ask"}, {"declared_fields": None}, {"declared_fields": ("Ask",)},
+                     {"declared_fields": {"ask": ("a",)}}, {"today": "soon"}):
+            with self.subTest(over=over), self.assertRaises(L.Refused):
+                self.ask(**over)
+
+    def test_it_refuses_the_entries_the_design_names(self):
+        for text in (self.ENTRY.replace("**Status:** Open", "**Status:** Resolved 2026-01-03"),
+                     self.ENTRY + "\n" + self.ENTRY.replace("TD-7", "TD-8"), "no entry",
+                     self.blocked("x").replace("**Blocked by:** x\n", "**Ask:** Ship?\n"),
+                     self.ENTRY + "- 2026-01-03: asked by the stage record: n1\n",
+                     *(self.blocked(b) for b in ("decision (sam)", "decision (sam) — words", "decision (designer)", "hold"))):
+            with self.subTest(text=text[:60]), self.assertRaises(L.Refused):
+                self.ask(text)
+
+    def test_a_word_that_only_starts_like_decision_does_not_refuse(self):
+        self.assertIn("decision (pat)", self.ask(self.blocked("decisions (bob)")))
 
 
 class LedgerLiftVerdict(unittest.TestCase):  # v3.3 (TD-115, TD-123): what the ledger_lift fixtures do not carry

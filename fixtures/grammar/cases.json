@@ -1155,6 +1155,54 @@
       ]
     }
   },
+  "ask-subject": {
+    "ask-subject": {
+      "accept": [
+        "shiftlead: ask pat on TD-12 (session n/a)"
+      ],
+      "refuse": [
+        "shiftlead: ask pat on TD-12 (session n/a) ",
+        "shiftlead: ask pat for TD-12 (session n/a)",
+        "shiftlead: asks pat on TD-12 (session n/a)"
+      ]
+    },
+    "log-token": {
+      "accept": [
+        "a.b@c/d_e-1: ask pat on TD-12 (session w-1)"
+      ],
+      "refuse": [
+        "shift lead: ask pat on TD-12 (session n/a)",
+        "shiftlead: ask pat on TD-12 (session a b)"
+      ]
+    },
+    "person": {
+      "accept": [
+        "shiftlead: ask sam.lee on TD-12 (session n/a)"
+      ],
+      "refuse": [
+        "shiftlead: ask a b on TD-12 (session n/a)",
+        "shiftlead: ask sam..lee on TD-12 (session n/a)"
+      ]
+    },
+    "person-part": {
+      "accept": [
+        "shiftlead: ask a-b_C on TD-12 (session n/a)"
+      ],
+      "refuse": [
+        "shiftlead: ask a+b on TD-12 (session n/a)",
+        "shiftlead: ask  on TD-12 (session n/a)"
+      ]
+    },
+    "digit": {
+      "accept": [
+        "shiftlead: ask pat on TD-0012 (session n/a)"
+      ],
+      "refuse": [
+        "shiftlead: ask pat on TD-١٢ (session n/a)",
+        "shiftlead: ask pat on TD-x (session n/a)"
+      ]
+    }
+  },
   "delegates-line": {
     "delegates-line": {
       "accept": [

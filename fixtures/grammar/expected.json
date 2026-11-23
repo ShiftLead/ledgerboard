@@ -39,6 +39,82 @@
    }
   ]
  },
+ "ask-subject": {
+  "ask-subject": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   }
+  ],
+  "digit": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   }
+  ],
+  "log-token": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   }
+  ],
+  "person": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   }
+  ],
+  "person-part": [
+   {
+    "accepted": true,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   },
+   {
+    "accepted": false,
+    "why": null
+   }
+  ]
+ },
  "blocked-by": {
   "blocked-by": [
    {
